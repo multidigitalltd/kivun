@@ -14,6 +14,12 @@ class Kivun_Core {
 		Kivun_Admin::init();
 		Kivun_WooCommerce::init();
 
+		// Elementor — only when Elementor Pro is active
+		add_action( 'elementor/loaded', function () {
+			require_once KIVUN_DIR . 'elementor/class-elementor.php';
+			Kivun_Elementor::init();
+		} );
+
 		add_action( 'wp_enqueue_scripts',    [ __CLASS__, 'enqueue_frontend' ] );
 		add_action( 'admin_enqueue_scripts', [ __CLASS__, 'enqueue_admin' ] );
 		add_action( 'plugins_loaded',        [ __CLASS__, 'load_textdomain' ] );

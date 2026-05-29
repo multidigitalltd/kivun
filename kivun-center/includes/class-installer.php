@@ -6,6 +6,12 @@ class Kivun_Installer {
 	public static function activate(): void {
 		self::create_tables();
 		self::add_roles();
+
+		// CPTs must be registered before seeding terms
+		require_once KIVUN_DIR . 'includes/class-post-types.php';
+		Kivun_Post_Types::register();
+
+		self::seed_default_terms();
 		flush_rewrite_rules();
 	}
 
@@ -60,5 +66,58 @@ class Kivun_Installer {
 			__( 'Employer', 'kivun' ),
 			[ 'read' => true ]
 		);
+	}
+
+	/**
+	 * Seed sensible default taxonomy terms on first activation.
+	 * Skips any term that already exists.
+	 */
+	private static function seed_default_terms(): void {
+		$defaults = [
+			'kivun_job_scope' => [
+				'משרה מלאה',
+				'משרה חלקית',
+				'פרילנס',
+				'התנדבות',
+			],
+			'kivun_job_region' => [
+				'מרכז',
+				'תל אביב והסביבה',
+				'ירושלים',
+				'צפון',
+				'חיפה והקריות',
+				'דרום',
+				'שפלה',
+				'השרון',
+				'עבודה מהבית',
+			],
+			'kivun_job_field' => [
+				'חינוך והוראה',
+				'ייעוץ מקצועי',
+				'מכירות ושיווק',
+				'טכנולוגיה ומחשבים',
+				'בריאות ורפואה',
+				'רווחה ושירותים חברתיים',
+				'ניהול ומנהל',
+				'אדמינסטרציה ומזכירות',
+				'כספים וחשבונאות',
+				'עיצוב ויצירה',
+			],
+			'kivun_course_cat' => [
+				'כישורי עבודה',
+				'יזמות עסקית',
+				'פיתוח אישי',
+				'טכנולוגיה',
+				'שפות',
+			],
+		];
+
+		foreach ( $defaults as $taxonomy => $terms ) {
+			foreach ( $terms as $term_name ) {
+				if ( ! term_exists( $term_name, $taxonomy ) ) {
+					wp_insert_term( $term_name, $taxonomy );
+				}
+			}
+		}
 	}
 }
