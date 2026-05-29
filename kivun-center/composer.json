@@ -1,0 +1,21 @@
+{
+  "name": "multidigital/kivun-center",
+  "description": "Course archive & job board plugin for Kivun Center",
+  "type": "wordpress-plugin",
+  "license": "GPL-2.0-or-later",
+  "require": {
+    "php": ">=8.0"
+  },
+  "require-dev": {
+    "squizlabs/php_codesniffer": "^3.9",
+    "wp-coding-standards/wpcs": "^3.1"
+  },
+  "scripts": {
+    "lint": "phpcs --standard=WordPress --extensions=php --ignore=vendor/ ."
+  },
+  "config": {
+    "allow-plugins": {
+      "dealerdirect/phpcodesniffer-composer-installer": true
+    }
+  }
+}

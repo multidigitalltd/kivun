@@ -1,0 +1,11 @@
+/* Kivun Center — Admin Styles */
+
+.kivun-meta-table { width: 100%; border-collapse: collapse; }
+.kivun-meta-table th { width: 180px; padding: 10px 14px; text-align: right; vertical-align: top; font-weight: 600; color: #1d2327; }
+.kivun-meta-table td { padding: 8px 0; }
+.kivun-meta-table input[type=text],
+.kivun-meta-table input[type=email],
+.kivun-meta-table input[type=number],
+.kivun-meta-table input[type=date],
+.kivun-meta-table textarea { width: 100%; max-width: 500px; }
+.kivun-meta-table small { display: block; color: #6b7280; margin-top: 3px; font-size: 12px; }

@@ -1,0 +1,19 @@
+# Dependencies
+kivun-center/vendor/
+node_modules/
+
+# Build artifacts
+*.zip
+*.tar.gz
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# WordPress
+wp-config.php
