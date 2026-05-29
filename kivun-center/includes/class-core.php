@@ -15,6 +15,9 @@ class Kivun_Core {
 		Kivun_Admin::init();
 		Kivun_Admin_Settings::init();
 		Kivun_WooCommerce::init();
+		Kivun_Notifications::init();
+		Kivun_Export::init();
+		Kivun_Cron::init();
 
 		// Elementor — only when Elementor Pro is active
 		add_action( 'elementor/loaded', function () {
@@ -30,14 +33,18 @@ class Kivun_Core {
 	private static function load_includes(): void {
 		$dir = KIVUN_DIR . 'includes/';
 		foreach ( [
+			'functions',
 			'class-post-types',
 			'class-courses',
 			'class-jobs',
 			'class-employer',
+			'class-workshops',
 			'class-mailer',
 			'class-woocommerce',
+			'class-notifications',
+			'class-export',
+			'class-cron',
 			'class-admin',
-			'class-workshops',
 		] as $file ) {
 			require_once $dir . $file . '.php';
 		}

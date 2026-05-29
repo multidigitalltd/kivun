@@ -24,4 +24,23 @@
 		});
 	});
 
+	// Notes — auto-save on blur
+	$(document).on('blur', '.kivun-notes-input', function () {
+		var $ta  = $(this);
+		var $row = $ta.closest('tr');
+		var $ind = $row.find('.kivun-saved-indicator').first();
+
+		$.post(kivunCrm.ajax_url, {
+			action: 'kivun_save_note',
+			nonce:  kivunCrm.nonce,
+			table:  $ta.data('table'),
+			id:     $ta.data('id'),
+			note:   $ta.val(),
+		}, function (res) {
+			if (res.success) {
+				$ind.text('✓ נשמר').css('color', '#16a34a').show().delay(1600).fadeOut();
+			}
+		});
+	});
+
 }(jQuery));

@@ -33,6 +33,7 @@ class Kivun_Installer {
 				email       varchar(100)        NOT NULL DEFAULT '',
 				phone       varchar(30)         NOT NULL DEFAULT '',
 				message     text,
+				notes       text,
 				type        varchar(20)         NOT NULL DEFAULT 'registration',
 				status      varchar(20)         NOT NULL DEFAULT 'pending',
 				created_at  datetime            NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -47,15 +48,18 @@ class Kivun_Installer {
 			CREATE TABLE IF NOT EXISTS {$wpdb->prefix}kivun_applications (
 				id               bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
 				job_id           bigint(20) UNSIGNED NOT NULL,
+				user_id          bigint(20) UNSIGNED NOT NULL DEFAULT 0,
 				applicant_name   varchar(100)        NOT NULL,
 				applicant_email  varchar(100)        NOT NULL,
 				applicant_phone  varchar(30)         NOT NULL DEFAULT '',
 				cv_file          varchar(500)        NOT NULL DEFAULT '',
 				message          text,
+				notes            text,
 				status           varchar(20)         NOT NULL DEFAULT 'new',
 				created_at       datetime            NOT NULL DEFAULT CURRENT_TIMESTAMP,
 				PRIMARY KEY (id),
-				KEY job_id (job_id)
+				KEY job_id (job_id),
+				KEY user_id (user_id)
 			) $collate;
 		" );
 

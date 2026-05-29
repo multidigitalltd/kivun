@@ -85,6 +85,20 @@ class Kivun_Tag_Course_Capacity extends Kivun_Course_Tag_Base {
 	}
 }
 
+// ── Spots left ────────────────────────────────────────────────────────────
+
+class Kivun_Tag_Course_Spots extends Kivun_Course_Tag_Base {
+	public function get_name(): string  { return 'kivun-course-spots'; }
+	public function get_title(): string { return __( 'קורס — מקומות פנויים', 'kivun' ); }
+	public function render(): void {
+		$left = kivun_get_spots_left( get_the_ID() );
+		if ( $left === null ) return;
+		echo $left === 0
+			? esc_html__( 'מלא', 'kivun' )
+			: esc_html( sprintf( __( '%d מקומות', 'kivun' ), $left ) );
+	}
+}
+
 // ── Is Free (boolean label) ───────────────────────────────────────────────────
 
 class Kivun_Tag_Course_Is_Free extends Kivun_Course_Tag_Base {

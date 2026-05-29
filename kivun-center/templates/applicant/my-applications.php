@@ -1,0 +1,80 @@
+<?php defined( 'ABSPATH' ) || exit;
+
+if ( ! is_user_logged_in() ) {
+	echo '<p class="kivun-notice">' . esc_html__( 'יש להתחבר כדי לצפות בהגשות שלך.', 'kivun' ) . '</p>';
+	echo do_shortcode( '[woocommerce_my_account]' );
+	return;
+}
+
+global $wpdb;
+
+$user_id = get_current_user_id();
+$rows    = $wpdb->get_results( $wpdb->prepare(
+	"SELECT a.*, p.post_title AS job_title
+	 FROM {$wpdb->prefix}kivun_applications a
+	 LEFT JOIN {$wpdb->posts} p ON p.ID = a.job_id
+	 WHERE a.user_id = %d
+	 ORDER BY a.created_at DESC",
+	$user_id
+) );
+
+$status_labels = [
+	'new'       => [ 'label' => 'ממתין', 'class' => 'pending' ],
+	'viewed'    => [ 'label' => 'נצפה',  'class' => 'viewed'  ],
+	'contacted' => [ 'label' => 'נוצר קשר', 'class' => 'contacted' ],
+	'interview' => [ 'label' => 'הוזמנת לראיון 🎉', 'class' => 'interview' ],
+	'hired'     => [ 'label' => 'גויסת ✓', 'class' => 'hired'   ],
+	'rejected'  => [ 'label' => 'לא מתאים', 'class' => 'rejected' ],
+];
+?>
+<div class="kivun-my-applications" dir="rtl">
+	<h2><?php esc_html_e( 'הגשות המועמדות שלי', 'kivun' ); ?></h2>
+
+	<?php if ( ! $rows ) : ?>
+		<p class="kivun-notice"><?php esc_html_e( 'עדיין לא הגשת מועמדות לאף משרה.', 'kivun' ); ?></p>
+	<?php else : ?>
+		<table class="kivun-my-apps-table">
+			<thead>
+				<tr>
+					<th><?php esc_html_e( 'משרה', 'kivun' ); ?></th>
+					<th><?php esc_html_e( 'תאריך הגשה', 'kivun' ); ?></th>
+					<th><?php esc_html_e( 'קו"ח', 'kivun' ); ?></th>
+					<th><?php esc_html_e( 'סטטוס', 'kivun' ); ?></th>
+				</tr>
+			</thead>
+			<tbody>
+			<?php foreach ( $rows as $r ) :
+				$s      = $status_labels[ $r->status ] ?? [ 'label' => $r->status, 'class' => '' ];
+				$upload = wp_upload_dir();
+				$cv_url = ( $r->cv_file && file_exists( $r->cv_file ) )
+					? str_replace( $upload['basedir'], $upload['baseurl'], $r->cv_file )
+					: '';
+			?>
+				<tr>
+					<td>
+						<?php if ( get_post_status( $r->job_id ) === 'publish' ) : ?>
+							<a href="<?php echo esc_url( get_permalink( $r->job_id ) ); ?>"><?php echo esc_html( $r->job_title ); ?></a>
+						<?php else : ?>
+							<?php echo esc_html( $r->job_title ); ?>
+							<small class="kivun-muted"><?php esc_html_e( '(הוסרה)', 'kivun' ); ?></small>
+						<?php endif; ?>
+					</td>
+					<td><?php echo esc_html( wp_date( 'd/m/Y', strtotime( $r->created_at ) ) ); ?></td>
+					<td>
+						<?php if ( $cv_url ) : ?>
+							<a href="<?php echo esc_url( $cv_url ); ?>" target="_blank"><?php esc_html_e( 'הורד', 'kivun' ); ?></a>
+						<?php else : ?>
+							<span class="kivun-muted">—</span>
+						<?php endif; ?>
+					</td>
+					<td>
+						<span class="kivun-app-status kivun-app-status--<?php echo esc_attr( $s['class'] ); ?>">
+							<?php echo esc_html( $s['label'] ); ?>
+						</span>
+					</td>
+				</tr>
+			<?php endforeach; ?>
+			</tbody>
+		</table>
+	<?php endif; ?>
+</div>

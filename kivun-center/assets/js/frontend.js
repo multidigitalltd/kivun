@@ -138,6 +138,26 @@
 		});
 	});
 
+	// ── Employer registration ────────────────────────────────────────────────────
+	$(document).on('submit', '.kivun-employer-reg-form', function (e) {
+		e.preventDefault();
+		var $form = $(this);
+		var $btn  = $form.find('[type=submit]');
+		var $err  = $form.find('.kivun-error');
+
+		$err.hide();
+		$btn.prop('disabled', true).text(kivun.i18n.sending);
+
+		$.post(kivun.ajax_url, $.extend({ action: 'kivun_register_employer', nonce: kivun.nonce }, formToObj($form)), function (res) {
+			if (res.success) {
+				$form.replaceWith('<p class="kivun-success">' + res.data.message + '</p>');
+			} else {
+				$err.text(res.data.message).show();
+				$btn.prop('disabled', false).text(kivun.i18n.submit);
+			}
+		});
+	});
+
 	// ── Employer dashboard ───────────────────────────────────────────────────────
 	$('#kivun-toggle-new-job').on('click', function () {
 		$('#kivun-new-job-form').slideDown(200);

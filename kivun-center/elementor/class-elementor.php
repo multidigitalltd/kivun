@@ -26,6 +26,7 @@ class Kivun_Elementor {
 			Kivun_Tag_Course_Duration::class,
 			Kivun_Tag_Course_Audience::class,
 			Kivun_Tag_Course_Capacity::class,
+			Kivun_Tag_Course_Spots::class,
 			Kivun_Tag_Course_Is_Free::class,
 			Kivun_Tag_Job_Company::class,
 			Kivun_Tag_Job_Salary::class,

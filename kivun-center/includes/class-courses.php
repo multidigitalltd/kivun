@@ -29,8 +29,13 @@ class Kivun_Courses {
 			wp_send_json_error( [ 'message' => __( 'קורס לא קיים.', 'kivun' ) ] );
 		}
 
-		// Prevent duplicate registration
-		if ( self::already_registered( $course_id, $email ) ) {
+		// Capacity check
+		if ( kivun_is_full( $course_id ) ) {
+			wp_send_json_error( [ 'message' => __( 'מצטערים, הקורס מלא. ניתן להשאיר פרטים לרשימת המתנה.', 'kivun' ) ] );
+		}
+
+		// Prevent duplicate registration (by email or phone)
+		if ( self::already_registered( $course_id, $email, $phone ) ) {
 			wp_send_json_error( [ 'message' => __( 'כבר נרשמת לקורס זה.', 'kivun' ) ] );
 		}
 
@@ -50,18 +55,28 @@ class Kivun_Courses {
 		);
 
 		Kivun_Mailer::send_course_registration( $course_id, compact( 'name', 'email', 'phone', 'message' ) );
+		do_action( 'kivun_after_registration', $course_id, compact( 'name', 'email', 'phone', 'message' ) );
 
 		wp_send_json_success( [
 			'message' => __( 'ההרשמה התקבלה! ניצור איתך קשר בהקדם.', 'kivun' ),
 		] );
 	}
 
-	private static function already_registered( int $course_id, string $email ): bool {
+	private static function already_registered( int $course_id, string $email, string $phone = '' ): bool {
 		global $wpdb;
+
+		if ( $phone ) {
+			return (bool) $wpdb->get_var( $wpdb->prepare(
+				"SELECT id FROM {$wpdb->prefix}kivun_registrations
+				 WHERE course_id = %d AND type IN ('registration','confirmed') AND (email = %s OR phone = %s) LIMIT 1",
+				$course_id, $email, $phone
+			) );
+		}
+
 		return (bool) $wpdb->get_var( $wpdb->prepare(
-			"SELECT id FROM {$wpdb->prefix}kivun_registrations WHERE course_id = %d AND email = %s LIMIT 1",
-			$course_id,
-			$email
+			"SELECT id FROM {$wpdb->prefix}kivun_registrations
+			 WHERE course_id = %d AND type IN ('registration','confirmed') AND email = %s LIMIT 1",
+			$course_id, $email
 		) );
 	}
 }

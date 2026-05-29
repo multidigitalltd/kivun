@@ -94,6 +94,11 @@ class Kivun_Jobs {
 			wp_send_json_error( [ 'message' => __( 'משרה לא קיימת.', 'kivun' ) ] );
 		}
 
+		// Duplicate check
+		if ( self::already_applied( $job_id, $email, $phone ) ) {
+			wp_send_json_error( [ 'message' => __( 'כבר הגשת מועמדות למשרה זו.', 'kivun' ) ] );
+		}
+
 		$cv_path = self::handle_cv_upload();
 		if ( is_wp_error( $cv_path ) ) {
 			wp_send_json_error( [ 'message' => $cv_path->get_error_message() ] );
@@ -104,6 +109,7 @@ class Kivun_Jobs {
 			$wpdb->prefix . 'kivun_applications',
 			[
 				'job_id'          => $job_id,
+				'user_id'         => get_current_user_id(),
 				'applicant_name'  => $name,
 				'applicant_email' => $email,
 				'applicant_phone' => $phone,
@@ -112,7 +118,7 @@ class Kivun_Jobs {
 				'status'          => 'new',
 				'created_at'      => current_time( 'mysql' ),
 			],
-			[ '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s' ]
+			[ '%d', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s' ]
 		);
 
 		$employer_email = get_post_meta( $job_id, '_kivun_employer_email', true );
@@ -123,10 +129,20 @@ class Kivun_Jobs {
 				compact( 'name', 'email', 'phone', 'message' ) + [ 'cv_path' => $cv_path ]
 			);
 		}
+		do_action( 'kivun_after_application', $job_id, compact( 'name', 'email', 'phone', 'message' ) + [ 'cv_path' => $cv_path ] );
 
 		wp_send_json_success( [
 			'message' => __( 'קורות החיים נשלחו! נחזור אליך בהקדם.', 'kivun' ),
 		] );
+	}
+
+	private static function already_applied( int $job_id, string $email, string $phone ): bool {
+		global $wpdb;
+		return (bool) $wpdb->get_var( $wpdb->prepare(
+			"SELECT id FROM {$wpdb->prefix}kivun_applications
+			 WHERE job_id = %d AND (applicant_email = %s OR applicant_phone = %s) LIMIT 1",
+			$job_id, $email, $phone
+		) );
 	}
 
 	/** @return string|null|\WP_Error */

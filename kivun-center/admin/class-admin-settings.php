@@ -66,6 +66,7 @@ class Kivun_Admin_Settings {
 			'jobs_per_page'      => absint( $_POST['jobs_per_page'] ?? 10 ),
 			'allow_cv_upload'    => ! empty( $_POST['allow_cv_upload'] ),
 			'cv_max_size_mb'     => absint( $_POST['cv_max_size_mb'] ?? 5 ),
+			'webhook_url'        => esc_url_raw( $_POST['webhook_url'] ?? '' ),
 		] );
 
 		wp_redirect( admin_url( 'admin.php?page=kivun-settings&saved=1' ) );
@@ -156,6 +157,16 @@ class Kivun_Admin_Settings {
 					<th scope="row"><?php esc_html_e( 'גודל מקסימלי לקו"ח (MB)', 'kivun' ); ?></th>
 					<td>
 						<input type="number" name="cv_max_size_mb" value="<?php echo esc_attr( $o( 'cv_max_size_mb', 5 ) ); ?>" min="1" max="20" class="small-text">
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'Webhook URL (n8n / Zapier / Make)', 'kivun' ); ?></th>
+					<td>
+						<input type="url" name="webhook_url" value="<?php echo esc_attr( $o( 'webhook_url' ) ); ?>" class="large-text" placeholder="https://...">
+						<p class="description">
+							<?php esc_html_e( 'POST (JSON) יישלח לכתובת זו בכל ליד, הרשמה או מועמדות חדשה.', 'kivun' ); ?><br>
+							<?php esc_html_e( 'משדות: event, post_id, post_title, name, email, phone, message, timestamp.', 'kivun' ); ?>
+						</p>
 					</td>
 				</tr>
 			</table>

@@ -22,6 +22,9 @@ class Kivun_Admin {
 
 		// Inline status update
 		add_action( 'wp_ajax_kivun_update_status', [ __CLASS__, 'ajax_update_status' ] );
+
+		// Notes save
+		add_action( 'wp_ajax_kivun_save_note', [ __CLASS__, 'ajax_save_note' ] );
 	}
 
 	// ── Meta boxes ─────────────────────────────────────────────────────────────
@@ -171,15 +174,21 @@ class Kivun_Admin {
 			'workshop'     => 'סדנה',
 		];
 
+		printf(
+			'<p style="margin-bottom:.5rem"><a href="%s" class="button button-small">⬇ ייצוא CSV</a></p>',
+			esc_url( Kivun_Export::url( 'registrations', $post->ID ) )
+		);
+
 		echo '<div style="overflow-x:auto"><table class="kivun-inner-table wp-list-table widefat fixed striped">';
 		echo '<thead><tr>
-			<th style="width:130px">שם</th>
-			<th style="width:110px">טלפון</th>
-			<th style="width:160px">אימייל</th>
-			<th style="width:70px">סוג</th>
-			<th>הערות</th>
-			<th style="width:110px">תאריך</th>
-			<th style="width:150px">סטטוס</th>
+			<th style="width:120px">שם</th>
+			<th style="width:105px">טלפון</th>
+			<th style="width:150px">אימייל</th>
+			<th style="width:65px">סוג</th>
+			<th style="width:120px">הערה</th>
+			<th>הערות פנימיות</th>
+			<th style="width:100px">תאריך</th>
+			<th style="width:145px">סטטוס</th>
 		</tr></thead><tbody>';
 
 		foreach ( $rows as $r ) {
@@ -190,7 +199,8 @@ class Kivun_Admin {
 					<td><a href="tel:%s">%s</a></td>
 					<td>%s</td>
 					<td><span class="kivun-type-badge">%s</span></td>
-					<td class="kivun-message-cell">%s</td>
+					<td class="kivun-message-cell" title="%s">%s</td>
+					<td>%s</td>
 					<td style="font-size:12px">%s</td>
 					<td>%s <span class="kivun-saved-indicator" style="display:none"></span></td>
 				</tr>',
@@ -199,7 +209,9 @@ class Kivun_Admin {
 				esc_html( $r->phone ),
 				esc_html( $r->email ),
 				esc_html( $type ),
-				esc_html( wp_trim_words( $r->message ?? '', 12 ) ),
+				esc_attr( $r->message ?? '' ),
+				esc_html( wp_trim_words( $r->message ?? '', 8 ) ),
+				self::notes_input( 'registrations', (int) $r->id, $r->notes ?? '' ),
 				esc_html( wp_date( 'd/m/Y H:i', strtotime( $r->created_at ) ) ),
 				self::status_select( 'registrations', (int) $r->id, $r->status, $reg_statuses )
 			);
@@ -234,15 +246,21 @@ class Kivun_Admin {
 
 		$upload = wp_upload_dir();
 
+		printf(
+			'<p style="margin-bottom:.5rem"><a href="%s" class="button button-small">⬇ ייצוא CSV</a></p>',
+			esc_url( Kivun_Export::url( 'applications', $post->ID ) )
+		);
+
 		echo '<div style="overflow-x:auto"><table class="kivun-inner-table wp-list-table widefat fixed striped">';
 		echo '<thead><tr>
-			<th style="width:130px">שם</th>
-			<th style="width:160px">אימייל</th>
-			<th style="width:110px">טלפון</th>
-			<th>מכתב מקדים</th>
-			<th style="width:90px">קו"ח</th>
-			<th style="width:110px">תאריך</th>
-			<th style="width:150px">סטטוס</th>
+			<th style="width:120px">שם</th>
+			<th style="width:150px">אימייל</th>
+			<th style="width:105px">טלפון</th>
+			<th style="width:110px">מכתב</th>
+			<th>הערות פנימיות</th>
+			<th style="width:80px">קו"ח</th>
+			<th style="width:100px">תאריך</th>
+			<th style="width:145px">סטטוס</th>
 		</tr></thead><tbody>';
 
 		foreach ( $rows as $r ) {
@@ -257,7 +275,8 @@ class Kivun_Admin {
 					<td><strong>%s</strong></td>
 					<td>%s</td>
 					<td><a href="tel:%s">%s</a></td>
-					<td class="kivun-message-cell">%s</td>
+					<td class="kivun-message-cell" title="%s">%s</td>
+					<td>%s</td>
 					<td>%s</td>
 					<td style="font-size:12px">%s</td>
 					<td>%s <span class="kivun-saved-indicator" style="display:none"></span></td>
@@ -266,14 +285,50 @@ class Kivun_Admin {
 				esc_html( $r->applicant_email ),
 				esc_attr( $r->applicant_phone ),
 				esc_html( $r->applicant_phone ),
-				esc_html( wp_trim_words( $r->message ?? '', 12 ) ),
-				$cv_html, // Already escaped above
+				esc_attr( $r->message ?? '' ),
+				esc_html( wp_trim_words( $r->message ?? '', 8 ) ),
+				self::notes_input( 'applications', (int) $r->id, $r->notes ?? '' ),
+				$cv_html,
 				esc_html( wp_date( 'd/m/Y H:i', strtotime( $r->created_at ) ) ),
 				self::status_select( 'applications', (int) $r->id, $r->status, $app_statuses )
 			);
 		}
 
 		echo '</tbody></table></div>';
+	}
+
+	private static function notes_input( string $table, int $id, string $value ): string {
+		return sprintf(
+			'<textarea class="kivun-notes-input" data-table="%s" data-id="%d" rows="2" placeholder="%s">%s</textarea>',
+			esc_attr( $table ),
+			$id,
+			esc_attr__( 'הוסף הערה פנימית...', 'kivun' ),
+			esc_textarea( $value )
+		);
+	}
+
+	public static function ajax_save_note(): void {
+		check_ajax_referer( 'kivun_admin_nonce', 'nonce' );
+		if ( ! current_user_can( 'edit_posts' ) ) wp_send_json_error();
+
+		$table = sanitize_key( $_POST['table'] ?? '' );
+		$id    = absint( $_POST['id']          ?? 0 );
+		$note  = sanitize_textarea_field( $_POST['note'] ?? '' );
+
+		if ( ! in_array( $table, [ 'registrations', 'applications' ], true ) || ! $id ) {
+			wp_send_json_error();
+		}
+
+		global $wpdb;
+		$wpdb->update(
+			$wpdb->prefix . 'kivun_' . $table,
+			[ 'notes' => $note ],
+			[ 'id'    => $id ],
+			[ '%s' ],
+			[ '%d' ]
+		);
+
+		wp_send_json_success();
 	}
 
 	private static function status_select( string $table, int $id, string $current, array $options ): string {

@@ -3,7 +3,7 @@
  * Plugin Name:  Kivun Center
  * Plugin URI:   https://github.com/multidigitalltd/kivun
  * Description:  לוח משרות, קורסים וסדנאות למרכז כיוון — Elementor Dynamic Tags, CRM מובנה, WooCommerce.
- * Version:      1.2.0
+ * Version:      1.3.0
  * Author:       MultiDigital
  * Author URI:   https://multidigital.co.il
  * Text Domain:  kivun
@@ -14,14 +14,18 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'KIVUN_VERSION', '1.2.0' );
+define( 'KIVUN_VERSION', '1.3.0' );
 define( 'KIVUN_FILE',    __FILE__ );
 define( 'KIVUN_DIR',     plugin_dir_path( __FILE__ ) );
 define( 'KIVUN_URL',     plugin_dir_url( __FILE__ ) );
 
 require_once KIVUN_DIR . 'includes/class-installer.php';
+require_once KIVUN_DIR . 'includes/class-cron.php';
 register_activation_hook( __FILE__,   [ 'Kivun_Installer', 'activate' ] );
-register_deactivation_hook( __FILE__, [ 'Kivun_Installer', 'deactivate' ] );
+register_deactivation_hook( __FILE__, function () {
+	Kivun_Installer::deactivate();
+	Kivun_Cron::deactivate();
+} );
 
 require_once KIVUN_DIR . 'includes/class-core.php';
 Kivun_Core::init();

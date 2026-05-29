@@ -38,9 +38,24 @@ class Kivun_Workshops {
 			wp_send_json_error( [ 'message' => __( 'פוסט לא קיים.', 'kivun' ) ] );
 		}
 
+		// Capacity check for workshops
+		if ( $post_type === 'kivun_workshop' && kivun_is_full( $post_id ) ) {
+			wp_send_json_error( [ 'message' => __( 'מצטערים, הסדנה מלאה. השאר פרטים ונעדכן אם יפתח מקום.', 'kivun' ) ] );
+		}
+
 		$type = $post_type === 'kivun_workshop' ? 'workshop' : 'lead';
 
+		// Duplicate check — phone is mandatory for leads, use it as primary key
 		global $wpdb;
+		$duplicate = $wpdb->get_var( $wpdb->prepare(
+			"SELECT id FROM {$wpdb->prefix}kivun_registrations
+			 WHERE course_id = %d AND (phone = %s OR (email != '' AND email = %s)) LIMIT 1",
+			$post_id, $phone, $email ?: '__no_email__'
+		) );
+		if ( $duplicate ) {
+			wp_send_json_error( [ 'message' => __( 'פנייתך כבר התקבלה — נציג יחזור אליך בהקדם.', 'kivun' ) ] );
+		}
+
 		$wpdb->insert(
 			$wpdb->prefix . 'kivun_registrations',
 			[
@@ -57,6 +72,7 @@ class Kivun_Workshops {
 		);
 
 		Kivun_Mailer::send_lead_notification( $post_id, compact( 'name', 'email', 'phone', 'message' ), $type );
+		do_action( 'kivun_after_lead', $post_id, compact( 'name', 'email', 'phone', 'message' ) );
 
 		$msg = $post_type === 'kivun_workshop'
 			? __( 'ההרשמה לסדנה התקבלה! נציג יצור איתך קשר בהקדם.', 'kivun' )

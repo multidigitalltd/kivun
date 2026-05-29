@@ -13,6 +13,9 @@ class Kivun_Shortcodes {
 			'kivun_workshop_single'    => 'render_workshop_single',
 			'kivun_jobs'               => 'render_jobs',
 			'kivun_apply'              => 'render_apply',
+			'kivun_spots_left'         => 'render_spots_left',
+			'kivun_my_applications'    => 'render_my_applications',
+			'kivun_employer_register'  => 'render_employer_register',
 			'kivun_employer_dashboard' => 'render_employer_dashboard',
 		];
 
@@ -190,6 +193,25 @@ class Kivun_Shortcodes {
 		return ob_get_clean();
 	}
 
+	// ── Spots left ────────────────────────────────────────────────────────────
+
+	public static function render_spots_left( array $atts ): string {
+		$atts = shortcode_atts( [ 'id' => 0, 'full_text' => 'מלא' ], $atts, 'kivun_spots_left' );
+		$id   = absint( $atts['id'] ) ?: get_the_ID();
+
+		$left = kivun_get_spots_left( $id );
+		if ( $left === null ) return '';
+
+		if ( $left === 0 ) {
+			return '<span class="kivun-spots kivun-spots--full">' . esc_html( $atts['full_text'] ) . '</span>';
+		}
+
+		return '<span class="kivun-spots">' . sprintf(
+			esc_html__( 'נותרו %d מקומות', 'kivun' ),
+			$left
+		) . '</span>';
+	}
+
 	// ── CV application form ───────────────────────────────────────────────────
 
 	public static function render_apply( array $atts ): string {
@@ -200,6 +222,22 @@ class Kivun_Shortcodes {
 
 		ob_start();
 		kivun_get_template( 'jobs/apply-form.php', [ 'job_id' => $id ] );
+		return ob_get_clean();
+	}
+
+	// ── My applications (personal area) ──────────────────────────────────────
+
+	public static function render_my_applications(): string {
+		ob_start();
+		kivun_get_template( 'applicant/my-applications.php' );
+		return ob_get_clean();
+	}
+
+	// ── Employer register ─────────────────────────────────────────────────────
+
+	public static function render_employer_register(): string {
+		ob_start();
+		kivun_get_template( 'employer/register-form.php' );
 		return ob_get_clean();
 	}
 

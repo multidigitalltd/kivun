@@ -170,6 +170,28 @@
 .kivun-job-card__deadline { font-size: .83rem; color: var(--kivun-muted); }
 .kivun-job-apply-inline { margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid var(--kivun-border); }
 
+/* ── Spots left ─────────────────────────────────────────────────────────── */
+.kivun-spots { font-weight: 700; color: var(--kivun-primary); font-size: .9rem; }
+.kivun-spots--full { color: var(--kivun-error); }
+
+/* ── Personal area — My Applications ────────────────────────────────────── */
+.kivun-my-applications h2 { margin-bottom: 1.25rem; }
+.kivun-my-apps-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+.kivun-my-apps-table th, .kivun-my-apps-table td { padding: .7rem 1rem; border-bottom: 1px solid var(--kivun-border); text-align: right; }
+.kivun-my-apps-table th { background: #f3f4f6; font-weight: 700; }
+.kivun-app-status { padding: .2rem .65rem; border-radius: 4px; font-size: .8rem; font-weight: 600; }
+.kivun-app-status--pending   { background: #f3f4f6; color: #374151; }
+.kivun-app-status--viewed    { background: #dbeafe; color: #1e40af; }
+.kivun-app-status--contacted { background: #fef9c3; color: #854d0e; }
+.kivun-app-status--interview { background: #dcfce7; color: #166534; }
+.kivun-app-status--hired     { background: #16a34a; color: #fff; }
+.kivun-app-status--rejected  { background: #fee2e2; color: #991b1b; }
+.kivun-muted { color: var(--kivun-muted); font-size: .85rem; }
+
+/* ── Employer register ───────────────────────────────────────────────────── */
+.kivun-employer-register { max-width: 700px; margin: 0 auto; }
+.kivun-employer-register__title { margin-bottom: 1.5rem; }
+
 /* ── Interest / Lead form ────────────────────────────────────────────────── */
 .kivun-interest {
 	margin-top: 2rem;
