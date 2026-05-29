@@ -2,8 +2,8 @@
 /**
  * Plugin Name:  Kivun Center
  * Plugin URI:   https://github.com/multidigitalltd/kivun
- * Description:  Course archive & job board for Kivun Center — shortcode-driven, Elementor-ready.
- * Version:      1.0.0
+ * Description:  לוח משרות, קורסים וסדנאות למרכז כיוון — Elementor Dynamic Tags, CRM מובנה, WooCommerce.
+ * Version:      1.2.0
  * Author:       MultiDigital
  * Author URI:   https://multidigital.co.il
  * Text Domain:  kivun
@@ -14,7 +14,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'KIVUN_VERSION', '1.0.0' );
+define( 'KIVUN_VERSION', '1.2.0' );
 define( 'KIVUN_FILE',    __FILE__ );
 define( 'KIVUN_DIR',     plugin_dir_path( __FILE__ ) );
 define( 'KIVUN_URL',     plugin_dir_url( __FILE__ ) );
