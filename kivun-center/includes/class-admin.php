@@ -19,14 +19,22 @@ class Kivun_Admin {
 
 		// WC product search for course metabox
 		add_action( 'wp_ajax_kivun_search_products', [ __CLASS__, 'ajax_search_products' ] );
+
+		// Inline status update
+		add_action( 'wp_ajax_kivun_update_status', [ __CLASS__, 'ajax_update_status' ] );
 	}
 
 	// ── Meta boxes ─────────────────────────────────────────────────────────────
 
 	public static function register_meta_boxes(): void {
-		add_meta_box( 'kivun_course_details',   'פרטי קורס',   [ __CLASS__, 'course_meta_box' ],   'kivun_course',   'normal', 'high' );
-		add_meta_box( 'kivun_workshop_details', 'פרטי סדנה',   [ __CLASS__, 'workshop_meta_box' ], 'kivun_workshop', 'normal', 'high' );
-		add_meta_box( 'kivun_job_details',      'פרטי משרה',   [ __CLASS__, 'job_meta_box' ],      'kivun_job',      'normal', 'high' );
+		add_meta_box( 'kivun_course_details',   'פרטי קורס',          [ __CLASS__, 'course_meta_box' ],          'kivun_course',   'normal', 'high' );
+		add_meta_box( 'kivun_workshop_details', 'פרטי סדנה',          [ __CLASS__, 'workshop_meta_box' ],        'kivun_workshop', 'normal', 'high' );
+		add_meta_box( 'kivun_job_details',      'פרטי משרה',          [ __CLASS__, 'job_meta_box' ],             'kivun_job',      'normal', 'high' );
+
+		// CRM metaboxes
+		add_meta_box( 'kivun_course_leads',   'הרשמות ולידים',   [ __CLASS__, 'registrations_metabox' ], 'kivun_course',   'normal', 'default' );
+		add_meta_box( 'kivun_workshop_leads', 'הרשמות לסדנה',    [ __CLASS__, 'registrations_metabox' ], 'kivun_workshop', 'normal', 'default' );
+		add_meta_box( 'kivun_job_apps',       'מועמדויות וקו"ח', [ __CLASS__, 'applications_metabox' ], 'kivun_job',      'normal', 'default' );
 	}
 
 	public static function course_meta_box( \WP_Post $post ): void {
@@ -131,6 +139,186 @@ class Kivun_Admin {
 			</tr>
 		</table>
 		<?php
+	}
+
+	// ── CRM: Registrations / Leads metabox ───────────────────────────────────
+
+	public static function registrations_metabox( \WP_Post $post ): void {
+		global $wpdb;
+
+		$rows = $wpdb->get_results( $wpdb->prepare(
+			"SELECT * FROM {$wpdb->prefix}kivun_registrations WHERE course_id = %d ORDER BY created_at DESC",
+			$post->ID
+		) );
+
+		if ( ! $rows ) {
+			echo '<p style="color:#6b7280;padding:.5rem 0">' . esc_html__( 'אין הרשמות או לידים עדיין.', 'kivun' ) . '</p>';
+			return;
+		}
+
+		$reg_statuses = [
+			'new'          => 'חדש',
+			'contacted'    => 'נוצר קשר',
+			'interested'   => 'מעוניין',
+			'enrolled'     => 'נרשם סופית',
+			'closed'       => 'נסגר ✓',
+			'not_relevant' => 'לא רלוונטי',
+		];
+
+		$type_labels = [
+			'registration' => 'הרשמה',
+			'lead'         => 'מתעניין',
+			'workshop'     => 'סדנה',
+		];
+
+		echo '<div style="overflow-x:auto"><table class="kivun-inner-table wp-list-table widefat fixed striped">';
+		echo '<thead><tr>
+			<th style="width:130px">שם</th>
+			<th style="width:110px">טלפון</th>
+			<th style="width:160px">אימייל</th>
+			<th style="width:70px">סוג</th>
+			<th>הערות</th>
+			<th style="width:110px">תאריך</th>
+			<th style="width:150px">סטטוס</th>
+		</tr></thead><tbody>';
+
+		foreach ( $rows as $r ) {
+			$type = $type_labels[ $r->type ?? 'registration' ] ?? $r->type;
+			printf(
+				'<tr>
+					<td><strong>%s</strong></td>
+					<td><a href="tel:%s">%s</a></td>
+					<td>%s</td>
+					<td><span class="kivun-type-badge">%s</span></td>
+					<td class="kivun-message-cell">%s</td>
+					<td style="font-size:12px">%s</td>
+					<td>%s <span class="kivun-saved-indicator" style="display:none"></span></td>
+				</tr>',
+				esc_html( $r->name ),
+				esc_attr( $r->phone ),
+				esc_html( $r->phone ),
+				esc_html( $r->email ),
+				esc_html( $type ),
+				esc_html( wp_trim_words( $r->message ?? '', 12 ) ),
+				esc_html( wp_date( 'd/m/Y H:i', strtotime( $r->created_at ) ) ),
+				self::status_select( 'registrations', (int) $r->id, $r->status, $reg_statuses )
+			);
+		}
+
+		echo '</tbody></table></div>';
+	}
+
+	// ── CRM: Applications metabox ─────────────────────────────────────────────
+
+	public static function applications_metabox( \WP_Post $post ): void {
+		global $wpdb;
+
+		$rows = $wpdb->get_results( $wpdb->prepare(
+			"SELECT * FROM {$wpdb->prefix}kivun_applications WHERE job_id = %d ORDER BY created_at DESC",
+			$post->ID
+		) );
+
+		if ( ! $rows ) {
+			echo '<p style="color:#6b7280;padding:.5rem 0">' . esc_html__( 'אין מועמדויות עדיין.', 'kivun' ) . '</p>';
+			return;
+		}
+
+		$app_statuses = [
+			'new'       => 'חדש',
+			'viewed'    => 'נצפה',
+			'contacted' => 'נוצר קשר',
+			'interview' => 'מוזמן לראיון',
+			'hired'     => 'גויס ✓',
+			'rejected'  => 'לא מתאים',
+		];
+
+		$upload = wp_upload_dir();
+
+		echo '<div style="overflow-x:auto"><table class="kivun-inner-table wp-list-table widefat fixed striped">';
+		echo '<thead><tr>
+			<th style="width:130px">שם</th>
+			<th style="width:160px">אימייל</th>
+			<th style="width:110px">טלפון</th>
+			<th>מכתב מקדים</th>
+			<th style="width:90px">קו"ח</th>
+			<th style="width:110px">תאריך</th>
+			<th style="width:150px">סטטוס</th>
+		</tr></thead><tbody>';
+
+		foreach ( $rows as $r ) {
+			$cv_html = '—';
+			if ( $r->cv_file && file_exists( $r->cv_file ) ) {
+				$cv_url  = str_replace( $upload['basedir'], $upload['baseurl'], $r->cv_file );
+				$cv_html = '<a href="' . esc_url( $cv_url ) . '" target="_blank" class="button button-small">⬇ הורד</a>';
+			}
+
+			printf(
+				'<tr>
+					<td><strong>%s</strong></td>
+					<td>%s</td>
+					<td><a href="tel:%s">%s</a></td>
+					<td class="kivun-message-cell">%s</td>
+					<td>%s</td>
+					<td style="font-size:12px">%s</td>
+					<td>%s <span class="kivun-saved-indicator" style="display:none"></span></td>
+				</tr>',
+				esc_html( $r->applicant_name ),
+				esc_html( $r->applicant_email ),
+				esc_attr( $r->applicant_phone ),
+				esc_html( $r->applicant_phone ),
+				esc_html( wp_trim_words( $r->message ?? '', 12 ) ),
+				$cv_html, // Already escaped above
+				esc_html( wp_date( 'd/m/Y H:i', strtotime( $r->created_at ) ) ),
+				self::status_select( 'applications', (int) $r->id, $r->status, $app_statuses )
+			);
+		}
+
+		echo '</tbody></table></div>';
+	}
+
+	private static function status_select( string $table, int $id, string $current, array $options ): string {
+		$html = sprintf(
+			'<select class="kivun-status-select" data-table="%s" data-id="%d">',
+			esc_attr( $table ),
+			$id
+		);
+		foreach ( $options as $val => $label ) {
+			$html .= sprintf(
+				'<option value="%s"%s>%s</option>',
+				esc_attr( $val ),
+				selected( $current, $val, false ),
+				esc_html( $label )
+			);
+		}
+		$html .= '</select>';
+		return $html;
+	}
+
+	// ── AJAX: update status ────────────────────────────────────────────────────
+
+	public static function ajax_update_status(): void {
+		check_ajax_referer( 'kivun_admin_nonce', 'nonce' );
+		if ( ! current_user_can( 'edit_posts' ) ) wp_send_json_error();
+
+		$table  = sanitize_key( $_POST['table']  ?? '' );
+		$id     = absint( $_POST['id']            ?? 0 );
+		$status = sanitize_key( $_POST['status']  ?? '' );
+
+		$allowed = [ 'registrations', 'applications' ];
+		if ( ! in_array( $table, $allowed, true ) || ! $id || ! $status ) {
+			wp_send_json_error();
+		}
+
+		global $wpdb;
+		$wpdb->update(
+			$wpdb->prefix . 'kivun_' . $table,
+			[ 'status' => $status ],
+			[ 'id'     => $id ],
+			[ '%s' ],
+			[ '%d' ]
+		);
+
+		wp_send_json_success();
 	}
 
 	public static function job_meta_box( \WP_Post $post ): void {

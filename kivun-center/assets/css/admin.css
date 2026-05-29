@@ -11,6 +11,14 @@
 .kivun-meta-table textarea { width: 100%; max-width: 500px; }
 .kivun-meta-table small { display: block; color: #6b7280; margin-top: 3px; font-size: 12px; }
 
+/* ── CRM inner tables ─────────────────────────────────────────────────────── */
+.kivun-inner-table { font-size: 13px; }
+.kivun-inner-table th { background: #f6f7f7; font-weight: 600; padding: 7px 10px; text-align: right; }
+.kivun-inner-table td { padding: 8px 10px; vertical-align: middle; }
+.kivun-inner-table .kivun-message-cell { max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #6b7280; }
+.kivun-status-select { font-size: 12px; padding: 3px 6px; border-radius: 4px; border: 1px solid #ddd; max-width: 140px; }
+.kivun-saved-indicator { font-size: 12px; font-weight: 600; margin-right: 4px; }
+
 /* ── Settings page ────────────────────────────────────────────────────────── */
 .kivun-settings-wrap .nav-tab-wrapper { margin-bottom: 0; }
 .kivun-tab-content { background: #fff; border: 1px solid #c3c4c7; border-top: none; padding: 1.5rem 2rem; }

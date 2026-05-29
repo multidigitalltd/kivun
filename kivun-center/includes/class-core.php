@@ -78,10 +78,24 @@ class Kivun_Core {
 			return;
 		}
 		$screen = get_current_screen();
-		if ( ! $screen || ! in_array( $screen->post_type, [ 'kivun_course', 'kivun_job' ], true ) ) {
+		$kivun_types = [ 'kivun_course', 'kivun_workshop', 'kivun_job' ];
+		if ( ! $screen || ! in_array( $screen->post_type, $kivun_types, true ) ) {
 			return;
 		}
+
 		wp_enqueue_style( 'kivun-admin', KIVUN_URL . 'assets/css/admin.css', [], KIVUN_VERSION );
+
+		wp_enqueue_script(
+			'kivun-admin-crm',
+			KIVUN_URL . 'assets/js/admin-crm.js',
+			[ 'jquery' ],
+			KIVUN_VERSION,
+			true
+		);
+		wp_localize_script( 'kivun-admin-crm', 'kivunCrm', [
+			'ajax_url' => admin_url( 'admin-ajax.php' ),
+			'nonce'    => wp_create_nonce( 'kivun_admin_nonce' ),
+		] );
 	}
 
 	public static function load_textdomain(): void {
