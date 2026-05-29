@@ -16,13 +16,17 @@ class Kivun_Admin {
 
 		// Applications & Registrations admin pages
 		add_action( 'admin_menu', [ __CLASS__, 'admin_menu' ] );
+
+		// WC product search for course metabox
+		add_action( 'wp_ajax_kivun_search_products', [ __CLASS__, 'ajax_search_products' ] );
 	}
 
 	// ── Meta boxes ─────────────────────────────────────────────────────────────
 
 	public static function register_meta_boxes(): void {
-		add_meta_box( 'kivun_course_details', 'פרטי קורס',  [ __CLASS__, 'course_meta_box' ], 'kivun_course', 'normal', 'high' );
-		add_meta_box( 'kivun_job_details',    'פרטי משרה',  [ __CLASS__, 'job_meta_box' ],    'kivun_job',    'normal', 'high' );
+		add_meta_box( 'kivun_course_details',   'פרטי קורס',   [ __CLASS__, 'course_meta_box' ],   'kivun_course',   'normal', 'high' );
+		add_meta_box( 'kivun_workshop_details', 'פרטי סדנה',   [ __CLASS__, 'workshop_meta_box' ], 'kivun_workshop', 'normal', 'high' );
+		add_meta_box( 'kivun_job_details',      'פרטי משרה',   [ __CLASS__, 'job_meta_box' ],      'kivun_job',      'normal', 'high' );
 	}
 
 	public static function course_meta_box( \WP_Post $post ): void {
@@ -52,8 +56,28 @@ class Kivun_Admin {
 			<tr>
 				<th><?php esc_html_e( 'מוצר WooCommerce', 'kivun' ); ?></th>
 				<td>
-					<input type="number" name="_kivun_wc_product_id" value="<?php echo esc_attr( $f( '_kivun_wc_product_id' ) ); ?>" placeholder="ID מוצר — רק לקורסים בתשלום">
-					<small> מלא רק אם הקורס בתשלום</small>
+					<?php if ( class_exists( 'WooCommerce' ) ) : ?>
+						<select
+							id="_kivun_wc_product_select"
+							name="_kivun_wc_product_id"
+							data-selected="<?php echo esc_attr( $f( '_kivun_wc_product_id' ) ); ?>"
+							style="width:400px"
+						>
+							<option value=""></option>
+						</select>
+						<p class="description" style="margin-top:6px">
+							<?php esc_html_e( 'לקורס בתשלום: צור תחילה מוצר WooCommerce (פשוט) עם המחיר הרצוי, ואז חפש ושייך אותו כאן. שדה ריק = קורס חינמי.', 'kivun' ); ?>
+							<br>
+							<a href="<?php echo esc_url( admin_url( 'post-new.php?post_type=product' ) ); ?>" target="_blank">
+								+ <?php esc_html_e( 'צור מוצר חדש', 'kivun' ); ?>
+							</a>
+						</p>
+					<?php else : ?>
+						<input type="number" name="_kivun_wc_product_id" value="<?php echo esc_attr( $f( '_kivun_wc_product_id' ) ); ?>" placeholder="Product ID">
+						<p class="description" style="color:#b32d2e">
+							<?php esc_html_e( 'WooCommerce אינו מותקן. שדה זה נדרש רק לקורסים בתשלום.', 'kivun' ); ?>
+						</p>
+					<?php endif; ?>
 				</td>
 			</tr>
 			<tr>
@@ -68,6 +92,42 @@ class Kivun_Admin {
 			<tr>
 				<th><?php esc_html_e( 'אימייל לקבלת הרשמות', 'kivun' ); ?></th>
 				<td><input type="email" name="_kivun_contact_email" value="<?php echo esc_attr( $f( '_kivun_contact_email' ) ); ?>"></td>
+			</tr>
+		</table>
+		<?php
+	}
+
+	public static function workshop_meta_box( \WP_Post $post ): void {
+		wp_nonce_field( 'kivun_save_workshop', 'kivun_workshop_nonce' );
+		$f = fn( $key ) => get_post_meta( $post->ID, $key, true );
+		?>
+		<table class="kivun-meta-table">
+			<tr>
+				<th><?php esc_html_e( 'תאריך הסדנה', 'kivun' ); ?></th>
+				<td><input type="text" name="_kivun_ws_date" value="<?php echo esc_attr( $f( '_kivun_ws_date' ) ); ?>" placeholder="ד׳ 15.9.2025 | 18:00–21:00"></td>
+			</tr>
+			<tr>
+				<th><?php esc_html_e( 'משך הסדנה', 'kivun' ); ?></th>
+				<td><input type="text" name="_kivun_ws_duration" value="<?php echo esc_attr( $f( '_kivun_ws_duration' ) ); ?>" placeholder="3 שעות"></td>
+			</tr>
+			<tr>
+				<th><?php esc_html_e( 'מיקום', 'kivun' ); ?></th>
+				<td><input type="text" name="_kivun_ws_location" value="<?php echo esc_attr( $f( '_kivun_ws_location' ) ); ?>" placeholder="תל אביב / זום / כתובת מדויקת"></td>
+			</tr>
+			<tr>
+				<th><?php esc_html_e( 'למי מיועדת', 'kivun' ); ?></th>
+				<td><textarea name="_kivun_ws_audience" rows="3"><?php echo esc_textarea( $f( '_kivun_ws_audience' ) ); ?></textarea></td>
+			</tr>
+			<tr>
+				<th><?php esc_html_e( 'מקסימום משתתפים', 'kivun' ); ?></th>
+				<td><input type="number" name="_kivun_ws_capacity" value="<?php echo esc_attr( $f( '_kivun_ws_capacity' ) ); ?>" min="1"></td>
+			</tr>
+			<tr>
+				<th><?php esc_html_e( 'אימייל לקבלת הרשמות', 'kivun' ); ?></th>
+				<td>
+					<input type="email" name="_kivun_contact_email" value="<?php echo esc_attr( $f( '_kivun_contact_email' ) ); ?>">
+					<small><?php esc_html_e( 'השאר ריק לשימוש באימייל הגלובלי מההגדרות', 'kivun' ); ?></small>
+				</td>
 			</tr>
 		</table>
 		<?php
@@ -129,6 +189,22 @@ class Kivun_Admin {
 			}
 		}
 
+		if ( $post->post_type === 'kivun_workshop' ) {
+			if ( ! isset( $_POST['kivun_workshop_nonce'] ) || ! wp_verify_nonce( $_POST['kivun_workshop_nonce'], 'kivun_save_workshop' ) ) return;
+			if ( ! current_user_can( 'edit_post', $post_id ) ) return;
+
+			foreach ( [
+				'_kivun_ws_date'      => 'text',
+				'_kivun_ws_duration'  => 'text',
+				'_kivun_ws_location'  => 'text',
+				'_kivun_ws_audience'  => 'textarea',
+				'_kivun_ws_capacity'  => 'absint',
+				'_kivun_contact_email' => 'email',
+			] as $key => $type ) {
+				self::save_field( $post_id, $key, $type );
+			}
+		}
+
 		if ( $post->post_type === 'kivun_job' ) {
 			if ( ! isset( $_POST['kivun_job_nonce'] ) || ! wp_verify_nonce( $_POST['kivun_job_nonce'], 'kivun_save_job' ) ) return;
 			if ( ! current_user_can( 'edit_post', $post_id ) ) return;
@@ -185,11 +261,48 @@ class Kivun_Admin {
 		if ( $col === 'schedule' ) echo esc_html( get_post_meta( $id, '_kivun_schedule', true ) );
 	}
 
+	// ── WC product search (AJAX) ───────────────────────────────────────────────
+
+	public static function ajax_search_products(): void {
+		check_ajax_referer( 'kivun_admin_nonce', 'nonce' );
+		if ( ! current_user_can( 'edit_posts' ) ) wp_send_json_error();
+		if ( ! class_exists( 'WooCommerce' ) ) wp_send_json_error();
+
+		// Single product lookup by ID (for pre-select)
+		if ( ! empty( $_POST['id'] ) ) {
+			$product = wc_get_product( absint( $_POST['id'] ) );
+			if ( $product ) {
+				wp_send_json_success( [ [
+					'id'   => $product->get_id(),
+					'text' => $product->get_name() . ' (#' . $product->get_id() . ')',
+				] ] );
+			}
+			wp_send_json_success( [] );
+		}
+
+		// Search by name
+		$term     = sanitize_text_field( $_POST['q'] ?? '' );
+		$products = wc_get_products( [
+			'status'     => 'publish',
+			'limit'      => 20,
+			'orderby'    => 'title',
+			'order'      => 'ASC',
+			's'          => $term,
+		] );
+
+		$results = array_map( fn( $p ) => [
+			'id'   => $p->get_id(),
+			'text' => $p->get_name() . ' (#' . $p->get_id() . ')',
+		], $products );
+
+		wp_send_json_success( $results );
+	}
+
 	// ── Admin pages ────────────────────────────────────────────────────────────
 
 	public static function admin_menu(): void {
-		add_submenu_page( 'edit.php?post_type=kivun_job', 'מועמדויות', 'מועמדויות', 'manage_options', 'kivun-applications', [ __CLASS__, 'applications_page' ] );
-		add_submenu_page( 'edit.php?post_type=kivun_course', 'הרשמות', 'הרשמות', 'manage_options', 'kivun-registrations', [ __CLASS__, 'registrations_page' ] );
+		add_submenu_page( 'edit.php?post_type=kivun_job',    'מועמדויות', 'מועמדויות', 'manage_options', 'kivun-applications',  [ __CLASS__, 'applications_page' ] );
+		add_submenu_page( 'edit.php?post_type=kivun_course', 'הרשמות',    'הרשמות',    'manage_options', 'kivun-registrations', [ __CLASS__, 'registrations_page' ] );
 	}
 
 	public static function applications_page(): void {
@@ -207,12 +320,22 @@ class Kivun_Admin {
 
 	public static function registrations_page(): void {
 		global $wpdb;
-		$rows = $wpdb->get_results( "SELECT r.*, p.post_title AS course_title FROM {$wpdb->prefix}kivun_registrations r LEFT JOIN {$wpdb->posts} p ON p.ID = r.course_id ORDER BY r.created_at DESC LIMIT 200" );
-		echo '<div class="wrap"><h1>הרשמות לקורסים</h1><table class="wp-list-table widefat fixed striped"><thead><tr><th>שם</th><th>קורס</th><th>אימייל</th><th>טלפון</th><th>תאריך</th><th>סטטוס</th></tr></thead><tbody>';
+		$rows = $wpdb->get_results( "SELECT r.*, p.post_title AS course_title FROM {$wpdb->prefix}kivun_registrations r LEFT JOIN {$wpdb->posts} p ON p.ID = r.course_id ORDER BY r.created_at DESC LIMIT 500" );
+
+		$type_labels = [
+			'registration' => 'הרשמה',
+			'lead'         => 'מתעניין',
+			'workshop'     => 'סדנה',
+		];
+
+		echo '<div class="wrap"><h1>הרשמות, לידים וסדנאות</h1>';
+		echo '<table class="wp-list-table widefat fixed striped"><thead><tr><th>שם</th><th>קורס / סדנה</th><th>סוג</th><th>אימייל</th><th>טלפון</th><th>תאריך</th><th>סטטוס</th></tr></thead><tbody>';
 		foreach ( $rows as $r ) {
-			printf( '<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>',
-				esc_html( $r->name ), esc_html( $r->course_title ), esc_html( $r->email ),
-				esc_html( $r->phone ), esc_html( $r->created_at ), esc_html( $r->status )
+			$type_label = $type_labels[ $r->type ?? 'registration' ] ?? $r->type;
+			printf( '<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>',
+				esc_html( $r->name ), esc_html( $r->course_title ), esc_html( $type_label ),
+				esc_html( $r->email ), esc_html( $r->phone ),
+				esc_html( $r->created_at ), esc_html( $r->status )
 			);
 		}
 		echo '</tbody></table></div>';

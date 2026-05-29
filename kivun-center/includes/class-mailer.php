@@ -29,6 +29,43 @@ class Kivun_Mailer {
 	}
 
 	/**
+	 * Send lead/interest notification to admin — no confirmation to visitor.
+	 *
+	 * @param int    $post_id   Course or workshop ID.
+	 * @param array  $data      name, email, phone, message.
+	 * @param string $type      'lead' | 'workshop'
+	 */
+	public static function send_lead_notification( int $post_id, array $data, string $type ): void {
+		$title      = get_the_title( $post_id );
+		$admin_email = get_post_meta( $post_id, '_kivun_contact_email', true )
+			?: get_option( 'kivun_settings', [] )['admin_email']
+			?: get_option( 'admin_email' );
+
+		$subject = $type === 'workshop'
+			? sprintf( '[%s] הרשמה חדשה לסדנה: %s', get_bloginfo( 'name' ), $title )
+			: sprintf( '[%s] מתעניין/ת חדש/ה — %s', get_bloginfo( 'name' ), $title );
+
+		$body = sprintf(
+			'<p><strong>%s</strong> — %s</p>
+			<ul>
+				<li><strong>שם:</strong> %s</li>
+				<li><strong>טלפון:</strong> %s</li>
+				<li><strong>אימייל:</strong> %s</li>
+				<li><strong>הערות:</strong> %s</li>
+			</ul>
+			<p style="color:#b91c1c;font-weight:bold">⚠️ נא לחזור אל הליד בהקדם.</p>',
+			$type === 'workshop' ? 'הרשמה לסדנה' : 'פנייה מתעניין',
+			esc_html( $title ),
+			esc_html( $data['name'] ),
+			esc_html( $data['phone'] ),
+			esc_html( $data['email'] ),
+			nl2br( esc_html( $data['message'] ) )
+		);
+
+		wp_mail( $admin_email, $subject, $body, self::headers() );
+	}
+
+	/**
 	 * Send CV application to employer (email hidden from frontend).
 	 */
 	public static function send_application( string $employer_email, string $job_title, array $data ): void {

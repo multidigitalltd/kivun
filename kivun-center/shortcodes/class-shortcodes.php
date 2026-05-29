@@ -8,6 +8,9 @@ class Kivun_Shortcodes {
 			'kivun_courses'            => 'render_courses',
 			'kivun_course_single'      => 'render_course_single',
 			'kivun_course_register'    => 'render_course_register',
+			'kivun_course_interest'    => 'render_course_interest',
+			'kivun_workshops'          => 'render_workshops',
+			'kivun_workshop_single'    => 'render_workshop_single',
 			'kivun_jobs'               => 'render_jobs',
 			'kivun_apply'              => 'render_apply',
 			'kivun_employer_dashboard' => 'render_employer_dashboard',
@@ -79,6 +82,69 @@ class Kivun_Shortcodes {
 
 		ob_start();
 		kivun_get_template( 'courses/register-form.php', [ 'course_id' => $id ] );
+		return ob_get_clean();
+	}
+
+	// ── Course interest form ──────────────────────────────────────────────────
+
+	public static function render_course_interest( array $atts ): string {
+		$atts = shortcode_atts( [ 'id' => 0 ], $atts, 'kivun_course_interest' );
+		$id   = absint( $atts['id'] ) ?: get_the_ID();
+
+		if ( get_post_type( $id ) !== 'kivun_course' ) return '';
+
+		ob_start();
+		kivun_get_template( 'courses/interest-form.php', [ 'post_id' => $id, 'post_type' => 'kivun_course' ] );
+		return ob_get_clean();
+	}
+
+	// ── Workshops archive ─────────────────────────────────────────────────────
+
+	public static function render_workshops( array $atts ): string {
+		$atts = shortcode_atts( [
+			'category' => '',
+			'per_page' => 12,
+			'columns'  => 3,
+		], $atts, 'kivun_workshops' );
+
+		$args = [
+			'post_type'      => 'kivun_workshop',
+			'post_status'    => 'publish',
+			'posts_per_page' => (int) $atts['per_page'],
+			'orderby'        => 'date',
+			'order'          => 'DESC',
+		];
+
+		if ( $atts['category'] ) {
+			$args['tax_query'] = [ [ // phpcs:ignore WordPress.DB.SlowDBQuery
+				'taxonomy' => 'kivun_workshop_cat',
+				'field'    => 'slug',
+				'terms'    => sanitize_text_field( $atts['category'] ),
+			] ];
+		}
+
+		$query = new WP_Query( $args );
+
+		ob_start();
+		kivun_get_template( 'workshops/archive.php', [
+			'query'   => $query,
+			'columns' => (int) $atts['columns'],
+		] );
+		wp_reset_postdata();
+
+		return ob_get_clean();
+	}
+
+	// ── Workshop single ───────────────────────────────────────────────────────
+
+	public static function render_workshop_single( array $atts ): string {
+		$atts = shortcode_atts( [ 'id' => 0 ], $atts, 'kivun_workshop_single' );
+		$id   = absint( $atts['id'] ) ?: get_the_ID();
+
+		if ( get_post_type( $id ) !== 'kivun_workshop' ) return '';
+
+		ob_start();
+		kivun_get_template( 'workshops/single.php', [ 'workshop_id' => $id ] );
 		return ob_get_clean();
 	}
 

@@ -20,6 +20,18 @@ class Kivun_Post_Types {
 			'show_in_rest'  => true,
 		] );
 
+		// ── Workshops ─────────────────────────────────────────────────────────
+		register_post_type( 'kivun_workshop', [
+			'labels'        => self::labels( 'סדנה', 'סדנאות' ),
+			'public'        => true,
+			'has_archive'   => true,
+			'menu_icon'     => 'dashicons-groups',
+			'menu_position' => 6,
+			'supports'      => [ 'title', 'editor', 'thumbnail', 'excerpt' ],
+			'rewrite'       => [ 'slug' => 'workshops', 'with_front' => false ],
+			'show_in_rest'  => true,
+		] );
+
 		// ── Jobs ─────────────────────────────────────────────────────────────
 		register_post_type( 'kivun_job', [
 			'labels'            => self::labels( 'משרה', 'משרות' ),
@@ -35,6 +47,13 @@ class Kivun_Post_Types {
 		] );
 
 		// ── Taxonomies ────────────────────────────────────────────────────────
+		register_taxonomy( 'kivun_workshop_cat', 'kivun_workshop', [
+			'labels'        => [ 'name' => 'קטגוריות סדנאות', 'singular_name' => 'קטגוריה' ],
+			'hierarchical'  => true,
+			'show_in_rest'  => true,
+			'rewrite'       => [ 'slug' => 'workshop-cat' ],
+		] );
+
 		register_taxonomy( 'kivun_course_cat', 'kivun_course', [
 			'labels'        => [ 'name' => 'קטגוריות', 'singular_name' => 'קטגוריה' ],
 			'hierarchical'  => true,

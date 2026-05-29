@@ -30,13 +30,15 @@ class Kivun_Installer {
 				id          bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
 				course_id   bigint(20) UNSIGNED NOT NULL,
 				name        varchar(100)        NOT NULL,
-				email       varchar(100)        NOT NULL,
+				email       varchar(100)        NOT NULL DEFAULT '',
 				phone       varchar(30)         NOT NULL DEFAULT '',
 				message     text,
+				type        varchar(20)         NOT NULL DEFAULT 'registration',
 				status      varchar(20)         NOT NULL DEFAULT 'pending',
 				created_at  datetime            NOT NULL DEFAULT CURRENT_TIMESTAMP,
 				PRIMARY KEY (id),
 				KEY course_id (course_id),
+				KEY type (type),
 				KEY email (email)
 			) $collate;
 		" );
@@ -109,6 +111,13 @@ class Kivun_Installer {
 				'פיתוח אישי',
 				'טכנולוגיה',
 				'שפות',
+			],
+			'kivun_workshop_cat' => [
+				'כישורי תקשורת',
+				'חיפוש עבודה',
+				'יזמות',
+				'מנהיגות',
+				'פיתוח אישי',
 			],
 		];
 

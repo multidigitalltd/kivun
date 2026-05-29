@@ -15,6 +15,7 @@ class Kivun_Elementor {
 	public static function register_tags( \Elementor\Core\DynamicTags\Manager $manager ): void {
 		require_once KIVUN_DIR . 'elementor/tags/class-course-tags.php';
 		require_once KIVUN_DIR . 'elementor/tags/class-job-tags.php';
+		require_once KIVUN_DIR . 'elementor/tags/class-workshop-tags.php';
 
 		// Register the Kivun group so all tags appear under one section
 		$manager->register_group( 'kivun', [ 'title' => __( 'Kivun Center', 'kivun' ) ] );
@@ -30,6 +31,11 @@ class Kivun_Elementor {
 			Kivun_Tag_Job_Salary::class,
 			Kivun_Tag_Job_Requirements::class,
 			Kivun_Tag_Job_Deadline::class,
+			Kivun_Tag_Workshop_Date::class,
+			Kivun_Tag_Workshop_Duration::class,
+			Kivun_Tag_Workshop_Location::class,
+			Kivun_Tag_Workshop_Audience::class,
+			Kivun_Tag_Workshop_Capacity::class,
 		] as $class ) {
 			$manager->register( new $class() );
 		}

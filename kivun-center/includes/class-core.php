@@ -9,9 +9,11 @@ class Kivun_Core {
 		Kivun_Post_Types::init();
 		Kivun_Shortcodes::init();
 		Kivun_Courses::init();
+		Kivun_Workshops::init();
 		Kivun_Jobs::init();
 		Kivun_Employer::init();
 		Kivun_Admin::init();
+		Kivun_Admin_Settings::init();
 		Kivun_WooCommerce::init();
 
 		// Elementor — only when Elementor Pro is active
@@ -35,9 +37,11 @@ class Kivun_Core {
 			'class-mailer',
 			'class-woocommerce',
 			'class-admin',
+			'class-workshops',
 		] as $file ) {
 			require_once $dir . $file . '.php';
 		}
+		require_once KIVUN_DIR . 'admin/class-admin-settings.php';
 		require_once KIVUN_DIR . 'shortcodes/class-shortcodes.php';
 	}
 

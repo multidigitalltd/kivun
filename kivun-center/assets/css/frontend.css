@@ -170,6 +170,17 @@
 .kivun-job-card__deadline { font-size: .83rem; color: var(--kivun-muted); }
 .kivun-job-apply-inline { margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid var(--kivun-border); }
 
+/* ── Interest / Lead form ────────────────────────────────────────────────── */
+.kivun-interest {
+	margin-top: 2rem;
+	border: 2px dashed var(--kivun-border);
+	border-radius: var(--kivun-radius);
+	padding: 1.5rem;
+	background: #f0f9ff;
+}
+.kivun-interest__title { margin: 0 0 .3rem; font-size: 1.15rem; color: var(--kivun-primary); }
+.kivun-interest__sub   { margin: 0 0 1.25rem; font-size: .9rem; color: var(--kivun-muted); }
+
 /* ── Employer dashboard ──────────────────────────────────────────────────── */
 .kivun-employer-dashboard { font-family: inherit; }
 .kivun-dashboard-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem; }
