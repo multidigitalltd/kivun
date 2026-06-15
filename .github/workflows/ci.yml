@@ -27,10 +27,13 @@ jobs:
 
       - name: Install PHPCS + WPCS
         run: |
+          # Allow the WPCS installer plugin; it auto-registers wpcs +
+          # PHPCSExtra + PHPCSUtils on installed_paths during install.
           composer global config --no-plugins allow-plugins.dealerdirect/phpcodesniffer-composer-installer true
           composer global require squizlabs/php_codesniffer wp-coding-standards/wpcs --no-progress
-          VENDOR=$(composer global config vendor-dir 2>/dev/null)
-          phpcs --config-set installed_paths "$VENDOR/wp-coding-standards/wpcs,$VENDOR/phpcsstandards/phpcsextra,$VENDOR/phpcsstandards/phpcsutils"
+
+      - name: Verify standard is available
+        run: phpcs -i
 
       - name: Run PHPCS
         run: phpcs --standard=WordPress --extensions=php --ignore=*/vendor/* kivun-center/
