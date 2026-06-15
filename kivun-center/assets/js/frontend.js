@@ -199,4 +199,98 @@
 		});
 	});
 
+	// ── Employer dashboard tabs ───────────────────────────────────────────────────
+	$(document).on('click', '.kivun-tab', function () {
+		var tab = $(this).data('tab');
+		var $dash = $(this).closest('.kivun-employer-dashboard');
+
+		$dash.find('.kivun-tab').removeClass('is-active');
+		$(this).addClass('is-active');
+
+		$dash.find('.kivun-tab-panel').removeClass('is-active');
+		$dash.find('.kivun-tab-panel[data-panel="' + tab + '"]').addClass('is-active');
+	});
+
+	// Jump from a job row's submissions count straight into the filtered list.
+	$(document).on('click', '.kivun-view-job-apps', function () {
+		var jobId = String($(this).data('job'));
+		var $dash = $(this).closest('.kivun-employer-dashboard');
+
+		$dash.find('.kivun-tab[data-tab="applications"]').trigger('click');
+		$dash.find('#kivun-apps-filter-job').val(jobId);
+		filterApplications();
+	});
+
+	// ── Applications filtering ────────────────────────────────────────────────────
+	$(document).on('input', '#kivun-apps-search', function () {
+		clearTimeout(filterTimeout);
+		filterTimeout = setTimeout(filterApplications, 200);
+	});
+	$(document).on('change', '#kivun-apps-filter-job, #kivun-apps-filter-status', filterApplications);
+
+	function filterApplications() {
+		var $rows = $('.kivun-app-row');
+		if (!$rows.length) return;
+
+		var term   = ($('#kivun-apps-search').val() || '').toLowerCase().trim();
+		var jobId  = $('#kivun-apps-filter-job').val() || '';
+		var status = $('#kivun-apps-filter-status').val() || '';
+		var shown  = 0;
+
+		$rows.each(function () {
+			var $row = $(this);
+			var ok =
+				(!term   || ($row.data('search') || '').indexOf(term) !== -1) &&
+				(!jobId  || String($row.data('job')) === jobId) &&
+				(!status || String($row.data('status')) === status);
+
+			$row.toggle(ok);
+			if (ok) shown++;
+		});
+
+		$('.kivun-apps-empty').toggle(shown === 0);
+	}
+
+	// ── Application status update (employer) ──────────────────────────────────────
+	$(document).on('change', '.kivun-app-status-select', function () {
+		var $select = $(this);
+		var $row    = $select.closest('.kivun-app-row');
+		var $ind    = $select.siblings('.kivun-saved-indicator');
+
+		$ind.hide();
+
+		$.post(kivun.ajax_url, {
+			action: 'kivun_employer_update_app',
+			nonce:  kivun.nonce,
+			app_id: $select.data('app'),
+			status: $select.val(),
+		}, function (res) {
+			if (res.success) {
+				$row.attr('data-status', res.data.status).data('status', res.data.status);
+				$ind.text(kivun.i18n.saved).css('color', '#16a34a').show().delay(1600).fadeOut();
+			} else {
+				$ind.text(kivun.i18n.save_error).css('color', '#dc2626').show();
+			}
+		}).fail(function () {
+			$ind.text(kivun.i18n.save_error).css('color', '#dc2626').show();
+		});
+	});
+
+	// ── Application note auto-save on blur (employer) ─────────────────────────────
+	$(document).on('blur', '.kivun-app-note', function () {
+		var $ta  = $(this);
+		var $ind = $ta.closest('.kivun-app-row').find('.kivun-saved-indicator');
+
+		$.post(kivun.ajax_url, {
+			action: 'kivun_employer_app_note',
+			nonce:  kivun.nonce,
+			app_id: $ta.data('app'),
+			note:   $ta.val(),
+		}, function (res) {
+			if (res.success) {
+				$ind.text(kivun.i18n.saved).css('color', '#16a34a').show().delay(1600).fadeOut();
+			}
+		});
+	});
+
 }(jQuery));

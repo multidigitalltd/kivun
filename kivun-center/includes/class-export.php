@@ -9,12 +9,18 @@ class Kivun_Export {
 
 	public static function handle(): void {
 		check_admin_referer( 'kivun_export' );
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( 'Unauthorized' );
-		}
 
 		$type    = sanitize_key( $_GET['type']    ?? '' );
 		$post_id = absint( $_GET['post_id']       ?? 0 );
+
+		// Employers may export applications, restricted to their own jobs.
+		if ( ! current_user_can( 'manage_options' ) ) {
+			if ( $type !== 'applications' || ! current_user_can( 'kivun_employer' ) ) {
+				wp_die( 'Unauthorized' );
+			}
+			self::export_applications( $post_id, get_current_user_id() );
+			return;
+		}
 
 		match ( $type ) {
 			'registrations' => self::export_registrations( $post_id ),
@@ -76,12 +82,18 @@ class Kivun_Export {
 
 	// ── Applications CSV ──────────────────────────────────────────────────────
 
-	private static function export_applications( int $post_id ): void {
+	private static function export_applications( int $post_id, int $author_id = 0 ): void {
 		global $wpdb;
 
-		$where = $post_id
-			? $wpdb->prepare( 'WHERE a.job_id = %d', $post_id )
-			: '';
+		$conds = [];
+		if ( $post_id ) {
+			$conds[] = $wpdb->prepare( 'a.job_id = %d', $post_id );
+		}
+		// Restrict to a single employer's own jobs (frontend export).
+		if ( $author_id ) {
+			$conds[] = $wpdb->prepare( 'p.post_author = %d', $author_id );
+		}
+		$where = $conds ? 'WHERE ' . implode( ' AND ', $conds ) : '';
 
 		$rows = $wpdb->get_results(
 			"SELECT a.*, p.post_title AS job_name

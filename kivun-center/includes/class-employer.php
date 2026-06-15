@@ -9,6 +9,27 @@ class Kivun_Employer {
 		add_action( 'wp_ajax_kivun_update_job',          [ __CLASS__, 'ajax_update_job' ] );
 		add_action( 'wp_ajax_kivun_register_employer',        [ __CLASS__, 'ajax_register_employer' ] );
 		add_action( 'wp_ajax_nopriv_kivun_register_employer', [ __CLASS__, 'ajax_register_employer' ] );
+
+		// Application management from the employer dashboard
+		add_action( 'wp_ajax_kivun_employer_update_app',  [ __CLASS__, 'ajax_update_application' ] );
+		add_action( 'wp_ajax_kivun_employer_app_note',    [ __CLASS__, 'ajax_save_application_note' ] );
+	}
+
+	/**
+	 * Application status labels, shared by the dashboard template, the AJAX
+	 * validators and the admin CRM so the vocabulary stays in one place.
+	 *
+	 * @return array<string,string>
+	 */
+	public static function app_statuses(): array {
+		return [
+			'new'       => __( 'חדש', 'kivun' ),
+			'viewed'    => __( 'נצפה', 'kivun' ),
+			'contacted' => __( 'נוצר קשר', 'kivun' ),
+			'interview' => __( 'מוזמן לראיון', 'kivun' ),
+			'hired'     => __( 'גויס ✓', 'kivun' ),
+			'rejected'  => __( 'לא מתאים', 'kivun' ),
+		];
 	}
 
 	// ── Post new job ──────────────────────────────────────────────────────────
@@ -159,6 +180,131 @@ class Kivun_Employer {
 		wp_send_json_success( [ 'message' => __( 'החשבון נוצר! כעת תוכל/י להתחבר ולפרסם משרות.', 'kivun' ) ] );
 	}
 
+	// ── Application management (employer dashboard) ───────────────────────────
+
+	public static function ajax_update_application(): void {
+		check_ajax_referer( 'kivun_nonce', 'nonce' );
+		self::require_employer();
+
+		$app_id = absint( $_POST['app_id'] ?? 0 );
+		$status = sanitize_key( $_POST['status'] ?? '' );
+
+		if ( ! array_key_exists( $status, self::app_statuses() ) ) {
+			wp_send_json_error( [ 'message' => __( 'סטטוס לא תקין.', 'kivun' ) ] );
+		}
+
+		$app = self::verify_application_owner( $app_id );
+
+		if ( $app->status === $status ) {
+			wp_send_json_success( [ 'status' => $status ] );
+		}
+
+		global $wpdb;
+		$wpdb->update(
+			$wpdb->prefix . 'kivun_applications',
+			[ 'status' => $status ],
+			[ 'id'     => $app_id ],
+			[ '%s' ],
+			[ '%d' ]
+		);
+
+		/**
+		 * Fires after an employer changes an application's status.
+		 * Useful for notifying the applicant (e.g. interview invitation).
+		 */
+		do_action( 'kivun_application_status_changed', (int) $app_id, $status, $app->status, $app );
+
+		wp_send_json_success( [ 'status' => $status ] );
+	}
+
+	public static function ajax_save_application_note(): void {
+		check_ajax_referer( 'kivun_nonce', 'nonce' );
+		self::require_employer();
+
+		$app_id = absint( $_POST['app_id'] ?? 0 );
+		$note   = sanitize_textarea_field( $_POST['note'] ?? '' );
+
+		self::verify_application_owner( $app_id );
+
+		global $wpdb;
+		$wpdb->update(
+			$wpdb->prefix . 'kivun_applications',
+			[ 'notes' => $note ],
+			[ 'id'    => $app_id ],
+			[ '%s' ],
+			[ '%d' ]
+		);
+
+		wp_send_json_success();
+	}
+
+	/**
+	 * Fetch every application addressed to the current employer's jobs.
+	 *
+	 * @return array<int,object>
+	 */
+	public static function get_applications( int $user_id ): array {
+		global $wpdb;
+
+		if ( current_user_can( 'manage_options' ) ) {
+			return $wpdb->get_results(
+				"SELECT a.*, p.post_title AS job_title, p.post_author AS job_author
+				 FROM {$wpdb->prefix}kivun_applications a
+				 INNER JOIN {$wpdb->posts} p ON p.ID = a.job_id
+				 WHERE p.post_type = 'kivun_job'
+				 ORDER BY a.created_at DESC"
+			);
+		}
+
+		return $wpdb->get_results( $wpdb->prepare(
+			"SELECT a.*, p.post_title AS job_title, p.post_author AS job_author
+			 FROM {$wpdb->prefix}kivun_applications a
+			 INNER JOIN {$wpdb->posts} p ON p.ID = a.job_id
+			 WHERE p.post_type = 'kivun_job' AND p.post_author = %d
+			 ORDER BY a.created_at DESC",
+			$user_id
+		) );
+	}
+
+	/**
+	 * Count applications (and unread "new" ones) per job for the given employer.
+	 *
+	 * @return array<int,array{total:int,new:int}>  Keyed by job_id.
+	 */
+	public static function application_counts( int $user_id ): array {
+		global $wpdb;
+
+		$rows = current_user_can( 'manage_options' )
+			? $wpdb->get_results(
+				"SELECT a.job_id,
+						COUNT(*) AS total,
+						SUM( CASE WHEN a.status = 'new' THEN 1 ELSE 0 END ) AS new_count
+				 FROM {$wpdb->prefix}kivun_applications a
+				 INNER JOIN {$wpdb->posts} p ON p.ID = a.job_id
+				 WHERE p.post_type = 'kivun_job'
+				 GROUP BY a.job_id"
+			)
+			: $wpdb->get_results( $wpdb->prepare(
+				"SELECT a.job_id,
+						COUNT(*) AS total,
+						SUM( CASE WHEN a.status = 'new' THEN 1 ELSE 0 END ) AS new_count
+				 FROM {$wpdb->prefix}kivun_applications a
+				 INNER JOIN {$wpdb->posts} p ON p.ID = a.job_id
+				 WHERE p.post_type = 'kivun_job' AND p.post_author = %d
+				 GROUP BY a.job_id",
+				$user_id
+			) );
+
+		$counts = [];
+		foreach ( $rows as $r ) {
+			$counts[ (int) $r->job_id ] = [
+				'total' => (int) $r->total,
+				'new'   => (int) $r->new_count,
+			];
+		}
+		return $counts;
+	}
+
 	// ── Helpers ───────────────────────────────────────────────────────────────
 
 	private static function require_employer(): void {
@@ -176,5 +322,35 @@ class Kivun_Employer {
 		) {
 			wp_send_json_error( [ 'message' => __( 'אין לך הרשאה לנהל משרה זו.', 'kivun' ) ] );
 		}
+	}
+
+	/**
+	 * Ensure the current employer owns the job the application belongs to.
+	 * Dies via wp_send_json_error() on failure; returns the application row.
+	 */
+	private static function verify_application_owner( int $app_id ): object {
+		global $wpdb;
+
+		$app = $app_id
+			? $wpdb->get_row( $wpdb->prepare(
+				"SELECT * FROM {$wpdb->prefix}kivun_applications WHERE id = %d",
+				$app_id
+			) )
+			: null;
+
+		if ( ! $app ) {
+			wp_send_json_error( [ 'message' => __( 'ההגשה לא נמצאה.', 'kivun' ) ] );
+		}
+
+		$post = get_post( $app->job_id );
+		if (
+			! $post ||
+			$post->post_type !== 'kivun_job' ||
+			( (int) $post->post_author !== get_current_user_id() && ! current_user_can( 'manage_options' ) )
+		) {
+			wp_send_json_error( [ 'message' => __( 'אין לך הרשאה לנהל הגשה זו.', 'kivun' ) ] );
+		}
+
+		return $app;
 	}
 }

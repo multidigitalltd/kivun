@@ -76,6 +76,8 @@ class Kivun_Core {
 				'submit'         => __( 'שלח', 'kivun' ),
 				'confirm_delete' => __( 'האם למחוק משרה זו?', 'kivun' ),
 				'error_generic'  => __( 'אירעה שגיאה, נסה שוב.', 'kivun' ),
+				'saved'          => __( '✓ נשמר', 'kivun' ),
+				'save_error'     => __( 'שגיאה', 'kivun' ),
 			],
 		] );
 	}
