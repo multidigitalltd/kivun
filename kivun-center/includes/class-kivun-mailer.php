@@ -1,17 +1,31 @@
 <?php
+/**
+ * Email sending for registrations, leads, and job applications.
+ *
+ * @package Kivun
+ */
+
 defined( 'ABSPATH' ) || exit;
 
+/**
+ * Handles outgoing email notifications for the plugin.
+ */
 class Kivun_Mailer {
 
 	/**
 	 * Send course registration notification to admin + confirmation to registrant.
+	 *
+	 * @param int   $course_id The course post ID.
+	 * @param array $data      The registration data.
+	 * @return void
 	 */
 	public static function send_course_registration( int $course_id, array $data ): void {
-		$course_title   = get_the_title( $course_id );
-		$admin_email    = get_post_meta( $course_id, '_kivun_contact_email', true ) ?: get_option( 'admin_email' );
-		$site_name      = get_bloginfo( 'name' );
+		$course_title = get_the_title( $course_id );
+		$contact_meta = get_post_meta( $course_id, '_kivun_contact_email', true );
+		$admin_email  = $contact_meta ? $contact_meta : get_option( 'admin_email' );
+		$site_name    = get_bloginfo( 'name' );
 
-		// To admin
+		// To admin.
 		wp_mail(
 			$admin_email,
 			sprintf( '[%s] הרשמה חדשה לקורס: %s', $site_name, $course_title ),
@@ -19,7 +33,7 @@ class Kivun_Mailer {
 			self::headers()
 		);
 
-		// Confirmation to registrant
+		// Confirmation to registrant.
 		wp_mail(
 			$data['email'],
 			sprintf( 'אישור הרשמה — %s', $course_title ),
@@ -31,17 +45,24 @@ class Kivun_Mailer {
 	/**
 	 * Send lead/interest notification to admin — no confirmation to visitor.
 	 *
-	 * @param int    $post_id   Course or workshop ID.
-	 * @param array  $data      name, email, phone, message.
-	 * @param string $type      'lead' | 'workshop'
+	 * @param int    $post_id Course or workshop ID.
+	 * @param array  $data    Name, email, phone, message.
+	 * @param string $type    Either 'lead' or 'workshop'.
+	 * @return void
 	 */
 	public static function send_lead_notification( int $post_id, array $data, string $type ): void {
-		$title      = get_the_title( $post_id );
-		$admin_email = get_post_meta( $post_id, '_kivun_contact_email', true )
-			?: get_option( 'kivun_settings', [] )['admin_email']
-			?: get_option( 'admin_email' );
+		$title         = get_the_title( $post_id );
+		$contact_meta  = get_post_meta( $post_id, '_kivun_contact_email', true );
+		$settings_mail = get_option( 'kivun_settings', array() )['admin_email'] ?? '';
+		if ( $contact_meta ) {
+			$admin_email = $contact_meta;
+		} elseif ( $settings_mail ) {
+			$admin_email = $settings_mail;
+		} else {
+			$admin_email = get_option( 'admin_email' );
+		}
 
-		$subject = $type === 'workshop'
+		$subject = 'workshop' === $type
 			? sprintf( '[%s] הרשמה חדשה לסדנה: %s', get_bloginfo( 'name' ), $title )
 			: sprintf( '[%s] מתעניין/ת חדש/ה — %s', get_bloginfo( 'name' ), $title );
 
@@ -54,7 +75,7 @@ class Kivun_Mailer {
 				<li><strong>הערות:</strong> %s</li>
 			</ul>
 			<p style="color:#b91c1c;font-weight:bold">⚠️ נא לחזור אל הליד בהקדם.</p>',
-			$type === 'workshop' ? 'הרשמה לסדנה' : 'פנייה מתעניין',
+			'workshop' === $type ? 'הרשמה לסדנה' : 'פנייה מתעניין',
 			esc_html( $title ),
 			esc_html( $data['name'] ),
 			esc_html( $data['phone'] ),
@@ -67,9 +88,14 @@ class Kivun_Mailer {
 
 	/**
 	 * Send CV application to employer (email hidden from frontend).
+	 *
+	 * @param string $employer_email The employer's email address.
+	 * @param string $job_title      The job title.
+	 * @param array  $data           The applicant data.
+	 * @return void
 	 */
 	public static function send_application( string $employer_email, string $job_title, array $data ): void {
-		$attachments = [];
+		$attachments = array();
 		if ( ! empty( $data['cv_path'] ) && file_exists( $data['cv_path'] ) ) {
 			$attachments[] = $data['cv_path'];
 		}
@@ -83,13 +109,25 @@ class Kivun_Mailer {
 		);
 	}
 
+	/**
+	 * Build the default email headers.
+	 *
+	 * @return array
+	 */
 	private static function headers(): array {
-		return [
+		return array(
 			'Content-Type: text/html; charset=UTF-8',
 			sprintf( 'From: %s <%s>', get_bloginfo( 'name' ), get_option( 'admin_email' ) ),
-		];
+		);
 	}
 
+	/**
+	 * Build the admin notification body for a course registration.
+	 *
+	 * @param string $course The course title.
+	 * @param array  $d      The registration data.
+	 * @return string
+	 */
 	private static function course_admin_body( string $course, array $d ): string {
 		return sprintf(
 			'<p>הרשמה חדשה לקורס <strong>%s</strong></p>
@@ -107,6 +145,14 @@ class Kivun_Mailer {
 		);
 	}
 
+	/**
+	 * Build the confirmation email body for a registrant.
+	 *
+	 * @param string $course The course title.
+	 * @param string $name   The registrant's name.
+	 * @param string $site   The site name.
+	 * @return string
+	 */
 	private static function course_confirmation_body( string $course, string $name, string $site ): string {
 		return sprintf(
 			'<p>שלום %s,</p>
@@ -119,6 +165,13 @@ class Kivun_Mailer {
 		);
 	}
 
+	/**
+	 * Build the application notification body for an employer.
+	 *
+	 * @param string $job The job title.
+	 * @param array  $d   The applicant data.
+	 * @return string
+	 */
 	private static function application_body( string $job, array $d ): string {
 		return sprintf(
 			'<p>קיבלת מועמדות חדשה למשרה <strong>%s</strong></p>

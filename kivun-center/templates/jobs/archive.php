@@ -1,9 +1,30 @@
 <?php
+/**
+ * Template: jobs board archive with filters.
+ *
+ * @package Kivun
+ */
+
 defined( 'ABSPATH' ) || exit;
 
-$scopes  = get_terms( [ 'taxonomy' => 'kivun_job_scope',   'hide_empty' => true ] );
-$regions = get_terms( [ 'taxonomy' => 'kivun_job_region',  'hide_empty' => true ] );
-$fields  = get_terms( [ 'taxonomy' => 'kivun_job_field',   'hide_empty' => true ] );
+$scopes  = get_terms(
+	array(
+		'taxonomy'   => 'kivun_job_scope',
+		'hide_empty' => true,
+	)
+);
+$regions = get_terms(
+	array(
+		'taxonomy'   => 'kivun_job_region',
+		'hide_empty' => true,
+	)
+);
+$fields  = get_terms(
+	array(
+		'taxonomy'   => 'kivun_job_field',
+		'hide_empty' => true,
+	)
+);
 ?>
 <div class="kivun-jobs-wrap">
 
@@ -16,8 +37,8 @@ $fields  = get_terms( [ 'taxonomy' => 'kivun_job_field',   'hide_empty' => true 
 		<div class="kivun-filter-group">
 			<select id="kivun-filter-scope">
 				<option value=""><?php esc_html_e( 'כל ההיקפים', 'kivun' ); ?></option>
-				<?php foreach ( $scopes as $term ) : ?>
-					<option value="<?php echo esc_attr( $term->slug ); ?>"><?php echo esc_html( $term->name ); ?></option>
+				<?php foreach ( $scopes as $job_term ) : ?>
+					<option value="<?php echo esc_attr( $job_term->slug ); ?>"><?php echo esc_html( $job_term->name ); ?></option>
 				<?php endforeach; ?>
 			</select>
 		</div>
@@ -25,8 +46,8 @@ $fields  = get_terms( [ 'taxonomy' => 'kivun_job_field',   'hide_empty' => true 
 		<div class="kivun-filter-group">
 			<select id="kivun-filter-region">
 				<option value=""><?php esc_html_e( 'כל האזורים', 'kivun' ); ?></option>
-				<?php foreach ( $regions as $term ) : ?>
-					<option value="<?php echo esc_attr( $term->slug ); ?>"><?php echo esc_html( $term->name ); ?></option>
+				<?php foreach ( $regions as $job_term ) : ?>
+					<option value="<?php echo esc_attr( $job_term->slug ); ?>"><?php echo esc_html( $job_term->name ); ?></option>
 				<?php endforeach; ?>
 			</select>
 		</div>
@@ -34,8 +55,8 @@ $fields  = get_terms( [ 'taxonomy' => 'kivun_job_field',   'hide_empty' => true 
 		<div class="kivun-filter-group">
 			<select id="kivun-filter-field">
 				<option value=""><?php esc_html_e( 'כל התחומים', 'kivun' ); ?></option>
-				<?php foreach ( $fields as $term ) : ?>
-					<option value="<?php echo esc_attr( $term->slug ); ?>"><?php echo esc_html( $term->name ); ?></option>
+				<?php foreach ( $fields as $job_term ) : ?>
+					<option value="<?php echo esc_attr( $job_term->slug ); ?>"><?php echo esc_html( $job_term->name ); ?></option>
 				<?php endforeach; ?>
 			</select>
 		</div>
@@ -49,7 +70,10 @@ $fields  = get_terms( [ 'taxonomy' => 'kivun_job_field',   'hide_empty' => true 
 
 	<div class="kivun-jobs-board">
 		<?php if ( $query->have_posts() ) : ?>
-			<?php while ( $query->have_posts() ) : $query->the_post(); ?>
+			<?php
+			while ( $query->have_posts() ) :
+				$query->the_post();
+				?>
 				<?php kivun_get_template( 'jobs/card.php' ); ?>
 			<?php endwhile; ?>
 		<?php else : ?>

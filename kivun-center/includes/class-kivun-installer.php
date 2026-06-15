@@ -1,31 +1,56 @@
 <?php
+/**
+ * Plugin activation, deactivation, and database setup routines.
+ *
+ * @package Kivun
+ */
+
 defined( 'ABSPATH' ) || exit;
 
+/**
+ * Handles plugin activation, deactivation, tables, roles, and seed terms.
+ */
 class Kivun_Installer {
 
+	/**
+	 * Runs activation tasks: tables, roles, post types, and seed terms.
+	 *
+	 * @return void
+	 */
 	public static function activate(): void {
 		self::create_tables();
 		self::add_roles();
 
-		// CPTs must be registered before seeding terms
-		require_once KIVUN_DIR . 'includes/class-post-types.php';
+		// CPTs must be registered before seeding terms.
+		require_once KIVUN_DIR . 'includes/class-kivun-post-types.php';
 		Kivun_Post_Types::register();
 
 		self::seed_default_terms();
 		flush_rewrite_rules();
 	}
 
+	/**
+	 * Runs deactivation tasks.
+	 *
+	 * @return void
+	 */
 	public static function deactivate(): void {
 		flush_rewrite_rules();
 	}
 
+	/**
+	 * Creates the plugin custom database tables.
+	 *
+	 * @return void
+	 */
 	private static function create_tables(): void {
 		global $wpdb;
 		$collate = $wpdb->get_charset_collate();
 
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 
-		dbDelta( "
+		dbDelta(
+			"
 			CREATE TABLE IF NOT EXISTS {$wpdb->prefix}kivun_registrations (
 				id          bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
 				course_id   bigint(20) UNSIGNED NOT NULL,
@@ -42,9 +67,11 @@ class Kivun_Installer {
 				KEY type (type),
 				KEY email (email)
 			) $collate;
-		" );
+		"
+		);
 
-		dbDelta( "
+		dbDelta(
+			"
 			CREATE TABLE IF NOT EXISTS {$wpdb->prefix}kivun_applications (
 				id               bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
 				job_id           bigint(20) UNSIGNED NOT NULL,
@@ -61,16 +88,22 @@ class Kivun_Installer {
 				KEY job_id (job_id),
 				KEY user_id (user_id)
 			) $collate;
-		" );
+		"
+		);
 
 		update_option( 'kivun_db_version', KIVUN_VERSION );
 	}
 
+	/**
+	 * Registers the custom employer role.
+	 *
+	 * @return void
+	 */
 	private static function add_roles(): void {
 		add_role(
 			'kivun_employer',
 			__( 'Employer', 'kivun' ),
-			[ 'read' => true ]
+			array( 'read' => true )
 		);
 	}
 
@@ -79,14 +112,14 @@ class Kivun_Installer {
 	 * Skips any term that already exists.
 	 */
 	private static function seed_default_terms(): void {
-		$defaults = [
-			'kivun_job_scope' => [
+		$defaults = array(
+			'kivun_job_scope'    => array(
 				'משרה מלאה',
 				'משרה חלקית',
 				'פרילנס',
 				'התנדבות',
-			],
-			'kivun_job_region' => [
+			),
+			'kivun_job_region'   => array(
 				'מרכז',
 				'תל אביב והסביבה',
 				'ירושלים',
@@ -96,8 +129,8 @@ class Kivun_Installer {
 				'שפלה',
 				'השרון',
 				'עבודה מהבית',
-			],
-			'kivun_job_field' => [
+			),
+			'kivun_job_field'    => array(
 				'חינוך והוראה',
 				'ייעוץ מקצועי',
 				'מכירות ושיווק',
@@ -108,22 +141,22 @@ class Kivun_Installer {
 				'אדמינסטרציה ומזכירות',
 				'כספים וחשבונאות',
 				'עיצוב ויצירה',
-			],
-			'kivun_course_cat' => [
+			),
+			'kivun_course_cat'   => array(
 				'כישורי עבודה',
 				'יזמות עסקית',
 				'פיתוח אישי',
 				'טכנולוגיה',
 				'שפות',
-			],
-			'kivun_workshop_cat' => [
+			),
+			'kivun_workshop_cat' => array(
 				'כישורי תקשורת',
 				'חיפוש עבודה',
 				'יזמות',
 				'מנהיגות',
 				'פיתוח אישי',
-			],
-		];
+			),
+		);
 
 		foreach ( $defaults as $taxonomy => $terms ) {
 			foreach ( $terms as $term_name ) {

@@ -1,4 +1,12 @@
-<?php defined( 'ABSPATH' ) || exit; ?>
+<?php
+/**
+ * Template: course interest form.
+ *
+ * @package Kivun
+ */
+
+defined( 'ABSPATH' ) || exit;
+?>
 <div class="kivun-interest" id="kivun-interest-<?php echo esc_attr( $post_id ); ?>">
 	<h3 class="kivun-interest__title"><?php esc_html_e( 'מתעניין/ת? נחזור אליך', 'kivun' ); ?></h3>
 	<p class="kivun-interest__sub"><?php esc_html_e( 'השאר פרטים ונציג שלנו יצור איתך קשר עם כל המידע.', 'kivun' ); ?></p>

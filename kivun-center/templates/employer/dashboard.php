@@ -1,6 +1,13 @@
 <?php
+/**
+ * Template: employer dashboard with jobs and applications tables.
+ *
+ * @package Kivun
+ */
+
 defined( 'ABSPATH' ) || exit;
 
+// phpcs:ignore WordPress.WP.Capabilities.Unknown -- Custom plugin capability.
 if ( ! is_user_logged_in() || ( ! current_user_can( 'kivun_employer' ) && ! current_user_can( 'manage_options' ) ) ) {
 	echo '<p class="kivun-notice">' . esc_html__( 'יש להתחבר כמעסיק כדי לגשת לאזור זה.', 'kivun' ) . '</p>';
 	echo do_shortcode( '[woocommerce_my_account]' );
@@ -8,18 +15,35 @@ if ( ! is_user_logged_in() || ( ! current_user_can( 'kivun_employer' ) && ! curr
 }
 
 $user_id = get_current_user_id();
-$jobs    = get_posts( [
-	'post_type'      => 'kivun_job',
-	'author'         => current_user_can( 'manage_options' ) ? 0 : $user_id,
-	'post_status'    => [ 'publish', 'draft', 'pending' ],
-	'posts_per_page' => -1,
-	'orderby'        => 'date',
-	'order'          => 'DESC',
-] );
+$jobs    = get_posts(
+	array(
+		'post_type'      => 'kivun_job',
+		'author'         => current_user_can( 'manage_options' ) ? 0 : $user_id,
+		'post_status'    => array( 'publish', 'draft', 'pending' ),
+		'posts_per_page' => -1,
+		'orderby'        => 'date',
+		'order'          => 'DESC',
+	)
+);
 
-$scopes  = get_terms( [ 'taxonomy' => 'kivun_job_scope',  'hide_empty' => false ] );
-$regions = get_terms( [ 'taxonomy' => 'kivun_job_region', 'hide_empty' => false ] );
-$fields  = get_terms( [ 'taxonomy' => 'kivun_job_field',  'hide_empty' => false ] );
+$scopes  = get_terms(
+	array(
+		'taxonomy'   => 'kivun_job_scope',
+		'hide_empty' => false,
+	)
+);
+$regions = get_terms(
+	array(
+		'taxonomy'   => 'kivun_job_region',
+		'hide_empty' => false,
+	)
+);
+$fields  = get_terms(
+	array(
+		'taxonomy'   => 'kivun_job_field',
+		'hide_empty' => false,
+	)
+);
 
 // Applications addressed to this employer's jobs.
 $applications = Kivun_Employer::get_applications( $user_id );
@@ -29,8 +53,8 @@ $app_statuses = Kivun_Employer::app_statuses();
 $total_apps = count( $applications );
 $new_apps   = 0;
 foreach ( $applications as $a ) {
-	if ( $a->status === 'new' ) {
-		$new_apps++;
+	if ( 'new' === $a->status ) {
+		++$new_apps;
 	}
 }
 
@@ -149,19 +173,23 @@ $upload = wp_upload_dir();
 					</tr>
 				</thead>
 				<tbody>
-				<?php foreach ( $jobs as $job ) :
-					$jc = $app_counts[ $job->ID ] ?? [ 'total' => 0, 'new' => 0 ];
-				?>
+				<?php
+				foreach ( $jobs as $job ) :
+					$jc = $app_counts[ $job->ID ] ?? array(
+						'total' => 0,
+						'new'   => 0,
+					);
+					?>
 					<tr data-job-row="<?php echo esc_attr( $job->ID ); ?>">
 						<td><?php echo esc_html( $job->post_title ); ?></td>
 						<td>
 							<span class="kivun-status kivun-status--<?php echo esc_attr( $job->post_status ); ?>">
 								<?php
-								$labels = [
+								$labels = array(
 									'publish' => 'פורסם',
 									'draft'   => 'טיוטה',
 									'pending' => 'ממתין לאישור',
-								];
+								);
 								echo esc_html( $labels[ $job->post_status ] ?? $job->post_status );
 								?>
 							</span>
@@ -169,7 +197,10 @@ $upload = wp_upload_dir();
 						<td>
 							<?php if ( $jc['total'] ) : ?>
 								<button type="button" class="kivun-link-btn kivun-view-job-apps" data-job="<?php echo esc_attr( $job->ID ); ?>">
-									<?php echo esc_html( sprintf( _n( '%d הגשה', '%d הגשות', $jc['total'], 'kivun' ), $jc['total'] ) ); ?>
+									<?php
+									/* translators: %d: number of applications for this job. */
+									echo esc_html( sprintf( _n( '%d הגשה', '%d הגשות', $jc['total'], 'kivun' ), $jc['total'] ) );
+									?>
 								</button>
 								<?php if ( $jc['new'] ) : ?>
 									<span class="kivun-tab-badge kivun-tab-badge--inline"><?php echo esc_html( $jc['new'] ); ?> <?php esc_html_e( 'חדש', 'kivun' ); ?></span>
@@ -221,11 +252,12 @@ $upload = wp_upload_dir();
 				<input type="search" id="kivun-apps-search" placeholder="<?php esc_attr_e( 'חיפוש לפי שם, אימייל או טלפון…', 'kivun' ); ?>">
 				<select id="kivun-apps-filter-job">
 					<option value=""><?php esc_html_e( 'כל המשרות', 'kivun' ); ?></option>
-					<?php foreach ( $jobs as $job ) :
+					<?php
+					foreach ( $jobs as $job ) :
 						if ( empty( $app_counts[ $job->ID ]['total'] ) ) {
 							continue;
 						}
-					?>
+						?>
 						<option value="<?php echo esc_attr( $job->ID ); ?>"><?php echo esc_html( $job->post_title ); ?></option>
 					<?php endforeach; ?>
 				</select>
@@ -252,12 +284,13 @@ $upload = wp_upload_dir();
 					</tr>
 				</thead>
 				<tbody>
-				<?php foreach ( $applications as $app ) :
-					$cv_url = ( $app->cv_file && file_exists( $app->cv_file ) )
+				<?php
+				foreach ( $applications as $app ) :
+					$cv_url      = ( $app->cv_file && file_exists( $app->cv_file ) )
 						? str_replace( $upload['basedir'], $upload['baseurl'], $app->cv_file )
 						: '';
 					$search_blob = strtolower( trim( $app->applicant_name . ' ' . $app->applicant_email . ' ' . $app->applicant_phone ) );
-				?>
+					?>
 					<tr
 						class="kivun-app-row"
 						data-app="<?php echo esc_attr( $app->id ); ?>"

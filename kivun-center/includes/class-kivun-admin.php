@@ -1,45 +1,70 @@
 <?php
+/**
+ * Admin metaboxes, columns, CRM views, and AJAX handlers for the plugin.
+ *
+ * @package Kivun
+ */
+
 defined( 'ABSPATH' ) || exit;
 
+/**
+ * Registers admin UI: metaboxes, list columns, CRM pages, and AJAX endpoints.
+ */
 class Kivun_Admin {
 
+	/**
+	 * Register all admin hooks.
+	 *
+	 * @return void
+	 */
 	public static function init(): void {
-		add_action( 'add_meta_boxes', [ __CLASS__, 'register_meta_boxes' ] );
-		add_action( 'save_post',      [ __CLASS__, 'save_meta' ], 10, 2 );
+		add_action( 'add_meta_boxes', array( __CLASS__, 'register_meta_boxes' ) );
+		add_action( 'save_post', array( __CLASS__, 'save_meta' ), 10, 2 );
 
-		// Admin columns
-		add_filter( 'manage_kivun_job_posts_columns',       [ __CLASS__, 'job_columns' ] );
-		add_action( 'manage_kivun_job_posts_custom_column', [ __CLASS__, 'job_column_values' ], 10, 2 );
+		// Admin columns.
+		add_filter( 'manage_kivun_job_posts_columns', array( __CLASS__, 'job_columns' ) );
+		add_action( 'manage_kivun_job_posts_custom_column', array( __CLASS__, 'job_column_values' ), 10, 2 );
 
-		add_filter( 'manage_kivun_course_posts_columns',       [ __CLASS__, 'course_columns' ] );
-		add_action( 'manage_kivun_course_posts_custom_column', [ __CLASS__, 'course_column_values' ], 10, 2 );
+		add_filter( 'manage_kivun_course_posts_columns', array( __CLASS__, 'course_columns' ) );
+		add_action( 'manage_kivun_course_posts_custom_column', array( __CLASS__, 'course_column_values' ), 10, 2 );
 
-		// Applications & Registrations admin pages
-		add_action( 'admin_menu', [ __CLASS__, 'admin_menu' ] );
+		// Applications & Registrations admin pages.
+		add_action( 'admin_menu', array( __CLASS__, 'admin_menu' ) );
 
-		// WC product search for course metabox
-		add_action( 'wp_ajax_kivun_search_products', [ __CLASS__, 'ajax_search_products' ] );
+		// WC product search for course metabox.
+		add_action( 'wp_ajax_kivun_search_products', array( __CLASS__, 'ajax_search_products' ) );
 
-		// Inline status update
-		add_action( 'wp_ajax_kivun_update_status', [ __CLASS__, 'ajax_update_status' ] );
+		// Inline status update.
+		add_action( 'wp_ajax_kivun_update_status', array( __CLASS__, 'ajax_update_status' ) );
 
-		// Notes save
-		add_action( 'wp_ajax_kivun_save_note', [ __CLASS__, 'ajax_save_note' ] );
+		// Notes save.
+		add_action( 'wp_ajax_kivun_save_note', array( __CLASS__, 'ajax_save_note' ) );
 	}
 
-	// ── Meta boxes ─────────────────────────────────────────────────────────────
+	// ── Meta boxes ─────────────────────────────────────────────────────────────.
 
+	/**
+	 * Register all post-type metaboxes.
+	 *
+	 * @return void
+	 */
 	public static function register_meta_boxes(): void {
-		add_meta_box( 'kivun_course_details',   'פרטי קורס',          [ __CLASS__, 'course_meta_box' ],          'kivun_course',   'normal', 'high' );
-		add_meta_box( 'kivun_workshop_details', 'פרטי סדנה',          [ __CLASS__, 'workshop_meta_box' ],        'kivun_workshop', 'normal', 'high' );
-		add_meta_box( 'kivun_job_details',      'פרטי משרה',          [ __CLASS__, 'job_meta_box' ],             'kivun_job',      'normal', 'high' );
+		add_meta_box( 'kivun_course_details', 'פרטי קורס', array( __CLASS__, 'course_meta_box' ), 'kivun_course', 'normal', 'high' );
+		add_meta_box( 'kivun_workshop_details', 'פרטי סדנה', array( __CLASS__, 'workshop_meta_box' ), 'kivun_workshop', 'normal', 'high' );
+		add_meta_box( 'kivun_job_details', 'פרטי משרה', array( __CLASS__, 'job_meta_box' ), 'kivun_job', 'normal', 'high' );
 
-		// CRM metaboxes
-		add_meta_box( 'kivun_course_leads',   'הרשמות ולידים',   [ __CLASS__, 'registrations_metabox' ], 'kivun_course',   'normal', 'default' );
-		add_meta_box( 'kivun_workshop_leads', 'הרשמות לסדנה',    [ __CLASS__, 'registrations_metabox' ], 'kivun_workshop', 'normal', 'default' );
-		add_meta_box( 'kivun_job_apps',       'מועמדויות וקו"ח', [ __CLASS__, 'applications_metabox' ], 'kivun_job',      'normal', 'default' );
+		// CRM metaboxes.
+		add_meta_box( 'kivun_course_leads', 'הרשמות ולידים', array( __CLASS__, 'registrations_metabox' ), 'kivun_course', 'normal', 'default' );
+		add_meta_box( 'kivun_workshop_leads', 'הרשמות לסדנה', array( __CLASS__, 'registrations_metabox' ), 'kivun_workshop', 'normal', 'default' );
+		add_meta_box( 'kivun_job_apps', 'מועמדויות וקו"ח', array( __CLASS__, 'applications_metabox' ), 'kivun_job', 'normal', 'default' );
 	}
 
+	/**
+	 * Render the course details metabox.
+	 *
+	 * @param \WP_Post $post The course post being edited.
+	 * @return void
+	 */
 	public static function course_meta_box( \WP_Post $post ): void {
 		wp_nonce_field( 'kivun_save_course', 'kivun_course_nonce' );
 		$f = fn( $key ) => get_post_meta( $post->ID, $key, true );
@@ -108,6 +133,12 @@ class Kivun_Admin {
 		<?php
 	}
 
+	/**
+	 * Render the workshop details metabox.
+	 *
+	 * @param \WP_Post $post The workshop post being edited.
+	 * @return void
+	 */
 	public static function workshop_meta_box( \WP_Post $post ): void {
 		wp_nonce_field( 'kivun_save_workshop', 'kivun_workshop_nonce' );
 		$f = fn( $key ) => get_post_meta( $post->ID, $key, true );
@@ -144,35 +175,44 @@ class Kivun_Admin {
 		<?php
 	}
 
-	// ── CRM: Registrations / Leads metabox ───────────────────────────────────
+	// ── CRM: Registrations / Leads metabox ───────────────────────────────────.
 
+	/**
+	 * Render the registrations / leads CRM metabox for a course or workshop.
+	 *
+	 * @param \WP_Post $post The course or workshop post.
+	 * @return void
+	 */
 	public static function registrations_metabox( \WP_Post $post ): void {
 		global $wpdb;
 
-		$rows = $wpdb->get_results( $wpdb->prepare(
-			"SELECT * FROM {$wpdb->prefix}kivun_registrations WHERE course_id = %d ORDER BY created_at DESC",
-			$post->ID
-		) );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT * FROM {$wpdb->prefix}kivun_registrations WHERE course_id = %d ORDER BY created_at DESC",
+				$post->ID
+			)
+		);
 
 		if ( ! $rows ) {
 			echo '<p style="color:#6b7280;padding:.5rem 0">' . esc_html__( 'אין הרשמות או לידים עדיין.', 'kivun' ) . '</p>';
 			return;
 		}
 
-		$reg_statuses = [
+		$reg_statuses = array(
 			'new'          => 'חדש',
 			'contacted'    => 'נוצר קשר',
 			'interested'   => 'מעוניין',
 			'enrolled'     => 'נרשם סופית',
 			'closed'       => 'נסגר ✓',
 			'not_relevant' => 'לא רלוונטי',
-		];
+		);
 
-		$type_labels = [
+		$type_labels = array(
 			'registration' => 'הרשמה',
 			'lead'         => 'מתעניין',
 			'workshop'     => 'סדנה',
-		];
+		);
 
 		printf(
 			'<p style="margin-bottom:.5rem"><a href="%s" class="button button-small">⬇ ייצוא CSV</a></p>',
@@ -211,38 +251,47 @@ class Kivun_Admin {
 				esc_html( $type ),
 				esc_attr( $r->message ?? '' ),
 				esc_html( wp_trim_words( $r->message ?? '', 8 ) ),
-				self::notes_input( 'registrations', (int) $r->id, $r->notes ?? '' ),
+				self::notes_input( 'registrations', (int) $r->id, $r->notes ?? '' ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built from escaped parts in notes_input.
 				esc_html( wp_date( 'd/m/Y H:i', strtotime( $r->created_at ) ) ),
-				self::status_select( 'registrations', (int) $r->id, $r->status, $reg_statuses )
+				self::status_select( 'registrations', (int) $r->id, $r->status, $reg_statuses ) // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built from escaped parts in status_select.
 			);
 		}
 
 		echo '</tbody></table></div>';
 	}
 
-	// ── CRM: Applications metabox ─────────────────────────────────────────────
+	// ── CRM: Applications metabox ─────────────────────────────────────────────.
 
+	/**
+	 * Render the applications CRM metabox for a job.
+	 *
+	 * @param \WP_Post $post The job post.
+	 * @return void
+	 */
 	public static function applications_metabox( \WP_Post $post ): void {
 		global $wpdb;
 
-		$rows = $wpdb->get_results( $wpdb->prepare(
-			"SELECT * FROM {$wpdb->prefix}kivun_applications WHERE job_id = %d ORDER BY created_at DESC",
-			$post->ID
-		) );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT * FROM {$wpdb->prefix}kivun_applications WHERE job_id = %d ORDER BY created_at DESC",
+				$post->ID
+			)
+		);
 
 		if ( ! $rows ) {
 			echo '<p style="color:#6b7280;padding:.5rem 0">' . esc_html__( 'אין מועמדויות עדיין.', 'kivun' ) . '</p>';
 			return;
 		}
 
-		$app_statuses = [
+		$app_statuses = array(
 			'new'       => 'חדש',
 			'viewed'    => 'נצפה',
 			'contacted' => 'נוצר קשר',
 			'interview' => 'מוזמן לראיון',
 			'hired'     => 'גויס ✓',
 			'rejected'  => 'לא מתאים',
-		];
+		);
 
 		$upload = wp_upload_dir();
 
@@ -287,16 +336,24 @@ class Kivun_Admin {
 				esc_html( $r->applicant_phone ),
 				esc_attr( $r->message ?? '' ),
 				esc_html( wp_trim_words( $r->message ?? '', 8 ) ),
-				self::notes_input( 'applications', (int) $r->id, $r->notes ?? '' ),
-				$cv_html,
+				self::notes_input( 'applications', (int) $r->id, $r->notes ?? '' ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built from escaped parts in notes_input.
+				$cv_html, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $cv_html is built with esc_url above.
 				esc_html( wp_date( 'd/m/Y H:i', strtotime( $r->created_at ) ) ),
-				self::status_select( 'applications', (int) $r->id, $r->status, $app_statuses )
+				self::status_select( 'applications', (int) $r->id, $r->status, $app_statuses ) // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built from escaped parts in status_select.
 			);
 		}
 
 		echo '</tbody></table></div>';
 	}
 
+	/**
+	 * Build an escaped notes textarea for a CRM row.
+	 *
+	 * @param string $table The CRM table key ('registrations' or 'applications').
+	 * @param int    $id    The row ID.
+	 * @param string $value The current note value.
+	 * @return string
+	 */
 	private static function notes_input( string $table, int $id, string $value ): string {
 		return sprintf(
 			'<textarea class="kivun-notes-input" data-table="%s" data-id="%d" rows="2" placeholder="%s">%s</textarea>',
@@ -307,30 +364,47 @@ class Kivun_Admin {
 		);
 	}
 
+	/**
+	 * AJAX handler: save an internal note on a CRM row.
+	 *
+	 * @return void
+	 */
 	public static function ajax_save_note(): void {
 		check_ajax_referer( 'kivun_admin_nonce', 'nonce' );
-		if ( ! current_user_can( 'edit_posts' ) ) wp_send_json_error();
+		if ( ! current_user_can( 'edit_posts' ) ) {
+			wp_send_json_error();
+		}
 
-		$table = sanitize_key( $_POST['table'] ?? '' );
-		$id    = absint( $_POST['id']          ?? 0 );
-		$note  = sanitize_textarea_field( $_POST['note'] ?? '' );
+		$table = sanitize_key( wp_unslash( $_POST['table'] ?? '' ) );
+		$id    = absint( wp_unslash( $_POST['id'] ?? 0 ) );
+		$note  = sanitize_textarea_field( wp_unslash( $_POST['note'] ?? '' ) );
 
-		if ( ! in_array( $table, [ 'registrations', 'applications' ], true ) || ! $id ) {
+		if ( ! in_array( $table, array( 'registrations', 'applications' ), true ) || ! $id ) {
 			wp_send_json_error();
 		}
 
 		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$wpdb->update(
 			$wpdb->prefix . 'kivun_' . $table,
-			[ 'notes' => $note ],
-			[ 'id'    => $id ],
-			[ '%s' ],
-			[ '%d' ]
+			array( 'notes' => $note ),
+			array( 'id' => $id ),
+			array( '%s' ),
+			array( '%d' )
 		);
 
 		wp_send_json_success();
 	}
 
+	/**
+	 * Build an escaped status <select> for a CRM row.
+	 *
+	 * @param string $table   The CRM table key ('registrations' or 'applications').
+	 * @param int    $id      The row ID.
+	 * @param string $current The currently selected status.
+	 * @param array  $options Map of status value => label.
+	 * @return string
+	 */
 	private static function status_select( string $table, int $id, string $current, array $options ): string {
 		$html = sprintf(
 			'<select class="kivun-status-select" data-table="%s" data-id="%d">',
@@ -349,33 +423,47 @@ class Kivun_Admin {
 		return $html;
 	}
 
-	// ── AJAX: update status ────────────────────────────────────────────────────
+	// ── AJAX: update status ────────────────────────────────────────────────────.
 
+	/**
+	 * AJAX handler: update the status of a CRM row.
+	 *
+	 * @return void
+	 */
 	public static function ajax_update_status(): void {
 		check_ajax_referer( 'kivun_admin_nonce', 'nonce' );
-		if ( ! current_user_can( 'edit_posts' ) ) wp_send_json_error();
+		if ( ! current_user_can( 'edit_posts' ) ) {
+			wp_send_json_error();
+		}
 
-		$table  = sanitize_key( $_POST['table']  ?? '' );
-		$id     = absint( $_POST['id']            ?? 0 );
-		$status = sanitize_key( $_POST['status']  ?? '' );
+		$table  = sanitize_key( wp_unslash( $_POST['table'] ?? '' ) );
+		$id     = absint( wp_unslash( $_POST['id'] ?? 0 ) );
+		$status = sanitize_key( wp_unslash( $_POST['status'] ?? '' ) );
 
-		$allowed = [ 'registrations', 'applications' ];
+		$allowed = array( 'registrations', 'applications' );
 		if ( ! in_array( $table, $allowed, true ) || ! $id || ! $status ) {
 			wp_send_json_error();
 		}
 
 		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$wpdb->update(
 			$wpdb->prefix . 'kivun_' . $table,
-			[ 'status' => $status ],
-			[ 'id'     => $id ],
-			[ '%s' ],
-			[ '%d' ]
+			array( 'status' => $status ),
+			array( 'id' => $id ),
+			array( '%s' ),
+			array( '%d' )
 		);
 
 		wp_send_json_success();
 	}
 
+	/**
+	 * Render the job details metabox.
+	 *
+	 * @param \WP_Post $post The job post being edited.
+	 * @return void
+	 */
 	public static function job_meta_box( \WP_Post $post ): void {
 		wp_nonce_field( 'kivun_save_job', 'kivun_job_nonce' );
 		$f = fn( $key ) => get_post_meta( $post->ID, $key, true );
@@ -408,17 +496,32 @@ class Kivun_Admin {
 		<?php
 	}
 
-	// ── Save ───────────────────────────────────────────────────────────────────
+	// ── Save ───────────────────────────────────────────────────────────────────.
 
+	/**
+	 * Persist metabox fields on save_post.
+	 *
+	 * @param int      $post_id The post ID being saved.
+	 * @param \WP_Post $post    The post object being saved.
+	 * @return void
+	 */
 	public static function save_meta( int $post_id, \WP_Post $post ): void {
-		if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) return;
-		if ( wp_is_post_revision( $post_id ) ) return;
+		if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
+			return;
+		}
+		if ( wp_is_post_revision( $post_id ) ) {
+			return;
+		}
 
-		if ( $post->post_type === 'kivun_course' ) {
-			if ( ! isset( $_POST['kivun_course_nonce'] ) || ! wp_verify_nonce( $_POST['kivun_course_nonce'], 'kivun_save_course' ) ) return;
-			if ( ! current_user_can( 'edit_post', $post_id ) ) return;
+		if ( 'kivun_course' === $post->post_type ) {
+			if ( ! isset( $_POST['kivun_course_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['kivun_course_nonce'] ) ), 'kivun_save_course' ) ) {
+				return;
+			}
+			if ( ! current_user_can( 'edit_post', $post_id ) ) {
+				return;
+			}
 
-			foreach ( [
+			foreach ( array(
 				'_kivun_target_audience' => 'textarea',
 				'_kivun_schedule'        => 'text',
 				'_kivun_duration'        => 'text',
@@ -427,158 +530,266 @@ class Kivun_Admin {
 				'_kivun_benefits'        => 'textarea',
 				'_kivun_capacity'        => 'absint',
 				'_kivun_contact_email'   => 'email',
-			] as $key => $type ) {
+			) as $key => $type ) {
 				self::save_field( $post_id, $key, $type );
 			}
 		}
 
-		if ( $post->post_type === 'kivun_workshop' ) {
-			if ( ! isset( $_POST['kivun_workshop_nonce'] ) || ! wp_verify_nonce( $_POST['kivun_workshop_nonce'], 'kivun_save_workshop' ) ) return;
-			if ( ! current_user_can( 'edit_post', $post_id ) ) return;
+		if ( 'kivun_workshop' === $post->post_type ) {
+			if ( ! isset( $_POST['kivun_workshop_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['kivun_workshop_nonce'] ) ), 'kivun_save_workshop' ) ) {
+				return;
+			}
+			if ( ! current_user_can( 'edit_post', $post_id ) ) {
+				return;
+			}
 
-			foreach ( [
-				'_kivun_ws_date'      => 'text',
-				'_kivun_ws_duration'  => 'text',
-				'_kivun_ws_location'  => 'text',
-				'_kivun_ws_audience'  => 'textarea',
-				'_kivun_ws_capacity'  => 'absint',
+			foreach ( array(
+				'_kivun_ws_date'       => 'text',
+				'_kivun_ws_duration'   => 'text',
+				'_kivun_ws_location'   => 'text',
+				'_kivun_ws_audience'   => 'textarea',
+				'_kivun_ws_capacity'   => 'absint',
 				'_kivun_contact_email' => 'email',
-			] as $key => $type ) {
+			) as $key => $type ) {
 				self::save_field( $post_id, $key, $type );
 			}
 		}
 
-		if ( $post->post_type === 'kivun_job' ) {
-			if ( ! isset( $_POST['kivun_job_nonce'] ) || ! wp_verify_nonce( $_POST['kivun_job_nonce'], 'kivun_save_job' ) ) return;
-			if ( ! current_user_can( 'edit_post', $post_id ) ) return;
+		if ( 'kivun_job' === $post->post_type ) {
+			if ( ! isset( $_POST['kivun_job_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['kivun_job_nonce'] ) ), 'kivun_save_job' ) ) {
+				return;
+			}
+			if ( ! current_user_can( 'edit_post', $post_id ) ) {
+				return;
+			}
 
-			foreach ( [
+			foreach ( array(
 				'_kivun_employer_email' => 'email',
 				'_kivun_company'        => 'text',
 				'_kivun_salary'         => 'text',
 				'_kivun_requirements'   => 'textarea',
 				'_kivun_deadline'       => 'text',
-			] as $key => $type ) {
+			) as $key => $type ) {
 				self::save_field( $post_id, $key, $type );
 			}
 		}
 	}
 
+	/**
+	 * Sanitize and persist a single metabox field by type.
+	 *
+	 * @param int    $post_id The post ID.
+	 * @param string $key     The meta key (and matching $_POST field name).
+	 * @param string $type    The field type: 'textarea', 'absint', 'email', or text.
+	 * @return void
+	 */
 	private static function save_field( int $post_id, string $key, string $type ): void {
-		$raw = $_POST[ $key ] ?? '';
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Nonce verified in save_meta(); value sanitized below per field type.
+		$raw = isset( $_POST[ $key ] ) ? wp_unslash( $_POST[ $key ] ) : '';
 		switch ( $type ) {
-			case 'textarea': $value = sanitize_textarea_field( $raw ); break;
-			case 'absint':   $value = absint( $raw ); break;
-			case 'email':    $value = sanitize_email( $raw ); break;
-			default:         $value = sanitize_text_field( $raw ); break;
+			case 'textarea':
+				$value = sanitize_textarea_field( $raw );
+				break;
+			case 'absint':
+				$value = absint( $raw );
+				break;
+			case 'email':
+				$value = sanitize_email( $raw );
+				break;
+			default:
+				$value = sanitize_text_field( $raw );
+				break;
 		}
 		update_post_meta( $post_id, $key, $value );
 	}
 
-	// ── Admin columns ──────────────────────────────────────────────────────────
+	// ── Admin columns ──────────────────────────────────────────────────────────.
 
+	/**
+	 * Add custom columns to the job list table.
+	 *
+	 * @param array $cols Existing columns.
+	 * @return array
+	 */
 	public static function job_columns( array $cols ): array {
-		return array_merge( $cols, [
-			'company'  => 'חברה',
-			'deadline' => 'תאריך אחרון',
-		] );
+		return array_merge(
+			$cols,
+			array(
+				'company'  => 'חברה',
+				'deadline' => 'תאריך אחרון',
+			)
+		);
 	}
 
+	/**
+	 * Render values for the custom job columns.
+	 *
+	 * @param string $col The column key.
+	 * @param int    $id  The post ID.
+	 * @return void
+	 */
 	public static function job_column_values( string $col, int $id ): void {
-		if ( $col === 'company' )  echo esc_html( get_post_meta( $id, '_kivun_company',  true ) );
-		if ( $col === 'deadline' ) echo esc_html( get_post_meta( $id, '_kivun_deadline', true ) );
+		if ( 'company' === $col ) {
+			echo esc_html( get_post_meta( $id, '_kivun_company', true ) );
+		}
+		if ( 'deadline' === $col ) {
+			echo esc_html( get_post_meta( $id, '_kivun_deadline', true ) );
+		}
 	}
 
+	/**
+	 * Add custom columns to the course list table.
+	 *
+	 * @param array $cols Existing columns.
+	 * @return array
+	 */
 	public static function course_columns( array $cols ): array {
-		return array_merge( $cols, [
-			'price'    => 'עלות',
-			'schedule' => 'זמנים',
-		] );
+		return array_merge(
+			$cols,
+			array(
+				'price'    => 'עלות',
+				'schedule' => 'זמנים',
+			)
+		);
 	}
 
+	/**
+	 * Render values for the custom course columns.
+	 *
+	 * @param string $col The column key.
+	 * @param int    $id  The post ID.
+	 * @return void
+	 */
 	public static function course_column_values( string $col, int $id ): void {
-		if ( $col === 'price' ) {
+		if ( 'price' === $col ) {
 			$price = (int) get_post_meta( $id, '_kivun_price', true );
 			echo $price > 0 ? esc_html( '₪' . number_format( $price ) ) : esc_html__( 'חינמי', 'kivun' );
 		}
-		if ( $col === 'schedule' ) echo esc_html( get_post_meta( $id, '_kivun_schedule', true ) );
+		if ( 'schedule' === $col ) {
+			echo esc_html( get_post_meta( $id, '_kivun_schedule', true ) );
+		}
 	}
 
-	// ── WC product search (AJAX) ───────────────────────────────────────────────
+	// ── WC product search (AJAX) ───────────────────────────────────────────────.
 
+	/**
+	 * AJAX handler: search WooCommerce products for the course metabox.
+	 *
+	 * @return void
+	 */
 	public static function ajax_search_products(): void {
 		check_ajax_referer( 'kivun_admin_nonce', 'nonce' );
-		if ( ! current_user_can( 'edit_posts' ) ) wp_send_json_error();
-		if ( ! class_exists( 'WooCommerce' ) ) wp_send_json_error();
-
-		// Single product lookup by ID (for pre-select)
-		if ( ! empty( $_POST['id'] ) ) {
-			$product = wc_get_product( absint( $_POST['id'] ) );
-			if ( $product ) {
-				wp_send_json_success( [ [
-					'id'   => $product->get_id(),
-					'text' => $product->get_name() . ' (#' . $product->get_id() . ')',
-				] ] );
-			}
-			wp_send_json_success( [] );
+		if ( ! current_user_can( 'edit_posts' ) ) {
+			wp_send_json_error();
+		}
+		if ( ! class_exists( 'WooCommerce' ) ) {
+			wp_send_json_error();
 		}
 
-		// Search by name
-		$term     = sanitize_text_field( $_POST['q'] ?? '' );
-		$products = wc_get_products( [
-			'status'     => 'publish',
-			'limit'      => 20,
-			'orderby'    => 'title',
-			'order'      => 'ASC',
-			's'          => $term,
-		] );
+		// Single product lookup by ID (for pre-select).
+		if ( ! empty( $_POST['id'] ) ) {
+			$product = wc_get_product( absint( wp_unslash( $_POST['id'] ) ) );
+			if ( $product ) {
+				wp_send_json_success(
+					array(
+						array(
+							'id'   => $product->get_id(),
+							'text' => $product->get_name() . ' (#' . $product->get_id() . ')',
+						),
+					)
+				);
+			}
+			wp_send_json_success( array() );
+		}
 
-		$results = array_map( fn( $p ) => [
-			'id'   => $p->get_id(),
-			'text' => $p->get_name() . ' (#' . $p->get_id() . ')',
-		], $products );
+		// Search by name.
+		$term     = sanitize_text_field( wp_unslash( $_POST['q'] ?? '' ) );
+		$products = wc_get_products(
+			array(
+				'status'  => 'publish',
+				'limit'   => 20,
+				'orderby' => 'title',
+				'order'   => 'ASC',
+				's'       => $term,
+			)
+		);
+
+		$results = array_map(
+			fn( $p ) => array(
+				'id'   => $p->get_id(),
+				'text' => $p->get_name() . ' (#' . $p->get_id() . ')',
+			),
+			$products
+		);
 
 		wp_send_json_success( $results );
 	}
 
-	// ── Admin pages ────────────────────────────────────────────────────────────
+	// ── Admin pages ────────────────────────────────────────────────────────────.
 
+	/**
+	 * Register the applications and registrations admin submenu pages.
+	 *
+	 * @return void
+	 */
 	public static function admin_menu(): void {
-		add_submenu_page( 'edit.php?post_type=kivun_job',    'מועמדויות', 'מועמדויות', 'manage_options', 'kivun-applications',  [ __CLASS__, 'applications_page' ] );
-		add_submenu_page( 'edit.php?post_type=kivun_course', 'הרשמות',    'הרשמות',    'manage_options', 'kivun-registrations', [ __CLASS__, 'registrations_page' ] );
+		add_submenu_page( 'edit.php?post_type=kivun_job', 'מועמדויות', 'מועמדויות', 'manage_options', 'kivun-applications', array( __CLASS__, 'applications_page' ) );
+		add_submenu_page( 'edit.php?post_type=kivun_course', 'הרשמות', 'הרשמות', 'manage_options', 'kivun-registrations', array( __CLASS__, 'registrations_page' ) );
 	}
 
+	/**
+	 * Render the applications admin list page.
+	 *
+	 * @return void
+	 */
 	public static function applications_page(): void {
 		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$rows = $wpdb->get_results( "SELECT a.*, p.post_title AS job_title FROM {$wpdb->prefix}kivun_applications a LEFT JOIN {$wpdb->posts} p ON p.ID = a.job_id ORDER BY a.created_at DESC LIMIT 200" );
 		echo '<div class="wrap"><h1>מועמדויות</h1><table class="wp-list-table widefat fixed striped"><thead><tr><th>שם</th><th>משרה</th><th>אימייל</th><th>טלפון</th><th>תאריך</th><th>סטטוס</th></tr></thead><tbody>';
 		foreach ( $rows as $r ) {
-			printf( '<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>',
-				esc_html( $r->applicant_name ), esc_html( $r->job_title ), esc_html( $r->applicant_email ),
-				esc_html( $r->applicant_phone ), esc_html( $r->created_at ), esc_html( $r->status )
+			printf(
+				'<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>',
+				esc_html( $r->applicant_name ),
+				esc_html( $r->job_title ),
+				esc_html( $r->applicant_email ),
+				esc_html( $r->applicant_phone ),
+				esc_html( $r->created_at ),
+				esc_html( $r->status )
 			);
 		}
 		echo '</tbody></table></div>';
 	}
 
+	/**
+	 * Render the registrations admin list page.
+	 *
+	 * @return void
+	 */
 	public static function registrations_page(): void {
 		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$rows = $wpdb->get_results( "SELECT r.*, p.post_title AS course_title FROM {$wpdb->prefix}kivun_registrations r LEFT JOIN {$wpdb->posts} p ON p.ID = r.course_id ORDER BY r.created_at DESC LIMIT 500" );
 
-		$type_labels = [
+		$type_labels = array(
 			'registration' => 'הרשמה',
 			'lead'         => 'מתעניין',
 			'workshop'     => 'סדנה',
-		];
+		);
 
 		echo '<div class="wrap"><h1>הרשמות, לידים וסדנאות</h1>';
 		echo '<table class="wp-list-table widefat fixed striped"><thead><tr><th>שם</th><th>קורס / סדנה</th><th>סוג</th><th>אימייל</th><th>טלפון</th><th>תאריך</th><th>סטטוס</th></tr></thead><tbody>';
 		foreach ( $rows as $r ) {
 			$type_label = $type_labels[ $r->type ?? 'registration' ] ?? $r->type;
-			printf( '<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>',
-				esc_html( $r->name ), esc_html( $r->course_title ), esc_html( $type_label ),
-				esc_html( $r->email ), esc_html( $r->phone ),
-				esc_html( $r->created_at ), esc_html( $r->status )
+			printf(
+				'<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>',
+				esc_html( $r->name ),
+				esc_html( $r->course_title ),
+				esc_html( $type_label ),
+				esc_html( $r->email ),
+				esc_html( $r->phone ),
+				esc_html( $r->created_at ),
+				esc_html( $r->status )
 			);
 		}
 		echo '</tbody></table></div>';

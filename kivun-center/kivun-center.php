@@ -10,24 +10,29 @@
  * Domain Path:  /languages
  * Requires PHP: 8.0
  * Requires WP:  6.0
+ *
+ * @package Kivun
  */
 
 defined( 'ABSPATH' ) || exit;
 
 define( 'KIVUN_VERSION', '1.4.0' );
-define( 'KIVUN_FILE',    __FILE__ );
-define( 'KIVUN_DIR',     plugin_dir_path( __FILE__ ) );
-define( 'KIVUN_URL',     plugin_dir_url( __FILE__ ) );
+define( 'KIVUN_FILE', __FILE__ );
+define( 'KIVUN_DIR', plugin_dir_path( __FILE__ ) );
+define( 'KIVUN_URL', plugin_dir_url( __FILE__ ) );
 
-require_once KIVUN_DIR . 'includes/class-installer.php';
-require_once KIVUN_DIR . 'includes/class-cron.php';
-register_activation_hook( __FILE__,   [ 'Kivun_Installer', 'activate' ] );
-register_deactivation_hook( __FILE__, function () {
-	Kivun_Installer::deactivate();
-	Kivun_Cron::deactivate();
-} );
+require_once KIVUN_DIR . 'includes/class-kivun-installer.php';
+require_once KIVUN_DIR . 'includes/class-kivun-cron.php';
+register_activation_hook( __FILE__, array( 'Kivun_Installer', 'activate' ) );
+register_deactivation_hook(
+	__FILE__,
+	function () {
+		Kivun_Installer::deactivate();
+		Kivun_Cron::deactivate();
+	}
+);
 
-require_once KIVUN_DIR . 'includes/class-core.php';
+require_once KIVUN_DIR . 'includes/class-kivun-core.php';
 Kivun_Core::init();
 
 /**
@@ -36,7 +41,7 @@ Kivun_Core::init();
  * @param string $template Relative path inside /templates/ (e.g. 'jobs/card.php').
  * @param array  $vars     Variables to extract into template scope.
  */
-function kivun_get_template( string $template, array $vars = [] ): void {
+function kivun_get_template( string $template, array $vars = array() ): void {
 	$file = KIVUN_DIR . 'templates/' . $template;
 
 	$theme_override = get_stylesheet_directory() . '/kivun/' . $template;

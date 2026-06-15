@@ -1,4 +1,12 @@
-<?php defined( 'ABSPATH' ) || exit; ?>
+<?php
+/**
+ * Template: job CV application form.
+ *
+ * @package Kivun
+ */
+
+defined( 'ABSPATH' ) || exit;
+?>
 <div class="kivun-apply-wrap">
 	<form class="kivun-apply-form" enctype="multipart/form-data" novalidate>
 		<?php wp_nonce_field( 'kivun_nonce', '_nonce', false ); ?>

@@ -1,14 +1,23 @@
 <?php
+/**
+ * Template: single job card for the jobs board.
+ *
+ * @package Kivun
+ */
+
 defined( 'ABSPATH' ) || exit;
 
 $job_id   = get_the_ID();
-$company  = get_post_meta( $job_id, '_kivun_company',  true );
-$salary   = get_post_meta( $job_id, '_kivun_salary',   true );
+$company  = get_post_meta( $job_id, '_kivun_company', true );
+$salary   = get_post_meta( $job_id, '_kivun_salary', true );
 $deadline = get_post_meta( $job_id, '_kivun_deadline', true );
 
-$scopes  = get_the_terms( $job_id, 'kivun_job_scope' )  ?: [];
-$regions = get_the_terms( $job_id, 'kivun_job_region' ) ?: [];
-$fields  = get_the_terms( $job_id, 'kivun_job_field' )  ?: [];
+$scopes  = get_the_terms( $job_id, 'kivun_job_scope' );
+$scopes  = $scopes ? $scopes : array();
+$regions = get_the_terms( $job_id, 'kivun_job_region' );
+$regions = $regions ? $regions : array();
+$fields  = get_the_terms( $job_id, 'kivun_job_field' );
+$fields  = $fields ? $fields : array();
 ?>
 <article class="kivun-job-card" id="job-<?php echo esc_attr( $job_id ); ?>" data-job-row="<?php echo esc_attr( $job_id ); ?>">
 
@@ -41,7 +50,10 @@ $fields  = get_the_terms( $job_id, 'kivun_job_field' )  ?: [];
 		<?php endif; ?>
 		<?php if ( $deadline ) : ?>
 			<span class="kivun-job-card__deadline">
-				<?php printf( esc_html__( 'אחרון: %s', 'kivun' ), esc_html( $deadline ) ); ?>
+				<?php
+					/* translators: %s: application deadline date. */
+					printf( esc_html__( 'אחרון: %s', 'kivun' ), esc_html( $deadline ) );
+				?>
 			</span>
 		<?php endif; ?>
 		<button
@@ -54,7 +66,7 @@ $fields  = get_the_terms( $job_id, 'kivun_job_field' )  ?: [];
 	</div>
 
 	<div class="kivun-job-apply-inline" id="apply-<?php echo esc_attr( $job_id ); ?>" style="display:none;">
-		<?php kivun_get_template( 'jobs/apply-form.php', [ 'job_id' => $job_id ] ); ?>
+		<?php kivun_get_template( 'jobs/apply-form.php', array( 'job_id' => $job_id ) ); ?>
 	</div>
 
 </article>
