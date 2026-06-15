@@ -46,6 +46,7 @@ class Kivun_Core {
 		add_action( 'wp_enqueue_scripts', array( __CLASS__, 'enqueue_frontend' ) );
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_admin' ) );
 		add_action( 'plugins_loaded', array( __CLASS__, 'load_textdomain' ) );
+		add_filter( 'do_shortcode_tag', array( __CLASS__, 'maybe_enqueue_for_shortcode' ), 10, 2 );
 	}
 
 	/**
@@ -82,18 +83,17 @@ class Kivun_Core {
 	 * @return void
 	 */
 	public static function enqueue_frontend(): void {
-		if ( ! self::needs_frontend_assets() ) {
-			return;
-		}
-
-		wp_enqueue_style(
+		// Always register + localize so the assets are available the moment a
+		// Kivun shortcode renders (see maybe_enqueue_for_shortcode), then
+		// enqueue eagerly on the obvious contexts (CPT singular/archive/tax).
+		wp_register_style(
 			'kivun-frontend',
 			KIVUN_URL . 'assets/css/' . self::asset( 'frontend', 'css' ),
 			array(),
 			KIVUN_VERSION
 		);
 
-		wp_enqueue_script(
+		wp_register_script(
 			'kivun-frontend',
 			KIVUN_URL . 'assets/js/' . self::asset( 'frontend', 'js' ),
 			array(),
@@ -118,6 +118,37 @@ class Kivun_Core {
 				),
 			)
 		);
+
+		if ( self::needs_frontend_assets() ) {
+			self::enqueue_frontend_assets();
+		}
+	}
+
+	/**
+	 * Enqueue the (already registered) front-end style and script. Safe to
+	 * call multiple times and late (e.g. while a shortcode renders).
+	 *
+	 * @return void
+	 */
+	public static function enqueue_frontend_assets(): void {
+		wp_enqueue_style( 'kivun-frontend' );
+		wp_enqueue_script( 'kivun-frontend' );
+	}
+
+	/**
+	 * Ensure the front-end assets load whenever a Kivun shortcode actually
+	 * renders — including inside Elementor's Shortcode widget, page-builder
+	 * blocks, or widgets that bypass post_content detection.
+	 *
+	 * @param string $output The shortcode output.
+	 * @param string $tag    The shortcode tag being processed.
+	 * @return string The unmodified shortcode output.
+	 */
+	public static function maybe_enqueue_for_shortcode( $output, $tag ) {
+		if ( is_string( $tag ) && 0 === strpos( $tag, 'kivun_' ) ) {
+			self::enqueue_frontend_assets();
+		}
+		return $output;
 	}
 
 	/**
@@ -154,8 +185,15 @@ class Kivun_Core {
 					'kivun_employer_register',
 					'kivun_employer_dashboard',
 				);
+
+				// Elementor keeps page content (including Shortcode widgets) in
+				// post meta rather than post_content, so scan both sources.
+				$elementor = get_post_meta( $post->ID, '_elementor_data', true );
+				$elementor = is_string( $elementor ) ? $elementor : '';
+
 				foreach ( $shortcodes as $shortcode ) {
-					if ( has_shortcode( $post->post_content, $shortcode ) ) {
+					if ( has_shortcode( $post->post_content, $shortcode )
+						|| ( '' !== $elementor && false !== strpos( $elementor, '[' . $shortcode ) ) ) {
 						$needs = true;
 						break;
 					}

@@ -30,6 +30,40 @@ class Kivun_Accessibility {
 	}
 
 	/**
+	 * Whether the accessibility layer should run on the current request.
+	 *
+	 * Suppressed inside wp-admin and the Elementor editor/preview so the
+	 * floating toolbar never overlaps the page-builder UI, and exposed via
+	 * the `kivun_a11y_enabled` filter for full opt-out.
+	 *
+	 * @return bool
+	 */
+	private static function is_enabled(): bool {
+		$enabled = ! is_admin();
+
+		if ( $enabled ) {
+			// Elementor editor canvas / preview iframe.
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only context detection, no state change.
+			if ( isset( $_GET['elementor-preview'] ) ) {
+				$enabled = false;
+			} elseif ( class_exists( '\Elementor\Plugin' ) ) {
+				$elementor = \Elementor\Plugin::instance();
+				if ( ( isset( $elementor->preview ) && $elementor->preview->is_preview_mode() )
+					|| ( isset( $elementor->editor ) && $elementor->editor->is_edit_mode() ) ) {
+					$enabled = false;
+				}
+			}
+		}
+
+		/**
+		 * Filter whether the Kivun accessibility layer loads on this request.
+		 *
+		 * @param bool $enabled Whether the toolbar, skip link and assets load.
+		 */
+		return (bool) apply_filters( 'kivun_a11y_enabled', $enabled );
+	}
+
+	/**
 	 * Enqueues and localizes the accessibility styles and scripts site-wide.
 	 *
 	 * Accessibility tooling must be present on every page, so unlike the rest
@@ -38,6 +72,9 @@ class Kivun_Accessibility {
 	 * @return void
 	 */
 	public static function enqueue_assets(): void {
+		if ( ! self::is_enabled() ) {
+			return;
+		}
 		wp_enqueue_style(
 			'kivun-accessibility',
 			KIVUN_URL . 'assets/css/' . Kivun_Core::asset( 'accessibility', 'css' ),
@@ -83,6 +120,10 @@ class Kivun_Accessibility {
 	 * @return void
 	 */
 	public static function render_skip_link(): void {
+		if ( ! self::is_enabled() ) {
+			return;
+		}
+
 		/**
 		 * Filters the id (without the leading hash) the skip link targets.
 		 *
@@ -103,6 +144,10 @@ class Kivun_Accessibility {
 	 * @return void
 	 */
 	public static function render_toolbar(): void {
+		if ( ! self::is_enabled() ) {
+			return;
+		}
+
 		kivun_get_template( 'accessibility/toolbar.php' );
 	}
 
