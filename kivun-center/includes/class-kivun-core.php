@@ -32,6 +32,7 @@ class Kivun_Core {
 		Kivun_Notifications::init();
 		Kivun_Export::init();
 		Kivun_Cron::init();
+		Kivun_Accessibility::init();
 
 		// Elementor — only when Elementor Pro is active.
 		add_action(
@@ -67,6 +68,7 @@ class Kivun_Core {
 			'class-kivun-export',
 			'class-kivun-cron',
 			'class-kivun-admin',
+			'class-kivun-accessibility',
 		) as $file ) {
 			require_once $dir . $file . '.php';
 		}
@@ -86,15 +88,15 @@ class Kivun_Core {
 
 		wp_enqueue_style(
 			'kivun-frontend',
-			KIVUN_URL . 'assets/css/frontend.css',
+			KIVUN_URL . 'assets/css/' . self::asset( 'frontend', 'css' ),
 			array(),
 			KIVUN_VERSION
 		);
 
 		wp_enqueue_script(
 			'kivun-frontend',
-			KIVUN_URL . 'assets/js/frontend.js',
-			array( 'jquery' ),
+			KIVUN_URL . 'assets/js/' . self::asset( 'frontend', 'js' ),
+			array(),
 			KIVUN_VERSION,
 			true
 		);
@@ -171,6 +173,26 @@ class Kivun_Core {
 	}
 
 	/**
+	 * Return the minified asset file name when available (and not debugging),
+	 * otherwise the original. Keeps a single source of truth for the file name.
+	 *
+	 * @param string $name Base file name without extension (e.g. 'frontend').
+	 * @param string $ext  Extension, 'css' or 'js'.
+	 * @return string File name to load (e.g. 'frontend.min.js').
+	 */
+	public static function asset( string $name, string $ext ): string {
+		$debug = ( defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG );
+		$dir   = ( 'css' === $ext ) ? 'assets/css/' : 'assets/js/';
+		$min   = $name . '.min.' . $ext;
+
+		if ( ! $debug && file_exists( KIVUN_DIR . $dir . $min ) ) {
+			return $min;
+		}
+
+		return $name . '.' . $ext;
+	}
+
+	/**
 	 * Enqueues admin styles and scripts on Kivun post-type edit screens.
 	 *
 	 * @param string $hook The current admin page hook suffix.
@@ -186,12 +208,12 @@ class Kivun_Core {
 			return;
 		}
 
-		wp_enqueue_style( 'kivun-admin', KIVUN_URL . 'assets/css/admin.css', array(), KIVUN_VERSION );
+		wp_enqueue_style( 'kivun-admin', KIVUN_URL . 'assets/css/' . self::asset( 'admin', 'css' ), array(), KIVUN_VERSION );
 
 		wp_enqueue_script(
 			'kivun-admin-crm',
-			KIVUN_URL . 'assets/js/admin-crm.js',
-			array( 'jquery' ),
+			KIVUN_URL . 'assets/js/' . self::asset( 'admin-crm', 'js' ),
+			array(),
 			KIVUN_VERSION,
 			true
 		);

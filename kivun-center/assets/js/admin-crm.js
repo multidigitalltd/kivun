@@ -1,46 +1,71 @@
-/* Kivun — inline status update for registrations & applications metaboxes */
-/* global kivunCrm, jQuery */
-(function ($) {
+/* global kivunCrm */
+/* Kivun — inline status & notes updates for the CRM metaboxes (vanilla JS). */
+(function () {
 	'use strict';
 
-	$(document).on('change', '.kivun-status-select', function () {
-		var $select    = $(this);
-		var $indicator = $select.siblings('.kivun-saved-indicator');
+	function post(obj) {
+		return fetch(kivunCrm.ajax_url, {
+			method: 'POST',
+			credentials: 'same-origin',
+			body: new URLSearchParams(obj)
+		}).then(function (r) { return r.json(); });
+	}
 
-		$indicator.hide().removeClass('error');
+	function indicatorFor(el, scope) {
+		if (scope === 'row') {
+			var row = el.closest('tr');
+			return row ? row.querySelector('.kivun-saved-indicator') : null;
+		}
+		return el.parentNode.querySelector('.kivun-saved-indicator');
+	}
 
-		$.post(kivunCrm.ajax_url, {
+	function flash(indicator, ok) {
+		if (!indicator) { return; }
+		indicator.textContent = ok ? '✓ נשמר' : 'שגיאה';
+		indicator.style.color = ok ? '#16a34a' : '#dc2626';
+		indicator.style.display = 'inline';
+		if (ok) {
+			setTimeout(function () { indicator.style.display = 'none'; }, 1700);
+		}
+	}
+
+	// Status select — save on change.
+	document.addEventListener('change', function (e) {
+		var select = e.target.closest('.kivun-status-select');
+		if (!select) { return; }
+
+		var indicator = select.parentNode.querySelector('.kivun-saved-indicator');
+		if (indicator) { indicator.style.display = 'none'; }
+
+		post({
 			action: 'kivun_update_status',
-			nonce:  kivunCrm.nonce,
-			table:  $select.data('table'),
-			id:     $select.data('id'),
-			status: $select.val(),
-		}, function (res) {
-			if (res.success) {
-				$indicator.text('✓ נשמר').css('color', '#16a34a').show().delay(1800).fadeOut();
-			} else {
-				$indicator.text('שגיאה').css('color', '#dc2626').show();
-			}
+			nonce: kivunCrm.nonce,
+			table: select.dataset.table,
+			id: select.dataset.id,
+			status: select.value
+		}).then(function (res) {
+			flash(indicator, res.success);
+		}).catch(function () {
+			flash(indicator, false);
 		});
 	});
 
-	// Notes — auto-save on blur
-	$(document).on('blur', '.kivun-notes-input', function () {
-		var $ta  = $(this);
-		var $row = $ta.closest('tr');
-		var $ind = $row.find('.kivun-saved-indicator').first();
+	// Notes textarea — auto-save on blur.
+	document.addEventListener('blur', function (e) {
+		var note = e.target.closest('.kivun-notes-input');
+		if (!note) { return; }
 
-		$.post(kivunCrm.ajax_url, {
+		var indicator = indicatorFor(note, 'row');
+
+		post({
 			action: 'kivun_save_note',
-			nonce:  kivunCrm.nonce,
-			table:  $ta.data('table'),
-			id:     $ta.data('id'),
-			note:   $ta.val(),
-		}, function (res) {
-			if (res.success) {
-				$ind.text('✓ נשמר').css('color', '#16a34a').show().delay(1600).fadeOut();
-			}
+			nonce: kivunCrm.nonce,
+			table: note.dataset.table,
+			id: note.dataset.id,
+			note: note.value
+		}).then(function (res) {
+			if (res.success) { flash(indicator, true); }
 		});
-	});
+	}, true);
 
-}(jQuery));
+}());

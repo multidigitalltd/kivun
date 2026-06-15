@@ -1,229 +1,273 @@
-/* global kivun, jQuery */
-(function ($) {
+/* global kivun */
+/* Kivun Center — front-end behaviour (vanilla JS, no dependencies). */
+(function () {
 	'use strict';
 
-	// ── Job filters ─────────────────────────────────────────────────────────────
 	var filterTimeout;
 
-	$(document).on('change', '#kivun-filter-scope, #kivun-filter-region, #kivun-filter-field', function () {
-		loadJobs();
-	});
+	// ── Helpers ──────────────────────────────────────────────────────────────────
+	function post(body) {
+		return fetch(kivun.ajax_url, {
+			method: 'POST',
+			credentials: 'same-origin',
+			body: body
+		}).then(function (r) { return r.json(); });
+	}
 
-	$(document).on('input', '#kivun-filter-search', function () {
-		clearTimeout(filterTimeout);
-		filterTimeout = setTimeout(loadJobs, 400);
-	});
+	function params(obj) {
+		return new URLSearchParams(obj);
+	}
+
+	function formParams(form, extra) {
+		var data = new URLSearchParams(new FormData(form));
+		if (extra) {
+			Object.keys(extra).forEach(function (k) { data.append(k, extra[k]); });
+		}
+		return data;
+	}
+
+	function showError(err, message) {
+		if (err) {
+			err.textContent = message;
+			err.style.display = 'block';
+		}
+	}
+
+	function replaceWithSuccess(node, message) {
+		var p = document.createElement('p');
+		p.className = 'kivun-success';
+		p.setAttribute('role', 'status');
+		p.textContent = message;
+		node.parentNode.replaceChild(p, node);
+	}
+
+	// ── Job board filters ────────────────────────────────────────────────────────
+	function val(id) {
+		var el = document.getElementById(id);
+		return el ? el.value : '';
+	}
 
 	function loadJobs(paged) {
-		var $board = $('.kivun-jobs-board');
-		if (!$board.length) return;
+		var board = document.querySelector('.kivun-jobs-board');
+		if (!board) { return; }
 
-		$board.addClass('kivun-loading');
+		board.classList.add('kivun-loading');
 
-		$.post(kivun.ajax_url, {
+		post(params({
 			action: 'kivun_filter_jobs',
-			nonce:  kivun.nonce,
-			scope:  $('#kivun-filter-scope').val()  || '',
-			region: $('#kivun-filter-region').val() || '',
-			field:  $('#kivun-filter-field').val()  || '',
-			search: $('#kivun-filter-search').val() || '',
-			paged:  paged || 1,
-		}, function (res) {
-			$board.removeClass('kivun-loading');
+			nonce: kivun.nonce,
+			scope: val('kivun-filter-scope'),
+			region: val('kivun-filter-region'),
+			field: val('kivun-filter-field'),
+			search: val('kivun-filter-search'),
+			paged: paged || 1
+		})).then(function (res) {
+			board.classList.remove('kivun-loading');
 			if (res.success) {
-				$board.html(res.data.html);
-				$('.kivun-jobs-count').text(res.data.count);
+				board.innerHTML = res.data.html;
+				var count = document.querySelector('.kivun-jobs-count');
+				if (count) { count.textContent = res.data.count; }
 			}
+		}).catch(function () {
+			board.classList.remove('kivun-loading');
 		});
 	}
 
-	// ── Apply form toggle ────────────────────────────────────────────────────────
-	$(document).on('click', '.kivun-apply-toggle', function () {
-		var target = '#' + $(this).data('target');
-		$(target).slideToggle(200);
-	});
-
-	// ── CV application submit ────────────────────────────────────────────────────
-	$(document).on('submit', '.kivun-apply-form', function (e) {
-		e.preventDefault();
-		var $form = $(this);
-		var $btn  = $form.find('[type=submit]');
-		var $err  = $form.find('.kivun-error');
-
-		$err.hide();
-		$btn.prop('disabled', true).text(kivun.i18n.sending);
-
-		var data = new FormData(this);
-		data.append('action', 'kivun_submit_application');
-		data.append('nonce',  kivun.nonce);
-
-		$.ajax({
-			url:         kivun.ajax_url,
-			type:        'POST',
-			data:        data,
-			processData: false,
-			contentType: false,
-			success: function (res) {
-				if (res.success) {
-					$form.replaceWith('<p class="kivun-success">' + res.data.message + '</p>');
-				} else {
-					$err.text(res.data.message).show();
-					$btn.prop('disabled', false).text(kivun.i18n.submit);
-				}
-			},
-			error: function () {
-				$err.text(kivun.i18n.error_generic).show();
-				$btn.prop('disabled', false).text(kivun.i18n.submit);
-			},
-		});
-	});
-
-	// ── Course registration submit ───────────────────────────────────────────────
-	$(document).on('submit', '.kivun-register-form', function (e) {
-		e.preventDefault();
-		var $form   = $(this);
-		var $btn    = $form.find('[type=submit]');
-		var $err    = $form.find('.kivun-error');
-		var isPaid  = $form.find('[name=is_paid]').val() === '1';
-
-		$err.hide();
-		$btn.prop('disabled', true).text(kivun.i18n.sending);
-
-		if (isPaid) {
-			// Paid course → go through WooCommerce
-			$.post(kivun.ajax_url, $.extend({ action: 'kivun_course_checkout', nonce: kivun.nonce }, formToObj($form)), function (res) {
-				if (res.success) {
-					window.location.href = res.data.checkout_url;
-				} else {
-					$err.text(res.data.message).show();
-					$btn.prop('disabled', false);
-				}
-			});
-		} else {
-			// Free course → direct registration
-			$.post(kivun.ajax_url, $.extend({ action: 'kivun_register_course', nonce: kivun.nonce }, formToObj($form)), function (res) {
-				if (res.success) {
-					$form.replaceWith('<p class="kivun-success">' + res.data.message + '</p>');
-				} else {
-					$err.text(res.data.message).show();
-					$btn.prop('disabled', false);
-				}
-			});
+	document.addEventListener('change', function (e) {
+		if (e.target.closest('#kivun-filter-scope, #kivun-filter-region, #kivun-filter-field')) {
+			loadJobs();
 		}
 	});
 
-	function formToObj($form) {
-		var obj = {};
-		$.each($form.serializeArray(), function (_, f) { obj[f.name] = f.value; });
-		return obj;
+	document.addEventListener('input', function (e) {
+		if (e.target.closest('#kivun-filter-search')) {
+			clearTimeout(filterTimeout);
+			filterTimeout = setTimeout(loadJobs, 400);
+		}
+	});
+
+	// ── Apply form toggle ────────────────────────────────────────────────────────
+	document.addEventListener('click', function (e) {
+		var toggle = e.target.closest('.kivun-apply-toggle');
+		if (!toggle) { return; }
+		var target = document.getElementById(toggle.dataset.target);
+		if (target) {
+			target.hidden = !target.hidden;
+		}
+	});
+
+	// ── Generic AJAX form submit (URL-encoded) ───────────────────────────────────
+	function handleFormSubmit(form, action, onSuccess) {
+		var btn = form.querySelector('[type=submit]');
+		var err = form.querySelector('.kivun-error');
+		var originalText = btn ? btn.textContent : '';
+
+		if (err) { err.style.display = 'none'; }
+		if (btn) { btn.disabled = true; btn.textContent = kivun.i18n.sending; }
+
+		var restore = function () {
+			if (btn) { btn.disabled = false; btn.textContent = originalText; }
+		};
+
+		post(formParams(form, { action: action, nonce: kivun.nonce }))
+			.then(function (res) {
+				if (res.success) {
+					onSuccess(res, form);
+				} else {
+					showError(err, res.data.message);
+					restore();
+				}
+			})
+			.catch(function () {
+				showError(err, kivun.i18n.error_generic);
+				restore();
+			});
 	}
 
-	// ── Lead / Interest form (courses + workshops) ───────────────────────────────
-	$(document).on('submit', '.kivun-lead-form', function (e) {
-		e.preventDefault();
-		var $form = $(this);
-		var $btn  = $form.find('[type=submit]');
-		var $err  = $form.find('.kivun-error');
+	document.addEventListener('submit', function (e) {
+		var form = e.target;
 
-		$err.hide();
-		$btn.prop('disabled', true).text(kivun.i18n.sending);
+		// CV application (multipart — includes the file input).
+		if (form.matches('.kivun-apply-form')) {
+			e.preventDefault();
+			var btn = form.querySelector('[type=submit]');
+			var err = form.querySelector('.kivun-error');
+			var originalText = btn ? btn.textContent : '';
+			if (err) { err.style.display = 'none'; }
+			if (btn) { btn.disabled = true; btn.textContent = kivun.i18n.sending; }
 
-		$.post(kivun.ajax_url, $.extend({ action: 'kivun_submit_lead', nonce: kivun.nonce }, formToObj($form)), function (res) {
-			if (res.success) {
-				$form.replaceWith('<p class="kivun-success">' + res.data.message + '</p>');
-			} else {
-				$err.text(res.data.message).show();
-				$btn.prop('disabled', false).text(kivun.i18n.submit);
-			}
-		});
-	});
+			var data = new FormData(form);
+			data.append('action', 'kivun_submit_application');
+			data.append('nonce', kivun.nonce);
 
-	// ── Employer registration ────────────────────────────────────────────────────
-	$(document).on('submit', '.kivun-employer-reg-form', function (e) {
-		e.preventDefault();
-		var $form = $(this);
-		var $btn  = $form.find('[type=submit]');
-		var $err  = $form.find('.kivun-error');
+			post(data).then(function (res) {
+				if (res.success) {
+					replaceWithSuccess(form, res.data.message);
+				} else {
+					showError(err, res.data.message);
+					if (btn) { btn.disabled = false; btn.textContent = originalText; }
+				}
+			}).catch(function () {
+				showError(err, kivun.i18n.error_generic);
+				if (btn) { btn.disabled = false; btn.textContent = originalText; }
+			});
+			return;
+		}
 
-		$err.hide();
-		$btn.prop('disabled', true).text(kivun.i18n.sending);
+		// Course registration (free → direct, paid → WooCommerce checkout).
+		if (form.matches('.kivun-register-form')) {
+			e.preventDefault();
+			var paidField = form.querySelector('[name=is_paid]');
+			var isPaid = paidField && paidField.value === '1';
+			handleFormSubmit(form, isPaid ? 'kivun_course_checkout' : 'kivun_register_course', function (res, theForm) {
+				if (isPaid) {
+					window.location.href = res.data.checkout_url;
+				} else {
+					replaceWithSuccess(theForm, res.data.message);
+				}
+			});
+			return;
+		}
 
-		$.post(kivun.ajax_url, $.extend({ action: 'kivun_register_employer', nonce: kivun.nonce }, formToObj($form)), function (res) {
-			if (res.success) {
-				$form.replaceWith('<p class="kivun-success">' + res.data.message + '</p>');
-			} else {
-				$err.text(res.data.message).show();
-				$btn.prop('disabled', false).text(kivun.i18n.submit);
-			}
-		});
-	});
+		// Lead / interest form (courses + workshops).
+		if (form.matches('.kivun-lead-form')) {
+			e.preventDefault();
+			handleFormSubmit(form, 'kivun_submit_lead', function (res, theForm) {
+				replaceWithSuccess(theForm, res.data.message);
+			});
+			return;
+		}
 
-	// ── Employer dashboard ───────────────────────────────────────────────────────
-	$('#kivun-toggle-new-job').on('click', function () {
-		$('#kivun-new-job-form').slideDown(200);
-	});
+		// Employer self-registration.
+		if (form.matches('.kivun-employer-reg-form')) {
+			e.preventDefault();
+			handleFormSubmit(form, 'kivun_register_employer', function (res, theForm) {
+				replaceWithSuccess(theForm, res.data.message);
+			});
+			return;
+		}
 
-	$('#kivun-cancel-new-job').on('click', function () {
-		$('#kivun-new-job-form').slideUp(200);
-	});
-
-	$(document).on('submit', '.kivun-employer-form', function (e) {
-		e.preventDefault();
-		var $form   = $(this);
-		var $btn    = $form.find('[type=submit]');
-		var $err    = $form.find('.kivun-error');
-		var action  = $form.data('action');
-
-		$err.hide();
-		$btn.prop('disabled', true).text(kivun.i18n.sending);
-
-		$.post(kivun.ajax_url, $.extend({ action: action, nonce: kivun.nonce }, formToObj($form)), function (res) {
-			if (res.success) {
+		// Employer dashboard — post/update job.
+		if (form.matches('.kivun-employer-form')) {
+			e.preventDefault();
+			handleFormSubmit(form, form.dataset.action, function () {
 				window.location.reload();
-			} else {
-				$err.text(res.data.message).show();
-				$btn.prop('disabled', false);
-			}
-		});
+			});
+			return;
+		}
 	});
 
-	$(document).on('click', '.kivun-delete-job', function () {
-		if (!window.confirm(kivun.i18n.confirm_delete)) return;
-		var $btn = $(this);
-		var id   = $btn.data('id');
+	// ── Employer dashboard — new-job form toggle ─────────────────────────────────
+	document.addEventListener('click', function (e) {
+		if (e.target.closest('#kivun-toggle-new-job')) {
+			var openForm = document.getElementById('kivun-new-job-form');
+			if (openForm) {
+				openForm.style.display = 'block';
+				var first = openForm.querySelector('input, textarea, select');
+				if (first) { first.focus(); }
+			}
+		}
+		if (e.target.closest('#kivun-cancel-new-job')) {
+			var closeForm = document.getElementById('kivun-new-job-form');
+			if (closeForm) { closeForm.style.display = 'none'; }
+		}
+	});
 
-		$.post(kivun.ajax_url, { action: 'kivun_delete_job', nonce: kivun.nonce, job_id: id }, function (res) {
+	// ── Employer dashboard — delete job ──────────────────────────────────────────
+	document.addEventListener('click', function (e) {
+		var del = e.target.closest('.kivun-delete-job');
+		if (!del) { return; }
+		if (!window.confirm(kivun.i18n.confirm_delete)) { return; }
+
+		var id = del.dataset.id;
+		post(params({ action: 'kivun_delete_job', nonce: kivun.nonce, job_id: id })).then(function (res) {
 			if (res.success) {
-				$('[data-job-row="' + id + '"]').fadeOut(300, function () { $(this).remove(); });
+				var row = document.querySelector('[data-job-row="' + id + '"]');
+				if (row) { row.parentNode.removeChild(row); }
 			}
 		});
 	});
 
-	// ── Employer dashboard tabs (WAI-ARIA tab pattern) ────────────────────────────
-	function activateTab($tab, focusIt) {
-		var $dash = $tab.closest('.kivun-employer-dashboard');
-		var tab   = $tab.data('tab');
-
-		$dash.find('.kivun-tab')
-			.removeClass('is-active')
-			.attr({ 'aria-selected': 'false', tabindex: '-1' });
-		$tab.addClass('is-active').attr({ 'aria-selected': 'true', tabindex: '0' });
-
-		$dash.find('.kivun-tab-panel').removeClass('is-active').attr('hidden', 'hidden');
-		$dash.find('.kivun-tab-panel[data-panel="' + tab + '"]').addClass('is-active').removeAttr('hidden');
-
-		if (focusIt) { $tab.trigger('focus'); }
+	// ── Employer dashboard tabs (WAI-ARIA tab pattern) ───────────────────────────
+	function getTabs(tab) {
+		return Array.prototype.slice.call(tab.closest('.kivun-tabs').querySelectorAll('.kivun-tab'));
 	}
 
-	$(document).on('click', '.kivun-tab', function () {
-		activateTab($(this), false);
+	function activateTab(tab, focusIt) {
+		if (!tab) { return; }
+		var dash = tab.closest('.kivun-employer-dashboard');
+		var name = tab.dataset.tab;
+
+		dash.querySelectorAll('.kivun-tab').forEach(function (t) {
+			t.classList.remove('is-active');
+			t.setAttribute('aria-selected', 'false');
+			t.setAttribute('tabindex', '-1');
+		});
+		tab.classList.add('is-active');
+		tab.setAttribute('aria-selected', 'true');
+		tab.setAttribute('tabindex', '0');
+
+		dash.querySelectorAll('.kivun-tab-panel').forEach(function (panel) {
+			var match = panel.dataset.panel === name;
+			panel.classList.toggle('is-active', match);
+			panel.hidden = !match;
+		});
+
+		if (focusIt) { tab.focus(); }
+	}
+
+	document.addEventListener('click', function (e) {
+		var tab = e.target.closest('.kivun-tab');
+		if (tab) { activateTab(tab, false); }
 	});
 
-	// Keyboard navigation across the tablist (arrows + Home/End), RTL-aware.
-	$(document).on('keydown', '.kivun-tab', function (e) {
-		var $tabs = $(this).closest('.kivun-tabs').find('.kivun-tab');
-		var count = $tabs.length;
-		var idx   = $tabs.index(this);
+	document.addEventListener('keydown', function (e) {
+		var tab = e.target.closest('.kivun-tab');
+		if (!tab) { return; }
+
+		var tabs = getTabs(tab);
+		var count = tabs.length;
+		var idx = tabs.indexOf(tab);
 		var next;
 
 		switch (e.key) {
@@ -234,89 +278,110 @@
 			default: return;
 		}
 		e.preventDefault();
-		activateTab($tabs.eq(next), true);
+		activateTab(tabs[next], true);
 	});
 
 	// Jump from a job row's submissions count straight into the filtered list.
-	$(document).on('click', '.kivun-view-job-apps', function () {
-		var jobId = String($(this).data('job'));
-		var $dash = $(this).closest('.kivun-employer-dashboard');
+	document.addEventListener('click', function (e) {
+		var link = e.target.closest('.kivun-view-job-apps');
+		if (!link) { return; }
 
-		activateTab($dash.find('.kivun-tab[data-tab="applications"]'), true);
-		$dash.find('#kivun-apps-filter-job').val(jobId);
+		var dash = link.closest('.kivun-employer-dashboard');
+		activateTab(dash.querySelector('.kivun-tab[data-tab="applications"]'), true);
+		var jobFilter = dash.querySelector('#kivun-apps-filter-job');
+		if (jobFilter) { jobFilter.value = String(link.dataset.job); }
 		filterApplications();
 	});
 
-	// ── Applications filtering ────────────────────────────────────────────────────
-	$(document).on('input', '#kivun-apps-search', function () {
-		clearTimeout(filterTimeout);
-		filterTimeout = setTimeout(filterApplications, 200);
+	// ── Applications filtering ───────────────────────────────────────────────────
+	document.addEventListener('input', function (e) {
+		if (e.target.closest('#kivun-apps-search')) {
+			clearTimeout(filterTimeout);
+			filterTimeout = setTimeout(filterApplications, 200);
+		}
 	});
-	$(document).on('change', '#kivun-apps-filter-job, #kivun-apps-filter-status', filterApplications);
+
+	document.addEventListener('change', function (e) {
+		if (e.target.closest('#kivun-apps-filter-job, #kivun-apps-filter-status')) {
+			filterApplications();
+		}
+	});
 
 	function filterApplications() {
-		var $rows = $('.kivun-app-row');
-		if (!$rows.length) return;
+		var rows = document.querySelectorAll('.kivun-app-row');
+		if (!rows.length) { return; }
 
-		var term   = ($('#kivun-apps-search').val() || '').toLowerCase().trim();
-		var jobId  = $('#kivun-apps-filter-job').val() || '';
-		var status = $('#kivun-apps-filter-status').val() || '';
-		var shown  = 0;
+		var term = (val('kivun-apps-search') || '').toLowerCase().trim();
+		var jobId = val('kivun-apps-filter-job');
+		var status = val('kivun-apps-filter-status');
+		var shown = 0;
 
-		$rows.each(function () {
-			var $row = $(this);
+		rows.forEach(function (row) {
 			var ok =
-				(!term   || ($row.data('search') || '').indexOf(term) !== -1) &&
-				(!jobId  || String($row.data('job')) === jobId) &&
-				(!status || String($row.data('status')) === status);
+				(!term || (row.dataset.search || '').indexOf(term) !== -1) &&
+				(!jobId || String(row.dataset.job) === jobId) &&
+				(!status || String(row.dataset.status) === status);
 
-			$row.toggle(ok);
-			if (ok) shown++;
+			row.style.display = ok ? '' : 'none';
+			if (ok) { shown += 1; }
 		});
 
-		$('.kivun-apps-empty').toggle(shown === 0);
+		var empty = document.querySelector('.kivun-apps-empty');
+		if (empty) { empty.style.display = shown === 0 ? 'block' : 'none'; }
 	}
 
-	// ── Application status update (employer) ──────────────────────────────────────
-	$(document).on('change', '.kivun-app-status-select', function () {
-		var $select = $(this);
-		var $row    = $select.closest('.kivun-app-row');
-		var $ind    = $select.siblings('.kivun-saved-indicator');
+	// ── Application inline feedback ───────────────────────────────────────────────
+	function flashSaved(indicator, ok) {
+		if (!indicator) { return; }
+		indicator.textContent = ok ? kivun.i18n.saved : kivun.i18n.save_error;
+		indicator.style.color = ok ? '#15803d' : '#b91c1c';
+		indicator.style.display = 'inline-block';
+		if (ok) {
+			setTimeout(function () { indicator.style.display = 'none'; }, 1600);
+		}
+	}
 
-		$ind.hide();
+	// Status update (employer).
+	document.addEventListener('change', function (e) {
+		var select = e.target.closest('.kivun-app-status-select');
+		if (!select) { return; }
 
-		$.post(kivun.ajax_url, {
+		var row = select.closest('.kivun-app-row');
+		var indicator = select.parentNode.querySelector('.kivun-saved-indicator');
+
+		post(params({
 			action: 'kivun_employer_update_app',
-			nonce:  kivun.nonce,
-			app_id: $select.data('app'),
-			status: $select.val(),
-		}, function (res) {
+			nonce: kivun.nonce,
+			app_id: select.dataset.app,
+			status: select.value
+		})).then(function (res) {
 			if (res.success) {
-				$row.attr('data-status', res.data.status).data('status', res.data.status);
-				$ind.text(kivun.i18n.saved).css('color', '#16a34a').show().delay(1600).fadeOut();
+				if (row) { row.dataset.status = res.data.status; }
+				flashSaved(indicator, true);
 			} else {
-				$ind.text(kivun.i18n.save_error).css('color', '#dc2626').show();
+				flashSaved(indicator, false);
 			}
-		}).fail(function () {
-			$ind.text(kivun.i18n.save_error).css('color', '#dc2626').show();
+		}).catch(function () {
+			flashSaved(indicator, false);
 		});
 	});
 
-	// ── Application note auto-save on blur (employer) ─────────────────────────────
-	$(document).on('blur', '.kivun-app-note', function () {
-		var $ta  = $(this);
-		var $ind = $ta.closest('.kivun-app-row').find('.kivun-saved-indicator');
+	// Internal note auto-save on blur (employer).
+	document.addEventListener('blur', function (e) {
+		var note = e.target.closest('.kivun-app-note');
+		if (!note) { return; }
 
-		$.post(kivun.ajax_url, {
+		var row = note.closest('.kivun-app-row');
+		var indicator = row ? row.querySelector('.kivun-saved-indicator') : null;
+
+		post(params({
 			action: 'kivun_employer_app_note',
-			nonce:  kivun.nonce,
-			app_id: $ta.data('app'),
-			note:   $ta.val(),
-		}, function (res) {
-			if (res.success) {
-				$ind.text(kivun.i18n.saved).css('color', '#16a34a').show().delay(1600).fadeOut();
-			}
+			nonce: kivun.nonce,
+			app_id: note.dataset.app,
+			note: note.value
+		})).then(function (res) {
+			if (res.success) { flashSaved(indicator, true); }
 		});
-	});
+	}, true);
 
-}(jQuery));
+}());
