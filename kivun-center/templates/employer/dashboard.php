@@ -17,12 +17,15 @@ if ( ! is_user_logged_in() || ( ! current_user_can( 'kivun_employer' ) && ! curr
 $user_id = get_current_user_id();
 $jobs    = get_posts(
 	array(
-		'post_type'      => 'kivun_job',
-		'author'         => current_user_can( 'manage_options' ) ? 0 : $user_id,
-		'post_status'    => array( 'publish', 'draft', 'pending' ),
-		'posts_per_page' => -1,
-		'orderby'        => 'date',
-		'order'          => 'DESC',
+		'post_type'              => 'kivun_job',
+		'author'                 => current_user_can( 'manage_options' ) ? 0 : $user_id,
+		'post_status'            => array( 'publish', 'draft', 'pending' ),
+		'posts_per_page'         => 100,
+		'orderby'                => 'date',
+		'order'                  => 'DESC',
+		'no_found_rows'          => true,
+		'update_post_term_cache' => false,
+		'update_post_meta_cache' => false,
 	)
 );
 
@@ -62,20 +65,20 @@ $upload = wp_upload_dir();
 ?>
 <div class="kivun-employer-dashboard" dir="rtl">
 
-	<div class="kivun-tabs" role="tablist">
-		<button type="button" class="kivun-tab is-active" data-tab="jobs" role="tab">
+	<div class="kivun-tabs" role="tablist" aria-label="<?php esc_attr_e( 'ניהול אזור מעסיק', 'kivun' ); ?>">
+		<button type="button" class="kivun-tab is-active" data-tab="jobs" role="tab" id="kivun-tab-jobs" aria-controls="kivun-panel-jobs" aria-selected="true">
 			<?php esc_html_e( 'המשרות שלי', 'kivun' ); ?>
 		</button>
-		<button type="button" class="kivun-tab" data-tab="applications" role="tab">
+		<button type="button" class="kivun-tab" data-tab="applications" role="tab" id="kivun-tab-applications" aria-controls="kivun-panel-applications" aria-selected="false" tabindex="-1">
 			<?php esc_html_e( 'הגשות מועמדות', 'kivun' ); ?>
 			<?php if ( $new_apps ) : ?>
-				<span class="kivun-tab-badge"><?php echo esc_html( $new_apps ); ?></span>
+				<span class="kivun-tab-badge"><?php echo esc_html( $new_apps ); ?><span class="kivun-sr-only"> <?php esc_html_e( 'הגשות חדשות', 'kivun' ); ?></span></span>
 			<?php endif; ?>
 		</button>
 	</div>
 
 	<!-- ── Jobs panel ──────────────────────────────────────────────────────── -->
-	<section class="kivun-tab-panel is-active" data-panel="jobs">
+	<section class="kivun-tab-panel is-active" data-panel="jobs" id="kivun-panel-jobs" role="tabpanel" aria-labelledby="kivun-tab-jobs" tabindex="0">
 
 		<div class="kivun-dashboard-header">
 			<h2><?php esc_html_e( 'המשרות שלי', 'kivun' ); ?></h2>
@@ -90,24 +93,24 @@ $upload = wp_upload_dir();
 			<form class="kivun-employer-form" data-action="kivun_post_job" novalidate>
 
 				<div class="kivun-form-row">
-					<label><?php esc_html_e( 'כותרת המשרה *', 'kivun' ); ?></label>
-					<input type="text" name="title" required>
+					<label for="kivun-f-title"><?php esc_html_e( 'כותרת המשרה *', 'kivun' ); ?></label>
+					<input type="text" id="kivun-f-title" name="title" required>
 				</div>
 
 				<div class="kivun-form-row">
-					<label><?php esc_html_e( 'שם חברה', 'kivun' ); ?></label>
-					<input type="text" name="company">
+					<label for="kivun-f-company"><?php esc_html_e( 'שם חברה', 'kivun' ); ?></label>
+					<input type="text" id="kivun-f-company" name="company">
 				</div>
 
 				<div class="kivun-form-row">
-					<label><?php esc_html_e( 'תיאור המשרה *', 'kivun' ); ?></label>
-					<textarea name="description" rows="6" required></textarea>
+					<label for="kivun-f-description"><?php esc_html_e( 'תיאור המשרה *', 'kivun' ); ?></label>
+					<textarea id="kivun-f-description" name="description" rows="6" required></textarea>
 				</div>
 
 				<div class="kivun-form-grid">
 					<div class="kivun-form-row">
-						<label><?php esc_html_e( 'היקף משרה', 'kivun' ); ?></label>
-						<select name="scope">
+						<label for="kivun-f-scope"><?php esc_html_e( 'היקף משרה', 'kivun' ); ?></label>
+						<select id="kivun-f-scope" name="scope">
 							<option value=""><?php esc_html_e( 'בחר', 'kivun' ); ?></option>
 							<?php foreach ( $scopes as $t ) : ?>
 								<option value="<?php echo esc_attr( $t->name ); ?>"><?php echo esc_html( $t->name ); ?></option>
@@ -116,8 +119,8 @@ $upload = wp_upload_dir();
 					</div>
 
 					<div class="kivun-form-row">
-						<label><?php esc_html_e( 'אזור', 'kivun' ); ?></label>
-						<select name="region">
+						<label for="kivun-f-region"><?php esc_html_e( 'אזור', 'kivun' ); ?></label>
+						<select id="kivun-f-region" name="region">
 							<option value=""><?php esc_html_e( 'בחר', 'kivun' ); ?></option>
 							<?php foreach ( $regions as $t ) : ?>
 								<option value="<?php echo esc_attr( $t->name ); ?>"><?php echo esc_html( $t->name ); ?></option>
@@ -126,8 +129,8 @@ $upload = wp_upload_dir();
 					</div>
 
 					<div class="kivun-form-row">
-						<label><?php esc_html_e( 'תחום מקצועי', 'kivun' ); ?></label>
-						<select name="field">
+						<label for="kivun-f-field"><?php esc_html_e( 'תחום מקצועי', 'kivun' ); ?></label>
+						<select id="kivun-f-field" name="field">
 							<option value=""><?php esc_html_e( 'בחר', 'kivun' ); ?></option>
 							<?php foreach ( $fields as $t ) : ?>
 								<option value="<?php echo esc_attr( $t->name ); ?>"><?php echo esc_html( $t->name ); ?></option>
@@ -136,19 +139,19 @@ $upload = wp_upload_dir();
 					</div>
 
 					<div class="kivun-form-row">
-						<label><?php esc_html_e( 'שכר (אופציונלי)', 'kivun' ); ?></label>
-						<input type="text" name="salary" placeholder="10,000–15,000 ₪">
+						<label for="kivun-f-salary"><?php esc_html_e( 'שכר (אופציונלי)', 'kivun' ); ?></label>
+						<input type="text" id="kivun-f-salary" name="salary" placeholder="10,000–15,000 ₪">
 					</div>
 
 					<div class="kivun-form-row">
-						<label><?php esc_html_e( 'תאריך אחרון להגשה', 'kivun' ); ?></label>
-						<input type="date" name="deadline">
+						<label for="kivun-f-deadline"><?php esc_html_e( 'תאריך אחרון להגשה', 'kivun' ); ?></label>
+						<input type="date" id="kivun-f-deadline" name="deadline">
 					</div>
 				</div>
 
 				<div class="kivun-form-row">
-					<label><?php esc_html_e( 'דרישות', 'kivun' ); ?></label>
-					<textarea name="requirements" rows="4"></textarea>
+					<label for="kivun-f-requirements"><?php esc_html_e( 'דרישות', 'kivun' ); ?></label>
+					<textarea id="kivun-f-requirements" name="requirements" rows="4"></textarea>
 				</div>
 
 				<p class="kivun-error" style="display:none;color:var(--kivun-error)"></p>
@@ -165,11 +168,11 @@ $upload = wp_upload_dir();
 			<table class="kivun-jobs-table">
 				<thead>
 					<tr>
-						<th><?php esc_html_e( 'כותרת', 'kivun' ); ?></th>
-						<th><?php esc_html_e( 'סטטוס', 'kivun' ); ?></th>
-						<th><?php esc_html_e( 'הגשות', 'kivun' ); ?></th>
-						<th><?php esc_html_e( 'תאריך', 'kivun' ); ?></th>
-						<th><?php esc_html_e( 'פעולות', 'kivun' ); ?></th>
+						<th scope="col"><?php esc_html_e( 'כותרת', 'kivun' ); ?></th>
+						<th scope="col"><?php esc_html_e( 'סטטוס', 'kivun' ); ?></th>
+						<th scope="col"><?php esc_html_e( 'הגשות', 'kivun' ); ?></th>
+						<th scope="col"><?php esc_html_e( 'תאריך', 'kivun' ); ?></th>
+						<th scope="col"><?php esc_html_e( 'פעולות', 'kivun' ); ?></th>
 					</tr>
 				</thead>
 				<tbody>
@@ -206,7 +209,7 @@ $upload = wp_upload_dir();
 									<span class="kivun-tab-badge kivun-tab-badge--inline"><?php echo esc_html( $jc['new'] ); ?> <?php esc_html_e( 'חדש', 'kivun' ); ?></span>
 								<?php endif; ?>
 							<?php else : ?>
-								<span class="kivun-muted">—</span>
+								<span class="kivun-muted" aria-hidden="true">—</span>
 							<?php endif; ?>
 						</td>
 						<td><?php echo esc_html( get_the_date( 'd/m/Y', $job->ID ) ); ?></td>
@@ -228,7 +231,7 @@ $upload = wp_upload_dir();
 	</section>
 
 	<!-- ── Applications panel ──────────────────────────────────────────────── -->
-	<section class="kivun-tab-panel" data-panel="applications">
+	<section class="kivun-tab-panel" data-panel="applications" id="kivun-panel-applications" role="tabpanel" aria-labelledby="kivun-tab-applications" tabindex="0" hidden>
 
 		<div class="kivun-dashboard-header">
 			<h2><?php esc_html_e( 'הגשות מועמדות', 'kivun' ); ?></h2>
@@ -249,38 +252,47 @@ $upload = wp_upload_dir();
 			</div>
 
 			<div class="kivun-apps-filters">
-				<input type="search" id="kivun-apps-search" placeholder="<?php esc_attr_e( 'חיפוש לפי שם, אימייל או טלפון…', 'kivun' ); ?>">
-				<select id="kivun-apps-filter-job">
-					<option value=""><?php esc_html_e( 'כל המשרות', 'kivun' ); ?></option>
-					<?php
-					foreach ( $jobs as $job ) :
-						if ( empty( $app_counts[ $job->ID ]['total'] ) ) {
-							continue;
-						}
-						?>
-						<option value="<?php echo esc_attr( $job->ID ); ?>"><?php echo esc_html( $job->post_title ); ?></option>
-					<?php endforeach; ?>
-				</select>
-				<select id="kivun-apps-filter-status">
-					<option value=""><?php esc_html_e( 'כל הסטטוסים', 'kivun' ); ?></option>
-					<?php foreach ( $app_statuses as $val => $label ) : ?>
-						<option value="<?php echo esc_attr( $val ); ?>"><?php echo esc_html( $label ); ?></option>
-					<?php endforeach; ?>
-				</select>
+				<div class="kivun-form-row">
+					<label class="kivun-sr-only" for="kivun-apps-search"><?php esc_html_e( 'חיפוש הגשות', 'kivun' ); ?></label>
+					<input type="search" id="kivun-apps-search" placeholder="<?php esc_attr_e( 'חיפוש לפי שם, אימייל או טלפון…', 'kivun' ); ?>">
+				</div>
+				<div class="kivun-form-row">
+					<label class="kivun-sr-only" for="kivun-apps-filter-job"><?php esc_html_e( 'סינון לפי משרה', 'kivun' ); ?></label>
+					<select id="kivun-apps-filter-job">
+						<option value=""><?php esc_html_e( 'כל המשרות', 'kivun' ); ?></option>
+						<?php
+						foreach ( $jobs as $job ) :
+							if ( empty( $app_counts[ $job->ID ]['total'] ) ) {
+								continue;
+							}
+							?>
+							<option value="<?php echo esc_attr( $job->ID ); ?>"><?php echo esc_html( $job->post_title ); ?></option>
+						<?php endforeach; ?>
+					</select>
+				</div>
+				<div class="kivun-form-row">
+					<label class="kivun-sr-only" for="kivun-apps-filter-status"><?php esc_html_e( 'סינון לפי סטטוס', 'kivun' ); ?></label>
+					<select id="kivun-apps-filter-status">
+						<option value=""><?php esc_html_e( 'כל הסטטוסים', 'kivun' ); ?></option>
+						<?php foreach ( $app_statuses as $val => $label ) : ?>
+							<option value="<?php echo esc_attr( $val ); ?>"><?php echo esc_html( $label ); ?></option>
+						<?php endforeach; ?>
+					</select>
+				</div>
 			</div>
 
 			<div class="kivun-apps-table-wrap">
 			<table class="kivun-apps-table">
 				<thead>
 					<tr>
-						<th><?php esc_html_e( 'מועמד/ת', 'kivun' ); ?></th>
-						<th><?php esc_html_e( 'משרה', 'kivun' ); ?></th>
-						<th><?php esc_html_e( 'יצירת קשר', 'kivun' ); ?></th>
-						<th><?php esc_html_e( 'מכתב מקדים', 'kivun' ); ?></th>
-						<th><?php esc_html_e( 'קו"ח', 'kivun' ); ?></th>
-						<th><?php esc_html_e( 'הערות', 'kivun' ); ?></th>
-						<th><?php esc_html_e( 'תאריך', 'kivun' ); ?></th>
-						<th><?php esc_html_e( 'סטטוס', 'kivun' ); ?></th>
+						<th scope="col"><?php esc_html_e( 'מועמד/ת', 'kivun' ); ?></th>
+						<th scope="col"><?php esc_html_e( 'משרה', 'kivun' ); ?></th>
+						<th scope="col"><?php esc_html_e( 'יצירת קשר', 'kivun' ); ?></th>
+						<th scope="col"><?php esc_html_e( 'מכתב מקדים', 'kivun' ); ?></th>
+						<th scope="col"><?php esc_html_e( 'קו"ח', 'kivun' ); ?></th>
+						<th scope="col"><?php esc_html_e( 'הערות', 'kivun' ); ?></th>
+						<th scope="col"><?php esc_html_e( 'תאריך', 'kivun' ); ?></th>
+						<th scope="col"><?php esc_html_e( 'סטטוס', 'kivun' ); ?></th>
 					</tr>
 				</thead>
 				<tbody>
@@ -310,19 +322,32 @@ $upload = wp_upload_dir();
 							<?php if ( $app->message ) : ?>
 								<span title="<?php echo esc_attr( $app->message ); ?>"><?php echo esc_html( wp_trim_words( $app->message, 10 ) ); ?></span>
 							<?php else : ?>
-								<span class="kivun-muted">—</span>
+								<span class="kivun-muted" aria-hidden="true">—</span>
 							<?php endif; ?>
 						</td>
 						<td>
 							<?php if ( $cv_url ) : ?>
-								<a class="kivun-btn kivun-btn--sm kivun-btn--outline" href="<?php echo esc_url( $cv_url ); ?>" target="_blank" rel="noopener">⬇ <?php esc_html_e( 'הורד', 'kivun' ); ?></a>
+								<a class="kivun-btn kivun-btn--sm kivun-btn--outline" href="<?php echo esc_url( $cv_url ); ?>" target="_blank" rel="noopener">
+									<span aria-hidden="true">⬇</span>
+									<?php
+									/* translators: %s: applicant name. */
+									echo esc_html( sprintf( __( 'הורדת קו"ח של %s', 'kivun' ), $app->applicant_name ) );
+									?>
+								</a>
 							<?php else : ?>
-								<span class="kivun-muted">—</span>
+								<span class="kivun-muted" aria-hidden="true">—</span>
 							<?php endif; ?>
 						</td>
 						<td>
+							<label class="kivun-sr-only" for="kivun-note-<?php echo esc_attr( $app->id ); ?>">
+								<?php
+								/* translators: %s: applicant name. */
+								echo esc_html( sprintf( __( 'הערה פנימית עבור %s', 'kivun' ), $app->applicant_name ) );
+								?>
+							</label>
 							<textarea
 								class="kivun-app-note"
+								id="kivun-note-<?php echo esc_attr( $app->id ); ?>"
 								data-app="<?php echo esc_attr( $app->id ); ?>"
 								rows="2"
 								placeholder="<?php esc_attr_e( 'הערה פנימית…', 'kivun' ); ?>"
@@ -330,12 +355,18 @@ $upload = wp_upload_dir();
 						</td>
 						<td class="kivun-app-date"><?php echo esc_html( wp_date( 'd/m/Y', strtotime( $app->created_at ) ) ); ?></td>
 						<td>
-							<select class="kivun-app-status-select" data-app="<?php echo esc_attr( $app->id ); ?>">
+							<label class="kivun-sr-only" for="kivun-status-<?php echo esc_attr( $app->id ); ?>">
+								<?php
+								/* translators: %s: applicant name. */
+								echo esc_html( sprintf( __( 'עדכון סטטוס מועמדות של %s', 'kivun' ), $app->applicant_name ) );
+								?>
+							</label>
+							<select class="kivun-app-status-select" id="kivun-status-<?php echo esc_attr( $app->id ); ?>" data-app="<?php echo esc_attr( $app->id ); ?>">
 								<?php foreach ( $app_statuses as $val => $label ) : ?>
 									<option value="<?php echo esc_attr( $val ); ?>"<?php selected( $app->status, $val ); ?>><?php echo esc_html( $label ); ?></option>
 								<?php endforeach; ?>
 							</select>
-							<span class="kivun-saved-indicator" style="display:none"></span>
+							<span class="kivun-saved-indicator" role="status" aria-live="polite" style="display:none"></span>
 						</td>
 					</tr>
 				<?php endforeach; ?>

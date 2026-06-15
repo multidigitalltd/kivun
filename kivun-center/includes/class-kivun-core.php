@@ -80,6 +80,10 @@ class Kivun_Core {
 	 * @return void
 	 */
 	public static function enqueue_frontend(): void {
+		if ( ! self::needs_frontend_assets() ) {
+			return;
+		}
+
 		wp_enqueue_style(
 			'kivun-frontend',
 			KIVUN_URL . 'assets/css/frontend.css',
@@ -94,6 +98,7 @@ class Kivun_Core {
 			KIVUN_VERSION,
 			true
 		);
+		wp_script_add_data( 'kivun-frontend', 'defer', true );
 
 		wp_localize_script(
 			'kivun-frontend',
@@ -111,6 +116,58 @@ class Kivun_Core {
 				),
 			)
 		);
+	}
+
+	/**
+	 * Decide whether the current request actually renders Kivun output, so
+	 * front-end CSS/JS load only where needed instead of site-wide.
+	 *
+	 * @return bool
+	 */
+	private static function needs_frontend_assets(): bool {
+		$cpts       = array( 'kivun_job', 'kivun_course', 'kivun_workshop' );
+		$taxonomies = array(
+			'kivun_job_scope',
+			'kivun_job_region',
+			'kivun_job_field',
+			'kivun_course_cat',
+			'kivun_workshop_cat',
+		);
+		$needs      = is_singular( $cpts ) || is_post_type_archive( $cpts ) || is_tax( $taxonomies );
+
+		if ( ! $needs ) {
+			$post = get_post();
+			if ( $post instanceof WP_Post ) {
+				$shortcodes = array(
+					'kivun_courses',
+					'kivun_course_single',
+					'kivun_course_register',
+					'kivun_course_interest',
+					'kivun_workshops',
+					'kivun_workshop_single',
+					'kivun_jobs',
+					'kivun_apply',
+					'kivun_spots_left',
+					'kivun_my_applications',
+					'kivun_employer_register',
+					'kivun_employer_dashboard',
+				);
+				foreach ( $shortcodes as $shortcode ) {
+					if ( has_shortcode( $post->post_content, $shortcode ) ) {
+						$needs = true;
+						break;
+					}
+				}
+			}
+		}
+
+		/**
+		 * Allow themes/page-builders that render Kivun output without a
+		 * shortcode or CPT context to force-load the front-end assets.
+		 *
+		 * @param bool $needs Whether the assets are required on this request.
+		 */
+		return (bool) apply_filters( 'kivun_load_frontend_assets', $needs );
 	}
 
 	/**

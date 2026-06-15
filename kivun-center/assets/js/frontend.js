@@ -199,16 +199,42 @@
 		});
 	});
 
-	// ── Employer dashboard tabs ───────────────────────────────────────────────────
+	// ── Employer dashboard tabs (WAI-ARIA tab pattern) ────────────────────────────
+	function activateTab($tab, focusIt) {
+		var $dash = $tab.closest('.kivun-employer-dashboard');
+		var tab   = $tab.data('tab');
+
+		$dash.find('.kivun-tab')
+			.removeClass('is-active')
+			.attr({ 'aria-selected': 'false', tabindex: '-1' });
+		$tab.addClass('is-active').attr({ 'aria-selected': 'true', tabindex: '0' });
+
+		$dash.find('.kivun-tab-panel').removeClass('is-active').attr('hidden', 'hidden');
+		$dash.find('.kivun-tab-panel[data-panel="' + tab + '"]').addClass('is-active').removeAttr('hidden');
+
+		if (focusIt) { $tab.trigger('focus'); }
+	}
+
 	$(document).on('click', '.kivun-tab', function () {
-		var tab = $(this).data('tab');
-		var $dash = $(this).closest('.kivun-employer-dashboard');
+		activateTab($(this), false);
+	});
 
-		$dash.find('.kivun-tab').removeClass('is-active');
-		$(this).addClass('is-active');
+	// Keyboard navigation across the tablist (arrows + Home/End), RTL-aware.
+	$(document).on('keydown', '.kivun-tab', function (e) {
+		var $tabs = $(this).closest('.kivun-tabs').find('.kivun-tab');
+		var count = $tabs.length;
+		var idx   = $tabs.index(this);
+		var next;
 
-		$dash.find('.kivun-tab-panel').removeClass('is-active');
-		$dash.find('.kivun-tab-panel[data-panel="' + tab + '"]').addClass('is-active');
+		switch (e.key) {
+			case 'ArrowLeft':  next = (idx + 1) % count; break;
+			case 'ArrowRight': next = (idx - 1 + count) % count; break;
+			case 'Home':       next = 0; break;
+			case 'End':        next = count - 1; break;
+			default: return;
+		}
+		e.preventDefault();
+		activateTab($tabs.eq(next), true);
 	});
 
 	// Jump from a job row's submissions count straight into the filtered list.
@@ -216,7 +242,7 @@
 		var jobId = String($(this).data('job'));
 		var $dash = $(this).closest('.kivun-employer-dashboard');
 
-		$dash.find('.kivun-tab[data-tab="applications"]').trigger('click');
+		activateTab($dash.find('.kivun-tab[data-tab="applications"]'), true);
 		$dash.find('#kivun-apps-filter-job').val(jobId);
 		filterApplications();
 	});
