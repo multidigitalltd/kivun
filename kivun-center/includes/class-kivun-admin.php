@@ -750,21 +750,139 @@ class Kivun_Admin {
 	 */
 	public static function applications_page(): void {
 		global $wpdb;
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$rows = $wpdb->get_results( "SELECT a.*, p.post_title AS job_title FROM {$wpdb->prefix}kivun_applications a LEFT JOIN {$wpdb->posts} p ON p.ID = a.job_id ORDER BY a.created_at DESC LIMIT 200" );
-		echo '<div class="wrap"><h1>מועמדויות</h1><table class="wp-list-table widefat fixed striped"><thead><tr><th>שם</th><th>משרה</th><th>אימייל</th><th>טלפון</th><th>תאריך</th><th>סטטוס</th></tr></thead><tbody>';
-		foreach ( $rows as $r ) {
-			printf(
-				'<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>',
-				esc_html( $r->applicant_name ),
-				esc_html( $r->job_title ),
-				esc_html( $r->applicant_email ),
-				esc_html( $r->applicant_phone ),
-				esc_html( $r->created_at ),
-				esc_html( $r->status )
-			);
+
+		// Inline status/notes editing assets for this page.
+		wp_enqueue_style( 'kivun-admin', KIVUN_URL . 'assets/css/' . Kivun_Core::asset( 'admin', 'css' ), array(), KIVUN_VERSION );
+		wp_enqueue_script( 'kivun-admin-crm', KIVUN_URL . 'assets/js/' . Kivun_Core::asset( 'admin-crm', 'js' ), array(), KIVUN_VERSION, true );
+		wp_localize_script(
+			'kivun-admin-crm',
+			'kivunCrm',
+			array(
+				'ajax_url' => admin_url( 'admin-ajax.php' ),
+				'nonce'    => wp_create_nonce( 'kivun_admin_nonce' ),
+			)
+		);
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin filter.
+		$job_filter = isset( $_GET['kivun_job_id'] ) ? absint( wp_unslash( $_GET['kivun_job_id'] ) ) : 0;
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin filter.
+		$search = isset( $_GET['s'] ) ? sanitize_text_field( wp_unslash( $_GET['s'] ) ) : '';
+
+		$conds = array();
+		if ( $job_filter ) {
+			$conds[] = $wpdb->prepare( 'a.job_id = %d', $job_filter );
 		}
-		echo '</tbody></table></div>';
+		if ( '' !== $search ) {
+			$like    = '%' . $wpdb->esc_like( $search ) . '%';
+			$conds[] = $wpdb->prepare( '(a.applicant_name LIKE %s OR a.applicant_email LIKE %s OR a.applicant_phone LIKE %s)', $like, $like, $like );
+		}
+		$where = $conds ? 'WHERE ' . implode( ' AND ', $conds ) : '';
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$rows  = $wpdb->get_results(
+			"SELECT a.*, p.post_title AS job_title
+			 FROM {$wpdb->prefix}kivun_applications a
+			 LEFT JOIN {$wpdb->posts} p ON p.ID = a.job_id
+			 $where
+			 ORDER BY a.created_at DESC
+			 LIMIT 500"
+		);
+		$total = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}kivun_applications" );
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+
+		$jobs = get_posts(
+			array(
+				'post_type'              => 'kivun_job',
+				'post_status'            => array( 'publish', 'draft', 'pending' ),
+				'posts_per_page'         => -1,
+				'orderby'                => 'title',
+				'order'                  => 'ASC',
+				'no_found_rows'          => true,
+				'update_post_meta_cache' => false,
+				'update_post_term_cache' => false,
+			)
+		);
+
+		$statuses = Kivun_Employer::app_statuses();
+		?>
+		<div class="wrap">
+			<h1><?php esc_html_e( 'מועמדויות — כל המשרות', 'kivun' ); ?></h1>
+			<p>
+				<?php
+				/* translators: %d: total number of applications. */
+				echo esc_html( sprintf( __( 'סה״כ %d הגשות במערכת.', 'kivun' ), $total ) );
+				?>
+				<a href="<?php echo esc_url( Kivun_Export::url( 'applications', 0 ) ); ?>" class="button">⬇ <?php esc_html_e( 'ייצוא CSV', 'kivun' ); ?></a>
+			</p>
+
+			<form method="get" class="kivun-apps-admin-filter" style="margin:1rem 0;display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
+				<input type="hidden" name="post_type" value="kivun_job">
+				<input type="hidden" name="page" value="kivun-applications">
+				<select name="kivun_job_id">
+					<option value="0"><?php esc_html_e( 'כל המשרות', 'kivun' ); ?></option>
+					<?php foreach ( $jobs as $job ) : ?>
+						<option value="<?php echo esc_attr( $job->ID ); ?>" <?php selected( $job_filter, $job->ID ); ?>><?php echo esc_html( $job->post_title ); ?></option>
+					<?php endforeach; ?>
+				</select>
+				<input type="search" name="s" value="<?php echo esc_attr( $search ); ?>" placeholder="<?php esc_attr_e( 'חיפוש שם / אימייל / טלפון', 'kivun' ); ?>">
+				<button class="button"><?php esc_html_e( 'סינון', 'kivun' ); ?></button>
+			</form>
+
+			<table class="wp-list-table widefat fixed striped">
+				<thead><tr>
+					<th style="width:130px"><?php esc_html_e( 'שם', 'kivun' ); ?></th>
+					<th><?php esc_html_e( 'משרה', 'kivun' ); ?></th>
+					<th style="width:150px"><?php esc_html_e( 'אימייל', 'kivun' ); ?></th>
+					<th style="width:105px"><?php esc_html_e( 'טלפון', 'kivun' ); ?></th>
+					<th style="width:80px"><?php esc_html_e( 'קו"ח', 'kivun' ); ?></th>
+					<th><?php esc_html_e( 'הערות', 'kivun' ); ?></th>
+					<th style="width:120px"><?php esc_html_e( 'תאריך', 'kivun' ); ?></th>
+					<th style="width:145px"><?php esc_html_e( 'סטטוס', 'kivun' ); ?></th>
+				</tr></thead>
+				<tbody>
+				<?php if ( ! $rows ) : ?>
+					<tr><td colspan="8"><?php esc_html_e( 'לא נמצאו הגשות.', 'kivun' ); ?></td></tr>
+				<?php else : ?>
+					<?php foreach ( $rows as $r ) : ?>
+						<tr>
+							<td><strong><?php echo esc_html( $r->applicant_name ); ?></strong></td>
+							<td>
+								<?php if ( $r->job_id && get_post( $r->job_id ) ) : ?>
+									<a href="<?php echo esc_url( (string) get_edit_post_link( $r->job_id ) ); ?>"><?php echo esc_html( $r->job_title ); ?></a>
+								<?php else : ?>
+									<?php echo esc_html( $r->job_title ? $r->job_title : __( '(נמחקה)', 'kivun' ) ); ?>
+								<?php endif; ?>
+							</td>
+							<td><?php echo esc_html( $r->applicant_email ); ?></td>
+							<td><a href="tel:<?php echo esc_attr( $r->applicant_phone ); ?>"><?php echo esc_html( $r->applicant_phone ); ?></a></td>
+							<td>
+								<?php if ( $r->cv_file && file_exists( $r->cv_file ) ) : ?>
+									<a href="<?php echo esc_url( Kivun_Jobs::cv_url( (int) $r->id ) ); ?>" target="_blank" class="button button-small">⬇ <?php esc_html_e( 'הורד', 'kivun' ); ?></a>
+								<?php else : ?>
+									—
+								<?php endif; ?>
+							</td>
+							<td>
+								<?php
+								// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Returns pre-escaped HTML.
+								echo self::notes_input( 'applications', (int) $r->id, $r->notes ?? '' );
+								?>
+								<span class="kivun-saved-indicator" style="display:none"></span>
+							</td>
+							<td style="font-size:12px"><?php echo esc_html( wp_date( 'd/m/Y H:i', strtotime( $r->created_at ) ) ); ?></td>
+							<td>
+								<?php
+								// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Returns pre-escaped HTML.
+								echo self::status_select( 'applications', (int) $r->id, $r->status, $statuses );
+								?>
+							</td>
+						</tr>
+					<?php endforeach; ?>
+				<?php endif; ?>
+				</tbody>
+			</table>
+		</div>
+		<?php
 	}
 
 	/**
