@@ -58,10 +58,6 @@ if ( $scope ) {
 if ( $field ) {
 	$info[] = $field;
 }
-if ( $deadline ) {
-	/* translators: %s: last application date. */
-	$info[] = sprintf( __( 'אחרון להגשה: %s', 'kivun' ), $deadline );
-}
 
 // Highlight summary.
 $summary_src = $description ? $description : $content;

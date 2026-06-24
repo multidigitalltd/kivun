@@ -162,6 +162,14 @@
 .kivun-form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0 1.5rem; }
 @media (max-width: 600px) { .kivun-form-grid { grid-template-columns: 1fr; } }
 .kivun-form-actions { display: flex; gap: 1rem; margin-top: .5rem; }
+/* Keep the publish-job form labels glued above their fields (theme-proof). */
+.kivun-new-job-form .kivun-form-row { display: flex; flex-direction: column; align-items: stretch; gap: .3rem; margin-bottom: 1.15rem; }
+.kivun-new-job-form .kivun-form-row > label { display: block; float: none; margin: 0 0 .3rem; padding: 0; font-weight: 700; font-size: .9rem; line-height: 1.4; color: var(--kivun-text); text-align: right; }
+.kivun-new-job-form .kivun-form-row > input,
+.kivun-new-job-form .kivun-form-row > select,
+.kivun-new-job-form .kivun-form-row > textarea { width: 100%; margin: 0; }
+.kivun-new-job-form .wp-editor-wrap { margin-top: .1rem; }
+.kivun-new-job-form .wp-editor-area { font-family: inherit; }
 .kivun-success { padding: 1rem; background: #dcfce7; color: var(--kivun-success); border-radius: 6px; font-weight: 600; }
 
 /* ── Jobs board ─────────────────────────────────────────────────────────── */
@@ -210,22 +218,25 @@
 }
 .kivun-jobs-meta { font-size: .87rem; color: var(--kivun-muted); margin-bottom: .75rem; }
 .kivun-jobs-count { font-weight: 700; color: var(--kivun-primary); }
-.kivun-jobs-board { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 2.5rem 1.75rem; align-items: start; direction: rtl; overflow: visible; }
+.kivun-jobs-board { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 2.5rem 1.75rem; align-items: stretch; direction: rtl; overflow: visible; }
 .kivun-jobs-board.kivun-loading { opacity: .5; pointer-events: none; }
 
-/* ── Job card (board) ───────────────────────────────────────────────────── */
+/* ── Job card (board) — uniform size ────────────────────────────────────── */
 .kivun-jc-wrap {
 	position: relative;
 	width: 100%;
-	max-width: 460px;
+	height: 100%;
 	direction: rtl;
 	font-family: var(--kivun-font);
 	padding-bottom: 34px;
 }
 .kivun-jc {
-	background: #ffffff;
+	background: #f7f7f7;
 	border-radius: 22px;
 	overflow: hidden;
+	height: 100%;
+	display: flex;
+	flex-direction: column;
 }
 .kivun-jc-header {
 	position: relative;
@@ -258,8 +269,9 @@
 .kivun-jc-header--nologo .kivun-jc-title { font-size: 17px; }
 .kivun-jc-header--nologo .kivun-jc-title { margin-top: 0; }
 .kivun-jc-body {
-	background: #ffffff;
+	background: #f7f7f7;
 	padding: 22px 26px 42px;
+	flex: 1 1 auto;
 }
 .kivun-jc-row {
 	display: flex;

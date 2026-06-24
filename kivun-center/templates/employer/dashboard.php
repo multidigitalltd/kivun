@@ -125,8 +125,20 @@ foreach ( $applications as $a ) {
 				</div>
 
 				<div class="kivun-form-row">
-					<label for="kivun-f-description"><?php esc_html_e( 'תיאור המשרה *', 'kivun' ); ?></label>
-					<textarea id="kivun-f-description" name="description" rows="6" required></textarea>
+					<label for="kivunjobdesc"><?php esc_html_e( 'תיאור המשרה *', 'kivun' ); ?></label>
+					<?php
+					wp_editor(
+						'',
+						'kivunjobdesc',
+						array(
+							'textarea_name' => 'description',
+							'media_buttons' => false,
+							'teeny'         => true,
+							'quicktags'     => false,
+							'textarea_rows' => 8,
+						)
+					);
+					?>
 				</div>
 
 				<div class="kivun-form-grid">
@@ -164,16 +176,23 @@ foreach ( $applications as $a ) {
 						<label for="kivun-f-salary"><?php esc_html_e( 'שכר (אופציונלי)', 'kivun' ); ?></label>
 						<input type="text" id="kivun-f-salary" name="salary" placeholder="10,000–15,000 ₪">
 					</div>
-
-					<div class="kivun-form-row">
-						<label for="kivun-f-deadline"><?php esc_html_e( 'תאריך אחרון להגשה', 'kivun' ); ?></label>
-						<input type="date" id="kivun-f-deadline" name="deadline">
-					</div>
 				</div>
 
 				<div class="kivun-form-row">
-					<label for="kivun-f-requirements"><?php esc_html_e( 'דרישות', 'kivun' ); ?></label>
-					<textarea id="kivun-f-requirements" name="requirements" rows="4"></textarea>
+					<label for="kivunjobreq"><?php esc_html_e( 'דרישות', 'kivun' ); ?></label>
+					<?php
+					wp_editor(
+						'',
+						'kivunjobreq',
+						array(
+							'textarea_name' => 'requirements',
+							'media_buttons' => false,
+							'teeny'         => true,
+							'quicktags'     => false,
+							'textarea_rows' => 6,
+						)
+					);
+					?>
 				</div>
 
 				<p class="kivun-error" style="display:none;color:var(--kivun-error)"></p>

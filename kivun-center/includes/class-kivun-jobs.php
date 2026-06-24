@@ -355,7 +355,7 @@ class Kivun_Jobs {
 		}
 
 		global $wpdb;
-		$wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$inserted = $wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$wpdb->prefix . 'kivun_applications',
 			array(
 				'job_id'          => $job_id,
@@ -370,6 +370,11 @@ class Kivun_Jobs {
 			),
 			array( '%d', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s' )
 		);
+
+		// Never report success on a failed write (was silently masking errors).
+		if ( false === $inserted ) {
+			wp_send_json_error( array( 'message' => __( 'שמירת ההגשה נכשלה. אנא נסו שוב או פנו אלינו.', 'kivun' ) ) );
+		}
 
 		$employer_email = get_post_meta( $job_id, '_kivun_employer_email', true );
 		if ( $employer_email ) {

@@ -120,6 +120,9 @@
 
 	// ── Generic AJAX form submit (URL-encoded) ───────────────────────────────────
 	function handleFormSubmit(form, action, onSuccess) {
+		// Flush any TinyMCE (WYSIWYG) editors into their textareas first.
+		if (window.tinymce) { window.tinymce.triggerSave(); }
+
 		var btn = form.querySelector('[type=submit]');
 		var err = form.querySelector('.kivun-error');
 		var originalText = btn ? btn.textContent : '';
@@ -225,7 +228,9 @@
 			var openForm = document.getElementById('kivun-new-job-form');
 			if (openForm) {
 				openForm.style.display = 'block';
-				var first = openForm.querySelector('input, textarea, select');
+				// Let any TinyMCE editors recalculate now that they are visible.
+				window.dispatchEvent(new Event('resize'));
+				var first = openForm.querySelector('input[name="title"]');
 				if (first) { first.focus(); }
 			}
 		}

@@ -347,6 +347,15 @@ class Kivun_Shortcodes {
 		$atts = shortcode_atts( array( 'id' => 0 ), $atts, 'kivun_apply' );
 		$id   = absint( $atts['id'] ) ? absint( $atts['id'] ) : get_the_ID();
 
+		// Fallback for contexts rendered outside the main loop (e.g. an
+		// Elementor Off-Canvas / Popup), where get_the_ID() is unreliable.
+		if ( get_post_type( $id ) !== 'kivun_job' ) {
+			$queried = get_queried_object_id();
+			if ( $queried && 'kivun_job' === get_post_type( $queried ) ) {
+				$id = $queried;
+			}
+		}
+
 		if ( get_post_type( $id ) !== 'kivun_job' ) {
 			return '';
 		}

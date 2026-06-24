@@ -61,8 +61,7 @@ class Kivun_Employer {
 		$description  = wp_kses_post( wp_unslash( $_POST['description'] ?? '' ) );
 		$company      = sanitize_text_field( wp_unslash( $_POST['company'] ?? '' ) );
 		$salary       = sanitize_text_field( wp_unslash( $_POST['salary'] ?? '' ) );
-		$requirements = sanitize_textarea_field( wp_unslash( $_POST['requirements'] ?? '' ) );
-		$deadline     = sanitize_text_field( wp_unslash( $_POST['deadline'] ?? '' ) );
+		$requirements = wp_kses_post( wp_unslash( $_POST['requirements'] ?? '' ) );
 		$scope        = sanitize_text_field( wp_unslash( $_POST['scope'] ?? '' ) );
 		$region       = sanitize_text_field( wp_unslash( $_POST['region'] ?? '' ) );
 		$field        = sanitize_text_field( wp_unslash( $_POST['field'] ?? '' ) );
@@ -93,7 +92,6 @@ class Kivun_Employer {
 		update_post_meta( $job_id, '_kivun_company', $company );
 		update_post_meta( $job_id, '_kivun_salary', $salary );
 		update_post_meta( $job_id, '_kivun_requirements', $requirements );
-		update_post_meta( $job_id, '_kivun_deadline', $deadline );
 
 		if ( $scope ) {
 			wp_set_object_terms( $job_id, $scope, 'kivun_job_scope' );
@@ -130,7 +128,6 @@ class Kivun_Employer {
 		$title       = sanitize_text_field( wp_unslash( $_POST['title'] ?? '' ) );
 		$description = wp_kses_post( wp_unslash( $_POST['description'] ?? '' ) );
 		$salary      = sanitize_text_field( wp_unslash( $_POST['salary'] ?? '' ) );
-		$deadline    = sanitize_text_field( wp_unslash( $_POST['deadline'] ?? '' ) );
 
 		wp_update_post(
 			array(
@@ -141,7 +138,6 @@ class Kivun_Employer {
 
 		update_post_meta( $job_id, '_kivun_description', $description );
 		update_post_meta( $job_id, '_kivun_salary', $salary );
-		update_post_meta( $job_id, '_kivun_deadline', $deadline );
 
 		wp_send_json_success( array( 'message' => __( 'המשרה עודכנה.', 'kivun' ) ) );
 	}
