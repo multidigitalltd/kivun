@@ -22,7 +22,7 @@ $scope   = ( $scopes && ! is_wp_error( $scopes ) ) ? $scopes[0]->name : '';
 
 	<div class="kivun-jc">
 
-		<div class="kivun-jc-header">
+		<div class="kivun-jc-header<?php echo $company ? '' : ' kivun-jc-header--nologo'; ?>">
 			<?php if ( $company ) : ?>
 				<div class="kivun-jc-logo"><?php echo esc_html( $company ); ?></div>
 			<?php endif; ?>

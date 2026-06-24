@@ -224,20 +224,20 @@
 }
 .kivun-jc {
 	background: #ffffff;
-	border-radius: 0 0 26px 26px;
+	border-radius: 22px;
 	overflow: hidden;
 }
 .kivun-jc-header {
 	position: relative;
-	min-height: 132px;
+	min-height: 104px;
 	background: #eeeeee;
-	padding: 24px 30px 22px;
+	padding: 20px 26px 18px;
 }
 .kivun-jc-logo {
 	position: absolute;
-	top: 26px;
-	left: 30px;
-	font-size: 28px;
+	top: 22px;
+	left: 26px;
+	font-size: 23px;
 	line-height: 1;
 	font-weight: 900;
 	letter-spacing: 1px;
@@ -245,34 +245,36 @@
 	direction: ltr;
 }
 .kivun-jc-title {
-	margin: 56px 0 0;
-	font-size: 34px;
-	line-height: 1.15;
+	margin: 42px 0 0;
+	font-size: 22px;
+	line-height: 1.2;
 	font-weight: 800;
 	color: #8a8a8a;
 	text-align: right;
 }
 .kivun-jc-title a { color: inherit; text-decoration: none; }
 .kivun-jc-title a:hover { color: #6f6f6f; }
+.kivun-jc-header--nologo { min-height: 0; }
+.kivun-jc-header--nologo .kivun-jc-title { margin-top: 0; }
 .kivun-jc-body {
 	background: #ffffff;
-	padding: 28px 28px 48px;
+	padding: 22px 26px 42px;
 }
 .kivun-jc-row {
 	display: flex;
 	align-items: center;
-	gap: 14px;
+	gap: 11px;
 	justify-content: flex-start;
-	margin-bottom: 20px;
-	font-size: 19px;
-	line-height: 1.2;
+	margin-bottom: 15px;
+	font-size: 15px;
+	line-height: 1.25;
 	color: #2f2f2f;
 }
 .kivun-jc-row:last-child { margin-bottom: 0; }
 .kivun-jc-icon {
-	flex: 0 0 28px;
-	width: 28px;
-	height: 28px;
+	flex: 0 0 24px;
+	width: 24px;
+	height: 24px;
 	border-radius: 50%;
 	background: #e73d68;
 	color: #ffffff;
@@ -280,14 +282,15 @@
 	align-items: center;
 	justify-content: center;
 }
-.kivun-jc-text { font-size: 19px; font-weight: 400; color: #303030; }
+.kivun-jc-icon svg { width: 13px; height: 13px; }
+.kivun-jc-text { font-size: 15px; font-weight: 400; color: #303030; }
 .kivun-jc-apply {
 	position: absolute;
 	left: 0;
 	bottom: 0;
-	height: 58px;
-	min-width: 240px;
-	padding: 0 14px 0 24px;
+	height: 50px;
+	min-width: 210px;
+	padding: 0 12px 0 22px;
 	border: 1.5px solid #000000;
 	border-radius: 999px;
 	background: #ffffff;
@@ -295,9 +298,9 @@
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	gap: 14px;
+	gap: 12px;
 	text-decoration: none;
-	font-size: 20px;
+	font-size: 16px;
 	font-weight: 800;
 	line-height: 1;
 	box-shadow: 0 0 0 8px #ffffff;
@@ -306,8 +309,8 @@
 }
 .kivun-jc-apply:hover { color: #000000; transform: translateY(-1px); }
 .kivun-jc-apply-ico {
-	width: 40px;
-	height: 40px;
+	width: 34px;
+	height: 34px;
 	border-radius: 50%;
 	background: #000000;
 	color: #ffffff;
@@ -315,15 +318,16 @@
 	align-items: center;
 	justify-content: center;
 	direction: ltr;
-	flex: 0 0 40px;
+	flex: 0 0 34px;
 }
+.kivun-jc-apply-ico svg { width: 17px; height: 17px; }
 
 @media (max-width: 480px) {
 	.kivun-jc-wrap { max-width: 100%; }
-	.kivun-jc-title { font-size: 28px; }
-	.kivun-jc-header { min-height: 120px; padding: 22px 24px; }
-	.kivun-jc-body { padding: 24px 24px 46px; }
-	.kivun-jc-apply { min-width: 220px; font-size: 18px; }
+	.kivun-jc-title { font-size: 20px; }
+	.kivun-jc-header { min-height: 96px; padding: 18px 22px; }
+	.kivun-jc-body { padding: 20px 22px 40px; }
+	.kivun-jc-apply { min-width: 200px; font-size: 15px; }
 }
 
 /* ── Single job (appended details + form) ───────────────────────────────── */
