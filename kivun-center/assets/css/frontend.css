@@ -12,7 +12,12 @@
 	--kivun-muted:     #6b7280;
 	--kivun-radius:    10px;
 	--kivun-shadow:    0 1px 4px rgba(0,0,0,.08);
-	--kivun-font:      'Ploni ML v2 AAA', 'Ploni', 'Heebo', 'Assistant', 'Rubik', system-ui, sans-serif;
+	/* Pull from the site's Elementor globals when present, with safe fallbacks. */
+	--kivun-font:      var(--e-global-typography-text-font-family, 'ploni'), 'Ploni ML v2 AAA', 'Heebo', 'Assistant', sans-serif;
+	--kivun-accent:    var(--e-global-color-primary, #de2952);
+	--kivun-dark:      #232323;
+	--kivun-card-bg:   #f5f5f5;
+	--kivun-title:     var(--e-global-color-secondary, #828383);
 }
 
 /* Apply the brand font to all front-end Kivun components (form controls do
@@ -173,8 +178,8 @@
 	background: none; border: none; cursor: pointer; font: inherit; font-weight: 600;
 	padding: .5rem 1.25rem; border-radius: 999px; color: #6b7280; transition: background .15s, color .15s;
 }
-.kivun-filtertab:hover { color: #111827; }
-.kivun-filtertab.is-active { background: #111827; color: #fff; }
+.kivun-filtertab:hover { color: var(--kivun-dark); }
+.kivun-filtertab.is-active { background: var(--kivun-dark); color: #fff; }
 .kivun-filterrow { display: flex; gap: 1rem; flex-wrap: wrap; }
 .kivun-select-pill, .kivun-search-pill { position: relative; flex: 1 1 220px; }
 .kivun-select-pill select,
@@ -194,7 +199,7 @@
 .kivun-pill-ico {
 	position: absolute; inset-inline-end: .45rem; top: 50%; transform: translateY(-50%);
 	width: 32px; height: 32px; border-radius: 50%;
-	background: #111827; color: #fff;
+	background: var(--kivun-dark); color: #fff;
 	display: inline-flex; align-items: center; justify-content: center;
 	pointer-events: none;
 }
@@ -210,7 +215,7 @@
 
 /* ── Job card (board) ───────────────────────────────────────────────────── */
 .kivun-job-card {
-	background: #f3f4f6;
+	background: var(--kivun-card-bg);
 	border: 1px solid transparent;
 	border-radius: 14px;
 	padding: 1.4rem 1.5rem;
@@ -218,14 +223,14 @@
 	flex-direction: column;
 	transition: box-shadow .15s, border-color .15s;
 }
-.kivun-job-card:hover { border-color: #d1d5db; box-shadow: 0 4px 14px rgba(0,0,0,.07); }
+.kivun-job-card:hover { border-color: #e0e0e0; box-shadow: 0 4px 14px rgba(0,0,0,.07); }
 .kivun-job-card__logo { font-size: 1.15rem; font-weight: 800; color: #111827; letter-spacing: .02em; margin-bottom: .9rem; }
 .kivun-job-card__title { font-size: 1.15rem; font-weight: 700; margin: 0 0 1rem; line-height: 1.35; }
-.kivun-job-card__title a { color: #4b5563; text-decoration: none; }
-.kivun-job-card__title a:hover { color: var(--kivun-primary); }
+.kivun-job-card__title a { color: var(--kivun-title); text-decoration: none; }
+.kivun-job-card__title a:hover { color: var(--kivun-accent); }
 .kivun-job-card__meta { list-style: none; margin: 0 0 1.25rem; padding: 0; display: flex; flex-direction: column; gap: .5rem; }
 .kivun-job-card__meta-item { display: flex; align-items: center; gap: .45rem; font-size: .85rem; color: #4b5563; }
-.kivun-job-card__ico { display: inline-flex; color: var(--kivun-error); flex: 0 0 auto; }
+.kivun-job-card__ico { display: inline-flex; color: var(--kivun-accent); flex: 0 0 auto; }
 .kivun-job-card__label { color: #6b7280; }
 .kivun-job-card__value { font-weight: 600; color: #374151; }
 .kivun-job-card__cta {
@@ -234,7 +239,7 @@
 	display: inline-flex;
 	align-items: center;
 	gap: .5rem;
-	background: #111827;
+	background: var(--kivun-dark);
 	color: #fff;
 	font-weight: 600;
 	font-size: .9rem;
@@ -243,7 +248,7 @@
 	text-decoration: none;
 	transition: background .15s;
 }
-.kivun-job-card__cta:hover { background: #374151; color: #fff; }
+.kivun-job-card__cta:hover { background: #000; color: #fff; }
 .kivun-job-card__cta-ico { display: inline-flex; transform: scaleX(-1); }
 
 /* ── Single job (appended details + form) ───────────────────────────────── */
