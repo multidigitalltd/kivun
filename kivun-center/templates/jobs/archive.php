@@ -30,36 +30,63 @@ $fields  = get_terms(
 
 	<?php if ( $show_filters ) : ?>
 	<div class="kivun-jobs-filters">
-		<div class="kivun-filter-group">
-			<input type="text" id="kivun-filter-search" placeholder="<?php esc_attr_e( 'חיפוש משרה...', 'kivun' ); ?>" class="kivun-filter-search">
+
+		<div class="kivun-filtertabs" role="tablist" aria-label="<?php esc_attr_e( 'מצב חיפוש', 'kivun' ); ?>">
+			<button type="button" class="kivun-filtertab is-active" data-filtermode="categories"><?php esc_html_e( 'חיפוש לפי קטגוריות', 'kivun' ); ?></button>
+			<button type="button" class="kivun-filtertab" data-filtermode="free"><?php esc_html_e( 'חיפוש חופשי', 'kivun' ); ?></button>
 		</div>
 
-		<div class="kivun-filter-group">
-			<select id="kivun-filter-scope">
-				<option value=""><?php esc_html_e( 'כל ההיקפים', 'kivun' ); ?></option>
-				<?php foreach ( $scopes as $job_term ) : ?>
-					<option value="<?php echo esc_attr( $job_term->slug ); ?>"><?php echo esc_html( $job_term->name ); ?></option>
-				<?php endforeach; ?>
-			</select>
+		<div class="kivun-filterrow" data-filterpanel="categories">
+			<div class="kivun-select-pill">
+				<label class="kivun-sr-only" for="kivun-filter-scope"><?php esc_html_e( 'סוג משרה', 'kivun' ); ?></label>
+				<select id="kivun-filter-scope">
+					<option value=""><?php esc_html_e( 'בחרו סוג משרה', 'kivun' ); ?></option>
+					<?php foreach ( $scopes as $job_term ) : ?>
+						<option value="<?php echo esc_attr( $job_term->slug ); ?>"><?php echo esc_html( $job_term->name ); ?></option>
+					<?php endforeach; ?>
+				</select>
+				<span class="kivun-pill-ico" aria-hidden="true">
+					<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+				</span>
+			</div>
+
+			<div class="kivun-select-pill">
+				<label class="kivun-sr-only" for="kivun-filter-region"><?php esc_html_e( 'אזור', 'kivun' ); ?></label>
+				<select id="kivun-filter-region">
+					<option value=""><?php esc_html_e( 'בחרו אזור', 'kivun' ); ?></option>
+					<?php foreach ( $regions as $job_term ) : ?>
+						<option value="<?php echo esc_attr( $job_term->slug ); ?>"><?php echo esc_html( $job_term->name ); ?></option>
+					<?php endforeach; ?>
+				</select>
+				<span class="kivun-pill-ico" aria-hidden="true">
+					<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+				</span>
+			</div>
+
+			<div class="kivun-select-pill">
+				<label class="kivun-sr-only" for="kivun-filter-field"><?php esc_html_e( 'תחום', 'kivun' ); ?></label>
+				<select id="kivun-filter-field">
+					<option value=""><?php esc_html_e( 'בחרו תחום', 'kivun' ); ?></option>
+					<?php foreach ( $fields as $job_term ) : ?>
+						<option value="<?php echo esc_attr( $job_term->slug ); ?>"><?php echo esc_html( $job_term->name ); ?></option>
+					<?php endforeach; ?>
+				</select>
+				<span class="kivun-pill-ico" aria-hidden="true">
+					<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+				</span>
+			</div>
 		</div>
 
-		<div class="kivun-filter-group">
-			<select id="kivun-filter-region">
-				<option value=""><?php esc_html_e( 'כל האזורים', 'kivun' ); ?></option>
-				<?php foreach ( $regions as $job_term ) : ?>
-					<option value="<?php echo esc_attr( $job_term->slug ); ?>"><?php echo esc_html( $job_term->name ); ?></option>
-				<?php endforeach; ?>
-			</select>
+		<div class="kivun-filterrow" data-filterpanel="free" hidden>
+			<div class="kivun-search-pill">
+				<label class="kivun-sr-only" for="kivun-filter-search"><?php esc_html_e( 'חיפוש חופשי', 'kivun' ); ?></label>
+				<span class="kivun-search-ico" aria-hidden="true">
+					<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+				</span>
+				<input type="search" id="kivun-filter-search" placeholder="<?php esc_attr_e( 'חיפוש משרה לפי שם או מילת מפתח…', 'kivun' ); ?>">
+			</div>
 		</div>
 
-		<div class="kivun-filter-group">
-			<select id="kivun-filter-field">
-				<option value=""><?php esc_html_e( 'כל התחומים', 'kivun' ); ?></option>
-				<?php foreach ( $fields as $job_term ) : ?>
-					<option value="<?php echo esc_attr( $job_term->slug ); ?>"><?php echo esc_html( $job_term->name ); ?></option>
-				<?php endforeach; ?>
-			</select>
-		</div>
 	</div>
 	<?php endif; ?>
 

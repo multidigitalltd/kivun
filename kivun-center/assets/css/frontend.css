@@ -132,15 +132,49 @@
 .kivun-success { padding: 1rem; background: #dcfce7; color: var(--kivun-success); border-radius: 6px; font-weight: 600; }
 
 /* ── Jobs board ─────────────────────────────────────────────────────────── */
-.kivun-jobs-filters {
-	display: flex;
-	flex-wrap: wrap;
-	gap: .75rem;
-	margin-bottom: 1.25rem;
-	align-items: center;
+.kivun-jobs-filters { margin-bottom: 1.75rem; }
+.kivun-filtertabs {
+	display: inline-flex;
+	gap: .25rem;
+	background: #f3f4f6;
+	border-radius: 999px;
+	padding: .25rem;
+	margin-bottom: 1rem;
 }
-.kivun-filter-group { flex: 1 1 160px; }
-.kivun-filter-search { width: 100%; }
+.kivun-filtertab {
+	background: none; border: none; cursor: pointer; font: inherit; font-weight: 600;
+	padding: .5rem 1.25rem; border-radius: 999px; color: #6b7280; transition: background .15s, color .15s;
+}
+.kivun-filtertab:hover { color: #111827; }
+.kivun-filtertab.is-active { background: #111827; color: #fff; }
+.kivun-filterrow { display: flex; gap: 1rem; flex-wrap: wrap; }
+.kivun-select-pill, .kivun-search-pill { position: relative; flex: 1 1 220px; }
+.kivun-select-pill select,
+.kivun-search-pill input {
+	width: 100%;
+	appearance: none; -webkit-appearance: none;
+	border: 1px solid var(--kivun-border);
+	border-radius: 999px;
+	background: #fff;
+	padding: .8rem 1.3rem;
+	padding-inline-end: 3.2rem;
+	font: inherit; font-size: .92rem; color: #374151;
+	cursor: pointer;
+}
+.kivun-select-pill select:focus,
+.kivun-search-pill input:focus { outline: none; border-color: #111827; }
+.kivun-pill-ico {
+	position: absolute; inset-inline-end: .45rem; top: 50%; transform: translateY(-50%);
+	width: 32px; height: 32px; border-radius: 50%;
+	background: #111827; color: #fff;
+	display: inline-flex; align-items: center; justify-content: center;
+	pointer-events: none;
+}
+.kivun-search-pill input { padding-inline-start: 3rem; padding-inline-end: 1.3rem; cursor: text; }
+.kivun-search-ico {
+	position: absolute; inset-inline-start: 1.1rem; top: 50%; transform: translateY(-50%);
+	color: #9ca3af; pointer-events: none;
+}
 .kivun-jobs-meta { font-size: .87rem; color: var(--kivun-muted); margin-bottom: .75rem; }
 .kivun-jobs-count { font-weight: 700; color: var(--kivun-primary); }
 .kivun-jobs-board { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.25rem; }

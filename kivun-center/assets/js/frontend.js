@@ -86,6 +86,28 @@
 		}
 	});
 
+	// Toggle between "search by categories" and "free search" modes.
+	document.addEventListener('click', function (e) {
+		var tab = e.target.closest('.kivun-filtertab');
+		if (!tab) { return; }
+
+		var wrap = tab.closest('.kivun-jobs-filters');
+		var mode = tab.dataset.filtermode;
+
+		wrap.querySelectorAll('.kivun-filtertab').forEach(function (t) {
+			t.classList.toggle('is-active', t === tab);
+		});
+		wrap.querySelectorAll('[data-filterpanel]').forEach(function (panel) {
+			var show = panel.dataset.filterpanel === mode;
+			panel.hidden = !show;
+			if (!show) {
+				panel.querySelectorAll('select, input').forEach(function (el) { el.value = ''; });
+			}
+		});
+
+		loadJobs();
+	});
+
 	// ── Apply form toggle ────────────────────────────────────────────────────────
 	document.addEventListener('click', function (e) {
 		var toggle = e.target.closest('.kivun-apply-toggle');
