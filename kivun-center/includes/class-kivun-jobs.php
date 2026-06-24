@@ -240,9 +240,9 @@ class Kivun_Jobs {
 	public static function ajax_filter(): void {
 		check_ajax_referer( 'kivun_nonce', 'nonce' );
 
-		$scope  = sanitize_text_field( wp_unslash( $_POST['scope'] ?? '' ) );
-		$region = sanitize_text_field( wp_unslash( $_POST['region'] ?? '' ) );
-		$field  = sanitize_text_field( wp_unslash( $_POST['field'] ?? '' ) );
+		$scope  = absint( $_POST['scope'] ?? 0 );
+		$region = absint( $_POST['region'] ?? 0 );
+		$field  = absint( $_POST['field'] ?? 0 );
 		$search = sanitize_text_field( wp_unslash( $_POST['search'] ?? '' ) );
 		$paged  = max( 1, absint( $_POST['paged'] ?? 1 ) );
 
@@ -260,21 +260,21 @@ class Kivun_Jobs {
 		if ( $scope ) {
 			$tax_query[] = array(
 				'taxonomy' => 'kivun_job_scope',
-				'field'    => 'slug',
+				'field'    => 'term_id',
 				'terms'    => $scope,
 			);
 		}
 		if ( $region ) {
 			$tax_query[] = array(
 				'taxonomy' => 'kivun_job_region',
-				'field'    => 'slug',
+				'field'    => 'term_id',
 				'terms'    => $region,
 			);
 		}
 		if ( $field ) {
 			$tax_query[] = array(
 				'taxonomy' => 'kivun_job_field',
-				'field'    => 'slug',
+				'field'    => 'term_id',
 				'terms'    => $field,
 			);
 		}
@@ -373,7 +373,15 @@ class Kivun_Jobs {
 
 		// Never report success on a failed write (was silently masking errors).
 		if ( false === $inserted ) {
-			wp_send_json_error( array( 'message' => __( 'שמירת ההגשה נכשלה. אנא נסו שוב או פנו אלינו.', 'kivun' ) ) );
+			$db_error = $wpdb->last_error;
+			do_action( 'kivun_application_insert_failed', $db_error, $job_id );
+
+			$message = __( 'שמירת ההגשה נכשלה. אנא נסו שוב או פנו אלינו.', 'kivun' );
+			// Surface the real reason to administrators testing the form.
+			if ( $db_error && current_user_can( 'manage_options' ) ) {
+				$message .= ' [' . $db_error . ']';
+			}
+			wp_send_json_error( array( 'message' => $message ) );
 		}
 
 		$employer_email = get_post_meta( $job_id, '_kivun_employer_email', true );

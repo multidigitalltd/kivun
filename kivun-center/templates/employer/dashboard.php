@@ -41,15 +41,13 @@ if ( ! current_user_can( 'kivun_employer' ) && ! current_user_can( 'manage_optio
 $user_id = get_current_user_id();
 $jobs    = get_posts(
 	array(
-		'post_type'              => 'kivun_job',
-		'author'                 => current_user_can( 'manage_options' ) ? 0 : $user_id,
-		'post_status'            => array( 'publish', 'draft', 'pending' ),
-		'posts_per_page'         => 100,
-		'orderby'                => 'date',
-		'order'                  => 'DESC',
-		'no_found_rows'          => true,
-		'update_post_term_cache' => false,
-		'update_post_meta_cache' => false,
+		'post_type'      => 'kivun_job',
+		'author'         => current_user_can( 'manage_options' ) ? 0 : $user_id,
+		'post_status'    => array( 'publish', 'draft', 'pending' ),
+		'posts_per_page' => 100,
+		'orderby'        => 'date',
+		'order'          => 'DESC',
+		'no_found_rows'  => true,
 	)
 );
 
@@ -109,10 +107,15 @@ foreach ( $applications as $a ) {
 			</button>
 		</div>
 
-		<!-- New Job Form -->
+		<!-- New / Edit Job Form -->
 		<div class="kivun-new-job-form" id="kivun-new-job-form" style="display:none;">
-			<h3><?php esc_html_e( 'משרה חדשה', 'kivun' ); ?></h3>
+			<h3
+				id="kivun-new-job-heading"
+				data-new="<?php esc_attr_e( 'משרה חדשה', 'kivun' ); ?>"
+				data-edit="<?php esc_attr_e( 'עריכת משרה', 'kivun' ); ?>"
+			><?php esc_html_e( 'משרה חדשה', 'kivun' ); ?></h3>
 			<form class="kivun-employer-form" data-action="kivun_post_job" novalidate>
+				<input type="hidden" name="job_id" value="">
 
 				<div class="kivun-form-row">
 					<label for="kivun-f-title"><?php esc_html_e( 'כותרת המשרה *', 'kivun' ); ?></label>
@@ -198,7 +201,13 @@ foreach ( $applications as $a ) {
 				<p class="kivun-error" style="display:none;color:var(--kivun-error)"></p>
 
 				<div class="kivun-form-actions">
-					<button type="submit" class="kivun-btn kivun-btn--primary"><?php esc_html_e( 'פרסם משרה', 'kivun' ); ?></button>
+					<button
+						type="submit"
+						class="kivun-btn kivun-btn--primary"
+						id="kivun-new-job-submit"
+						data-new="<?php esc_attr_e( 'פרסם משרה', 'kivun' ); ?>"
+						data-edit="<?php esc_attr_e( 'שמירת שינויים', 'kivun' ); ?>"
+					><?php esc_html_e( 'פרסם משרה', 'kivun' ); ?></button>
 					<button type="button" class="kivun-btn kivun-btn--outline" id="kivun-cancel-new-job"><?php esc_html_e( 'ביטול', 'kivun' ); ?></button>
 				</div>
 			</form>
@@ -223,8 +232,22 @@ foreach ( $applications as $a ) {
 						'total' => 0,
 						'new'   => 0,
 					);
+
+					$kivun_scope_t  = get_the_terms( $job->ID, 'kivun_job_scope' );
+					$kivun_region_t = get_the_terms( $job->ID, 'kivun_job_region' );
+					$kivun_field_t  = get_the_terms( $job->ID, 'kivun_job_field' );
 					?>
-					<tr data-job-row="<?php echo esc_attr( $job->ID ); ?>">
+					<tr
+						data-job-row="<?php echo esc_attr( $job->ID ); ?>"
+						data-title="<?php echo esc_attr( $job->post_title ); ?>"
+						data-company="<?php echo esc_attr( get_post_meta( $job->ID, '_kivun_company', true ) ); ?>"
+						data-salary="<?php echo esc_attr( get_post_meta( $job->ID, '_kivun_salary', true ) ); ?>"
+						data-scope="<?php echo esc_attr( ( $kivun_scope_t && ! is_wp_error( $kivun_scope_t ) ) ? $kivun_scope_t[0]->name : '' ); ?>"
+						data-region="<?php echo esc_attr( ( $kivun_region_t && ! is_wp_error( $kivun_region_t ) ) ? $kivun_region_t[0]->name : '' ); ?>"
+						data-field="<?php echo esc_attr( ( $kivun_field_t && ! is_wp_error( $kivun_field_t ) ) ? $kivun_field_t[0]->name : '' ); ?>"
+						data-description="<?php echo esc_attr( get_post_meta( $job->ID, '_kivun_description', true ) ); ?>"
+						data-requirements="<?php echo esc_attr( get_post_meta( $job->ID, '_kivun_requirements', true ) ); ?>"
+					>
 						<td><?php echo esc_html( $job->post_title ); ?></td>
 						<td>
 							<span class="kivun-status kivun-status--<?php echo esc_attr( $job->post_status ); ?>">
@@ -255,6 +278,11 @@ foreach ( $applications as $a ) {
 						</td>
 						<td><?php echo esc_html( get_the_date( 'd/m/Y', $job->ID ) ); ?></td>
 						<td>
+							<button
+								type="button"
+								class="kivun-btn kivun-btn--sm kivun-btn--outline kivun-edit-job"
+								data-id="<?php echo esc_attr( $job->ID ); ?>"
+							><?php esc_html_e( 'ערוך', 'kivun' ); ?></button>
 							<button
 								type="button"
 								class="kivun-btn kivun-btn--sm kivun-delete-job"

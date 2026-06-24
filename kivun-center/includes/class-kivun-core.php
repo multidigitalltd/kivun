@@ -20,6 +20,8 @@ class Kivun_Core {
 	public static function init(): void {
 		self::load_includes();
 
+		Kivun_Installer::maybe_upgrade();
+
 		Kivun_Post_Types::init();
 		Kivun_Shortcodes::init();
 		Kivun_Courses::init();

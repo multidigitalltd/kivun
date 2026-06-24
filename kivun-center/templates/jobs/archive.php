@@ -42,7 +42,7 @@ $fields  = get_terms(
 				<select id="kivun-filter-scope">
 					<option value=""><?php esc_html_e( 'בחרו סוג משרה', 'kivun' ); ?></option>
 					<?php foreach ( $scopes as $job_term ) : ?>
-						<option value="<?php echo esc_attr( $job_term->slug ); ?>"><?php echo esc_html( $job_term->name ); ?></option>
+						<option value="<?php echo esc_attr( $job_term->term_id ); ?>"><?php echo esc_html( $job_term->name ); ?></option>
 					<?php endforeach; ?>
 				</select>
 				<span class="kivun-pill-ico" aria-hidden="true">
@@ -55,7 +55,7 @@ $fields  = get_terms(
 				<select id="kivun-filter-region">
 					<option value=""><?php esc_html_e( 'בחרו אזור', 'kivun' ); ?></option>
 					<?php foreach ( $regions as $job_term ) : ?>
-						<option value="<?php echo esc_attr( $job_term->slug ); ?>"><?php echo esc_html( $job_term->name ); ?></option>
+						<option value="<?php echo esc_attr( $job_term->term_id ); ?>"><?php echo esc_html( $job_term->name ); ?></option>
 					<?php endforeach; ?>
 				</select>
 				<span class="kivun-pill-ico" aria-hidden="true">
@@ -68,7 +68,7 @@ $fields  = get_terms(
 				<select id="kivun-filter-field">
 					<option value=""><?php esc_html_e( 'בחרו תחום', 'kivun' ); ?></option>
 					<?php foreach ( $fields as $job_term ) : ?>
-						<option value="<?php echo esc_attr( $job_term->slug ); ?>"><?php echo esc_html( $job_term->name ); ?></option>
+						<option value="<?php echo esc_attr( $job_term->term_id ); ?>"><?php echo esc_html( $job_term->name ); ?></option>
 					<?php endforeach; ?>
 				</select>
 				<span class="kivun-pill-ico" aria-hidden="true">

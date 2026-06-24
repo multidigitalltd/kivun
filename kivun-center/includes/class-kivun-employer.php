@@ -125,9 +125,18 @@ class Kivun_Employer {
 		$job_id = absint( wp_unslash( $_POST['job_id'] ?? 0 ) );
 		self::verify_job_owner( $job_id );
 
-		$title       = sanitize_text_field( wp_unslash( $_POST['title'] ?? '' ) );
-		$description = wp_kses_post( wp_unslash( $_POST['description'] ?? '' ) );
-		$salary      = sanitize_text_field( wp_unslash( $_POST['salary'] ?? '' ) );
+		$title        = sanitize_text_field( wp_unslash( $_POST['title'] ?? '' ) );
+		$description  = wp_kses_post( wp_unslash( $_POST['description'] ?? '' ) );
+		$company      = sanitize_text_field( wp_unslash( $_POST['company'] ?? '' ) );
+		$salary       = sanitize_text_field( wp_unslash( $_POST['salary'] ?? '' ) );
+		$requirements = wp_kses_post( wp_unslash( $_POST['requirements'] ?? '' ) );
+		$scope        = sanitize_text_field( wp_unslash( $_POST['scope'] ?? '' ) );
+		$region       = sanitize_text_field( wp_unslash( $_POST['region'] ?? '' ) );
+		$field        = sanitize_text_field( wp_unslash( $_POST['field'] ?? '' ) );
+
+		if ( ! $title || ! $description ) {
+			wp_send_json_error( array( 'message' => __( 'כותרת ותיאור הם שדות חובה.', 'kivun' ) ) );
+		}
 
 		wp_update_post(
 			array(
@@ -137,7 +146,13 @@ class Kivun_Employer {
 		);
 
 		update_post_meta( $job_id, '_kivun_description', $description );
+		update_post_meta( $job_id, '_kivun_company', $company );
 		update_post_meta( $job_id, '_kivun_salary', $salary );
+		update_post_meta( $job_id, '_kivun_requirements', $requirements );
+
+		wp_set_object_terms( $job_id, $scope ? $scope : array(), 'kivun_job_scope' );
+		wp_set_object_terms( $job_id, $region ? $region : array(), 'kivun_job_region' );
+		wp_set_object_terms( $job_id, $field ? $field : array(), 'kivun_job_field' );
 
 		wp_send_json_success( array( 'message' => __( 'המשרה עודכנה.', 'kivun' ) ) );
 	}

@@ -39,6 +39,19 @@ class Kivun_Installer {
 	}
 
 	/**
+	 * Ensure the database tables exist after a plugin update. The activation
+	 * hook only runs on activate, not on a ZIP/FTP update, so a missing table
+	 * would make submissions silently fail — guard against that here.
+	 *
+	 * @return void
+	 */
+	public static function maybe_upgrade(): void {
+		if ( get_option( 'kivun_db_version' ) !== KIVUN_VERSION ) {
+			self::create_tables();
+		}
+	}
+
+	/**
 	 * Creates the plugin custom database tables.
 	 *
 	 * @return void

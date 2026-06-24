@@ -222,11 +222,42 @@
 		}
 	});
 
-	// ── Employer dashboard — new-job form toggle ─────────────────────────────────
+	// ── Employer dashboard — add / edit job form ─────────────────────────────────
+	function kivunSetEditor(id, html) {
+		if (window.tinymce && window.tinymce.get(id)) {
+			window.tinymce.get(id).setContent(html || '');
+		} else {
+			var ta = document.getElementById(id);
+			if (ta) { ta.value = html || ''; }
+		}
+	}
+
+	function kivunFormMode(isEdit) {
+		var heading = document.getElementById('kivun-new-job-heading');
+		var submit = document.getElementById('kivun-new-job-submit');
+		if (heading) { heading.textContent = isEdit ? heading.dataset.edit : heading.dataset.new; }
+		if (submit) { submit.textContent = isEdit ? submit.dataset.edit : submit.dataset.new; }
+	}
+
+	function kivunResetJobForm() {
+		var form = document.querySelector('.kivun-employer-form');
+		if (!form) { return; }
+		form.reset();
+		form.dataset.action = 'kivun_post_job';
+		var jobId = form.querySelector('input[name="job_id"]');
+		if (jobId) { jobId.value = ''; }
+		kivunSetEditor('kivunjobdesc', '');
+		kivunSetEditor('kivunjobreq', '');
+		var err = form.querySelector('.kivun-error');
+		if (err) { err.style.display = 'none'; }
+		kivunFormMode(false);
+	}
+
 	document.addEventListener('click', function (e) {
 		if (e.target.closest('#kivun-toggle-new-job')) {
 			var openForm = document.getElementById('kivun-new-job-form');
 			if (openForm) {
+				kivunResetJobForm();
 				openForm.style.display = 'block';
 				// Let any TinyMCE editors recalculate now that they are visible.
 				window.dispatchEvent(new Event('resize'));
@@ -237,6 +268,38 @@
 		if (e.target.closest('#kivun-cancel-new-job')) {
 			var closeForm = document.getElementById('kivun-new-job-form');
 			if (closeForm) { closeForm.style.display = 'none'; }
+			kivunResetJobForm();
+		}
+
+		// Edit an existing job — populate the shared form in edit mode.
+		var editBtn = e.target.closest('.kivun-edit-job');
+		if (editBtn) {
+			var row = editBtn.closest('[data-job-row]');
+			var form = document.querySelector('.kivun-employer-form');
+			var wrap = document.getElementById('kivun-new-job-form');
+			if (row && form && wrap) {
+				form.dataset.action = 'kivun_update_job';
+				var idField = form.querySelector('input[name="job_id"]');
+				if (idField) { idField.value = editBtn.dataset.id; }
+
+				var setField = function (name, value) {
+					var el = form.querySelector('[name="' + name + '"]');
+					if (el) { el.value = value || ''; }
+				};
+				setField('title', row.dataset.title);
+				setField('company', row.dataset.company);
+				setField('salary', row.dataset.salary);
+				setField('scope', row.dataset.scope);
+				setField('region', row.dataset.region);
+				setField('field', row.dataset.field);
+				kivunSetEditor('kivunjobdesc', row.dataset.description);
+				kivunSetEditor('kivunjobreq', row.dataset.requirements);
+
+				kivunFormMode(true);
+				wrap.style.display = 'block';
+				window.dispatchEvent(new Event('resize'));
+				wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+			}
 		}
 	});
 
