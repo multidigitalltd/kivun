@@ -105,11 +105,13 @@ class Kivun_Admin_Settings {
 		update_option(
 			self::$option_key,
 			array(
-				'admin_email'     => sanitize_email( wp_unslash( $_POST['admin_email'] ?? '' ) ),
-				'jobs_per_page'   => absint( $_POST['jobs_per_page'] ?? 10 ),
-				'allow_cv_upload' => ! empty( $_POST['allow_cv_upload'] ),
-				'cv_max_size_mb'  => absint( $_POST['cv_max_size_mb'] ?? 5 ),
-				'webhook_url'     => esc_url_raw( wp_unslash( $_POST['webhook_url'] ?? '' ) ),
+				'admin_email'          => sanitize_email( wp_unslash( $_POST['admin_email'] ?? '' ) ),
+				'jobs_per_page'        => absint( $_POST['jobs_per_page'] ?? 10 ),
+				'allow_cv_upload'      => ! empty( $_POST['allow_cv_upload'] ),
+				'cv_max_size_mb'       => absint( $_POST['cv_max_size_mb'] ?? 5 ),
+				'webhook_url'          => esc_url_raw( wp_unslash( $_POST['webhook_url'] ?? '' ) ),
+				'turnstile_site_key'   => sanitize_text_field( wp_unslash( $_POST['turnstile_site_key'] ?? '' ) ),
+				'turnstile_secret_key' => sanitize_text_field( wp_unslash( $_POST['turnstile_secret_key'] ?? '' ) ),
 			)
 		);
 
@@ -231,6 +233,20 @@ class Kivun_Admin_Settings {
 							<?php esc_html_e( 'POST (JSON) יישלח לכתובת זו בכל ליד, הרשמה או מועמדות חדשה.', 'kivun' ); ?><br>
 							<?php esc_html_e( 'משדות: event, post_id, post_title, name, email, phone, message, timestamp.', 'kivun' ); ?>
 						</p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'Cloudflare Turnstile — Site Key', 'kivun' ); ?></th>
+					<td>
+						<input type="text" name="turnstile_site_key" value="<?php echo esc_attr( $o( 'turnstile_site_key' ) ); ?>" class="regular-text" autocomplete="off">
+						<p class="description"><?php esc_html_e( 'מפתח אתר מ-Cloudflare Turnstile. כשממולא, תופיע הגנת CAPTCHA בטופס הגשת המועמדות.', 'kivun' ); ?></p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'Cloudflare Turnstile — Secret Key', 'kivun' ); ?></th>
+					<td>
+						<input type="password" name="turnstile_secret_key" value="<?php echo esc_attr( $o( 'turnstile_secret_key' ) ); ?>" class="regular-text" autocomplete="off">
+						<p class="description"><?php esc_html_e( 'מפתח סודי לאימות בצד השרת. נשמר פרטית ולא נחשף בפרונטאנד.', 'kivun' ); ?></p>
 					</td>
 				</tr>
 			</table>

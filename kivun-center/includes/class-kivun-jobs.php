@@ -113,7 +113,72 @@ class Kivun_Jobs {
 
 		ob_start();
 		kivun_get_template( 'jobs/single.php', array( 'job_id' => $job_id ) );
-		return $content . ob_get_clean();
+		$appended = ob_get_clean();
+
+		return self::breadcrumbs( $job_id ) . $content . $appended;
+	}
+
+	/**
+	 * Build an accessible breadcrumb trail (with BreadcrumbList schema) for the
+	 * single job page: Home › Jobs board › Job title.
+	 *
+	 * @param int $job_id The current job ID.
+	 * @return string The breadcrumb markup, or '' when disabled.
+	 */
+	public static function breadcrumbs( int $job_id ): string {
+		if ( ! apply_filters( 'kivun_job_breadcrumbs', true, $job_id ) ) {
+			return '';
+		}
+
+		$trail = array(
+			array(
+				'label' => __( 'בית', 'kivun' ),
+				'url'   => home_url( '/' ),
+			),
+			array(
+				'label' => __( 'לוח המשרות', 'kivun' ),
+				'url'   => get_post_type_archive_link( 'kivun_job' ),
+			),
+			array(
+				'label' => get_the_title( $job_id ),
+				'url'   => '',
+			),
+		);
+
+		$items = '';
+		$pos   = 1;
+		$last  = count( $trail ) - 1;
+
+		foreach ( $trail as $index => $crumb ) {
+			$is_last = ( $index === $last );
+			$inner   = '';
+
+			if ( ! $is_last && $crumb['url'] ) {
+				$inner = sprintf(
+					'<a itemprop="item" href="%s"><span itemprop="name">%s</span></a>',
+					esc_url( $crumb['url'] ),
+					esc_html( $crumb['label'] )
+				);
+			} else {
+				$inner = sprintf(
+					'<span itemprop="name" aria-current="page">%s</span>',
+					esc_html( $crumb['label'] )
+				);
+			}
+
+			$items .= sprintf(
+				'<li class="kivun-breadcrumbs__item" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">%s<meta itemprop="position" content="%d"></li>',
+				$inner,
+				$pos
+			);
+			++$pos;
+		}
+
+		return sprintf(
+			'<nav class="kivun-breadcrumbs" aria-label="%s"><ol class="kivun-breadcrumbs__list" itemscope itemtype="https://schema.org/BreadcrumbList">%s</ol></nav>',
+			esc_attr__( 'פירורי לחם', 'kivun' ),
+			$items
+		);
 	}
 
 	// ── Filter ────────────────────────────────────────────────────────────────.
@@ -210,6 +275,10 @@ class Kivun_Jobs {
 	public static function ajax_apply(): void {
 		check_ajax_referer( 'kivun_nonce', 'nonce' );
 
+		if ( ! self::verify_turnstile() ) {
+			wp_send_json_error( array( 'message' => __( 'אימות האבטחה נכשל. נסו שוב.', 'kivun' ) ) );
+		}
+
 		$job_id  = absint( $_POST['job_id'] ?? 0 );
 		$name    = sanitize_text_field( wp_unslash( $_POST['applicant_name'] ?? '' ) );
 		$email   = sanitize_email( wp_unslash( $_POST['applicant_email'] ?? '' ) );
@@ -265,6 +334,46 @@ class Kivun_Jobs {
 				'message' => __( 'קורות החיים נשלחו! נחזור אליך בהקדם.', 'kivun' ),
 			)
 		);
+	}
+
+	/**
+	 * Verify the Cloudflare Turnstile token. Returns true when Turnstile is not
+	 * configured (feature disabled), otherwise validates the token server-side.
+	 *
+	 * @return bool
+	 */
+	private static function verify_turnstile(): bool {
+		$secret = (string) Kivun_Admin_Settings::get( 'turnstile_secret_key' );
+		if ( '' === $secret ) {
+			return true;
+		}
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in ajax_apply() before this runs.
+		$token = isset( $_POST['cf-turnstile-response'] ) ? sanitize_text_field( wp_unslash( $_POST['cf-turnstile-response'] ) ) : '';
+		if ( '' === $token ) {
+			return false;
+		}
+
+		$remote_ip = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
+
+		$response = wp_remote_post(
+			'https://challenges.cloudflare.com/turnstile/v0/siteverify',
+			array(
+				'timeout' => 10,
+				'body'    => array(
+					'secret'   => $secret,
+					'response' => $token,
+					'remoteip' => $remote_ip,
+				),
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			return false;
+		}
+
+		$data = json_decode( wp_remote_retrieve_body( $response ), true );
+		return is_array( $data ) && ! empty( $data['success'] );
 	}
 
 	/**

@@ -330,6 +330,15 @@
 	.kivun-jc-apply { min-width: 200px; font-size: 15px; }
 }
 
+/* ── Breadcrumbs ────────────────────────────────────────────────────────── */
+.kivun-breadcrumbs { direction: rtl; margin: 0 0 1.25rem; font-size: 14px; font-family: var(--kivun-font); }
+.kivun-breadcrumbs__list { list-style: none; display: flex; flex-wrap: wrap; align-items: center; margin: 0; padding: 0; }
+.kivun-breadcrumbs__item { display: inline-flex; align-items: center; color: var(--kivun-muted); }
+.kivun-breadcrumbs__item + .kivun-breadcrumbs__item::before { content: "\2039"; margin: 0 .5rem; color: #b8b8b8; }
+.kivun-breadcrumbs__item a { color: var(--kivun-muted); text-decoration: none; }
+.kivun-breadcrumbs__item a:hover { color: var(--kivun-accent); text-decoration: underline; }
+.kivun-breadcrumbs__item [aria-current="page"] { color: #303030; font-weight: 600; }
+
 /* ── Single job (appended details + form) ───────────────────────────────── */
 .kivun-job-single { margin-top: 2rem; }
 .kivun-job-single__description { margin-bottom: 2rem; line-height: 1.7; }

@@ -6,6 +6,8 @@
  */
 
 defined( 'ABSPATH' ) || exit;
+
+$kivun_turnstile_key = Kivun_Admin_Settings::get( 'turnstile_site_key' );
 ?>
 <div class="kivun-apply-wrap">
 	<form class="kivun-apply-form" enctype="multipart/form-data" novalidate>
@@ -36,6 +38,13 @@ defined( 'ABSPATH' ) || exit;
 			<label for="kivun-apply-cv"><?php esc_html_e( 'קורות חיים (PDF / Word, עד 5MB)', 'kivun' ); ?></label>
 			<input type="file" id="kivun-apply-cv" name="cv_file" accept=".pdf,.doc,.docx">
 		</div>
+
+		<?php if ( $kivun_turnstile_key ) : ?>
+			<?php wp_enqueue_script( 'kivun-turnstile', 'https://challenges.cloudflare.com/turnstile/v0/api.js', array(), null, true ); // phpcs:ignore WordPress.WP.EnqueuedResourceParameters.MissingVersion, WordPress.WP.EnqueuedResourceParameters.NotInFooter -- External Cloudflare API; no version, loaded async in footer. ?>
+			<div class="kivun-form-row">
+				<div class="cf-turnstile" data-sitekey="<?php echo esc_attr( $kivun_turnstile_key ); ?>" data-language="he"></div>
+			</div>
+		<?php endif; ?>
 
 		<p class="kivun-error" style="display:none;color:var(--kivun-error)"></p>
 
