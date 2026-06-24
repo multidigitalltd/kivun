@@ -186,6 +186,7 @@
 
 /* ── Single job (appended details + form) ───────────────────────────────── */
 .kivun-job-single { margin-top: 2rem; }
+.kivun-job-single__description { margin-bottom: 2rem; line-height: 1.7; }
 .kivun-job-single__heading { font-size: 1.25rem; margin: 0 0 1rem; }
 .kivun-job-single__subheading { font-size: 1.05rem; margin: 1.25rem 0 .5rem; }
 .kivun-job-single__details {

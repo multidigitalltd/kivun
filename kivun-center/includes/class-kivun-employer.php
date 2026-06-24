@@ -75,7 +75,7 @@ class Kivun_Employer {
 			array(
 				'post_type'    => 'kivun_job',
 				'post_title'   => $title,
-				'post_content' => $description,
+				'post_content' => '',
 				'post_status'  => 'publish',
 				'post_author'  => get_current_user_id(),
 			),
@@ -89,6 +89,7 @@ class Kivun_Employer {
 		// Employer email — stored privately, never exposed in frontend.
 		$user = wp_get_current_user();
 		update_post_meta( $job_id, '_kivun_employer_email', $user->user_email );
+		update_post_meta( $job_id, '_kivun_description', $description );
 		update_post_meta( $job_id, '_kivun_company', $company );
 		update_post_meta( $job_id, '_kivun_salary', $salary );
 		update_post_meta( $job_id, '_kivun_requirements', $requirements );
@@ -133,12 +134,12 @@ class Kivun_Employer {
 
 		wp_update_post(
 			array(
-				'ID'           => $job_id,
-				'post_title'   => $title,
-				'post_content' => $description,
+				'ID'         => $job_id,
+				'post_title' => $title,
 			)
 		);
 
+		update_post_meta( $job_id, '_kivun_description', $description );
 		update_post_meta( $job_id, '_kivun_salary', $salary );
 		update_post_meta( $job_id, '_kivun_deadline', $deadline );
 

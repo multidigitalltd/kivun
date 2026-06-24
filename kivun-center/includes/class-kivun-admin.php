@@ -479,6 +479,10 @@ class Kivun_Admin {
 				<td><input type="text" name="_kivun_company" value="<?php echo esc_attr( $f( '_kivun_company' ) ); ?>"></td>
 			</tr>
 			<tr>
+				<th><?php esc_html_e( 'תיאור המשרה', 'kivun' ); ?></th>
+				<td><textarea name="_kivun_description" rows="6"><?php echo esc_textarea( $f( '_kivun_description' ) ); ?></textarea></td>
+			</tr>
+			<tr>
 				<th><?php esc_html_e( 'שכר / טווח', 'kivun' ); ?></th>
 				<td><input type="text" name="_kivun_salary" value="<?php echo esc_attr( $f( '_kivun_salary' ) ); ?>" placeholder="10,000–15,000 ₪"></td>
 			</tr>
@@ -564,6 +568,7 @@ class Kivun_Admin {
 			foreach ( array(
 				'_kivun_employer_email' => 'email',
 				'_kivun_company'        => 'text',
+				'_kivun_description'    => 'kses',
 				'_kivun_salary'         => 'text',
 				'_kivun_requirements'   => 'textarea',
 				'_kivun_deadline'       => 'text',
@@ -593,6 +598,9 @@ class Kivun_Admin {
 				break;
 			case 'email':
 				$value = sanitize_email( $raw );
+				break;
+			case 'kses':
+				$value = wp_kses_post( $raw );
 				break;
 			default:
 				$value = sanitize_text_field( $raw );

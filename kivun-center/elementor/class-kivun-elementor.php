@@ -44,6 +44,7 @@ class Kivun_Elementor {
 		require_once KIVUN_DIR . 'elementor/tags/class-kivun-tag-course-spots.php';
 		require_once KIVUN_DIR . 'elementor/tags/class-kivun-tag-course-is-free.php';
 		require_once KIVUN_DIR . 'elementor/tags/class-kivun-tag-job-company.php';
+		require_once KIVUN_DIR . 'elementor/tags/class-kivun-tag-job-description.php';
 		require_once KIVUN_DIR . 'elementor/tags/class-kivun-tag-job-salary.php';
 		require_once KIVUN_DIR . 'elementor/tags/class-kivun-tag-job-requirements.php';
 		require_once KIVUN_DIR . 'elementor/tags/class-kivun-tag-job-deadline.php';
@@ -65,6 +66,7 @@ class Kivun_Elementor {
 			Kivun_Tag_Course_Spots::class,
 			Kivun_Tag_Course_Is_Free::class,
 			Kivun_Tag_Job_Company::class,
+			Kivun_Tag_Job_Description::class,
 			Kivun_Tag_Job_Salary::class,
 			Kivun_Tag_Job_Requirements::class,
 			Kivun_Tag_Job_Deadline::class,

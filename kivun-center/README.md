@@ -4,7 +4,7 @@
 אינטגרציית WooCommerce, תגיות דינמיות ל‑Elementor, אזור מעסיקים לניהול הגשות,
 ושכבת נגישות (ת"י 5568 / WCAG 2.2 AA).
 
-- **גרסה:** 1.6.0
+- **גרסה:** 1.6.1
 - **דרישות:** WordPress 6.0+, PHP 8.0+ (נבדק עד 8.4)
 - **טקסט דומיין:** `kivun` (RTL מלא)
 
@@ -164,8 +164,8 @@
 
 ## שדות מטא
 
-**משרה (`kivun_job`):** `_kivun_employer_email` · `_kivun_company` · `_kivun_salary` ·
-`_kivun_requirements` · `_kivun_deadline`
+**משרה (`kivun_job`):** `_kivun_employer_email` · `_kivun_company` · `_kivun_description` ·
+`_kivun_salary` · `_kivun_requirements` · `_kivun_deadline`
 
 **קורס (`kivun_course`):** `_kivun_target_audience` · `_kivun_schedule` · `_kivun_duration` ·
 `_kivun_price` · `_kivun_wc_product_id` · `_kivun_benefits` · `_kivun_capacity` ·

@@ -7,6 +7,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
+$description  = get_post_meta( $job_id, '_kivun_description', true );
 $company      = get_post_meta( $job_id, '_kivun_company', true );
 $salary       = get_post_meta( $job_id, '_kivun_salary', true );
 $requirements = get_post_meta( $job_id, '_kivun_requirements', true );
@@ -29,6 +30,13 @@ $rows = array(
 );
 ?>
 <div class="kivun-job-single" dir="rtl">
+
+	<?php if ( $description ) : ?>
+		<div class="kivun-job-single__description">
+			<h3 class="kivun-job-single__heading"><?php esc_html_e( 'תיאור המשרה', 'kivun' ); ?></h3>
+			<?php echo wp_kses_post( wpautop( $description ) ); ?>
+		</div>
+	<?php endif; ?>
 
 	<div class="kivun-job-single__details">
 		<h3 class="kivun-job-single__heading"><?php esc_html_e( 'פרטי המשרה', 'kivun' ); ?></h3>
