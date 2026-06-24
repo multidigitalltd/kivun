@@ -210,46 +210,121 @@
 }
 .kivun-jobs-meta { font-size: .87rem; color: var(--kivun-muted); margin-bottom: .75rem; }
 .kivun-jobs-count { font-weight: 700; color: var(--kivun-primary); }
-.kivun-jobs-board { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.25rem; }
+.kivun-jobs-board { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 2.5rem 1.75rem; align-items: start; direction: rtl; overflow: visible; }
 .kivun-jobs-board.kivun-loading { opacity: .5; pointer-events: none; }
 
 /* ── Job card (board) ───────────────────────────────────────────────────── */
-.kivun-job-card {
-	background: var(--kivun-card-bg);
-	border: 1px solid transparent;
-	border-radius: 14px;
-	padding: 1.4rem 1.5rem;
-	display: flex;
-	flex-direction: column;
-	transition: box-shadow .15s, border-color .15s;
+.kivun-jc-wrap {
+	position: relative;
+	width: 100%;
+	max-width: 460px;
+	direction: rtl;
+	font-family: var(--kivun-font);
+	padding-bottom: 34px;
 }
-.kivun-job-card:hover { border-color: #e0e0e0; box-shadow: 0 4px 14px rgba(0,0,0,.07); }
-.kivun-job-card__logo { font-size: 1.15rem; font-weight: 800; color: #111827; letter-spacing: .02em; margin-bottom: .9rem; }
-.kivun-job-card__title { font-size: 1.15rem; font-weight: 700; margin: 0 0 1rem; line-height: 1.35; }
-.kivun-job-card__title a { color: var(--kivun-title); text-decoration: none; }
-.kivun-job-card__title a:hover { color: var(--kivun-accent); }
-.kivun-job-card__meta { list-style: none; margin: 0 0 1.25rem; padding: 0; display: flex; flex-direction: column; gap: .5rem; }
-.kivun-job-card__meta-item { display: flex; align-items: center; gap: .45rem; font-size: .85rem; color: #4b5563; }
-.kivun-job-card__ico { display: inline-flex; color: var(--kivun-accent); flex: 0 0 auto; }
-.kivun-job-card__label { color: #6b7280; }
-.kivun-job-card__value { font-weight: 600; color: #374151; }
-.kivun-job-card__cta {
-	margin-top: auto;
-	align-self: flex-start;
+.kivun-jc {
+	background: #ffffff;
+	border-radius: 0 0 26px 26px;
+	overflow: hidden;
+}
+.kivun-jc-header {
+	position: relative;
+	min-height: 132px;
+	background: #eeeeee;
+	padding: 24px 30px 22px;
+}
+.kivun-jc-logo {
+	position: absolute;
+	top: 26px;
+	left: 30px;
+	font-size: 28px;
+	line-height: 1;
+	font-weight: 900;
+	letter-spacing: 1px;
+	color: #000000;
+	direction: ltr;
+}
+.kivun-jc-title {
+	margin: 56px 0 0;
+	font-size: 34px;
+	line-height: 1.15;
+	font-weight: 800;
+	color: #8a8a8a;
+	text-align: right;
+}
+.kivun-jc-title a { color: inherit; text-decoration: none; }
+.kivun-jc-title a:hover { color: #6f6f6f; }
+.kivun-jc-body {
+	background: #ffffff;
+	padding: 28px 28px 48px;
+}
+.kivun-jc-row {
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	justify-content: flex-start;
+	margin-bottom: 20px;
+	font-size: 19px;
+	line-height: 1.2;
+	color: #2f2f2f;
+}
+.kivun-jc-row:last-child { margin-bottom: 0; }
+.kivun-jc-icon {
+	flex: 0 0 28px;
+	width: 28px;
+	height: 28px;
+	border-radius: 50%;
+	background: #e73d68;
+	color: #ffffff;
 	display: inline-flex;
 	align-items: center;
-	gap: .5rem;
-	background: var(--kivun-dark);
-	color: #fff;
-	font-weight: 600;
-	font-size: .9rem;
-	padding: .6rem 1.3rem;
-	border-radius: 999px;
-	text-decoration: none;
-	transition: background .15s;
+	justify-content: center;
 }
-.kivun-job-card__cta:hover { background: #000; color: #fff; }
-.kivun-job-card__cta-ico { display: inline-flex; transform: scaleX(-1); }
+.kivun-jc-text { font-size: 19px; font-weight: 400; color: #303030; }
+.kivun-jc-apply {
+	position: absolute;
+	left: 0;
+	bottom: 0;
+	height: 58px;
+	min-width: 240px;
+	padding: 0 14px 0 24px;
+	border: 1.5px solid #000000;
+	border-radius: 999px;
+	background: #ffffff;
+	color: #000000;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 14px;
+	text-decoration: none;
+	font-size: 20px;
+	font-weight: 800;
+	line-height: 1;
+	box-shadow: 0 0 0 8px #ffffff;
+	z-index: 2;
+	transition: transform .15s;
+}
+.kivun-jc-apply:hover { color: #000000; transform: translateY(-1px); }
+.kivun-jc-apply-ico {
+	width: 40px;
+	height: 40px;
+	border-radius: 50%;
+	background: #000000;
+	color: #ffffff;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	direction: ltr;
+	flex: 0 0 40px;
+}
+
+@media (max-width: 480px) {
+	.kivun-jc-wrap { max-width: 100%; }
+	.kivun-jc-title { font-size: 28px; }
+	.kivun-jc-header { min-height: 120px; padding: 22px 24px; }
+	.kivun-jc-body { padding: 24px 24px 46px; }
+	.kivun-jc-apply { min-width: 220px; font-size: 18px; }
+}
 
 /* ── Single job (appended details + form) ───────────────────────────────── */
 .kivun-job-single { margin-top: 2rem; }

@@ -2,6 +2,8 @@
 /**
  * Template: single job card for the jobs board.
  *
+ * Display layer only — all data, links and the apply flow are unchanged.
+ *
  * @package Kivun
  */
 
@@ -16,51 +18,55 @@ $region  = ( $regions && ! is_wp_error( $regions ) ) ? $regions[0]->name : '';
 $scopes  = get_the_terms( $job_id, 'kivun_job_scope' );
 $scope   = ( $scopes && ! is_wp_error( $scopes ) ) ? $scopes[0]->name : '';
 ?>
-<article class="kivun-job-card" id="job-<?php echo esc_attr( $job_id ); ?>" data-job-row="<?php echo esc_attr( $job_id ); ?>">
+<div class="kivun-jc-wrap" id="job-<?php echo esc_attr( $job_id ); ?>" dir="rtl">
 
-	<?php if ( $company ) : ?>
-		<div class="kivun-job-card__logo"><?php echo esc_html( $company ); ?></div>
-	<?php endif; ?>
+	<div class="kivun-jc">
 
-	<h3 class="kivun-job-card__title">
-		<a href="<?php echo esc_url( $permalink ); ?>"><?php the_title(); ?></a>
-	</h3>
+		<div class="kivun-jc-header">
+			<?php if ( $company ) : ?>
+				<div class="kivun-jc-logo"><?php echo esc_html( $company ); ?></div>
+			<?php endif; ?>
+			<h3 class="kivun-jc-title">
+				<a href="<?php echo esc_url( $permalink ); ?>"><?php the_title(); ?></a>
+			</h3>
+		</div>
 
-	<ul class="kivun-job-card__meta">
-		<li class="kivun-job-card__meta-item">
-			<span class="kivun-job-card__ico" aria-hidden="true">
-				<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-			</span>
-			<span class="kivun-job-card__label"><?php esc_html_e( 'ת. פרסום:', 'kivun' ); ?></span>
-			<span class="kivun-job-card__value"><?php echo esc_html( get_the_date( 'j.n.Y', $job_id ) ); ?></span>
-		</li>
+		<div class="kivun-jc-body">
 
-		<?php if ( $region ) : ?>
-		<li class="kivun-job-card__meta-item">
-			<span class="kivun-job-card__ico" aria-hidden="true">
-				<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
-			</span>
-			<span class="kivun-job-card__label"><?php esc_html_e( 'אזור:', 'kivun' ); ?></span>
-			<span class="kivun-job-card__value"><?php echo esc_html( $region ); ?></span>
-		</li>
-		<?php endif; ?>
+			<div class="kivun-jc-row">
+				<span class="kivun-jc-icon" aria-hidden="true">
+					<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+				</span>
+				<span class="kivun-jc-text"><?php esc_html_e( 'ת. פרסום:', 'kivun' ); ?> <?php echo esc_html( get_the_date( 'j.n.Y', $job_id ) ); ?></span>
+			</div>
 
-		<?php if ( $scope ) : ?>
-		<li class="kivun-job-card__meta-item">
-			<span class="kivun-job-card__ico" aria-hidden="true">
-				<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>
-			</span>
-			<span class="kivun-job-card__label"><?php esc_html_e( 'סוג משרה:', 'kivun' ); ?></span>
-			<span class="kivun-job-card__value"><?php echo esc_html( $scope ); ?></span>
-		</li>
-		<?php endif; ?>
-	</ul>
+			<?php if ( $region ) : ?>
+			<div class="kivun-jc-row">
+				<span class="kivun-jc-icon" aria-hidden="true">
+					<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+				</span>
+				<span class="kivun-jc-text"><?php esc_html_e( 'איזור:', 'kivun' ); ?> <?php echo esc_html( $region ); ?></span>
+			</div>
+			<?php endif; ?>
 
-	<a class="kivun-job-card__cta" href="<?php echo esc_url( $permalink ); ?>">
-		<span class="kivun-job-card__cta-ico" aria-hidden="true">
-			<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+			<?php if ( $scope ) : ?>
+			<div class="kivun-jc-row">
+				<span class="kivun-jc-icon" aria-hidden="true">
+					<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>
+				</span>
+				<span class="kivun-jc-text"><?php esc_html_e( 'סוג משרה:', 'kivun' ); ?> <?php echo esc_html( $scope ); ?></span>
+			</div>
+			<?php endif; ?>
+
+		</div>
+
+	</div>
+
+	<a href="<?php echo esc_url( $permalink ); ?>" class="kivun-jc-apply">
+		<span class="kivun-jc-apply-ico" aria-hidden="true">
+			<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 7L7 17M16 17H7V8"/></svg>
 		</span>
-		<?php esc_html_e( 'להגשת מועמדות', 'kivun' ); ?>
+		<span><?php esc_html_e( 'להגשת מועמדות', 'kivun' ); ?></span>
 	</a>
 
-</article>
+</div>
