@@ -112,10 +112,18 @@ class Kivun_Jobs {
 		$job_id = get_the_ID();
 
 		ob_start();
-		kivun_get_template( 'jobs/single.php', array( 'job_id' => $job_id ) );
-		$appended = ob_get_clean();
+		kivun_get_template(
+			'jobs/single.php',
+			array(
+				'job_id'  => $job_id,
+				'content' => $content,
+			)
+		);
+		$design = ob_get_clean();
 
-		return self::breadcrumbs( $job_id ) . $content . $appended;
+		// The editor body is embedded inside the design (see single.php), so it
+		// is intentionally not output a second time here.
+		return self::breadcrumbs( $job_id ) . $design;
 	}
 
 	/**
@@ -285,8 +293,8 @@ class Kivun_Jobs {
 		$phone   = sanitize_text_field( wp_unslash( $_POST['applicant_phone'] ?? '' ) );
 		$message = sanitize_textarea_field( wp_unslash( $_POST['message'] ?? '' ) );
 
-		if ( ! $job_id || ! $name || ! is_email( $email ) ) {
-			wp_send_json_error( array( 'message' => __( 'נא למלא שם ואימייל תקין.', 'kivun' ) ) );
+		if ( ! $job_id || ! $name || ! $phone || ! is_email( $email ) ) {
+			wp_send_json_error( array( 'message' => __( 'נא למלא שם, טלפון ואימייל תקין.', 'kivun' ) ) );
 		}
 		if ( get_post_type( $job_id ) !== 'kivun_job' ) {
 			wp_send_json_error( array( 'message' => __( 'משרה לא קיימת.', 'kivun' ) ) );
@@ -300,6 +308,9 @@ class Kivun_Jobs {
 		$cv_path = self::handle_cv_upload();
 		if ( is_wp_error( $cv_path ) ) {
 			wp_send_json_error( array( 'message' => $cv_path->get_error_message() ) );
+		}
+		if ( ! $cv_path ) {
+			wp_send_json_error( array( 'message' => __( 'נא לצרף קובץ קורות חיים.', 'kivun' ) ) );
 		}
 
 		global $wpdb;

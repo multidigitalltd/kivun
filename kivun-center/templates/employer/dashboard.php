@@ -7,10 +7,34 @@
 
 defined( 'ABSPATH' ) || exit;
 
+if ( ! is_user_logged_in() ) {
+	$kivun_redirect = ( is_singular() && get_permalink() ) ? get_permalink() : home_url( add_query_arg( null, null ) );
+	?>
+	<div class="kivun-employer-login" dir="rtl">
+		<h2 class="kivun-employer-login__title"><?php esc_html_e( 'התחברות מעסיקים', 'kivun' ); ?></h2>
+		<p class="kivun-notice"><?php esc_html_e( 'יש להתחבר כדי לגשת לאזור ניהול המשרות.', 'kivun' ); ?></p>
+		<?php
+		wp_login_form(
+			array(
+				'redirect'       => $kivun_redirect,
+				'label_username' => __( 'אימייל / שם משתמש', 'kivun' ),
+				'label_password' => __( 'סיסמה', 'kivun' ),
+				'label_remember' => __( 'זכור אותי', 'kivun' ),
+				'label_log_in'   => __( 'התחברות', 'kivun' ),
+			)
+		);
+		?>
+		<p class="kivun-employer-login__links">
+			<a href="<?php echo esc_url( wp_lostpassword_url( $kivun_redirect ) ); ?>"><?php esc_html_e( 'שכחתי סיסמה', 'kivun' ); ?></a>
+		</p>
+	</div>
+	<?php
+	return;
+}
+
 // phpcs:ignore WordPress.WP.Capabilities.Unknown -- Custom plugin capability.
-if ( ! is_user_logged_in() || ( ! current_user_can( 'kivun_employer' ) && ! current_user_can( 'manage_options' ) ) ) {
-	echo '<p class="kivun-notice">' . esc_html__( 'יש להתחבר כמעסיק כדי לגשת לאזור זה.', 'kivun' ) . '</p>';
-	echo do_shortcode( '[woocommerce_my_account]' );
+if ( ! current_user_can( 'kivun_employer' ) && ! current_user_can( 'manage_options' ) ) {
+	echo '<p class="kivun-notice">' . esc_html__( 'החשבון שלך אינו משויך כמעסיק. פנה למנהל המערכת לקבלת הרשאה.', 'kivun' ) . '</p>';
 	return;
 }
 

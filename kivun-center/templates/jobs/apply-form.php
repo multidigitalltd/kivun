@@ -25,8 +25,8 @@ $kivun_turnstile_key = Kivun_Admin_Settings::get( 'turnstile_site_key' );
 		</div>
 
 		<div class="kivun-form-row">
-			<label for="kivun-apply-phone"><?php esc_html_e( 'טלפון', 'kivun' ); ?></label>
-			<input type="tel" id="kivun-apply-phone" name="applicant_phone" autocomplete="tel">
+			<label for="kivun-apply-phone"><?php esc_html_e( 'טלפון *', 'kivun' ); ?></label>
+			<input type="tel" id="kivun-apply-phone" name="applicant_phone" required autocomplete="tel">
 		</div>
 
 		<div class="kivun-form-row">
@@ -35,8 +35,8 @@ $kivun_turnstile_key = Kivun_Admin_Settings::get( 'turnstile_site_key' );
 		</div>
 
 		<div class="kivun-form-row">
-			<label for="kivun-apply-cv"><?php esc_html_e( 'קורות חיים (PDF / Word, עד 5MB)', 'kivun' ); ?></label>
-			<input type="file" id="kivun-apply-cv" name="cv_file" accept=".pdf,.doc,.docx">
+			<label for="kivun-apply-cv"><?php esc_html_e( 'קורות חיים * (PDF / Word, עד 5MB)', 'kivun' ); ?></label>
+			<input type="file" id="kivun-apply-cv" name="cv_file" accept=".pdf,.doc,.docx" required>
 		</div>
 
 		<?php if ( $kivun_turnstile_key ) : ?>

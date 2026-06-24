@@ -72,7 +72,7 @@ class Kivun_Post_Types {
 				'has_archive'     => true,
 				'menu_icon'       => 'dashicons-businessperson',
 				'menu_position'   => 6,
-				'supports'        => array( 'title', 'editor', 'author' ),
+				'supports'        => array( 'title', 'editor', 'author', 'thumbnail' ),
 				'rewrite'         => array(
 					'slug'       => 'jobs',
 					'with_front' => false,
