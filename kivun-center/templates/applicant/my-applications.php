@@ -77,9 +77,8 @@ $status_labels = array(
 					'label' => $r->status,
 					'class' => '',
 				);
-				$upload      = wp_upload_dir();
 				$cv_url      = ( $r->cv_file && file_exists( $r->cv_file ) )
-					? str_replace( $upload['basedir'], $upload['baseurl'], $r->cv_file )
+					? Kivun_Jobs::cv_url( (int) $r->id )
 					: '';
 				?>
 				<tr>

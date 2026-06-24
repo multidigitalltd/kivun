@@ -95,17 +95,20 @@ class Kivun_Export {
 		foreach ( $rows as $r ) {
 			fputcsv(
 				$out,
-				array(
-					$r['id'],
-					$r['post_name'],
-					$r['name'],
-					$r['email'],
-					$r['phone'],
-					$type_labels[ $r['type'] ] ?? $r['type'],
-					$r['message'],
-					$r['notes'],
-					$r['status'],
-					$r['created_at'],
+				array_map(
+					array( __CLASS__, 'csv_safe' ),
+					array(
+						$r['id'],
+						$r['post_name'],
+						$r['name'],
+						$r['email'],
+						$r['phone'],
+						$type_labels[ $r['type'] ] ?? $r['type'],
+						$r['message'],
+						$r['notes'],
+						$r['status'],
+						$r['created_at'],
+					)
 				)
 			);
 		}
@@ -161,23 +164,42 @@ class Kivun_Export {
 		foreach ( $rows as $r ) {
 			fputcsv(
 				$out,
-				array(
-					$r['id'],
-					$r['job_name'],
-					$r['applicant_name'],
-					$r['applicant_email'],
-					$r['applicant_phone'],
-					$r['message'],
-					$r['cv_file'] ? basename( $r['cv_file'] ) : '',
-					$r['notes'],
-					$r['status'],
-					$r['created_at'],
+				array_map(
+					array( __CLASS__, 'csv_safe' ),
+					array(
+						$r['id'],
+						$r['job_name'],
+						$r['applicant_name'],
+						$r['applicant_email'],
+						$r['applicant_phone'],
+						$r['message'],
+						$r['cv_file'] ? basename( $r['cv_file'] ) : '',
+						$r['notes'],
+						$r['status'],
+						$r['created_at'],
+					)
 				)
 			);
 		}
 
 		fclose( $out ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose
 		exit;
+	}
+
+	/**
+	 * Neutralise CSV formula injection: a leading =, +, -, @, tab or CR can be
+	 * executed as a formula by spreadsheet software, so prefix such values
+	 * with an apostrophe.
+	 *
+	 * @param mixed $value The raw cell value.
+	 * @return string The safe cell value.
+	 */
+	private static function csv_safe( $value ): string {
+		$value = (string) $value;
+		if ( '' !== $value && in_array( $value[0], array( '=', '+', '-', '@', "\t", "\r" ), true ) ) {
+			return "'" . $value;
+		}
+		return $value;
 	}
 
 	/**

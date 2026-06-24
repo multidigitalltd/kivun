@@ -293,8 +293,6 @@ class Kivun_Admin {
 			'rejected'  => 'לא מתאים',
 		);
 
-		$upload = wp_upload_dir();
-
 		printf(
 			'<p style="margin-bottom:.5rem"><a href="%s" class="button button-small">⬇ ייצוא CSV</a></p>',
 			esc_url( Kivun_Export::url( 'applications', $post->ID ) )
@@ -315,7 +313,7 @@ class Kivun_Admin {
 		foreach ( $rows as $r ) {
 			$cv_html = '—';
 			if ( $r->cv_file && file_exists( $r->cv_file ) ) {
-				$cv_url  = str_replace( $upload['basedir'], $upload['baseurl'], $r->cv_file );
+				$cv_url  = Kivun_Jobs::cv_url( (int) $r->id );
 				$cv_html = '<a href="' . esc_url( $cv_url ) . '" target="_blank" class="button button-small">⬇ הורד</a>';
 			}
 

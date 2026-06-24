@@ -23,6 +23,97 @@ class Kivun_Jobs {
 
 		add_action( 'wp_ajax_kivun_submit_application', array( __CLASS__, 'ajax_apply' ) );
 		add_action( 'wp_ajax_nopriv_kivun_submit_application', array( __CLASS__, 'ajax_apply' ) );
+
+		// Authenticated CV download (logged-in only; permission re-checked).
+		add_action( 'admin_post_kivun_download_cv', array( __CLASS__, 'download_cv' ) );
+
+		add_filter( 'the_content', array( __CLASS__, 'append_single_job_content' ) );
+	}
+
+	/**
+	 * Build the authenticated download URL for an application's CV.
+	 *
+	 * @param int $app_id The application row id.
+	 * @return string Nonce-protected admin-post URL.
+	 */
+	public static function cv_url( int $app_id ): string {
+		return wp_nonce_url(
+			add_query_arg(
+				array(
+					'action' => 'kivun_download_cv',
+					'app'    => $app_id,
+				),
+				admin_url( 'admin-post.php' )
+			),
+			'kivun_download_cv_' . $app_id
+		);
+	}
+
+	/**
+	 * Stream a CV file to authorised users only: a site admin, the employer
+	 * who owns the job, or the applicant who submitted it. Prevents the PII in
+	 * CVs from being fetched by guessing the upload URL (IDOR).
+	 *
+	 * @return void
+	 */
+	public static function download_cv(): void {
+		$app_id = absint( $_GET['app'] ?? 0 ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Nonce checked below.
+
+		if ( ! $app_id || ! is_user_logged_in() ) {
+			wp_die( esc_html__( 'אין הרשאה.', 'kivun' ), '', array( 'response' => 403 ) );
+		}
+		check_admin_referer( 'kivun_download_cv_' . $app_id );
+
+		global $wpdb;
+		$app = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$wpdb->prepare( "SELECT * FROM {$wpdb->prefix}kivun_applications WHERE id = %d", $app_id )
+		);
+
+		if ( ! $app || ! $app->cv_file || ! file_exists( $app->cv_file ) ) {
+			wp_die( esc_html__( 'הקובץ לא נמצא.', 'kivun' ), '', array( 'response' => 404 ) );
+		}
+
+		$user_id  = get_current_user_id();
+		$job      = get_post( $app->job_id );
+		$is_owner = $job && (int) $job->post_author === $user_id;
+		$is_self  = (int) $app->user_id === $user_id && $user_id > 0;
+
+		if ( ! current_user_can( 'manage_options' ) && ! $is_owner && ! $is_self ) {
+			wp_die( esc_html__( 'אין הרשאה לצפות בקובץ זה.', 'kivun' ), '', array( 'response' => 403 ) );
+		}
+
+		$type = wp_check_filetype( $app->cv_file );
+		nocache_headers();
+		header( 'Content-Type: ' . ( $type['type'] ? $type['type'] : 'application/octet-stream' ) );
+		header( 'Content-Disposition: attachment; filename="' . sanitize_file_name( basename( $app->cv_file ) ) . '"' );
+		header( 'Content-Length: ' . filesize( $app->cv_file ) );
+		readfile( $app->cv_file ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_readfile
+		exit;
+	}
+
+	/**
+	 * Append the job details and CV application form to the single job page,
+	 * so the board's "apply" button can deep-link to the full job and submit.
+	 *
+	 * Runs only on the main single kivun_job view; opt out via the
+	 * `kivun_single_job_append` filter (e.g. when building the page manually).
+	 *
+	 * @param string $content The post content.
+	 * @return string The content with the job details + form appended.
+	 */
+	public static function append_single_job_content( string $content ): string {
+		if ( ! is_singular( 'kivun_job' ) || ! is_main_query() || ! in_the_loop() ) {
+			return $content;
+		}
+		if ( ! apply_filters( 'kivun_single_job_append', true ) ) {
+			return $content;
+		}
+
+		$job_id = get_the_ID();
+
+		ob_start();
+		kivun_get_template( 'jobs/single.php', array( 'job_id' => $job_id ) );
+		return $content . ob_get_clean();
 	}
 
 	// ── Filter ────────────────────────────────────────────────────────────────.
@@ -208,15 +299,19 @@ class Kivun_Jobs {
 			return null;
 		}
 
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Nonce verified above; MIME compared against allowlist below.
-		$mime    = isset( $_FILES['cv_file']['type'] ) ? sanitize_text_field( wp_unslash( $_FILES['cv_file']['type'] ) ) : '';
 		$allowed = array(
-			'application/pdf',
-			'application/msword',
-			'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+			'pdf'  => 'application/pdf',
+			'doc'  => 'application/msword',
+			'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
 		);
 
-		if ( ! in_array( $mime, $allowed, true ) ) {
+		// Validate by the real file extension/content — never trust the
+		// browser-supplied MIME type, which is easily spoofed.
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.MissingUnslash -- Nonce verified above; file name sanitized below.
+		$filename = sanitize_file_name( wp_unslash( $_FILES['cv_file']['name'] ) );
+		$check    = wp_check_filetype( $filename, $allowed );
+
+		if ( empty( $check['ext'] ) || ! in_array( $check['type'], $allowed, true ) ) {
 			return new WP_Error( 'bad_type', __( 'סוג קובץ לא נתמך. יש לשלוח PDF או Word בלבד.', 'kivun' ) );
 		}
 
@@ -225,13 +320,69 @@ class Kivun_Jobs {
 		}
 
 		require_once ABSPATH . 'wp-admin/includes/file.php';
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized, WordPress.Security.ValidatedSanitizedInput.MissingUnslash -- Nonce verified above; wp_handle_upload() validates and sanitizes the file.
-		$upload = wp_handle_upload( $_FILES['cv_file'], array( 'test_form' => false ) );
+
+		// Store CVs in a protected sub-directory, not the public uploads root.
+		add_filter( 'upload_dir', array( __CLASS__, 'cv_upload_dir' ) );
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized, WordPress.Security.ValidatedSanitizedInput.MissingUnslash -- Nonce verified above; wp_handle_upload() validates and sanitizes the file, restricted to the allowlist below.
+		$file   = $_FILES['cv_file'];
+		$upload = wp_handle_upload(
+			$file,
+			array(
+				'test_form' => false,
+				'mimes'     => $allowed,
+			)
+		);
+		remove_filter( 'upload_dir', array( __CLASS__, 'cv_upload_dir' ) );
 
 		if ( isset( $upload['error'] ) ) {
 			return new WP_Error( 'upload_error', $upload['error'] );
 		}
 
 		return $upload['file'];
+	}
+
+	/**
+	 * Redirect CV uploads into a private uploads sub-directory and ensure it is
+	 * protected from direct web access.
+	 *
+	 * @param array $dirs The WordPress upload directory data.
+	 * @return array The adjusted upload directory data.
+	 */
+	public static function cv_upload_dir( array $dirs ): array {
+		$subdir = '/kivun-cv';
+		$path   = $dirs['basedir'] . $subdir;
+
+		self::protect_dir( $path );
+
+		$dirs['subdir'] = $subdir;
+		$dirs['path']   = $path;
+		$dirs['url']    = $dirs['baseurl'] . $subdir;
+
+		return $dirs;
+	}
+
+	/**
+	 * Create a directory (if needed) and drop guards that block direct web
+	 * access to its files on Apache/LiteSpeed servers.
+	 *
+	 * @param string $path Absolute directory path.
+	 * @return void
+	 */
+	private static function protect_dir( string $path ): void {
+		if ( ! is_dir( $path ) ) {
+			wp_mkdir_p( $path );
+		}
+
+		$htaccess = $path . '/.htaccess';
+		if ( ! file_exists( $htaccess ) ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- One-time static guard file; WP_Filesystem is unavailable this early in the request.
+			file_put_contents( $htaccess, "Require all denied\n<IfModule !mod_authz_core.c>\nOrder allow,deny\nDeny from all\n</IfModule>\n" );
+		}
+
+		$index = $path . '/index.html';
+		if ( ! file_exists( $index ) ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- One-time empty index to prevent directory listing; safe static write.
+			file_put_contents( $index, '' );
+		}
 	}
 }

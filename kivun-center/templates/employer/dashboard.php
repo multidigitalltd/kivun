@@ -60,8 +60,6 @@ foreach ( $applications as $a ) {
 		++$new_apps;
 	}
 }
-
-$upload = wp_upload_dir();
 ?>
 <div class="kivun-employer-dashboard" dir="rtl">
 
@@ -299,7 +297,7 @@ $upload = wp_upload_dir();
 				<?php
 				foreach ( $applications as $app ) :
 					$cv_url      = ( $app->cv_file && file_exists( $app->cv_file ) )
-						? str_replace( $upload['basedir'], $upload['baseurl'], $app->cv_file )
+						? Kivun_Jobs::cv_url( (int) $app->id )
 						: '';
 					$search_blob = strtolower( trim( $app->applicant_name . ' ' . $app->applicant_email . ' ' . $app->applicant_phone ) );
 					?>
