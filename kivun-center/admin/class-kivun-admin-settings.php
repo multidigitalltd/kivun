@@ -107,6 +107,7 @@ class Kivun_Admin_Settings {
 			array(
 				'admin_email'          => sanitize_email( wp_unslash( $_POST['admin_email'] ?? '' ) ),
 				'jobs_per_page'        => absint( $_POST['jobs_per_page'] ?? 10 ),
+				'single_job_design'    => ! empty( $_POST['single_job_design'] ),
 				'allow_cv_upload'      => ! empty( $_POST['allow_cv_upload'] ),
 				'cv_max_size_mb'       => absint( $_POST['cv_max_size_mb'] ?? 5 ),
 				'webhook_url'          => esc_url_raw( wp_unslash( $_POST['webhook_url'] ?? '' ) ),
@@ -208,6 +209,18 @@ class Kivun_Admin_Settings {
 					<th scope="row"><?php esc_html_e( 'משרות לעמוד בלוח', 'kivun' ); ?></th>
 					<td>
 						<input type="number" name="jobs_per_page" value="<?php echo esc_attr( $o( 'jobs_per_page', 10 ) ); ?>" min="1" max="100" class="small-text">
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'עיצוב מובנה לעמוד משרה', 'kivun' ); ?></th>
+					<td>
+						<label>
+							<input type="checkbox" name="single_job_design" value="1" <?php checked( (bool) $o( 'single_job_design', true ) ); ?>>
+							<?php esc_html_e( 'הצג את עיצוב עמוד המשרה המובנה (הירו + פרטים + טופס).', 'kivun' ); ?>
+						</label>
+						<p class="description">
+							<?php esc_html_e( 'כבה אם אתה בונה את עמוד המשרה בעצמך (Elementor Single). בכיבוי: התוסף לא מזריק עיצוב/טופס ולא מסתיר את הכותרת — תוסיף את [kivun_apply] ואת התגיות הדינמיות ידנית.', 'kivun' ); ?>
+						</p>
 					</td>
 				</tr>
 				<tr>

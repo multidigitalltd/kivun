@@ -32,6 +32,17 @@ class Kivun_Jobs {
 	}
 
 	/**
+	 * Whether the built-in single job design (hero, details and appended apply
+	 * form) is active. Disabled from the settings screen when the page is built
+	 * manually (e.g. with an Elementor Single template).
+	 *
+	 * @return bool
+	 */
+	private static function single_design_enabled(): bool {
+		return (bool) Kivun_Admin_Settings::get( 'single_job_design', true );
+	}
+
+	/**
 	 * Hide the theme/page-builder post title on the single job page, since the
 	 * Kivun design already renders the title in its hero. Only affects the main
 	 * heading of the current job; the design itself uses the raw title so it is
@@ -49,8 +60,8 @@ class Kivun_Jobs {
 			&& is_main_query()
 			&& in_the_loop()
 			&& get_queried_object_id() === (int) $post_id
-			&& apply_filters( 'kivun_single_job_append', true )
-			&& apply_filters( 'kivun_hide_duplicate_job_title', true )
+			&& apply_filters( 'kivun_single_job_append', self::single_design_enabled() )
+			&& apply_filters( 'kivun_hide_duplicate_job_title', self::single_design_enabled() )
 		) {
 			return '';
 		}
@@ -132,7 +143,7 @@ class Kivun_Jobs {
 		if ( ! is_singular( 'kivun_job' ) || ! is_main_query() || ! in_the_loop() ) {
 			return $content;
 		}
-		if ( ! apply_filters( 'kivun_single_job_append', true ) ) {
+		if ( ! apply_filters( 'kivun_single_job_append', self::single_design_enabled() ) ) {
 			return $content;
 		}
 
