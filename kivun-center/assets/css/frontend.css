@@ -237,11 +237,11 @@
 	position: absolute;
 	top: 20px;
 	left: 24px;
-	font-size: 21px;
+	font-size: 16px;
 	line-height: 1;
-	font-weight: 900;
+	font-weight: 800;
 	letter-spacing: 1px;
-	color: #000000;
+	color: #8a8a8a;
 	direction: ltr;
 }
 .kivun-jc-title {
@@ -249,11 +249,11 @@
 	font-size: 20px;
 	line-height: 1.2;
 	font-weight: 800;
-	color: #8a8a8a;
+	color: #000000;
 	text-align: right;
 }
 .kivun-jc-title a { color: inherit; text-decoration: none; }
-.kivun-jc-title a:hover { color: #6f6f6f; }
+.kivun-jc-title a:hover { color: #333333; }
 .kivun-jc-header--nologo { min-height: 0; }
 .kivun-jc-header--nologo .kivun-jc-title { font-size: 17px; }
 .kivun-jc-header--nologo .kivun-jc-title { margin-top: 0; }
@@ -381,10 +381,10 @@
 .kivun-job-hero-image { border-radius: 10px; overflow: hidden; }
 .kivun-job-hero-image img { display: block; width: 100%; height: 185px; object-fit: cover; }
 .kivun-job-hero-content { text-align: right; }
-.kivun-job-small-label { font-size: 13px; font-weight: 600; color: #9a9a9a; margin-bottom: 6px; }
+.kivun-job-small-label { font-size: 15px; font-weight: 600; color: #9a9a9a; margin-bottom: 6px; }
 .kivun-job-title {
 	margin: 0 0 14px;
-	font-size: 38px;
+	font-size: 42px;
 	line-height: 1.05;
 	font-weight: 900;
 	color: #ef315d;
@@ -395,24 +395,10 @@
 	align-items: center;
 	gap: 18px;
 	flex-wrap: wrap;
-	font-size: 13px;
+	font-size: 15px;
 	color: #555555;
 	margin-bottom: 12px;
 }
-.kivun-job-apply-small {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	min-height: 32px;
-	padding: 0 16px;
-	border-radius: 999px;
-	background: #111111;
-	color: #ffffff;
-	font-size: 13px;
-	font-weight: 700;
-	text-decoration: none;
-}
-.kivun-job-apply-small:hover { background: #000; color: #fff; }
 .kivun-job-tags {
 	display: grid;
 	grid-template-columns: repeat(5, 1fr);
@@ -420,14 +406,14 @@
 	margin: 0 0 52px;
 }
 .kivun-job-tag {
-	min-height: 52px;
+	min-height: 54px;
 	background: #fafafa;
 	border-radius: 10px;
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	gap: 9px;
-	font-size: 13px;
+	font-size: 15px;
 	color: #777777;
 	box-shadow: 0 1px 8px rgba(0,0,0,0.03);
 	padding: 6px 10px;
@@ -437,7 +423,7 @@
 .kivun-job-about { position: relative; }
 .kivun-job-section-title {
 	margin: 0 0 18px;
-	font-size: 30px;
+	font-size: 33px;
 	line-height: 1.1;
 	font-weight: 900;
 	color: #ef315d;
@@ -452,7 +438,7 @@
 	margin: 0 auto 34px;
 	text-align: center;
 	color: #777777;
-	font-size: 15px;
+	font-size: 17px;
 	line-height: 1.7;
 }
 .kivun-job-highlight-box p { margin: 0; }
@@ -464,41 +450,20 @@
 	flex-wrap: wrap;
 	margin-bottom: 42px;
 }
-.kivun-job-info-item { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; color: #777777; }
+.kivun-job-info-item { display: inline-flex; align-items: center; gap: 7px; font-size: 15px; color: #777777; }
 .kivun-job-info-icon { width: 9px; height: 9px; border-radius: 50%; background: #ef315d; display: inline-block; flex: 0 0 9px; }
 .kivun-job-content-wrap {
 	position: relative;
-	display: grid;
-	grid-template-columns: 170px 1fr;
-	gap: 36px;
-	align-items: start;
 }
-.kivun-job-floating-apply {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	width: fit-content;
-	min-height: 34px;
-	padding: 0 18px;
-	border-radius: 999px;
-	background: #111111;
-	color: #ffffff;
-	font-size: 13px;
-	font-weight: 700;
-	text-decoration: none;
-	position: sticky;
-	top: 30px;
-}
-.kivun-job-floating-apply:hover { background: #000; color: #fff; }
-.kivun-job-content { max-width: 760px; }
+.kivun-job-content { max-width: 820px; }
 .kivun-job-content-section {
 	display: grid;
-	grid-template-columns: 130px 1fr;
+	grid-template-columns: 150px 1fr;
 	gap: 28px;
 	margin-bottom: 34px;
 }
-.kivun-job-content-section h3 { margin: 0; font-size: 15px; line-height: 1.5; color: #555555; font-weight: 800; }
-.kivun-job-content-text { font-size: 15px; line-height: 1.8; color: #555555; }
+.kivun-job-content-section h3 { margin: 0; font-size: 17px; line-height: 1.5; color: #555555; font-weight: 800; }
+.kivun-job-content-text { font-size: 17px; line-height: 1.8; color: #555555; }
 .kivun-job-content-text p { margin: 0 0 1em; }
 .kivun-job-content-text p:last-child { margin-bottom: 0; }
 .kivun-job-apply-area { max-width: 760px; margin: 3rem auto 0; }
@@ -508,13 +473,11 @@
 	.kivun-job-page { padding: 20px 16px 50px; }
 	.kivun-job-hero { grid-template-columns: 1fr; gap: 18px; }
 	.kivun-job-hero-image img { height: 170px; }
-	.kivun-job-title { font-size: 31px; }
+	.kivun-job-title { font-size: 34px; }
 	.kivun-job-tags { grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 36px; }
-	.kivun-job-section-title { font-size: 27px; }
+	.kivun-job-section-title { font-size: 29px; }
 	.kivun-job-highlight-box { padding: 18px 20px; margin-bottom: 28px; }
 	.kivun-job-info-row { justify-content: flex-start; gap: 18px; }
-	.kivun-job-content-wrap { display: block; }
-	.kivun-job-floating-apply { position: static; margin-bottom: 24px; }
 	.kivun-job-content-section { grid-template-columns: 1fr; gap: 8px; margin-bottom: 28px; }
 }
 

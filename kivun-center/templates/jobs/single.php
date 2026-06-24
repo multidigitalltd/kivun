@@ -27,8 +27,11 @@ $scope   = ( $scopes && ! is_wp_error( $scopes ) ) ? $scopes[0]->name : '';
 $fields  = get_the_terms( $job_id, 'kivun_job_field' );
 $field   = ( $fields && ! is_wp_error( $fields ) ) ? $fields[0]->name : '';
 
-$has_image    = has_post_thumbnail( $job_id );
-$apply_anchor = '#kivun-apply-' . $job_id;
+$has_image = has_post_thumbnail( $job_id );
+
+// Raw title (bypasses the the_title filter that hides the duplicate theme title).
+$kivun_job_post = get_post( $job_id );
+$job_title      = $kivun_job_post ? $kivun_job_post->post_title : '';
 
 // Tag chips — built from the real taxonomy terms (+ salary when present).
 $tags = array();
@@ -90,7 +93,7 @@ if ( $requirements ) {
 	<div class="kivun-job-hero<?php echo $has_image ? '' : ' kivun-job-hero--noimg'; ?>">
 		<?php if ( $has_image ) : ?>
 			<div class="kivun-job-hero-image">
-				<?php echo get_the_post_thumbnail( $job_id, 'large', array( 'alt' => esc_attr( get_the_title( $job_id ) ) ) ); ?>
+				<?php echo get_the_post_thumbnail( $job_id, 'large', array( 'alt' => esc_attr( $job_title ) ) ); ?>
 			</div>
 		<?php endif; ?>
 		<div class="kivun-job-hero-content">
@@ -102,7 +105,7 @@ if ( $requirements ) {
 					?>
 				</div>
 			<?php endif; ?>
-			<h1 class="kivun-job-title"><?php echo esc_html( get_the_title( $job_id ) ); ?></h1>
+			<h1 class="kivun-job-title"><?php echo esc_html( $job_title ); ?></h1>
 			<div class="kivun-job-meta-top">
 				<span>
 					<?php
@@ -117,7 +120,6 @@ if ( $requirements ) {
 					?>
 				</span>
 			</div>
-			<a href="<?php echo esc_attr( $apply_anchor ); ?>" class="kivun-job-apply-small"><?php esc_html_e( 'להגשת מועמדות', 'kivun' ); ?></a>
 		</div>
 	</div>
 
@@ -151,7 +153,6 @@ if ( $requirements ) {
 		<?php endif; ?>
 
 		<div class="kivun-job-content-wrap">
-			<a href="<?php echo esc_attr( $apply_anchor ); ?>" class="kivun-job-floating-apply"><?php esc_html_e( 'הגשת מועמדות', 'kivun' ); ?></a>
 			<div class="kivun-job-content">
 				<?php foreach ( $sections as $section ) : ?>
 					<div class="kivun-job-content-section">

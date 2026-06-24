@@ -28,6 +28,33 @@ class Kivun_Jobs {
 		add_action( 'admin_post_kivun_download_cv', array( __CLASS__, 'download_cv' ) );
 
 		add_filter( 'the_content', array( __CLASS__, 'append_single_job_content' ) );
+		add_filter( 'the_title', array( __CLASS__, 'suppress_duplicate_title' ), 10, 2 );
+	}
+
+	/**
+	 * Hide the theme/page-builder post title on the single job page, since the
+	 * Kivun design already renders the title in its hero. Only affects the main
+	 * heading of the current job; the design itself uses the raw title so it is
+	 * unaffected. Opt out via the kivun_hide_duplicate_job_title filter.
+	 *
+	 * @param string $title   The post title.
+	 * @param int    $post_id The post ID (0 in some legacy callers).
+	 * @return string The title, or '' when suppressed.
+	 */
+	public static function suppress_duplicate_title( $title, $post_id = 0 ) {
+		if (
+			'' !== $title
+			&& ! is_admin()
+			&& is_singular( 'kivun_job' )
+			&& is_main_query()
+			&& in_the_loop()
+			&& get_queried_object_id() === (int) $post_id
+			&& apply_filters( 'kivun_single_job_append', true )
+			&& apply_filters( 'kivun_hide_duplicate_job_title', true )
+		) {
+			return '';
+		}
+		return $title;
 	}
 
 	/**
@@ -138,6 +165,9 @@ class Kivun_Jobs {
 			return '';
 		}
 
+		$job_post  = get_post( $job_id );
+		$job_title = $job_post ? $job_post->post_title : '';
+
 		$trail = array(
 			array(
 				'label' => __( 'בית', 'kivun' ),
@@ -148,7 +178,7 @@ class Kivun_Jobs {
 				'url'   => get_post_type_archive_link( 'kivun_job' ),
 			),
 			array(
-				'label' => get_the_title( $job_id ),
+				'label' => $job_title,
 				'url'   => '',
 			),
 		);

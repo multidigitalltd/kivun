@@ -39,8 +39,24 @@
 }
 
 /* ── Toolbar trigger ────────────────────────────────────────────────────── */
+/* Reset so theme button/list rules can't break the widget layout. */
+.kivun-a11y,
+.kivun-a11y *,
+.kivun-a11y *::before,
+.kivun-a11y *::after {
+	box-sizing: border-box;
+}
 .kivun-a11y {
 	font-family: system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+}
+.kivun-a11y button {
+	appearance: none;
+	-webkit-appearance: none;
+	margin: 0;
+	font-family: inherit;
+	line-height: normal;
+	text-transform: none;
+	box-shadow: none;
 }
 
 .kivun-a11y-toggle {
@@ -48,25 +64,28 @@
 	inset-inline-start: 16px;
 	bottom: 16px;
 	z-index: 99999;
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	width: 52px;
-	height: 52px;
-	min-width: 44px;
-	min-height: 44px;
-	padding: 0;
+	display: inline-flex !important;
+	align-items: center !important;
+	justify-content: center !important;
+	width: 56px !important;
+	height: 56px !important;
+	min-width: 56px !important;
+	min-height: 56px !important;
+	max-width: 56px;
+	padding: 0 !important;
 	color: #fff;
 	background: #0b3d91;
 	border: 2px solid #fff;
-	border-radius: 50%;
+	border-radius: 50% !important;
 	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 	cursor: pointer;
+	line-height: 1 !important;
 }
 
 .kivun-a11y-toggle:hover {
 	background: #082a66;
 }
+.kivun-a11y-icon { width: 28px; height: 28px; }
 
 .kivun-a11y-toggle:focus-visible,
 .kivun-a11y-btn:focus-visible,
@@ -139,26 +158,31 @@
 }
 
 .kivun-a11y-list {
-	display: grid;
-	grid-template-columns: 1fr 1fr;
-	gap: 8px;
-	margin: 0;
-	padding: 0;
-	list-style: none;
+	display: grid !important;
+	grid-template-columns: 1fr 1fr !important;
+	gap: 8px !important;
+	margin: 0 !important;
+	padding: 0 !important;
+	list-style: none !important;
 }
 
 .kivun-a11y-list__item {
-	margin: 0;
-	padding: 0;
+	margin: 0 !important;
+	padding: 0 !important;
+	list-style: none !important;
 }
+.kivun-a11y-list__item::before { content: none !important; }
 
 .kivun-a11y-btn {
-	display: block;
-	width: 100%;
-	min-height: 44px;
+	display: flex !important;
+	align-items: center;
+	justify-content: center;
+	width: 100% !important;
+	min-height: 48px;
 	padding: 10px 8px;
 	font-size: 14px;
 	font-weight: 600;
+	text-align: center;
 	color: #111;
 	background: #f0f3fa;
 	border: 2px solid #cdd8ee;
