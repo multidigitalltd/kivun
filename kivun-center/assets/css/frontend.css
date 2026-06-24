@@ -12,6 +12,34 @@
 	--kivun-muted:     #6b7280;
 	--kivun-radius:    10px;
 	--kivun-shadow:    0 1px 4px rgba(0,0,0,.08);
+	--kivun-font:      'Ploni ML v2 AAA', 'Ploni', 'Heebo', 'Assistant', 'Rubik', system-ui, sans-serif;
+}
+
+/* Apply the brand font to all front-end Kivun components (form controls do
+   not inherit font-family by default, so set it on them explicitly too). */
+.kivun-jobs-wrap,
+.kivun-job-card,
+.kivun-job-single,
+.kivun-employer-dashboard,
+.kivun-my-applications,
+.kivun-apply-wrap,
+.kivun-employer-register,
+.kivun-interest {
+	font-family: var(--kivun-font);
+}
+.kivun-jobs-wrap input,
+.kivun-jobs-wrap select,
+.kivun-jobs-wrap textarea,
+.kivun-jobs-wrap button,
+.kivun-job-single input,
+.kivun-job-single select,
+.kivun-job-single textarea,
+.kivun-job-single button,
+.kivun-employer-dashboard input,
+.kivun-employer-dashboard select,
+.kivun-employer-dashboard textarea,
+.kivun-employer-dashboard button {
+	font-family: var(--kivun-font);
 }
 
 /* ── Buttons ─────────────────────────────────────────────────────────── */
