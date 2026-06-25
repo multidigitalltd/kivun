@@ -82,6 +82,13 @@ foreach ( $applications as $a ) {
 		++$new_apps;
 	}
 }
+
+$published_jobs = 0;
+foreach ( $jobs as $j ) {
+	if ( 'publish' === $j->post_status ) {
+		++$published_jobs;
+	}
+}
 ?>
 <div class="kivun-employer-dashboard" dir="rtl">
 
@@ -106,6 +113,14 @@ foreach ( $applications as $a ) {
 				+ <?php esc_html_e( 'פרסם משרה חדשה', 'kivun' ); ?>
 			</button>
 		</div>
+
+		<?php if ( $jobs ) : ?>
+			<div class="kivun-apps-stats">
+				<span class="kivun-stat"><strong><?php echo esc_html( count( $jobs ) ); ?></strong> <?php esc_html_e( 'סה״כ משרות', 'kivun' ); ?></span>
+				<span class="kivun-stat"><strong><?php echo esc_html( $published_jobs ); ?></strong> <?php esc_html_e( 'משרות פעילות', 'kivun' ); ?></span>
+				<span class="kivun-stat"><strong><?php echo esc_html( $total_apps ); ?></strong> <?php esc_html_e( 'סה״כ הגשות', 'kivun' ); ?></span>
+			</div>
+		<?php endif; ?>
 
 		<!-- New / Edit Job Form -->
 		<div class="kivun-new-job-form" id="kivun-new-job-form" style="display:none;">
@@ -215,6 +230,7 @@ foreach ( $applications as $a ) {
 
 		<!-- Jobs Table -->
 		<?php if ( $jobs ) : ?>
+			<div class="kivun-jobs-table-wrap">
 			<table class="kivun-jobs-table">
 				<thead>
 					<tr>
@@ -293,6 +309,7 @@ foreach ( $applications as $a ) {
 				<?php endforeach; ?>
 				</tbody>
 			</table>
+			</div>
 		<?php else : ?>
 			<p class="kivun-notice"><?php esc_html_e( 'עדיין לא פרסמת משרות.', 'kivun' ); ?></p>
 		<?php endif; ?>
