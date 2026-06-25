@@ -134,50 +134,37 @@
 	align-items: center;
 	justify-content: space-between;
 	margin: 0;
-	padding: 16px 18px;
-	background: #f7f8fa;
-	border-bottom: 1px solid #eceef3;
+	padding: 18px 20px 6px;
+	background: #fff;
 	border-radius: 18px 18px 0 0;
 }
 
 .kivun-a11y-panel__title {
 	margin: 0;
-	font-size: 17px;
+	font-size: 18px;
 	font-weight: 700;
-	color: #232323;
-	display: inline-flex;
-	align-items: center;
-	gap: 8px;
-}
-.kivun-a11y-panel__title::before {
-	content: "";
-	width: 9px;
-	height: 9px;
-	border-radius: 50%;
-	background: #1452d8;
-	flex: none;
+	color: #1a1a1a;
 }
 
 .kivun-a11y-close {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	width: 34px;
-	height: 34px;
+	width: 32px;
+	height: 32px;
 	font-size: 22px;
 	line-height: 1;
-	color: #5b6472;
-	background: #fff;
-	border: 1px solid #eceef3;
-	border-radius: 50%;
+	color: #6b7280;
+	background: transparent;
+	border: none;
+	border-radius: 8px;
 	cursor: pointer;
-	transition: background .15s ease, color .15s ease, border-color .15s ease;
+	transition: background .15s ease, color .15s ease;
 }
 
 .kivun-a11y-close:hover {
-	background: #232323;
-	border-color: #232323;
-	color: #fff;
+	background: #f2f3f5;
+	color: #1a1a1a;
 }
 
 .kivun-a11y-list {
@@ -185,7 +172,7 @@
 	grid-template-columns: 1fr 1fr !important;
 	gap: 10px !important;
 	margin: 0 !important;
-	padding: 18px !important;
+	padding: 14px 20px !important;
 	list-style: none !important;
 }
 
@@ -196,64 +183,61 @@
 }
 .kivun-a11y-list__item::before { content: none !important; }
 
+/* Thin, clean, single-line buttons (reference style). */
 .kivun-a11y-btn {
 	display: flex !important;
-	flex-direction: column;
 	align-items: center;
 	justify-content: center;
 	width: 100% !important;
-	min-height: 64px;
-	padding: 12px 8px;
+	min-height: 50px;
+	padding: 10px 10px;
 	font-size: 13.5px;
-	font-weight: 600;
+	font-weight: 500;
 	line-height: 1.3;
 	text-align: center;
 	color: #2a2f3a;
-	background: #f7f8fa;
-	border: 1.5px solid #eceef3;
-	border-radius: 14px;
+	background: #fff;
+	border: 1px solid #e6e8ee;
+	border-radius: 11px;
 	cursor: pointer;
-	transition: transform .12s ease, background .15s ease, border-color .15s ease, box-shadow .15s ease;
+	transition: background .15s ease, border-color .15s ease, color .15s ease;
 }
 
 .kivun-a11y-btn:hover {
-	background: #fff;
-	border-color: #1452d8;
-	box-shadow: 0 4px 14px rgba(20, 82, 216, 0.16);
-	transform: translateY(-1px);
+	background: #f7f8fa;
+	border-color: #d6dae2;
 }
 
 .kivun-a11y-btn[aria-pressed="true"] {
-	color: #fff;
-	background: #1452d8;
+	color: #1452d8;
+	background: #eef2fb;
 	border-color: #1452d8;
-	box-shadow: 0 4px 14px rgba(20, 82, 216, 0.32);
+	font-weight: 600;
 }
 
 .kivun-a11y-panel__foot {
 	margin: 0;
-	padding: 4px 18px 18px;
+	padding: 6px 20px 20px;
 }
 
 .kivun-a11y-reset {
 	display: block;
 	width: 100%;
-	min-height: 46px;
+	min-height: 48px;
 	padding: 12px;
 	font-size: 14.5px;
-	font-weight: 700;
-	color: #b42318;
-	background: #fef3f2;
-	border: 1.5px solid #fadbd7;
-	border-radius: 14px;
+	font-weight: 600;
+	color: #fff;
+	background: #1a1a1a;
+	border: 1px solid #1a1a1a;
+	border-radius: 11px;
 	cursor: pointer;
-	transition: background .15s ease, color .15s ease, border-color .15s ease;
+	transition: background .15s ease, border-color .15s ease;
 }
 
 .kivun-a11y-reset:hover {
-	background: #b42318;
-	border-color: #b42318;
-	color: #fff;
+	background: #333;
+	border-color: #333;
 }
 
 /* ── Reading guide ──────────────────────────────────────────────────────── */

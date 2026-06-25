@@ -582,12 +582,29 @@
 	max-width: 1080px;
 	margin-inline: auto;
 }
+.kivun-employer-dashboard .kivun-btn { border-width: 1.5px; border-radius: 9px; padding: .55rem 1.2rem; font-weight: 600; }
 .kivun-employer-dashboard .kivun-btn--primary { background: var(--kc-accent); border-color: var(--kc-accent); color: #fff; }
 .kivun-employer-dashboard .kivun-btn--primary:hover { background: var(--kc-dark); border-color: var(--kc-dark); }
-.kivun-employer-dashboard .kivun-btn--outline { color: var(--kc-dark); border-color: var(--kc-line); background: #fff; }
-.kivun-employer-dashboard .kivun-btn--outline:hover { background: var(--kc-dark); border-color: var(--kc-dark); color: #fff; }
-.kivun-employer-dashboard .kivun-btn { border-radius: 10px; padding: .6rem 1.3rem; }
-.kivun-employer-dashboard .kivun-btn--sm { padding: .35rem .8rem; }
+.kivun-employer-dashboard .kivun-btn--outline { color: #4b5563; border-color: var(--kc-line); background: #fff; }
+.kivun-employer-dashboard .kivun-btn--outline:hover { background: #f7f8fa; border-color: #d6dae2; color: var(--kc-dark); }
+/* Thin, gentle row-action buttons (edit / delete) */
+.kivun-employer-dashboard .kivun-btn--sm {
+	padding: .3rem .85rem;
+	font-size: .8rem;
+	font-weight: 500;
+	border-width: 1px;
+	border-radius: 8px;
+}
+.kivun-employer-dashboard .kivun-delete-job {
+	background: #fff;
+	color: #c0392b;
+	border: 1px solid #f0d5d1;
+}
+.kivun-employer-dashboard .kivun-delete-job:hover {
+	background: #fdecea;
+	border-color: #e8b6af;
+	color: #a93226;
+}
 
 .kivun-dashboard-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem; }
 .kivun-dashboard-header h2 { margin: 0; font-size: 1.55rem; font-weight: 700; color: var(--kc-dark); letter-spacing: -.01em; }
@@ -607,8 +624,8 @@
 	overflow-x: auto;
 	background: #fff;
 	border: 1px solid var(--kc-line);
-	border-radius: 16px;
-	box-shadow: 0 4px 24px rgba(35,35,35,.05);
+	border-radius: 18px;
+	box-shadow: 0 6px 28px rgba(35,35,35,.06);
 }
 .kivun-jobs-table {
 	width: 100%; border-collapse: separate; border-spacing: 0;
@@ -695,8 +712,8 @@
 .kivun-apps-filters input, .kivun-apps-filters select { width: 100%; padding: .6rem .85rem; border: 1px solid var(--kivun-border); border-radius: 10px; font: inherit; background: #fff; }
 .kivun-apps-table-wrap {
 	overflow-x: auto;
-	background: #fff; border: 1px solid var(--kivun-border); border-radius: 16px;
-	box-shadow: 0 4px 24px rgba(35,35,35,.05);
+	background: #fff; border: 1px solid var(--kc-line, #eceef3); border-radius: 18px;
+	box-shadow: 0 6px 28px rgba(35,35,35,.06);
 }
 .kivun-apps-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: .88rem; }
 .kivun-apps-table th, .kivun-apps-table td { padding: .85rem 1rem; border-bottom: 1px solid var(--kivun-border); text-align: right; vertical-align: top; }
