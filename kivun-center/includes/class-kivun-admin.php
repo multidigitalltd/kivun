@@ -887,8 +887,34 @@ class Kivun_Admin {
 	 */
 	public static function registrations_page(): void {
 		global $wpdb;
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$rows = $wpdb->get_results( "SELECT r.*, p.post_title AS course_title FROM {$wpdb->prefix}kivun_registrations r LEFT JOIN {$wpdb->posts} p ON p.ID = r.course_id ORDER BY r.created_at DESC LIMIT 500" );
+
+		// Inline status/notes editing assets for this page.
+		wp_enqueue_style( 'kivun-admin', KIVUN_URL . 'assets/css/' . Kivun_Core::asset( 'admin', 'css' ), array(), KIVUN_VERSION );
+		wp_enqueue_script( 'kivun-admin-crm', KIVUN_URL . 'assets/js/' . Kivun_Core::asset( 'admin-crm', 'js' ), array(), KIVUN_VERSION, true );
+		wp_localize_script(
+			'kivun-admin-crm',
+			'kivunCrm',
+			array(
+				'ajax_url' => admin_url( 'admin-ajax.php' ),
+				'nonce'    => wp_create_nonce( 'kivun_admin_nonce' ),
+			)
+		);
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin filter.
+		$course_filter = isset( $_GET['kivun_course_id'] ) ? absint( wp_unslash( $_GET['kivun_course_id'] ) ) : 0;
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin filter.
+		$type_filter = isset( $_GET['kivun_type'] ) ? sanitize_text_field( wp_unslash( $_GET['kivun_type'] ) ) : '';
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin filter.
+		$search = isset( $_GET['s'] ) ? sanitize_text_field( wp_unslash( $_GET['s'] ) ) : '';
+
+		$reg_statuses = array(
+			'new'          => 'חדש',
+			'contacted'    => 'נוצר קשר',
+			'interested'   => 'מעוניין',
+			'enrolled'     => 'נרשם סופית',
+			'closed'       => 'נסגר ✓',
+			'not_relevant' => 'לא רלוונטי',
+		);
 
 		$type_labels = array(
 			'registration' => 'הרשמה',
@@ -896,21 +922,122 @@ class Kivun_Admin {
 			'workshop'     => 'סדנה',
 		);
 
-		echo '<div class="wrap"><h1>הרשמות, לידים וסדנאות</h1>';
-		echo '<table class="wp-list-table widefat fixed striped"><thead><tr><th>שם</th><th>קורס / סדנה</th><th>סוג</th><th>אימייל</th><th>טלפון</th><th>תאריך</th><th>סטטוס</th></tr></thead><tbody>';
-		foreach ( $rows as $r ) {
-			$type_label = $type_labels[ $r->type ?? 'registration' ] ?? $r->type;
-			printf(
-				'<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>',
-				esc_html( $r->name ),
-				esc_html( $r->course_title ),
-				esc_html( $type_label ),
-				esc_html( $r->email ),
-				esc_html( $r->phone ),
-				esc_html( $r->created_at ),
-				esc_html( $r->status )
-			);
+		$conds = array();
+		if ( $course_filter ) {
+			$conds[] = $wpdb->prepare( 'r.course_id = %d', $course_filter );
 		}
-		echo '</tbody></table></div>';
+		if ( '' !== $type_filter && isset( $type_labels[ $type_filter ] ) ) {
+			$conds[] = $wpdb->prepare( 'r.type = %s', $type_filter );
+		}
+		if ( '' !== $search ) {
+			$like    = '%' . $wpdb->esc_like( $search ) . '%';
+			$conds[] = $wpdb->prepare( '(r.name LIKE %s OR r.email LIKE %s OR r.phone LIKE %s)', $like, $like, $like );
+		}
+		$where = $conds ? 'WHERE ' . implode( ' AND ', $conds ) : '';
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$rows  = $wpdb->get_results(
+			"SELECT r.*, p.post_title AS course_title
+			 FROM {$wpdb->prefix}kivun_registrations r
+			 LEFT JOIN {$wpdb->posts} p ON p.ID = r.course_id
+			 $where
+			 ORDER BY r.created_at DESC
+			 LIMIT 500"
+		);
+		$total = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}kivun_registrations" );
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+
+		$courses = get_posts(
+			array(
+				'post_type'              => array( 'kivun_course', 'kivun_workshop' ),
+				'post_status'            => array( 'publish', 'draft', 'pending' ),
+				'posts_per_page'         => -1,
+				'orderby'                => 'title',
+				'order'                  => 'ASC',
+				'no_found_rows'          => true,
+				'update_post_meta_cache' => false,
+				'update_post_term_cache' => false,
+			)
+		);
+		?>
+		<div class="wrap">
+			<h1><?php esc_html_e( 'הרשמות, לידים וסדנאות', 'kivun' ); ?></h1>
+			<p>
+				<?php
+				/* translators: %d: total number of registrations. */
+				echo esc_html( sprintf( __( 'סה״כ %d רשומות במערכת.', 'kivun' ), $total ) );
+				?>
+				<a href="<?php echo esc_url( Kivun_Export::url( 'registrations', 0 ) ); ?>" class="button">⬇ <?php esc_html_e( 'ייצוא CSV', 'kivun' ); ?></a>
+			</p>
+
+			<form method="get" class="kivun-apps-admin-filter" style="margin:1rem 0;display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
+				<input type="hidden" name="post_type" value="kivun_course">
+				<input type="hidden" name="page" value="kivun-registrations">
+				<select name="kivun_course_id">
+					<option value="0"><?php esc_html_e( 'כל הקורסים והסדנאות', 'kivun' ); ?></option>
+					<?php foreach ( $courses as $course ) : ?>
+						<option value="<?php echo esc_attr( $course->ID ); ?>" <?php selected( $course_filter, $course->ID ); ?>><?php echo esc_html( $course->post_title ); ?></option>
+					<?php endforeach; ?>
+				</select>
+				<select name="kivun_type">
+					<option value=""><?php esc_html_e( 'כל הסוגים', 'kivun' ); ?></option>
+					<?php foreach ( $type_labels as $type_val => $type_label ) : ?>
+						<option value="<?php echo esc_attr( $type_val ); ?>" <?php selected( $type_filter, $type_val ); ?>><?php echo esc_html( $type_label ); ?></option>
+					<?php endforeach; ?>
+				</select>
+				<input type="search" name="s" value="<?php echo esc_attr( $search ); ?>" placeholder="<?php esc_attr_e( 'חיפוש שם / אימייל / טלפון', 'kivun' ); ?>">
+				<button class="button"><?php esc_html_e( 'סינון', 'kivun' ); ?></button>
+			</form>
+
+			<table class="wp-list-table widefat fixed striped">
+				<thead><tr>
+					<th style="width:130px"><?php esc_html_e( 'שם', 'kivun' ); ?></th>
+					<th><?php esc_html_e( 'קורס / סדנה', 'kivun' ); ?></th>
+					<th style="width:70px"><?php esc_html_e( 'סוג', 'kivun' ); ?></th>
+					<th style="width:150px"><?php esc_html_e( 'אימייל', 'kivun' ); ?></th>
+					<th style="width:105px"><?php esc_html_e( 'טלפון', 'kivun' ); ?></th>
+					<th><?php esc_html_e( 'הערות', 'kivun' ); ?></th>
+					<th style="width:120px"><?php esc_html_e( 'תאריך', 'kivun' ); ?></th>
+					<th style="width:145px"><?php esc_html_e( 'סטטוס', 'kivun' ); ?></th>
+				</tr></thead>
+				<tbody>
+				<?php if ( ! $rows ) : ?>
+					<tr><td colspan="8"><?php esc_html_e( 'לא נמצאו רשומות.', 'kivun' ); ?></td></tr>
+				<?php else : ?>
+					<?php foreach ( $rows as $r ) : ?>
+						<?php $type_label = $type_labels[ $r->type ?? 'registration' ] ?? $r->type; ?>
+						<tr>
+							<td><strong><?php echo esc_html( $r->name ); ?></strong></td>
+							<td>
+								<?php if ( $r->course_id && get_post( $r->course_id ) ) : ?>
+									<a href="<?php echo esc_url( (string) get_edit_post_link( $r->course_id ) ); ?>"><?php echo esc_html( $r->course_title ); ?></a>
+								<?php else : ?>
+									<?php echo esc_html( $r->course_title ? $r->course_title : __( '(נמחק)', 'kivun' ) ); ?>
+								<?php endif; ?>
+							</td>
+							<td><?php echo esc_html( $type_label ); ?></td>
+							<td><a href="mailto:<?php echo esc_attr( $r->email ); ?>"><?php echo esc_html( $r->email ); ?></a></td>
+							<td><a href="tel:<?php echo esc_attr( $r->phone ); ?>"><?php echo esc_html( $r->phone ); ?></a></td>
+							<td>
+								<?php
+								// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Returns pre-escaped HTML.
+								echo self::notes_input( 'registrations', (int) $r->id, $r->notes ?? '' );
+								?>
+								<span class="kivun-saved-indicator" style="display:none"></span>
+							</td>
+							<td style="font-size:12px"><?php echo esc_html( wp_date( 'd/m/Y H:i', strtotime( $r->created_at ) ) ); ?></td>
+							<td>
+								<?php
+								// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Returns pre-escaped HTML.
+								echo self::status_select( 'registrations', (int) $r->id, $r->status, $reg_statuses );
+								?>
+							</td>
+						</tr>
+					<?php endforeach; ?>
+				<?php endif; ?>
+				</tbody>
+			</table>
+		</div>
+		<?php
 	}
 }

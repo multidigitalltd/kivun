@@ -21,6 +21,14 @@
 .kivun-notes-input:focus { border-color: #2563eb; outline: none; }
 .kivun-saved-indicator { font-size: 12px; font-weight: 600; margin-right: 4px; }
 
+/* ── CRM list pages (applications / registrations) ────────────────────────── */
+.kivun-apps-admin-filter { padding: 12px 14px; background: #fff; border: 1px solid #e2e4e7; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,.04); }
+.kivun-apps-admin-filter select,
+.kivun-apps-admin-filter input[type=search] { border-radius: 6px; padding: 5px 10px; border: 1px solid #dcdfe3; min-height: 32px; }
+.kivun-apps-admin-filter input[type=search] { min-width: 240px; }
+.kivun-apps-admin-filter select:focus,
+.kivun-apps-admin-filter input[type=search]:focus { border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37,99,235,.15); outline: none; }
+
 /* ── Settings page ────────────────────────────────────────────────────────── */
 .kivun-settings-wrap .nav-tab-wrapper { margin-bottom: 0; }
 .kivun-tab-content { background: #fff; border: 1px solid #c3c4c7; border-top: none; padding: 1.5rem 2rem; }
