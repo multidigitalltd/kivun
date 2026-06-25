@@ -162,37 +162,50 @@
 .kivun-form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0 1.5rem; }
 @media (max-width: 600px) { .kivun-form-grid { grid-template-columns: 1fr; } }
 .kivun-form-actions { display: flex; gap: 1rem; margin-top: .5rem; }
-/* Keep the publish-job form labels glued above their fields (theme-proof). */
+/* Keep the publish-job form labels glued above their fields (theme-proof).
+   Plain block layout — no flex/gap/order tricks that themes can hijack. */
 .kivun-new-job-form .kivun-form-row {
-	display: flex !important;
-	flex-direction: column !important;
-	align-items: stretch !important;
-	gap: .25rem !important;
-	margin: 0 0 1.1rem !important;
+	display: block !important;
+	margin: 0 0 1.15rem !important;
+	padding: 0 !important;
 }
 .kivun-new-job-form .kivun-form-row > label {
 	display: block !important;
-	order: -1 !important;
 	float: none !important;
 	width: auto !important;
-	margin: 0 0 .25rem !important;
+	margin: 0 0 .35rem !important;
 	padding: 0 !important;
-	font-weight: 700 !important;
+	font-weight: 600 !important;
 	font-size: .9rem !important;
-	line-height: 1.4 !important;
-	color: var(--kivun-text) !important;
+	line-height: 1.35 !important;
+	color: var(--kivun-dark) !important;
 	text-align: right !important;
 }
 .kivun-new-job-form .kivun-form-row > input,
 .kivun-new-job-form .kivun-form-row > select,
 .kivun-new-job-form .kivun-form-row > textarea {
+	display: block !important;
 	width: 100% !important;
 	margin: 0 !important;
 	float: none !important;
 }
-.kivun-new-job-form .wp-editor-wrap { margin-top: .1rem; }
+.kivun-new-job-form .kivun-form-row > .wp-editor-wrap,
+.kivun-new-job-form .wp-editor-wrap { margin: 0 !important; }
 .kivun-new-job-form .wp-editor-area { font-family: inherit; }
-.kivun-success { padding: 1rem; background: #dcfce7; color: var(--kivun-success); border-radius: 6px; font-weight: 600; }
+.kivun-new-job-form .kivun-form-row input,
+.kivun-new-job-form .kivun-form-row select,
+.kivun-new-job-form .kivun-form-row textarea {
+	border-radius: 10px;
+	padding: .65rem .9rem;
+	background: #fff;
+}
+.kivun-new-job-form .kivun-form-row input:focus,
+.kivun-new-job-form .kivun-form-row select:focus,
+.kivun-new-job-form .kivun-form-row textarea:focus {
+	border-color: var(--kivun-accent);
+	box-shadow: 0 0 0 3px rgba(222,41,82,.12);
+}
+.kivun-success { padding: 1rem 1.25rem; background: #e7f6ec; color: #1a7a40; border-radius: 12px; font-weight: 600; }
 
 /* ── Jobs board ─────────────────────────────────────────────────────────── */
 .kivun-jobs-filters { margin-bottom: 1.75rem; }
@@ -374,25 +387,35 @@
 .kivun-breadcrumbs__item a:hover { color: var(--kivun-accent); text-decoration: underline; }
 .kivun-breadcrumbs__item [aria-current="page"] { color: #303030; font-weight: 600; }
 
-/* ── Employer login ─────────────────────────────────────────────────────── */
-.kivun-employer-login { max-width: 420px; margin: 2rem auto; font-family: var(--kivun-font); direction: rtl; }
-.kivun-employer-login__title { margin: 0 0 1rem; font-size: 1.4rem; }
-.kivun-employer-login form { margin-top: 1.25rem; }
-.kivun-employer-login p { margin: 0 0 1rem; }
-.kivun-employer-login label { display: block; margin-bottom: .35rem; font-weight: 600; }
+/* ── Employer login — modern card ───────────────────────────────────────── */
+.kivun-employer-login {
+	max-width: 420px; margin: 2.5rem auto; font-family: var(--kivun-font); direction: rtl;
+	background: #fff; border: 1px solid #eceef3; border-radius: 18px;
+	padding: 2rem 1.85rem; box-shadow: 0 8px 32px rgba(35,35,35,.08); color: var(--kivun-dark);
+}
+.kivun-employer-login__title { margin: 0 0 .5rem; font-size: 1.5rem; font-weight: 700; letter-spacing: -.01em; }
+.kivun-employer-login form { margin-top: 1.5rem; }
+.kivun-employer-login p { margin: 0 0 1rem; color: #5b6472; }
+.kivun-employer-login label { display: block; margin-bottom: .4rem; font-weight: 600; font-size: .9rem; }
 .kivun-employer-login input[type="text"],
 .kivun-employer-login input[type="password"] {
-	width: 100%; padding: .6rem .85rem; border: 1px solid var(--kivun-border); border-radius: 8px; font: inherit; box-sizing: border-box;
+	width: 100%; padding: .7rem .9rem; border: 1px solid #e2e5ec; border-radius: 12px; font: inherit; box-sizing: border-box; background: #fafbfc;
+	transition: border-color .15s, box-shadow .15s;
+}
+.kivun-employer-login input[type="text"]:focus,
+.kivun-employer-login input[type="password"]:focus {
+	outline: none; border-color: var(--kivun-accent); background: #fff; box-shadow: 0 0 0 3px rgba(222,41,82,.12);
 }
 .kivun-employer-login .login-remember label { font-weight: 400; display: inline-flex; align-items: center; gap: .4rem; }
 .kivun-employer-login .login-remember input { width: auto; }
 .kivun-employer-login .login-submit input {
-	background: var(--kivun-dark); color: #fff; border: none; border-radius: 999px;
-	padding: .6rem 1.6rem; font-weight: 700; cursor: pointer; font-size: .95rem;
+	width: 100%; background: var(--kivun-accent); color: #fff; border: none; border-radius: 12px;
+	padding: .8rem 1.6rem; font-weight: 700; cursor: pointer; font-size: 1rem; transition: background .15s;
 }
-.kivun-employer-login .login-submit input:hover { background: #000; }
-.kivun-employer-login__links { margin-top: 1rem; font-size: .9rem; }
-.kivun-employer-login__links a { color: var(--kivun-primary-h); }
+.kivun-employer-login .login-submit input:hover { background: var(--kivun-dark); }
+.kivun-employer-login__links { margin-top: 1.25rem; font-size: .9rem; text-align: center; }
+.kivun-employer-login__links a { color: var(--kivun-accent); text-decoration: none; }
+.kivun-employer-login__links a:hover { text-decoration: underline; }
 
 /* ── Single job page ────────────────────────────────────────────────────── */
 .kivun-job-page {
@@ -548,43 +571,90 @@
 .kivun-interest__title { margin: 0 0 .3rem; font-size: 1.15rem; color: var(--kivun-primary); }
 .kivun-interest__sub   { margin: 0 0 1.25rem; font-size: .9rem; color: var(--kivun-muted); }
 
-/* ── Employer dashboard ──────────────────────────────────────────────────── */
-.kivun-employer-dashboard { font-family: inherit; }
-.kivun-dashboard-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem; }
-.kivun-dashboard-header h2 { margin: 0; font-size: 1.4rem; }
-.kivun-new-job-form { background: #f9fafb; border: 1px solid var(--kivun-border); border-radius: var(--kivun-radius); padding: 1.5rem; margin-bottom: 1.75rem; }
-.kivun-new-job-form h3 { margin: 0 0 1.25rem; }
-.kivun-jobs-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
-.kivun-jobs-table th,
-.kivun-jobs-table td { padding: .75rem 1rem; border-bottom: 1px solid var(--kivun-border); text-align: right; }
-.kivun-jobs-table th { background: #f3f4f6; font-weight: 700; }
-.kivun-status { padding: .2rem .65rem; border-radius: 4px; font-size: .8rem; font-weight: 600; }
-.kivun-status--publish { background: #dcfce7; color: #166534; }
-.kivun-status--draft   { background: #f3f4f6; color: #374151; }
-.kivun-status--pending { background: #fef9c3; color: #854d0e; }
-.kivun-notice { padding: 1rem; background: #f9fafb; border: 1px solid var(--kivun-border); border-radius: 6px; }
-.kivun-no-results { color: var(--kivun-muted); padding: 2rem; text-align: center; }
+/* ── Employer dashboard — modern, clean ──────────────────────────────────── */
+.kivun-employer-dashboard {
+	--kc-accent: var(--kivun-accent);
+	--kc-dark: var(--kivun-dark);
+	--kc-line: #eceef3;
+	--kc-soft: #f7f8fa;
+	font-family: inherit;
+	color: var(--kc-dark);
+	max-width: 1080px;
+	margin-inline: auto;
+}
+.kivun-employer-dashboard .kivun-btn--primary { background: var(--kc-accent); border-color: var(--kc-accent); color: #fff; }
+.kivun-employer-dashboard .kivun-btn--primary:hover { background: var(--kc-dark); border-color: var(--kc-dark); }
+.kivun-employer-dashboard .kivun-btn--outline { color: var(--kc-dark); border-color: var(--kc-line); background: #fff; }
+.kivun-employer-dashboard .kivun-btn--outline:hover { background: var(--kc-dark); border-color: var(--kc-dark); color: #fff; }
+.kivun-employer-dashboard .kivun-btn { border-radius: 10px; padding: .6rem 1.3rem; }
+.kivun-employer-dashboard .kivun-btn--sm { padding: .35rem .8rem; }
 
-/* ── Dashboard tabs ──────────────────────────────────────────────────────── */
-.kivun-tabs { display: flex; gap: .25rem; border-bottom: 2px solid var(--kivun-border); margin-bottom: 1.5rem; flex-wrap: wrap; }
+.kivun-dashboard-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem; }
+.kivun-dashboard-header h2 { margin: 0; font-size: 1.55rem; font-weight: 700; color: var(--kc-dark); letter-spacing: -.01em; }
+
+.kivun-new-job-form {
+	background: #fff;
+	border: 1px solid var(--kc-line);
+	border-radius: 16px;
+	padding: 1.75rem;
+	margin-bottom: 1.75rem;
+	box-shadow: 0 4px 24px rgba(35,35,35,.06);
+}
+.kivun-new-job-form h3 { margin: 0 0 1.4rem; font-size: 1.2rem; font-weight: 700; color: var(--kc-dark); }
+
+/* Cards / tables wrapper feel */
+.kivun-jobs-table {
+	width: 100%; border-collapse: separate; border-spacing: 0;
+	font-size: .92rem;
+	background: #fff;
+	border: 1px solid var(--kc-line);
+	border-radius: 16px;
+	overflow: hidden;
+	box-shadow: 0 4px 24px rgba(35,35,35,.05);
+}
+.kivun-jobs-table th,
+.kivun-jobs-table td { padding: .95rem 1.15rem; border-bottom: 1px solid var(--kc-line); text-align: right; vertical-align: middle; }
+.kivun-jobs-table thead th { background: var(--kc-soft); font-weight: 700; color: var(--kc-dark); font-size: .82rem; letter-spacing: .01em; }
+.kivun-jobs-table tbody tr:last-child td { border-bottom: 0; }
+.kivun-jobs-table tbody tr { transition: background .15s; }
+.kivun-jobs-table tbody tr:hover { background: var(--kc-soft); }
+
+.kivun-status { display: inline-block; padding: .25rem .7rem; border-radius: 999px; font-size: .78rem; font-weight: 600; }
+.kivun-status--publish { background: #e7f6ec; color: #1a7a40; }
+.kivun-status--draft   { background: #eef0f4; color: #515a6b; }
+.kivun-status--pending { background: #fdf3d8; color: #8a6311; }
+.kivun-notice { padding: 1.1rem 1.25rem; background: var(--kc-soft); border: 1px solid var(--kc-line); border-radius: 12px; color: #5b6472; }
+.kivun-no-results { color: var(--kivun-muted); padding: 2rem; text-align: center; }
+.kivun-muted { color: #aab0bb; }
+
+/* ── Dashboard tabs — pill toggle group ──────────────────────────────────── */
+.kivun-tabs {
+	display: inline-flex; gap: .25rem;
+	background: var(--kc-soft);
+	border: 1px solid var(--kc-line);
+	border-radius: 999px;
+	padding: .3rem;
+	margin-bottom: 1.75rem;
+	flex-wrap: wrap;
+}
 .kivun-tab {
 	background: none; border: none; cursor: pointer;
-	padding: .75rem 1.25rem; font-size: 1rem; font-weight: 600;
-	color: var(--kivun-muted); border-bottom: 3px solid transparent;
-	margin-bottom: -2px; display: inline-flex; align-items: center; gap: .5rem;
-	font-family: inherit;
+	padding: .6rem 1.4rem; font-size: .95rem; font-weight: 600;
+	color: #6b7280; border-radius: 999px;
+	display: inline-flex; align-items: center; gap: .5rem;
+	font-family: inherit; transition: background .15s, color .15s, box-shadow .15s;
 }
-.kivun-tab:hover { color: var(--kivun-text); }
-.kivun-tab.is-active { color: var(--kivun-primary); border-bottom-color: var(--kivun-primary); }
+.kivun-tab:hover { color: var(--kc-dark); }
+.kivun-tab.is-active { color: var(--kc-dark); background: #fff; box-shadow: 0 2px 8px rgba(35,35,35,.08); }
 .kivun-tab-badge {
-	background: #b91c1c; color: #fff; font-size: .72rem; font-weight: 700;
+	background: var(--kc-accent); color: #fff; font-size: .72rem; font-weight: 700;
 	border-radius: 999px; padding: .1rem .5rem; line-height: 1.4;
 }
-.kivun-tab-badge--inline { background: #fef9c3; color: #7c4a07; margin-inline-start: .4rem; }
+.kivun-tab-badge--inline { background: #fdf3d8; color: #8a6311; margin-inline-start: .4rem; }
 .kivun-tab-panel { display: none; }
 .kivun-tab-panel.is-active { display: block; }
 .kivun-tab-panel[hidden] { display: none; }
-.kivun-link-btn { background: none; border: none; color: var(--kivun-primary-h); cursor: pointer; font: inherit; padding: 0; text-decoration: underline; }
+.kivun-link-btn { background: none; border: none; color: var(--kc-accent); cursor: pointer; font: inherit; font-weight: 600; padding: 0; text-decoration: underline; }
 
 /* ── Accessibility helpers ───────────────────────────────────────────────── */
 .kivun-sr-only {
@@ -610,20 +680,32 @@
 }
 
 /* ── Applications panel ──────────────────────────────────────────────────── */
-.kivun-apps-stats { display: flex; gap: 1.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
-.kivun-stat { background: #f9fafb; border: 1px solid var(--kivun-border); border-radius: 8px; padding: .6rem 1rem; font-size: .9rem; color: var(--kivun-muted); }
-.kivun-stat strong { font-size: 1.25rem; color: var(--kivun-text); margin-inline-end: .25rem; }
-.kivun-apps-filters { display: flex; gap: .75rem; margin-bottom: 1rem; flex-wrap: wrap; align-items: flex-end; }
+.kivun-apps-stats { display: flex; gap: 1rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
+.kivun-stat {
+	background: #fff; border: 1px solid var(--kivun-border); border-radius: 14px;
+	padding: 1rem 1.4rem; font-size: .9rem; color: #6b7280;
+	box-shadow: 0 4px 24px rgba(35,35,35,.05); flex: 1 1 160px; min-width: 150px;
+}
+.kivun-stat strong { display: block; font-size: 1.8rem; line-height: 1.1; color: var(--kivun-dark); margin-bottom: .15rem; font-weight: 700; }
+.kivun-apps-filters { display: flex; gap: .75rem; margin-bottom: 1.25rem; flex-wrap: wrap; align-items: flex-end; }
 .kivun-apps-filters .kivun-form-row { margin: 0; }
 .kivun-apps-filters .kivun-form-row:first-child { flex: 1 1 220px; }
-.kivun-apps-filters input, .kivun-apps-filters select { width: 100%; padding: .5rem .75rem; border: 1px solid var(--kivun-border); border-radius: 6px; font: inherit; }
-.kivun-apps-table-wrap { overflow-x: auto; }
-.kivun-apps-table { width: 100%; border-collapse: collapse; font-size: .88rem; }
-.kivun-apps-table th, .kivun-apps-table td { padding: .7rem .85rem; border-bottom: 1px solid var(--kivun-border); text-align: right; vertical-align: top; }
-.kivun-apps-table th { background: #f3f4f6; font-weight: 700; white-space: nowrap; }
+.kivun-apps-filters input, .kivun-apps-filters select { width: 100%; padding: .6rem .85rem; border: 1px solid var(--kivun-border); border-radius: 10px; font: inherit; background: #fff; }
+.kivun-apps-table-wrap {
+	overflow-x: auto;
+	background: #fff; border: 1px solid var(--kivun-border); border-radius: 16px;
+	box-shadow: 0 4px 24px rgba(35,35,35,.05);
+}
+.kivun-apps-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: .88rem; }
+.kivun-apps-table th, .kivun-apps-table td { padding: .85rem 1rem; border-bottom: 1px solid var(--kivun-border); text-align: right; vertical-align: top; }
+.kivun-apps-table tbody tr:last-child td { border-bottom: 0; }
+.kivun-apps-table thead th { background: #f7f8fa; font-weight: 700; white-space: nowrap; color: var(--kivun-dark); font-size: .8rem; }
+.kivun-apps-table tbody tr:hover { background: #f7f8fa; }
 .kivun-app-contact { display: flex; flex-direction: column; gap: .15rem; font-size: .82rem; }
+.kivun-app-contact a { color: var(--kivun-dark); text-decoration: none; }
+.kivun-app-contact a:hover { color: var(--kivun-accent); text-decoration: underline; }
 .kivun-app-message { max-width: 200px; color: var(--kivun-muted); }
 .kivun-app-date { white-space: nowrap; font-size: .82rem; color: var(--kivun-muted); }
-.kivun-app-note { width: 100%; min-width: 150px; padding: .4rem; border: 1px solid var(--kivun-border); border-radius: 6px; font: inherit; font-size: .82rem; resize: vertical; }
-.kivun-app-status-select { padding: .35rem .5rem; border: 1px solid var(--kivun-border); border-radius: 6px; font: inherit; font-size: .82rem; }
-.kivun-saved-indicator { display: block; font-size: .72rem; margin-top: .2rem; }
+.kivun-app-note { width: 100%; min-width: 150px; padding: .5rem; border: 1px solid var(--kivun-border); border-radius: 10px; font: inherit; font-size: .82rem; resize: vertical; background: #fff; }
+.kivun-app-status-select { padding: .45rem .6rem; border: 1px solid var(--kivun-border); border-radius: 10px; font: inherit; font-size: .82rem; background: #fff; }
+.kivun-saved-indicator { display: block; font-size: .72rem; margin-top: .2rem; color: #1a7a40; }

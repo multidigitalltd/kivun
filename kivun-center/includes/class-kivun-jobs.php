@@ -396,7 +396,7 @@ class Kivun_Jobs {
 
 		wp_send_json_success(
 			array(
-				'message' => __( 'קורות החיים נשלחו! נחזור אליך בהקדם.', 'kivun' ),
+				'message' => __( 'קורות החיים נשלחו בהצלחה למפרסם המשרה', 'kivun' ),
 			)
 		);
 	}

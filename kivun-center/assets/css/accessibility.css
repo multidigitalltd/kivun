@@ -61,31 +61,34 @@
 
 .kivun-a11y-toggle {
 	position: fixed;
-	inset-inline-start: 16px;
-	bottom: 16px;
+	inset-inline-start: 20px;
+	bottom: 20px;
 	z-index: 99999;
 	display: inline-flex !important;
 	align-items: center !important;
 	justify-content: center !important;
-	width: 56px !important;
-	height: 56px !important;
-	min-width: 56px !important;
-	min-height: 56px !important;
-	max-width: 56px;
+	width: 58px !important;
+	height: 58px !important;
+	min-width: 58px !important;
+	min-height: 58px !important;
+	max-width: 58px;
 	padding: 0 !important;
 	color: #fff;
-	background: #0b3d91;
-	border: 2px solid #fff;
+	background: #1452d8;
+	border: 3px solid #fff;
 	border-radius: 50% !important;
-	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+	box-shadow: 0 6px 20px rgba(20, 82, 216, 0.45);
 	cursor: pointer;
 	line-height: 1 !important;
+	transition: transform .15s ease, background .15s ease, box-shadow .15s ease;
 }
 
 .kivun-a11y-toggle:hover {
-	background: #082a66;
+	background: #0d3ca8;
+	transform: translateY(-2px);
+	box-shadow: 0 8px 26px rgba(20, 82, 216, 0.5);
 }
-.kivun-a11y-icon { width: 28px; height: 28px; }
+.kivun-a11y-icon { width: 30px; height: 30px; }
 
 .kivun-a11y-toggle:focus-visible,
 .kivun-a11y-btn:focus-visible,
@@ -102,19 +105,19 @@
 /* ── Panel ──────────────────────────────────────────────────────────────── */
 .kivun-a11y-panel {
 	position: fixed;
-	inset-inline-start: 16px;
-	bottom: 80px;
+	inset-inline-start: 20px;
+	bottom: 88px;
 	z-index: 100000;
-	width: 320px;
-	max-width: calc(100vw - 32px);
-	max-height: 70vh;
+	width: 340px;
+	max-width: calc(100vw - 40px);
+	max-height: 76vh;
 	overflow-y: auto;
-	padding: 16px;
-	color: #111;
+	padding: 0;
+	color: #1c1f26;
 	background: #fff;
-	border: 2px solid #0b3d91;
-	border-radius: 10px;
-	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+	border: 1px solid #e6e9f0;
+	border-radius: 18px;
+	box-shadow: 0 18px 50px rgba(20, 40, 90, 0.22);
 	text-align: right;
 }
 
@@ -126,43 +129,45 @@
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	margin-bottom: 12px;
-	border-bottom: 1px solid #ccc;
-	padding-bottom: 8px;
+	margin: 0;
+	padding: 16px 18px;
+	background: #1452d8;
+	border-radius: 18px 18px 0 0;
 }
 
 .kivun-a11y-panel__title {
 	margin: 0;
-	font-size: 18px;
+	font-size: 17px;
 	font-weight: 700;
-	color: #0b3d91;
+	color: #fff;
 }
 
 .kivun-a11y-close {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	width: 36px;
-	height: 36px;
-	font-size: 24px;
+	width: 34px;
+	height: 34px;
+	font-size: 22px;
 	line-height: 1;
-	color: #111;
-	background: transparent;
+	color: #fff;
+	background: rgba(255, 255, 255, 0.16);
 	border: 1px solid transparent;
-	border-radius: 6px;
+	border-radius: 50%;
 	cursor: pointer;
+	transition: background .15s ease;
 }
 
 .kivun-a11y-close:hover {
-	background: #eee;
+	background: rgba(255, 255, 255, 0.3);
 }
 
 .kivun-a11y-list {
 	display: grid !important;
 	grid-template-columns: 1fr 1fr !important;
-	gap: 8px !important;
+	gap: 10px !important;
 	margin: 0 !important;
-	padding: 0 !important;
+	padding: 18px !important;
 	list-style: none !important;
 }
 
@@ -175,53 +180,62 @@
 
 .kivun-a11y-btn {
 	display: flex !important;
+	flex-direction: column;
 	align-items: center;
 	justify-content: center;
 	width: 100% !important;
-	min-height: 48px;
-	padding: 10px 8px;
-	font-size: 14px;
+	min-height: 64px;
+	padding: 12px 8px;
+	font-size: 13.5px;
 	font-weight: 600;
+	line-height: 1.3;
 	text-align: center;
-	color: #111;
-	background: #f0f3fa;
-	border: 2px solid #cdd8ee;
-	border-radius: 8px;
+	color: #2a2f3a;
+	background: #f5f7fc;
+	border: 1.5px solid #e6e9f0;
+	border-radius: 14px;
 	cursor: pointer;
+	transition: transform .12s ease, background .15s ease, border-color .15s ease, box-shadow .15s ease;
 }
 
 .kivun-a11y-btn:hover {
-	background: #e2e9f7;
+	background: #fff;
+	border-color: #1452d8;
+	box-shadow: 0 4px 14px rgba(20, 82, 216, 0.16);
+	transform: translateY(-1px);
 }
 
 .kivun-a11y-btn[aria-pressed="true"] {
 	color: #fff;
-	background: #0b3d91;
-	border-color: #0b3d91;
+	background: #1452d8;
+	border-color: #1452d8;
+	box-shadow: 0 4px 14px rgba(20, 82, 216, 0.32);
 }
 
 .kivun-a11y-panel__foot {
-	margin-top: 12px;
-	border-top: 1px solid #ccc;
-	padding-top: 12px;
+	margin: 0;
+	padding: 0 18px 18px;
 }
 
 .kivun-a11y-reset {
 	display: block;
 	width: 100%;
-	min-height: 44px;
-	padding: 10px;
-	font-size: 15px;
+	min-height: 46px;
+	padding: 12px;
+	font-size: 14.5px;
 	font-weight: 700;
-	color: #fff;
-	background: #8a1212;
-	border: 2px solid #8a1212;
-	border-radius: 8px;
+	color: #b42318;
+	background: #fef3f2;
+	border: 1.5px solid #fadbd7;
+	border-radius: 14px;
 	cursor: pointer;
+	transition: background .15s ease, color .15s ease, border-color .15s ease;
 }
 
 .kivun-a11y-reset:hover {
-	background: #6f0e0e;
+	background: #b42318;
+	border-color: #b42318;
+	color: #fff;
 }
 
 /* ── Reading guide ──────────────────────────────────────────────────────── */
