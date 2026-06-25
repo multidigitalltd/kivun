@@ -48,6 +48,53 @@ class Kivun_Installer {
 	public static function maybe_upgrade(): void {
 		if ( get_option( 'kivun_db_version' ) !== KIVUN_VERSION ) {
 			self::create_tables();
+			self::ensure_columns();
+		}
+	}
+
+	/**
+	 * Bulletproof safety net for older installs: dbDelta does not always add
+	 * columns to an existing table, so explicitly ALTER any missing columns
+	 * (e.g. user_id / notes that were introduced after the first release).
+	 *
+	 * @return void
+	 */
+	private static function ensure_columns(): void {
+		global $wpdb;
+
+		$tables = array(
+			$wpdb->prefix . 'kivun_applications'  => array(
+				'user_id'         => 'bigint(20) UNSIGNED NOT NULL DEFAULT 0',
+				'applicant_phone' => "varchar(30) NOT NULL DEFAULT ''",
+				'cv_file'         => "varchar(500) NOT NULL DEFAULT ''",
+				'message'         => 'text',
+				'notes'           => 'text',
+				'status'          => "varchar(20) NOT NULL DEFAULT 'new'",
+			),
+			$wpdb->prefix . 'kivun_registrations' => array(
+				'message' => 'text',
+				'notes'   => 'text',
+				'type'    => "varchar(20) NOT NULL DEFAULT 'registration'",
+				'status'  => "varchar(20) NOT NULL DEFAULT 'pending'",
+			),
+		);
+
+		foreach ( $tables as $table => $columns ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared
+			$exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) );
+			if ( ! $exists ) {
+				continue;
+			}
+
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			$have = $wpdb->get_col( "SHOW COLUMNS FROM `{$table}`" );
+
+			foreach ( $columns as $column => $definition ) {
+				if ( ! in_array( $column, $have, true ) ) {
+					// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared
+					$wpdb->query( "ALTER TABLE `{$table}` ADD COLUMN `{$column}` {$definition}" );
+				}
+			}
 		}
 	}
 

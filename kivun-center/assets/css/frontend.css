@@ -163,11 +163,33 @@
 @media (max-width: 600px) { .kivun-form-grid { grid-template-columns: 1fr; } }
 .kivun-form-actions { display: flex; gap: 1rem; margin-top: .5rem; }
 /* Keep the publish-job form labels glued above their fields (theme-proof). */
-.kivun-new-job-form .kivun-form-row { display: flex; flex-direction: column; align-items: stretch; gap: .3rem; margin-bottom: 1.15rem; }
-.kivun-new-job-form .kivun-form-row > label { display: block; float: none; margin: 0 0 .3rem; padding: 0; font-weight: 700; font-size: .9rem; line-height: 1.4; color: var(--kivun-text); text-align: right; }
+.kivun-new-job-form .kivun-form-row {
+	display: flex !important;
+	flex-direction: column !important;
+	align-items: stretch !important;
+	gap: .25rem !important;
+	margin: 0 0 1.1rem !important;
+}
+.kivun-new-job-form .kivun-form-row > label {
+	display: block !important;
+	order: -1 !important;
+	float: none !important;
+	width: auto !important;
+	margin: 0 0 .25rem !important;
+	padding: 0 !important;
+	font-weight: 700 !important;
+	font-size: .9rem !important;
+	line-height: 1.4 !important;
+	color: var(--kivun-text) !important;
+	text-align: right !important;
+}
 .kivun-new-job-form .kivun-form-row > input,
 .kivun-new-job-form .kivun-form-row > select,
-.kivun-new-job-form .kivun-form-row > textarea { width: 100%; margin: 0; }
+.kivun-new-job-form .kivun-form-row > textarea {
+	width: 100% !important;
+	margin: 0 !important;
+	float: none !important;
+}
 .kivun-new-job-form .wp-editor-wrap { margin-top: .1rem; }
 .kivun-new-job-form .wp-editor-area { font-family: inherit; }
 .kivun-success { padding: 1rem; background: #dcfce7; color: var(--kivun-success); border-radius: 6px; font-weight: 600; }
