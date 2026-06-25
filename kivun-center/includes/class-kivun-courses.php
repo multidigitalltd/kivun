@@ -33,27 +33,58 @@ class Kivun_Courses {
 		check_ajax_referer( 'kivun_nonce', 'nonce' );
 
 		$course_id = absint( wp_unslash( $_POST['course_id'] ?? 0 ) );
-		$name      = sanitize_text_field( wp_unslash( $_POST['name'] ?? '' ) );
-		$email     = sanitize_email( wp_unslash( $_POST['email'] ?? '' ) );
-		$phone     = sanitize_text_field( wp_unslash( $_POST['phone'] ?? '' ) );
-		$message   = sanitize_textarea_field( wp_unslash( $_POST['message'] ?? '' ) );
+		$data      = array(
+			'name'    => sanitize_text_field( wp_unslash( $_POST['name'] ?? '' ) ),
+			'email'   => sanitize_email( wp_unslash( $_POST['email'] ?? '' ) ),
+			'phone'   => sanitize_text_field( wp_unslash( $_POST['phone'] ?? '' ) ),
+			'message' => sanitize_textarea_field( wp_unslash( $_POST['message'] ?? '' ) ),
+		);
+
+		$result = self::register_free( $course_id, $data );
+		if ( is_wp_error( $result ) ) {
+			wp_send_json_error( array( 'message' => $result->get_error_message() ) );
+		}
+
+		wp_send_json_success(
+			array(
+				'message' => __( 'ההרשמה התקבלה! ניצור איתך קשר בהקדם.', 'kivun' ),
+			)
+		);
+	}
+
+	/**
+	 * Save a free course registration: validate, enforce capacity and
+	 * de-duplication, store the row, notify, and fire the action hook.
+	 *
+	 * Shared by the built-in AJAX form and the Elementor Forms action so both
+	 * paths run the exact same pipeline.
+	 *
+	 * @param int   $course_id The course post ID.
+	 * @param array $data      Associative data: name, email, phone, message (raw or sanitized).
+	 * @return true|\WP_Error True on success, WP_Error with a user message on failure.
+	 */
+	public static function register_free( int $course_id, array $data ) {
+		$name    = sanitize_text_field( $data['name'] ?? '' );
+		$email   = sanitize_email( $data['email'] ?? '' );
+		$phone   = sanitize_text_field( $data['phone'] ?? '' );
+		$message = sanitize_textarea_field( $data['message'] ?? '' );
 
 		if ( ! $course_id || ! $name || ! is_email( $email ) ) {
-			wp_send_json_error( array( 'message' => __( 'נא למלא שם ואימייל תקין.', 'kivun' ) ) );
+			return new \WP_Error( 'kivun_invalid', __( 'נא למלא שם ואימייל תקין.', 'kivun' ) );
 		}
 
 		if ( get_post_type( $course_id ) !== 'kivun_course' ) {
-			wp_send_json_error( array( 'message' => __( 'קורס לא קיים.', 'kivun' ) ) );
+			return new \WP_Error( 'kivun_no_course', __( 'קורס לא קיים.', 'kivun' ) );
 		}
 
 		// Capacity check.
 		if ( kivun_is_full( $course_id ) ) {
-			wp_send_json_error( array( 'message' => __( 'מצטערים, הקורס מלא. ניתן להשאיר פרטים לרשימת המתנה.', 'kivun' ) ) );
+			return new \WP_Error( 'kivun_full', __( 'מצטערים, הקורס מלא. ניתן להשאיר פרטים לרשימת המתנה.', 'kivun' ) );
 		}
 
 		// Prevent duplicate registration (by email or phone).
 		if ( self::already_registered( $course_id, $email, $phone ) ) {
-			wp_send_json_error( array( 'message' => __( 'כבר נרשמת לקורס זה.', 'kivun' ) ) );
+			return new \WP_Error( 'kivun_duplicate', __( 'כבר נרשמת לקורס זה.', 'kivun' ) );
 		}
 
 		global $wpdb;
@@ -74,11 +105,7 @@ class Kivun_Courses {
 		Kivun_Mailer::send_course_registration( $course_id, compact( 'name', 'email', 'phone', 'message' ) );
 		do_action( 'kivun_after_registration', $course_id, compact( 'name', 'email', 'phone', 'message' ) );
 
-		wp_send_json_success(
-			array(
-				'message' => __( 'ההרשמה התקבלה! ניצור איתך קשר בהקדם.', 'kivun' ),
-			)
-		);
+		return true;
 	}
 
 	/**

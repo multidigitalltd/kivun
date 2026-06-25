@@ -22,6 +22,24 @@ class Kivun_Elementor {
 	public static function init(): void {
 		// Wait for Elementor to be fully loaded.
 		add_action( 'elementor/dynamic_tags/register', array( __CLASS__, 'register_tags' ) );
+
+		// Register the custom Forms action (Elementor Pro Forms only).
+		add_action( 'elementor_pro/forms/actions/register', array( __CLASS__, 'register_form_actions' ) );
+	}
+
+	/**
+	 * Register Kivun's custom Elementor Pro Forms actions.
+	 *
+	 * @param \ElementorPro\Modules\Forms\Registrars\Form_Actions_Registrar $registrar The actions registrar.
+	 * @return void
+	 */
+	public static function register_form_actions( $registrar ): void {
+		if ( ! class_exists( '\ElementorPro\Modules\Forms\Classes\Action_Base' ) ) {
+			return;
+		}
+
+		require_once KIVUN_DIR . 'elementor/class-kivun-course-registration-action.php';
+		$registrar->register( new Kivun_Course_Registration_Action() );
 	}
 
 	/**

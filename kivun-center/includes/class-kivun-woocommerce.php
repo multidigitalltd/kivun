@@ -43,18 +43,68 @@ class Kivun_WooCommerce {
 		check_ajax_referer( 'kivun_nonce', 'nonce' );
 
 		$course_id = absint( $_POST['course_id'] ?? 0 );
-		$name      = sanitize_text_field( wp_unslash( $_POST['name'] ?? '' ) );
-		$email     = sanitize_email( wp_unslash( $_POST['email'] ?? '' ) );
-		$phone     = sanitize_text_field( wp_unslash( $_POST['phone'] ?? '' ) );
-		$message   = sanitize_textarea_field( wp_unslash( $_POST['message'] ?? '' ) );
+		$data      = array(
+			'name'    => sanitize_text_field( wp_unslash( $_POST['name'] ?? '' ) ),
+			'email'   => sanitize_email( wp_unslash( $_POST['email'] ?? '' ) ),
+			'phone'   => sanitize_text_field( wp_unslash( $_POST['phone'] ?? '' ) ),
+			'message' => sanitize_textarea_field( wp_unslash( $_POST['message'] ?? '' ) ),
+		);
+
+		$checkout_url = self::add_course_to_cart( $course_id, $data );
+		if ( is_wp_error( $checkout_url ) ) {
+			wp_send_json_error( array( 'message' => $checkout_url->get_error_message() ) );
+		}
+
+		wp_send_json_success( array( 'checkout_url' => $checkout_url ) );
+	}
+
+	/**
+	 * Whether a course is paid (has a valid linked WooCommerce product).
+	 *
+	 * @param int $course_id The course post ID.
+	 * @return bool True when WooCommerce is active and a valid product is linked.
+	 */
+	public static function is_paid_course( int $course_id ): bool {
+		if ( ! $course_id || ! class_exists( 'WooCommerce' ) ) {
+			return false;
+		}
+		$product_id = (int) get_post_meta( $course_id, '_kivun_wc_product_id', true );
+		return $product_id > 0 && (bool) wc_get_product( $product_id );
+	}
+
+	/**
+	 * Empty the cart, add the course's linked product, stash the pending
+	 * registration in the WC session, and return the checkout URL.
+	 *
+	 * Shared by the built-in AJAX flow and the Elementor Forms action.
+	 *
+	 * @param int   $course_id The course post ID.
+	 * @param array $data      Associative data: name, email, phone, message.
+	 * @return string|\WP_Error Checkout URL on success, WP_Error on failure.
+	 */
+	public static function add_course_to_cart( int $course_id, array $data ) {
+		$name    = sanitize_text_field( $data['name'] ?? '' );
+		$email   = sanitize_email( $data['email'] ?? '' );
+		$phone   = sanitize_text_field( $data['phone'] ?? '' );
+		$message = sanitize_textarea_field( $data['message'] ?? '' );
 
 		if ( ! $course_id || ! $name || ! is_email( $email ) ) {
-			wp_send_json_error( array( 'message' => __( 'נא למלא שם ואימייל תקין.', 'kivun' ) ) );
+			return new \WP_Error( 'kivun_invalid', __( 'נא למלא שם ואימייל תקין.', 'kivun' ) );
 		}
 
 		$product_id = (int) get_post_meta( $course_id, '_kivun_wc_product_id', true );
 		if ( ! $product_id || ! wc_get_product( $product_id ) ) {
-			wp_send_json_error( array( 'message' => __( 'מוצר WooCommerce לא מוגדר לקורס זה.', 'kivun' ) ) );
+			return new \WP_Error( 'kivun_no_product', __( 'מוצר WooCommerce לא מוגדר לקורס זה.', 'kivun' ) );
+		}
+
+		// The WC cart/session may not be loaded yet on a non-standard request
+		// (e.g. an Elementor Forms submission) — load it on demand.
+		if ( ( ! WC()->cart || ! WC()->session ) && function_exists( 'wc_load_cart' ) ) {
+			wc_load_cart();
+		}
+
+		if ( ! WC()->cart ) {
+			return new \WP_Error( 'kivun_no_cart', __( 'עגלת הקנייה אינה זמינה כרגע. נסו שוב.', 'kivun' ) );
 		}
 
 		WC()->cart->empty_cart();
@@ -71,7 +121,7 @@ class Kivun_WooCommerce {
 			)
 		);
 
-		wp_send_json_success( array( 'checkout_url' => wc_get_checkout_url() ) );
+		return wc_get_checkout_url();
 	}
 
 	/**
