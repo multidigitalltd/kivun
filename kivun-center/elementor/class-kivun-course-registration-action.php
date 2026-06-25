@@ -61,8 +61,20 @@ class Kivun_Course_Registration_Action extends Action_Base {
 				'default' => 'current',
 				'options' => array(
 					'current' => __( 'הקורס הנוכחי (לפי כתובת העמוד)', 'kivun' ),
+					'field'   => __( 'משדה נסתר בטופס (מומלץ לטמפלט יחיד)', 'kivun' ),
 					'manual'  => __( 'מזהה קורס ידני', 'kivun' ),
 				),
+			)
+		);
+
+		$widget->add_control(
+			'kivun_field_course',
+			array(
+				'label'       => __( 'מזהה שדה: קורס (ID)', 'kivun' ),
+				'type'        => Controls_Manager::TEXT,
+				'default'     => 'course_id',
+				'condition'   => array( 'kivun_course_source' => 'field' ),
+				'description' => __( 'הוסיפו שדה נסתר (Hidden) שערכו ‎[kivun_course_id]‎ דרך Dynamic → Shortcode, ורשמו כאן את ה‑ID שלו.', 'kivun' ),
 			)
 		);
 
@@ -143,9 +155,12 @@ class Kivun_Course_Registration_Action extends Action_Base {
 		);
 
 		// Resolve the target course.
+		$source    = $settings['kivun_course_source'] ?? 'current';
 		$course_id = 0;
-		if ( 'manual' === ( $settings['kivun_course_source'] ?? 'current' ) ) {
+		if ( 'manual' === $source ) {
 			$course_id = absint( $settings['kivun_course_id'] ?? 0 );
+		} elseif ( 'field' === $source ) {
+			$course_id = absint( $get_value( $settings['kivun_field_course'] ?? 'course_id' ) );
 		} else {
 			$referer   = wp_get_referer();
 			$course_id = $referer ? url_to_postid( $referer ) : 0;
@@ -183,6 +198,7 @@ class Kivun_Course_Registration_Action extends Action_Base {
 	public function on_export( $element ) {
 		unset(
 			$element['settings']['kivun_course_source'],
+			$element['settings']['kivun_field_course'],
 			$element['settings']['kivun_course_id'],
 			$element['settings']['kivun_field_name'],
 			$element['settings']['kivun_field_email'],

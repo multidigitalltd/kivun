@@ -22,6 +22,7 @@ class Kivun_Shortcodes {
 			'kivun_courses'            => 'render_courses',
 			'kivun_course_single'      => 'render_course_single',
 			'kivun_course_register'    => 'render_course_register',
+			'kivun_course_id'          => 'render_course_id',
 			'kivun_course_interest'    => 'render_course_interest',
 			'kivun_workshops'          => 'render_workshops',
 			'kivun_workshop_single'    => 'render_workshop_single',
@@ -363,6 +364,26 @@ class Kivun_Shortcodes {
 		ob_start();
 		kivun_get_template( 'jobs/apply-form.php', array( 'job_id' => $id ) );
 		return ob_get_clean();
+	}
+
+	/**
+	 * Output the current course ID — for binding an Elementor hidden field
+	 * (via a "Shortcode" dynamic tag) so the Forms action knows which course
+	 * the visitor is on, even inside a shared single template.
+	 *
+	 * @return string The course ID, or empty string when not on a course.
+	 */
+	public static function render_course_id(): string {
+		$id = (int) get_the_ID();
+
+		if ( get_post_type( $id ) !== 'kivun_course' ) {
+			$queried = get_queried_object_id();
+			if ( $queried && 'kivun_course' === get_post_type( $queried ) ) {
+				$id = (int) $queried;
+			}
+		}
+
+		return get_post_type( $id ) === 'kivun_course' ? (string) $id : '';
 	}
 
 	// ── My applications (personal area) ──────────────────────────────────────
