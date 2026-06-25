@@ -45,6 +45,14 @@ class Kivun_Core {
 			}
 		);
 
+		// Register the custom Forms action as early as possible so we never miss
+		// the Forms registrar hook. The class file only declares a class (no
+		// Elementor symbols are resolved at parse time), so it is safe to load
+		// unconditionally; both callbacks bail out when Pro Forms is absent.
+		require_once KIVUN_DIR . 'elementor/class-kivun-elementor.php';
+		add_action( 'elementor_pro/forms/actions/register', array( 'Kivun_Elementor', 'register_form_actions' ) );
+		add_action( 'elementor_pro/init', array( 'Kivun_Elementor', 'register_form_actions_legacy' ), 99 );
+
 		add_action( 'wp_enqueue_scripts', array( __CLASS__, 'enqueue_frontend' ) );
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_admin' ) );
 		add_action( 'plugins_loaded', array( __CLASS__, 'load_textdomain' ) );

@@ -15,6 +15,14 @@ defined( 'ABSPATH' ) || exit;
 class Kivun_Elementor {
 
 	/**
+	 * Guards against registering the Forms action more than once (the modern
+	 * registrar hook and the legacy fallback can both fire on newer Pro).
+	 *
+	 * @var bool
+	 */
+	private static $form_action_registered = false;
+
+	/**
 	 * Hook the tag registration into Elementor.
 	 *
 	 * @return void
@@ -22,24 +30,51 @@ class Kivun_Elementor {
 	public static function init(): void {
 		// Wait for Elementor to be fully loaded.
 		add_action( 'elementor/dynamic_tags/register', array( __CLASS__, 'register_tags' ) );
-
-		// Register the custom Forms action (Elementor Pro Forms only).
-		add_action( 'elementor_pro/forms/actions/register', array( __CLASS__, 'register_form_actions' ) );
 	}
 
 	/**
-	 * Register Kivun's custom Elementor Pro Forms actions.
+	 * Register Kivun's custom Elementor Pro Forms actions (modern hook,
+	 * Elementor Pro 3.5+).
 	 *
-	 * @param \ElementorPro\Modules\Forms\Registrars\Form_Actions_Registrar $registrar The actions registrar.
+	 * @param mixed $registrar The actions registrar (Form_Actions_Registrar).
 	 * @return void
 	 */
 	public static function register_form_actions( $registrar ): void {
-		if ( ! class_exists( '\ElementorPro\Modules\Forms\Classes\Action_Base' ) ) {
+		if ( self::$form_action_registered ) {
+			return;
+		}
+		if ( ! class_exists( '\ElementorPro\Modules\Forms\Classes\Action_Base' ) || ! is_object( $registrar ) ) {
 			return;
 		}
 
 		require_once KIVUN_DIR . 'elementor/class-kivun-course-registration-action.php';
 		$registrar->register( new Kivun_Course_Registration_Action() );
+		self::$form_action_registered = true;
+	}
+
+	/**
+	 * Backward-compatible registration for Elementor Pro versions older than
+	 * 3.5 that lack the registrar hook (uses the Forms module's add_form_action).
+	 *
+	 * @return void
+	 */
+	public static function register_form_actions_legacy(): void {
+		if ( self::$form_action_registered ) {
+			return;
+		}
+		if ( ! class_exists( '\ElementorPro\Modules\Forms\Classes\Action_Base' ) || ! class_exists( '\ElementorPro\Plugin' ) ) {
+			return;
+		}
+
+		$forms = \ElementorPro\Plugin::instance()->modules_manager->get_modules( 'forms' );
+		if ( ! $forms || ! method_exists( $forms, 'add_form_action' ) ) {
+			return;
+		}
+
+		require_once KIVUN_DIR . 'elementor/class-kivun-course-registration-action.php';
+		$action = new Kivun_Course_Registration_Action();
+		$forms->add_form_action( $action->get_name(), $action );
+		self::$form_action_registered = true;
 	}
 
 	/**
