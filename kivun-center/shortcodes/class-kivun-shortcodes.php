@@ -23,6 +23,7 @@ class Kivun_Shortcodes {
 			'kivun_course_single'      => 'render_course_single',
 			'kivun_course_register'    => 'render_course_register',
 			'kivun_course_id'          => 'render_course_id',
+			'kivun_post_id'            => 'render_post_id',
 			'kivun_course_interest'    => 'render_course_interest',
 			'kivun_workshops'          => 'render_workshops',
 			'kivun_workshop_single'    => 'render_workshop_single',
@@ -384,6 +385,26 @@ class Kivun_Shortcodes {
 		}
 
 		return get_post_type( $id ) === 'kivun_course' ? (string) $id : '';
+	}
+
+	/**
+	 * Output the current Kivun post ID (course or landing page) — for binding an
+	 * Elementor hidden field on a shared single template so the Forms action
+	 * knows which item the visitor is on.
+	 *
+	 * @return string The post ID, or empty string when not on a Kivun item.
+	 */
+	public static function render_post_id(): string {
+		$id = (int) get_the_ID();
+
+		if ( ! in_array( get_post_type( $id ), array( 'kivun_course', 'kivun_workshop' ), true ) ) {
+			$queried = get_queried_object_id();
+			if ( $queried && in_array( get_post_type( $queried ), array( 'kivun_course', 'kivun_workshop' ), true ) ) {
+				$id = (int) $queried;
+			}
+		}
+
+		return in_array( get_post_type( $id ), array( 'kivun_course', 'kivun_workshop' ), true ) ? (string) $id : '';
 	}
 
 	// ── My applications (personal area) ──────────────────────────────────────

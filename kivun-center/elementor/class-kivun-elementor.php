@@ -48,7 +48,9 @@ class Kivun_Elementor {
 		}
 
 		require_once KIVUN_DIR . 'elementor/class-kivun-course-registration-action.php';
+		require_once KIVUN_DIR . 'elementor/class-kivun-lead-action.php';
 		$registrar->register( new Kivun_Course_Registration_Action() );
+		$registrar->register( new Kivun_Lead_Action() );
 		self::$form_action_registered = true;
 	}
 
@@ -72,8 +74,11 @@ class Kivun_Elementor {
 		}
 
 		require_once KIVUN_DIR . 'elementor/class-kivun-course-registration-action.php';
-		$action = new Kivun_Course_Registration_Action();
-		$forms->add_form_action( $action->get_name(), $action );
+		require_once KIVUN_DIR . 'elementor/class-kivun-lead-action.php';
+		$course_action = new Kivun_Course_Registration_Action();
+		$lead_action   = new Kivun_Lead_Action();
+		$forms->add_form_action( $course_action->get_name(), $course_action );
+		$forms->add_form_action( $lead_action->get_name(), $lead_action );
 		self::$form_action_registered = true;
 	}
 

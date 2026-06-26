@@ -37,23 +37,54 @@ class Kivun_Workshops {
 		check_ajax_referer( 'kivun_nonce', 'nonce' );
 
 		$post_id = absint( wp_unslash( $_POST['post_id'] ?? 0 ) );
-		$name    = sanitize_text_field( wp_unslash( $_POST['name'] ?? '' ) );
-		$email   = sanitize_email( wp_unslash( $_POST['email'] ?? '' ) );
-		$phone   = sanitize_text_field( wp_unslash( $_POST['phone'] ?? '' ) );
-		$message = sanitize_textarea_field( wp_unslash( $_POST['message'] ?? '' ) );
+		$data    = array(
+			'name'    => sanitize_text_field( wp_unslash( $_POST['name'] ?? '' ) ),
+			'email'   => sanitize_email( wp_unslash( $_POST['email'] ?? '' ) ),
+			'phone'   => sanitize_text_field( wp_unslash( $_POST['phone'] ?? '' ) ),
+			'message' => sanitize_textarea_field( wp_unslash( $_POST['message'] ?? '' ) ),
+		);
+
+		$result = self::save_lead( $post_id, $data );
+		if ( is_wp_error( $result ) ) {
+			wp_send_json_error( array( 'message' => $result->get_error_message() ) );
+		}
+
+		$msg = 'kivun_workshop' === get_post_type( $post_id )
+			? __( 'ההרשמה התקבלה! נציג יצור איתך קשר בהקדם.', 'kivun' )
+			: __( 'פנייתך התקבלה! נציג יצור איתך קשר בהקדם לפרטים נוספים.', 'kivun' );
+
+		wp_send_json_success( array( 'message' => $msg ) );
+	}
+
+	/**
+	 * Validate and store a lead/registration: capacity (workshops/landing pages),
+	 * de-duplication, DB row, mailer, and the kivun_after_lead hook.
+	 *
+	 * Shared by the built-in AJAX form and the Elementor Forms lead action so
+	 * both paths run the exact same pipeline.
+	 *
+	 * @param int   $post_id The course or landing-page (kivun_workshop) ID.
+	 * @param array $data    Associative data: name, email, phone, message.
+	 * @return true|\WP_Error True on success, WP_Error with a user message on failure.
+	 */
+	public static function save_lead( int $post_id, array $data ) {
+		$name    = sanitize_text_field( $data['name'] ?? '' );
+		$email   = sanitize_email( $data['email'] ?? '' );
+		$phone   = sanitize_text_field( $data['phone'] ?? '' );
+		$message = sanitize_textarea_field( $data['message'] ?? '' );
 
 		if ( ! $post_id || ! $name || ! $phone ) {
-			wp_send_json_error( array( 'message' => __( 'נא למלא שם וטלפון.', 'kivun' ) ) );
+			return new \WP_Error( 'kivun_invalid', __( 'נא למלא שם וטלפון.', 'kivun' ) );
 		}
 
 		$post_type = get_post_type( $post_id );
 		if ( ! in_array( $post_type, array( 'kivun_course', 'kivun_workshop' ), true ) ) {
-			wp_send_json_error( array( 'message' => __( 'פוסט לא קיים.', 'kivun' ) ) );
+			return new \WP_Error( 'kivun_no_post', __( 'פוסט לא קיים.', 'kivun' ) );
 		}
 
-		// Capacity check for workshops.
+		// Capacity check for landing pages / workshops.
 		if ( 'kivun_workshop' === $post_type && kivun_is_full( $post_id ) ) {
-			wp_send_json_error( array( 'message' => __( 'מצטערים, ההרשמה מלאה כרגע. השאירו פרטים ונעדכן אם ייפתח מקום.', 'kivun' ) ) );
+			return new \WP_Error( 'kivun_full', __( 'מצטערים, ההרשמה מלאה כרגע. השאירו פרטים ונעדכן אם ייפתח מקום.', 'kivun' ) );
 		}
 
 		$type = 'kivun_workshop' === $post_type ? 'workshop' : 'lead';
@@ -70,7 +101,7 @@ class Kivun_Workshops {
 			)
 		);
 		if ( $duplicate ) {
-			wp_send_json_error( array( 'message' => __( 'פנייתך כבר התקבלה — נציג יחזור אליך בהקדם.', 'kivun' ) ) );
+			return new \WP_Error( 'kivun_duplicate', __( 'פנייתך כבר התקבלה — נציג יחזור אליך בהקדם.', 'kivun' ) );
 		}
 
 		$wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
@@ -91,10 +122,6 @@ class Kivun_Workshops {
 		Kivun_Mailer::send_lead_notification( $post_id, compact( 'name', 'email', 'phone', 'message' ), $type );
 		do_action( 'kivun_after_lead', $post_id, compact( 'name', 'email', 'phone', 'message' ) );
 
-		$msg = 'kivun_workshop' === $post_type
-			? __( 'ההרשמה התקבלה! נציג יצור איתך קשר בהקדם.', 'kivun' )
-			: __( 'פנייתך התקבלה! נציג יצור איתך קשר בהקדם לפרטים נוספים.', 'kivun' );
-
-		wp_send_json_success( array( 'message' => $msg ) );
+		return true;
 	}
 }
