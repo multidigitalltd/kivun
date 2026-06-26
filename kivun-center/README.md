@@ -4,7 +4,7 @@
 אינטגרציית WooCommerce, תגיות דינמיות ל‑Elementor, אזור מעסיקים לניהול הגשות,
 ושכבת נגישות (ת"י 5568 / WCAG 2.2 AA).
 
-- **גרסה:** 1.25.1
+- **גרסה:** 1.26.0
 - **דרישות:** WordPress 6.0+, PHP 8.0+ (נבדק עד 8.4)
 - **טקסט דומיין:** `kivun` (RTL מלא)
 
@@ -203,6 +203,22 @@
 - **הצהרת נגישות** דרך `[kivun_accessibility_statement]`.
 
 ניתן לכבות לגמרי או להתאים דרך הפילטרים (ראו למטה).
+
+---
+
+## באנר אישור עוגיות (Cookie Consent)
+באנר RTL מודרני הנטען בכל עמוד בצד הקדמי, עם דיאלוג העדפות וכפתור "ניהול עוגיות" צף.
+
+- **קטגוריות:** הכרחיות (תמיד פעילות), אנליטיקה, שיווק. הבחירה נשמרת ב‑`localStorage`
+  ובעוגייה (`kivun_cookie_consent`, 6 חודשים).
+- **הפעלת סקריפטים לפי הסכמה:** עטפו סקריפט שדורש הסכמה כך —
+  `<script type="text/plain" data-kivun-cookie="analytics">…</script>` (או `marketing`).
+  הסקריפט יופעל רק לאחר אישור הקטגוריה.
+- **Google Consent Mode v2:** אם קיים `gtag` בעמוד, נשלח עדכון consent אוטומטי
+  (`analytics_storage` / `ad_storage` / `ad_user_data` / `ad_personalization`).
+- **אירוע למפתחים:** `document.addEventListener('kivun:cookie-consent', e => e.detail)`.
+- **הגדרות:** הפעלה/כיבוי וקישור למדיניות פרטיות תחת **Kivun Center → הגדרות**.
+  כיבוי מלא גם דרך הפילטר `kivun_cookies_enabled`.
 
 ---
 
