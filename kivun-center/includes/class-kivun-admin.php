@@ -211,7 +211,7 @@ class Kivun_Admin {
 		$type_labels = array(
 			'registration' => 'הרשמה',
 			'lead'         => 'מתעניין',
-			'workshop'     => 'סדנה',
+			'workshop'     => 'דף נחיתה',
 		);
 
 		printf(
@@ -919,7 +919,7 @@ class Kivun_Admin {
 		$type_labels = array(
 			'registration' => 'הרשמה',
 			'lead'         => 'מתעניין',
-			'workshop'     => 'סדנה',
+			'workshop'     => 'דף נחיתה',
 		);
 
 		$conds = array();

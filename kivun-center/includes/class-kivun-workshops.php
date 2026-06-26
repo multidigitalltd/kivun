@@ -53,7 +53,7 @@ class Kivun_Workshops {
 
 		// Capacity check for workshops.
 		if ( 'kivun_workshop' === $post_type && kivun_is_full( $post_id ) ) {
-			wp_send_json_error( array( 'message' => __( 'מצטערים, הסדנה מלאה. השאר פרטים ונעדכן אם יפתח מקום.', 'kivun' ) ) );
+			wp_send_json_error( array( 'message' => __( 'מצטערים, ההרשמה מלאה כרגע. השאירו פרטים ונעדכן אם ייפתח מקום.', 'kivun' ) ) );
 		}
 
 		$type = 'kivun_workshop' === $post_type ? 'workshop' : 'lead';
@@ -92,7 +92,7 @@ class Kivun_Workshops {
 		do_action( 'kivun_after_lead', $post_id, compact( 'name', 'email', 'phone', 'message' ) );
 
 		$msg = 'kivun_workshop' === $post_type
-			? __( 'ההרשמה לסדנה התקבלה! נציג יצור איתך קשר בהקדם.', 'kivun' )
+			? __( 'ההרשמה התקבלה! נציג יצור איתך קשר בהקדם.', 'kivun' )
 			: __( 'פנייתך התקבלה! נציג יצור איתך קשר בהקדם לפרטים נוספים.', 'kivun' );
 
 		wp_send_json_success( array( 'message' => $msg ) );

@@ -45,18 +45,18 @@ class Kivun_Post_Types {
 			)
 		);
 
-		// ── Workshops ─────────────────────────────────────────────────────────
+		// ── Landing pages (backed by the kivun_workshop post type) ────────────
 		register_post_type(
 			'kivun_workshop',
 			array(
-				'labels'        => self::labels( 'סדנה', 'סדנאות' ),
+				'labels'        => self::labels( 'דף נחיתה', 'דפי נחיתה' ),
 				'public'        => true,
 				'has_archive'   => true,
-				'menu_icon'     => 'dashicons-groups',
+				'menu_icon'     => 'dashicons-megaphone',
 				'menu_position' => 6,
 				'supports'      => array( 'title', 'editor', 'thumbnail', 'excerpt' ),
 				'rewrite'       => array(
-					'slug'       => 'workshops',
+					'slug'       => 'landing',
 					'with_front' => false,
 				),
 				'show_in_rest'  => true,
@@ -89,12 +89,12 @@ class Kivun_Post_Types {
 			'kivun_workshop',
 			array(
 				'labels'       => array(
-					'name'          => 'קטגוריות סדנאות',
+					'name'          => 'קטגוריות דפי נחיתה',
 					'singular_name' => 'קטגוריה',
 				),
 				'hierarchical' => true,
 				'show_in_rest' => true,
-				'rewrite'      => array( 'slug' => 'workshop-cat' ),
+				'rewrite'      => array( 'slug' => 'landing-cat' ),
 			)
 		);
 

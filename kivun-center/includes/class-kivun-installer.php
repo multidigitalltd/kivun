@@ -49,6 +49,9 @@ class Kivun_Installer {
 		if ( get_option( 'kivun_db_version' ) !== KIVUN_VERSION ) {
 			self::create_tables();
 			self::ensure_columns();
+			// Rewrite slugs may change between versions (e.g. landing pages) —
+			// flush once after the post types register on `init`.
+			add_action( 'init', 'flush_rewrite_rules', 99 );
 		}
 	}
 

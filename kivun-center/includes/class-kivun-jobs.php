@@ -33,13 +33,14 @@ class Kivun_Jobs {
 
 	/**
 	 * Whether the built-in single job design (hero, details and appended apply
-	 * form) is active. Disabled from the settings screen when the page is built
-	 * manually (e.g. with an Elementor Single template).
+	 * form) is active. On by default; developers can disable it with the
+	 * kivun_single_job_design filter when building the page manually
+	 * (e.g. with an Elementor Single template).
 	 *
 	 * @return bool
 	 */
 	private static function single_design_enabled(): bool {
-		return (bool) Kivun_Admin_Settings::get( 'single_job_design', true );
+		return (bool) apply_filters( 'kivun_single_job_design', true );
 	}
 
 	/**

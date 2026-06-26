@@ -26,6 +26,7 @@ class Kivun_Core {
 		Kivun_Shortcodes::init();
 		Kivun_Courses::init();
 		Kivun_Workshops::init();
+		Kivun_Landing::init();
 		Kivun_Jobs::init();
 		Kivun_Employer::init();
 		Kivun_Admin::init();
@@ -73,6 +74,7 @@ class Kivun_Core {
 			'class-kivun-jobs',
 			'class-kivun-employer',
 			'class-kivun-workshops',
+			'class-kivun-landing',
 			'class-kivun-mailer',
 			'class-kivun-woocommerce',
 			'class-kivun-notifications',

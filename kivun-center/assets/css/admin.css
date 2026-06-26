@@ -29,6 +29,26 @@
 .kivun-apps-admin-filter select:focus,
 .kivun-apps-admin-filter input[type=search]:focus { border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37,99,235,.15); outline: none; }
 
+/* ── Landing page builder (dedicated form) ────────────────────────────────── */
+.kivun-lp-admin h1 { margin-bottom: 1rem; }
+.kivun-lp-grid { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 20px; align-items: start; }
+@media (max-width: 960px) { .kivun-lp-grid { grid-template-columns: 1fr; } }
+.kivun-lp-card { background: #fff; border: 1px solid #e2e4e7; border-radius: 12px; padding: 18px 20px; margin-bottom: 18px; box-shadow: 0 1px 3px rgba(0,0,0,.04); }
+.kivun-lp-label { display: block; font-size: 14px; font-weight: 700; color: #1d2327; margin-bottom: 6px; }
+.kivun-lp-sub { display: block; font-size: 13px; font-weight: 600; color: #3c434a; margin: 12px 0 4px; }
+.kivun-lp-req { color: #d63638; }
+.kivun-lp-hint { font-size: 12.5px; color: #6b7280; margin: 0 0 10px; }
+.kivun-lp-input { width: 100%; padding: 8px 12px; border: 1px solid #dcdfe3; border-radius: 8px; font-size: 14px; box-sizing: border-box; }
+.kivun-lp-input:focus { border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37,99,235,.15); outline: none; }
+.kivun-lp-input--lg { font-size: 18px; font-weight: 600; padding: 12px 14px; }
+.kivun-lp-actions { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
+.kivun-lp-actions .button-hero { width: 100%; text-align: center; justify-content: center; }
+.kivun-lp-media__preview { margin-bottom: 10px; border-radius: 10px; overflow: hidden; border: 1px solid #e2e4e7; }
+.kivun-lp-media__preview img { display: block; width: 100%; height: auto; }
+.kivun-lp-media__remove { color: #d63638; margin-inline-start: 8px; }
+.kivun-lp-media input[type=file] { margin-top: 6px; font-size: 12px; }
+.kivun-lp-admin .wp-editor-wrap { margin-top: 4px; }
+
 /* ── Settings page ────────────────────────────────────────────────────────── */
 .kivun-settings-wrap .nav-tab-wrapper { margin-bottom: 0; }
 .kivun-tab-content { background: #fff; border: 1px solid #c3c4c7; border-top: none; padding: 1.5rem 2rem; }
