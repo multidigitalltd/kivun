@@ -735,7 +735,17 @@ class Kivun_Admin {
 	 */
 	public static function admin_menu(): void {
 		add_submenu_page( 'edit.php?post_type=kivun_job', 'מועמדויות', 'מועמדויות', 'manage_options', 'kivun-applications', array( __CLASS__, 'applications_page' ) );
-		add_submenu_page( 'edit.php?post_type=kivun_course', 'הרשמות', 'הרשמות', 'manage_options', 'kivun-registrations', array( __CLASS__, 'registrations_page' ) );
+		add_submenu_page( 'edit.php?post_type=kivun_course', 'הרשמות ולידים', 'הרשמות ולידים', 'manage_options', 'kivun-registrations', array( __CLASS__, 'registrations_page' ) );
+
+		// Convenience link under "דפי נחיתה" → the same registrations screen,
+		// pre-filtered to landing-page leads (they all share one table).
+		add_submenu_page(
+			'edit.php?post_type=kivun_workshop',
+			'לידים והרשמות',
+			'לידים והרשמות',
+			'manage_options',
+			'edit.php?post_type=kivun_course&page=kivun-registrations&kivun_type=workshop'
+		);
 	}
 
 	/**
