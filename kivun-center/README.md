@@ -4,7 +4,7 @@
 אינטגרציית WooCommerce, תגיות דינמיות ל‑Elementor, אזור מעסיקים לניהול הגשות,
 ושכבת נגישות (ת"י 5568 / WCAG 2.2 AA).
 
-- **גרסה:** 1.26.0
+- **גרסה:** 1.27.0
 - **דרישות:** WordPress 6.0+, PHP 8.0+ (נבדק עד 8.4)
 - **טקסט דומיין:** `kivun` (RTL מלא)
 
@@ -206,16 +206,16 @@
 
 ---
 
-## באנר אישור עוגיות (Cookie Consent)
-באנר RTL מודרני הנטען בכל עמוד בצד הקדמי, עם דיאלוג העדפות וכפתור "ניהול עוגיות" צף.
+## הודעת עוגיות (Cookie Notice)
+באנר RTL מודרני ויידועי הנטען בכל עמוד בצד הקדמי — מיידע על שימוש בעוגיות/מעקב
+עם קישור למדיניות הפרטיות וכפתור "הבנתי" בולט. אין בורר העדפות.
 
-- **קטגוריות:** הכרחיות (תמיד פעילות), אנליטיקה, שיווק. הבחירה נשמרת ב‑`localStorage`
-  ובעוגייה (`kivun_cookie_consent`, 6 חודשים).
-- **הפעלת סקריפטים לפי הסכמה:** עטפו סקריפט שדורש הסכמה כך —
-  `<script type="text/plain" data-kivun-cookie="analytics">…</script>` (או `marketing`).
-  הסקריפט יופעל רק לאחר אישור הקטגוריה.
-- **Google Consent Mode v2:** אם קיים `gtag` בעמוד, נשלח עדכון consent אוטומטי
-  (`analytics_storage` / `ad_storage` / `ad_user_data` / `ad_personalization`).
+- האישור נשמר ב‑`localStorage` ובעוגייה (`kivun_cookie_consent`, 6 חודשים) כך
+  שהבאנר לא יוצג שוב.
+- **הפעלת סקריפטים לאחר אישור:** עטפו סקריפט מעקב כך —
+  `<script type="text/plain" data-kivun-cookie="analytics">…</script>` (או `marketing`),
+  והוא יופעל לאחר לחיצת "הבנתי".
+- **Google Consent Mode v2:** אם קיים `gtag` בעמוד, נשלח עדכון consent אוטומטי.
 - **אירוע למפתחים:** `document.addEventListener('kivun:cookie-consent', e => e.detail)`.
 - **הגדרות:** הפעלה/כיבוי וקישור למדיניות פרטיות תחת **Kivun Center → הגדרות**.
   כיבוי מלא גם דרך הפילטר `kivun_cookies_enabled`.
