@@ -84,20 +84,7 @@ class Kivun_Post_Types {
 		);
 
 		// ── Taxonomies ────────────────────────────────────────────────────────
-		register_taxonomy(
-			'kivun_workshop_cat',
-			'kivun_workshop',
-			array(
-				'labels'       => array(
-					'name'          => 'קטגוריות דפי נחיתה',
-					'singular_name' => 'קטגוריה',
-				),
-				'hierarchical' => true,
-				'show_in_rest' => true,
-				'rewrite'      => array( 'slug' => 'landing-cat' ),
-			)
-		);
-
+		// Landing pages (kivun_workshop) intentionally have no categories.
 		register_taxonomy(
 			'kivun_course_cat',
 			'kivun_course',

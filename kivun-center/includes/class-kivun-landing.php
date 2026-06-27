@@ -151,6 +151,8 @@ class Kivun_Landing {
 		$title     = $post ? $post->post_title : '';
 		$long      = $post ? $post->post_content : '';
 		$status    = $post ? $post->post_status : 'publish';
+		$slug      = $post ? $post->post_name : '';
+		$slug_base = trailingslashit( home_url( '/landing/' ) );
 		$short     = $landing_id ? (string) get_post_meta( $landing_id, '_kivun_lp_short', true ) : '';
 		$audience  = $landing_id ? (string) get_post_meta( $landing_id, '_kivun_ws_audience', true ) : '';
 		$duration  = $landing_id ? (string) get_post_meta( $landing_id, '_kivun_ws_duration', true ) : '';
@@ -186,6 +188,18 @@ class Kivun_Landing {
 						<div class="kivun-lp-card">
 							<label class="kivun-lp-label" for="kivun-lp-title"><?php esc_html_e( 'כותרת דף הנחיתה', 'kivun' ); ?> <span class="kivun-lp-req">*</span></label>
 							<input type="text" id="kivun-lp-title" name="title" class="kivun-lp-input kivun-lp-input--lg" value="<?php echo esc_attr( $title ); ?>" required placeholder="<?php esc_attr_e( 'לדוגמה: סדנת חיפוש עבודה אפקטיבי', 'kivun' ); ?>">
+
+							<label class="kivun-lp-sub" for="kivun-lp-slug"><?php esc_html_e( 'כתובת הדף (Slug)', 'kivun' ); ?></label>
+							<div class="kivun-lp-slug">
+								<span class="kivun-lp-slug__base" dir="ltr"><?php echo esc_html( $slug_base ); ?></span>
+								<input type="text" id="kivun-lp-slug" name="slug" class="kivun-lp-input" dir="ltr" value="<?php echo esc_attr( $slug ); ?>" placeholder="my-landing-page">
+							</div>
+							<p class="kivun-lp-hint">
+								<?php esc_html_e( 'החלק האחרון של הכתובת. השאר ריק כדי לייצר אוטומטית מהכותרת.', 'kivun' ); ?>
+								<?php if ( $landing_id ) : ?>
+									<a href="<?php echo esc_url( (string) get_permalink( $landing_id ) ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'צפייה בכתובת הנוכחית ↗', 'kivun' ); ?></a>
+								<?php endif; ?>
+							</p>
 						</div>
 
 						<div class="kivun-lp-card">
@@ -354,6 +368,7 @@ class Kivun_Landing {
 		$title      = isset( $_POST['title'] ) ? sanitize_text_field( wp_unslash( $_POST['title'] ) ) : '';
 		$long       = isset( $_POST['long'] ) ? wp_kses_post( wp_unslash( $_POST['long'] ) ) : '';
 		$status     = ( isset( $_POST['status'] ) && 'draft' === $_POST['status'] ) ? 'draft' : 'publish';
+		$slug       = isset( $_POST['slug'] ) ? sanitize_title( wp_unslash( $_POST['slug'] ) ) : '';
 
 		if ( '' === $title ) {
 			wp_die( esc_html__( 'יש להזין כותרת לדף הנחיתה.', 'kivun' ) );
@@ -365,6 +380,12 @@ class Kivun_Landing {
 			'post_content' => $long,
 			'post_status'  => $status,
 		);
+
+		// Only set the slug when the admin provided one; otherwise let WordPress
+		// keep the existing slug (edit) or generate one from the title (create).
+		if ( '' !== $slug ) {
+			$postarr['post_name'] = $slug;
+		}
 
 		if ( $landing_id && get_post_type( $landing_id ) === self::POST_TYPE ) {
 			$postarr['ID'] = $landing_id;

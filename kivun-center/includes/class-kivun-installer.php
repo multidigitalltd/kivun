@@ -176,13 +176,13 @@ class Kivun_Installer {
 	 */
 	private static function seed_default_terms(): void {
 		$defaults = array(
-			'kivun_job_scope'    => array(
+			'kivun_job_scope'  => array(
 				'משרה מלאה',
 				'משרה חלקית',
 				'פרילנס',
 				'התנדבות',
 			),
-			'kivun_job_region'   => array(
+			'kivun_job_region' => array(
 				'מרכז',
 				'תל אביב והסביבה',
 				'ירושלים',
@@ -193,7 +193,7 @@ class Kivun_Installer {
 				'השרון',
 				'עבודה מהבית',
 			),
-			'kivun_job_field'    => array(
+			'kivun_job_field'  => array(
 				'חינוך והוראה',
 				'ייעוץ מקצועי',
 				'מכירות ושיווק',
@@ -205,19 +205,12 @@ class Kivun_Installer {
 				'כספים וחשבונאות',
 				'עיצוב ויצירה',
 			),
-			'kivun_course_cat'   => array(
+			'kivun_course_cat' => array(
 				'כישורי עבודה',
 				'יזמות עסקית',
 				'פיתוח אישי',
 				'טכנולוגיה',
 				'שפות',
-			),
-			'kivun_workshop_cat' => array(
-				'כישורי תקשורת',
-				'חיפוש עבודה',
-				'יזמות',
-				'מנהיגות',
-				'פיתוח אישי',
 			),
 		);
 

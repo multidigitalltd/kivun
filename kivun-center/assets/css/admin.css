@@ -48,6 +48,11 @@
 .kivun-lp-media__remove { color: #d63638; margin-inline-start: 8px; }
 .kivun-lp-media input[type=file] { margin-top: 6px; font-size: 12px; }
 .kivun-lp-admin .wp-editor-wrap { margin-top: 4px; }
+.kivun-lp-slug { display: flex; align-items: stretch; border: 1px solid #dcdfe3; border-radius: 8px; overflow: hidden; background: #fff; }
+.kivun-lp-slug__base { display: inline-flex; align-items: center; padding: 0 10px; background: #f1f2f4; color: #6b7280; font-size: 12.5px; white-space: nowrap; border-inline-end: 1px solid #e2e4e7; }
+.kivun-lp-slug .kivun-lp-input { border: 0; border-radius: 0; }
+.kivun-lp-slug .kivun-lp-input:focus { box-shadow: none; }
+.kivun-lp-slug:focus-within { border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37,99,235,.15); }
 
 /* ── Settings page ────────────────────────────────────────────────────────── */
 .kivun-settings-wrap .nav-tab-wrapper { margin-bottom: 0; }
