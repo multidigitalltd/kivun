@@ -37,6 +37,7 @@ class Kivun_Core {
 		Kivun_Cron::init();
 		Kivun_Accessibility::init();
 		Kivun_Cookies::init();
+		Kivun_Support::init();
 
 		// Elementor — only when Elementor Pro is active.
 		add_action(
@@ -84,6 +85,7 @@ class Kivun_Core {
 			'class-kivun-admin',
 			'class-kivun-accessibility',
 			'class-kivun-cookies',
+			'class-kivun-support',
 		) as $file ) {
 			require_once $dir . $file . '.php';
 		}
