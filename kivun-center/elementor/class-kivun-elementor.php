@@ -111,6 +111,8 @@ class Kivun_Elementor {
 		require_once KIVUN_DIR . 'elementor/tags/class-kivun-tag-workshop-location.php';
 		require_once KIVUN_DIR . 'elementor/tags/class-kivun-tag-workshop-audience.php';
 		require_once KIVUN_DIR . 'elementor/tags/class-kivun-tag-workshop-capacity.php';
+		require_once KIVUN_DIR . 'elementor/tags/class-kivun-tag-landing-short.php';
+		require_once KIVUN_DIR . 'elementor/tags/class-kivun-tag-landing-cost.php';
 
 		// Register the Kivun group so all tags appear under one section.
 		$manager->register_group( 'kivun', array( 'title' => __( 'Kivun Center', 'kivun' ) ) );
@@ -133,6 +135,8 @@ class Kivun_Elementor {
 			Kivun_Tag_Workshop_Location::class,
 			Kivun_Tag_Workshop_Audience::class,
 			Kivun_Tag_Workshop_Capacity::class,
+			Kivun_Tag_Landing_Short::class,
+			Kivun_Tag_Landing_Cost::class,
 		) as $class ) {
 			$manager->register( new $class() );
 		}

@@ -29,7 +29,7 @@ class Kivun_Tag_Workshop_Audience extends Kivun_Workshop_Tag_Base {
 	 * @return string The tag title.
 	 */
 	public function get_title(): string {
-		return __( 'סדנה — למי מיועדת', 'kivun' );
+		return __( 'דף נחיתה — קהל יעד', 'kivun' );
 	}
 
 	/**

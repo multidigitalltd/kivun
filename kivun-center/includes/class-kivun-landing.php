@@ -465,13 +465,17 @@ class Kivun_Landing {
 			return $content;
 		}
 
+		// Off by default: most sites design the landing single in Elementor and
+		// don't want the plugin to override the content or inject a form. Opt in
+		// from Kivun Center → Settings (or via the filter below).
+		$default = (bool) Kivun_Admin_Settings::get( 'landing_builtin_single', false );
+
 		/**
-		 * Allow disabling the built-in landing layout (e.g. to build it fully
-		 * in Elementor instead).
+		 * Allow forcing/disabling the built-in landing layout.
 		 *
 		 * @param bool $render Whether to render the built-in layout.
 		 */
-		if ( ! apply_filters( 'kivun_render_landing_single', true ) ) {
+		if ( ! apply_filters( 'kivun_render_landing_single', $default ) ) {
 			return $content;
 		}
 

@@ -1,6 +1,6 @@
 <?php
 /**
- * Workshop date dynamic tag.
+ * Landing page cost dynamic tag.
  *
  * @package Kivun
  */
@@ -8,9 +8,9 @@
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Dynamic tag for the workshop date.
+ * Dynamic tag for the landing page cost.
  */
-class Kivun_Tag_Workshop_Date extends Kivun_Workshop_Tag_Base {
+class Kivun_Tag_Landing_Cost extends Kivun_Workshop_Tag_Base {
 
 	/**
 	 * Get the tag name.
@@ -18,7 +18,7 @@ class Kivun_Tag_Workshop_Date extends Kivun_Workshop_Tag_Base {
 	 * @return string The tag name.
 	 */
 	public function get_name(): string {
-		return 'kivun-workshop-date';
+		return 'kivun-landing-cost';
 	}
 
 	/**
@@ -27,7 +27,7 @@ class Kivun_Tag_Workshop_Date extends Kivun_Workshop_Tag_Base {
 	 * @return string The tag title.
 	 */
 	public function get_title(): string {
-		return __( 'דף נחיתה — תאריך פתיחה', 'kivun' );
+		return __( 'דף נחיתה — עלות', 'kivun' );
 	}
 
 	/**
@@ -36,6 +36,6 @@ class Kivun_Tag_Workshop_Date extends Kivun_Workshop_Tag_Base {
 	 * @return void
 	 */
 	public function render(): void {
-		echo esc_html( get_post_meta( get_the_ID(), '_kivun_ws_date', true ) );
+		echo esc_html( (string) get_post_meta( get_the_ID(), '_kivun_lp_cost', true ) );
 	}
 }

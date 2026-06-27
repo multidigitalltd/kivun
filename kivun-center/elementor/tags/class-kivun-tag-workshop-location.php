@@ -27,7 +27,7 @@ class Kivun_Tag_Workshop_Location extends Kivun_Workshop_Tag_Base {
 	 * @return string The tag title.
 	 */
 	public function get_title(): string {
-		return __( 'סדנה — מיקום', 'kivun' );
+		return __( 'דף נחיתה — מיקום', 'kivun' );
 	}
 
 	/**
