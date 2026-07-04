@@ -198,18 +198,23 @@ class Kivun_Lead_Action extends Action_Base {
 		}
 
 		$result = Kivun_Workshops::save_lead( $post_id, $data );
-		if ( is_wp_error( $result ) ) {
-			$message = $result->get_error_message();
 
-			// Help admins diagnose a field-ID mapping mismatch: show the IDs the
-			// form actually submitted. Never shown to regular visitors.
-			if ( current_user_can( 'manage_options' ) && is_array( $fields ) ) {
-				/* translators: %s: comma-separated list of submitted field IDs. */
-				$message .= ' — ' . sprintf( __( '[אבחון למנהל] מזהי השדות שהתקבלו: %s', 'kivun' ), implode( ', ', array_keys( $fields ) ) );
-			}
-
-			$ajax_handler->add_error_message( $message );
+		// A duplicate is not a real error — the visitor already registered, so
+		// let the form show its normal success message instead of an error.
+		if ( ! is_wp_error( $result ) || 'kivun_duplicate' === $result->get_error_code() ) {
+			return;
 		}
+
+		$message = $result->get_error_message();
+
+		// Help admins diagnose a field-ID mapping mismatch: show the IDs the
+		// form actually submitted. Never shown to regular visitors.
+		if ( current_user_can( 'manage_options' ) && is_array( $fields ) ) {
+			/* translators: %s: comma-separated list of submitted field IDs. */
+			$message .= ' — ' . sprintf( __( '[אבחון למנהל] מזהי השדות שהתקבלו: %s', 'kivun' ), implode( ', ', array_keys( $fields ) ) );
+		}
+
+		$ajax_handler->add_error_message( $message );
 	}
 
 	/**

@@ -184,9 +184,13 @@ class Kivun_Course_Registration_Action extends Action_Base {
 
 		// Free course → save registration, notify, fire hook.
 		$result = Kivun_Courses::register_free( $course_id, $data );
-		if ( is_wp_error( $result ) ) {
-			$ajax_handler->add_error_message( $result->get_error_message() );
+
+		// A duplicate is not a real error — show the form's success message.
+		if ( ! is_wp_error( $result ) || 'kivun_duplicate' === $result->get_error_code() ) {
+			return;
 		}
+
+		$ajax_handler->add_error_message( $result->get_error_message() );
 	}
 
 	/**
