@@ -79,13 +79,13 @@ class Kivun_Workshops {
 		$consent = empty( $data['marketing_consent'] ) ? 0 : 1;
 		$message = sanitize_textarea_field( $data['message'] ?? '' );
 
-		if ( ! $post_id || ! $name || ! $phone ) {
+		if ( ! $name || ! $phone ) {
 			return new \WP_Error( 'kivun_invalid', __( 'נא למלא שם וטלפון.', 'kivun' ) );
 		}
 
 		$post_type = get_post_type( $post_id );
-		if ( ! in_array( $post_type, array( 'kivun_course', 'kivun_workshop' ), true ) ) {
-			return new \WP_Error( 'kivun_no_post', __( 'פוסט לא קיים.', 'kivun' ) );
+		if ( ! $post_id || ! in_array( $post_type, array( 'kivun_course', 'kivun_workshop' ), true ) ) {
+			return new \WP_Error( 'kivun_no_post', __( 'לא נמצא הדף לשיוך הפנייה. בדקו את הגדרת "מקור הדף" או את השדה הנסתר.', 'kivun' ) );
 		}
 
 		// Capacity check for landing pages / workshops.

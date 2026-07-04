@@ -69,12 +69,12 @@ class Kivun_Courses {
 		$phone   = sanitize_text_field( $data['phone'] ?? '' );
 		$message = sanitize_textarea_field( $data['message'] ?? '' );
 
-		if ( ! $course_id || ! $name || ! is_email( $email ) ) {
+		if ( ! $name || ! is_email( $email ) ) {
 			return new \WP_Error( 'kivun_invalid', __( 'נא למלא שם ואימייל תקין.', 'kivun' ) );
 		}
 
-		if ( get_post_type( $course_id ) !== 'kivun_course' ) {
-			return new \WP_Error( 'kivun_no_course', __( 'קורס לא קיים.', 'kivun' ) );
+		if ( ! $course_id || get_post_type( $course_id ) !== 'kivun_course' ) {
+			return new \WP_Error( 'kivun_no_course', __( 'לא נמצא הקורס לשיוך ההרשמה. בדקו את הגדרת "מקור הקורס" או את השדה הנסתר.', 'kivun' ) );
 		}
 
 		// Capacity check.
