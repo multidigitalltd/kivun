@@ -31,11 +31,28 @@ class Kivun_Tag_Landing_CTA_Button extends Kivun_Workshop_Tag_Base {
 	}
 
 	/**
-	 * Render the tag output.
+	 * Render the tag output. Falls back to "להרשמה ל<שם הדף>" when no custom
+	 * button label was set.
 	 *
 	 * @return void
 	 */
 	public function render(): void {
-		echo esc_html( (string) get_post_meta( get_the_ID(), '_kivun_lp_cta_btn', true ) );
+		$id    = get_the_ID();
+		$label = (string) get_post_meta( $id, '_kivun_lp_cta_btn', true );
+
+		if ( '' === trim( $label ) ) {
+			/* translators: %s: landing page title. */
+			$default = sprintf( __( 'להרשמה ל%s', 'kivun' ), get_the_title( $id ) );
+
+			/**
+			 * Filter the default CTA button label used when none is set.
+			 *
+			 * @param string $default The default button label.
+			 * @param int    $id      The landing page ID.
+			 */
+			$label = (string) apply_filters( 'kivun_landing_cta_button_default', $default, $id );
+		}
+
+		echo esc_html( $label );
 	}
 }
