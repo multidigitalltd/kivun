@@ -36,19 +36,6 @@ class Kivun_Tag_CTA_Title extends Kivun_Workshop_Tag_Base {
 	 * @return void
 	 */
 	public function render(): void {
-		$id    = get_the_ID();
-		$value = (string) get_post_meta( $id, '_kivun_cta_title', true );
-
-		if ( '' === trim( $value ) ) {
-			/**
-			 * Filter the default CTA banner title used when none is set.
-			 *
-			 * @param string $default The default title.
-			 * @param int    $id      The post ID.
-			 */
-			$value = (string) apply_filters( 'kivun_cta_title_default', __( 'רוצים להתקדם? זה הזמן', 'kivun' ), $id );
-		}
-
-		echo esc_html( $value );
+		echo esc_html( Kivun_CTA::value( (int) get_the_ID(), '_kivun_cta_title' ) );
 	}
 }
