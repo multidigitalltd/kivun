@@ -72,14 +72,18 @@ class Kivun_Mailer {
 				<li><strong>שם:</strong> %s</li>
 				<li><strong>טלפון:</strong> %s</li>
 				<li><strong>אימייל:</strong> %s</li>
+				<li><strong>עיר:</strong> %s</li>
+				<li><strong>מגדר:</strong> %s</li>
 				<li><strong>הערות:</strong> %s</li>
 			</ul>
 			<p style="color:#b91c1c;font-weight:bold">⚠️ נא לחזור אל הליד בהקדם.</p>',
-			'workshop' === $type ? 'הרשמה לסדנה' : 'פנייה מתעניין',
+			'workshop' === $type ? 'הרשמה לדף נחיתה' : 'פנייה מתעניין',
 			esc_html( $title ),
 			esc_html( $data['name'] ),
 			esc_html( $data['phone'] ),
 			esc_html( $data['email'] ),
+			esc_html( $data['city'] ?? '' ),
+			esc_html( $data['gender'] ?? '' ),
 			nl2br( esc_html( $data['message'] ) )
 		);
 

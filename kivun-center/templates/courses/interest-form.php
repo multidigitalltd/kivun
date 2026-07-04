@@ -32,9 +32,29 @@ defined( 'ABSPATH' ) || exit;
 		</div>
 
 		<div class="kivun-form-row">
+			<label><?php esc_html_e( 'עיר', 'kivun' ); ?></label>
+			<input type="text" name="city" autocomplete="address-level2">
+		</div>
+
+		<div class="kivun-form-row">
+			<label><?php esc_html_e( 'מגדר', 'kivun' ); ?></label>
+			<select name="gender">
+				<option value=""><?php esc_html_e( 'בחר/י', 'kivun' ); ?></option>
+				<option value="זכר"><?php esc_html_e( 'זכר', 'kivun' ); ?></option>
+				<option value="נקבה"><?php esc_html_e( 'נקבה', 'kivun' ); ?></option>
+				<option value="אחר"><?php esc_html_e( 'אחר', 'kivun' ); ?></option>
+			</select>
+		</div>
+
+		<div class="kivun-form-row">
 			<label><?php esc_html_e( 'הערות / שאלות', 'kivun' ); ?></label>
 			<textarea name="message" rows="3"></textarea>
 		</div>
+
+		<label class="kivun-consent-row">
+			<input type="checkbox" name="marketing_consent" value="1">
+			<span><?php esc_html_e( 'אני מאשר/ת קבלת דיוור ותכנים שיווקיים.', 'kivun' ); ?></span>
+		</label>
 
 		<p class="kivun-error" style="display:none;color:var(--kivun-error)"></p>
 

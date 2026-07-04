@@ -1006,6 +1006,9 @@ class Kivun_Admin {
 					<th style="width:70px"><?php esc_html_e( 'סוג', 'kivun' ); ?></th>
 					<th style="width:150px"><?php esc_html_e( 'אימייל', 'kivun' ); ?></th>
 					<th style="width:105px"><?php esc_html_e( 'טלפון', 'kivun' ); ?></th>
+						<th style="width:90px"><?php esc_html_e( 'עיר', 'kivun' ); ?></th>
+						<th style="width:60px"><?php esc_html_e( 'מגדר', 'kivun' ); ?></th>
+						<th style="width:55px"><?php esc_html_e( 'דיוור', 'kivun' ); ?></th>
 					<th><?php esc_html_e( 'הערות', 'kivun' ); ?></th>
 					<th style="width:120px"><?php esc_html_e( 'תאריך', 'kivun' ); ?></th>
 					<th style="width:145px"><?php esc_html_e( 'סטטוס', 'kivun' ); ?></th>
@@ -1028,6 +1031,9 @@ class Kivun_Admin {
 							<td><?php echo esc_html( $type_label ); ?></td>
 							<td><a href="mailto:<?php echo esc_attr( $r->email ); ?>"><?php echo esc_html( $r->email ); ?></a></td>
 							<td><a href="tel:<?php echo esc_attr( $r->phone ); ?>"><?php echo esc_html( $r->phone ); ?></a></td>
+								<td><?php echo esc_html( (string) ( $r->city ?? '' ) ); ?></td>
+								<td><?php echo esc_html( (string) ( $r->gender ?? '' ) ); ?></td>
+								<td><?php echo esc_html( ! empty( $r->marketing_consent ) ? '✓' : '—' ); ?></td>
 							<td>
 								<?php
 								// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Returns pre-escaped HTML.

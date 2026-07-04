@@ -84,12 +84,12 @@ class Kivun_Export {
 		// UTF-8 BOM for Excel.
 		fputs( $out, "\xEF\xBB\xBF" ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fputs
 
-		fputcsv( $out, array( 'ID', 'קורס / סדנה', 'שם', 'אימייל', 'טלפון', 'סוג', 'הערות', 'הערות פנימיות', 'סטטוס', 'תאריך' ) );
+		fputcsv( $out, array( 'ID', 'קורס / סדנה', 'שם', 'אימייל', 'טלפון', 'עיר', 'מגדר', 'אישור דיוור', 'סוג', 'הערות', 'הערות פנימיות', 'סטטוס', 'תאריך' ) );
 
 		$type_labels = array(
 			'registration' => 'הרשמה',
 			'lead'         => 'מתעניין',
-			'workshop'     => 'סדנה',
+			'workshop'     => 'דף נחיתה',
 		);
 
 		foreach ( $rows as $r ) {
@@ -103,6 +103,9 @@ class Kivun_Export {
 						$r['name'],
 						$r['email'],
 						$r['phone'],
+						$r['city'] ?? '',
+						$r['gender'] ?? '',
+						empty( $r['marketing_consent'] ) ? 'לא' : 'כן',
 						$type_labels[ $r['type'] ] ?? $r['type'],
 						$r['message'],
 						$r['notes'],

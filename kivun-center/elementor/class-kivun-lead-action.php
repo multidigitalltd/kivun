@@ -117,6 +117,34 @@ class Kivun_Lead_Action extends Action_Base {
 		);
 
 		$widget->add_control(
+			'kivun_lead_field_city',
+			array(
+				'label'   => __( 'מזהה שדה: עיר', 'kivun' ),
+				'type'    => Controls_Manager::TEXT,
+				'default' => 'city',
+			)
+		);
+
+		$widget->add_control(
+			'kivun_lead_field_gender',
+			array(
+				'label'   => __( 'מזהה שדה: מגדר', 'kivun' ),
+				'type'    => Controls_Manager::TEXT,
+				'default' => 'gender',
+			)
+		);
+
+		$widget->add_control(
+			'kivun_lead_field_consent',
+			array(
+				'label'       => __( 'מזהה שדה: אישור דיוור', 'kivun' ),
+				'type'        => Controls_Manager::TEXT,
+				'default'     => 'consent',
+				'description' => __( 'שדה Acceptance/צ׳קבוקס. סימון = הסכמה לקבלת דיוור.', 'kivun' ),
+			)
+		);
+
+		$widget->add_control(
 			'kivun_lead_field_message',
 			array(
 				'label'   => __( 'מזהה שדה: הודעה', 'kivun' ),
@@ -148,10 +176,13 @@ class Kivun_Lead_Action extends Action_Base {
 		};
 
 		$data = array(
-			'name'    => $get_value( $settings['kivun_lead_field_name'] ?? 'name' ),
-			'phone'   => $get_value( $settings['kivun_lead_field_phone'] ?? 'phone' ),
-			'email'   => $get_value( $settings['kivun_lead_field_email'] ?? 'email' ),
-			'message' => $get_value( $settings['kivun_lead_field_message'] ?? 'message' ),
+			'name'              => $get_value( $settings['kivun_lead_field_name'] ?? 'name' ),
+			'phone'             => $get_value( $settings['kivun_lead_field_phone'] ?? 'phone' ),
+			'email'             => $get_value( $settings['kivun_lead_field_email'] ?? 'email' ),
+			'city'              => $get_value( $settings['kivun_lead_field_city'] ?? 'city' ),
+			'gender'            => $get_value( $settings['kivun_lead_field_gender'] ?? 'gender' ),
+			'marketing_consent' => '' !== trim( (string) $get_value( $settings['kivun_lead_field_consent'] ?? 'consent' ) ) ? 1 : 0,
+			'message'           => $get_value( $settings['kivun_lead_field_message'] ?? 'message' ),
 		);
 
 		// Resolve the target landing page / course.
@@ -186,6 +217,9 @@ class Kivun_Lead_Action extends Action_Base {
 			$element['settings']['kivun_lead_field_name'],
 			$element['settings']['kivun_lead_field_phone'],
 			$element['settings']['kivun_lead_field_email'],
+			$element['settings']['kivun_lead_field_city'],
+			$element['settings']['kivun_lead_field_gender'],
+			$element['settings']['kivun_lead_field_consent'],
 			$element['settings']['kivun_lead_field_message']
 		);
 

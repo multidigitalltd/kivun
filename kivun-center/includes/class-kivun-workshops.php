@@ -38,10 +38,13 @@ class Kivun_Workshops {
 
 		$post_id = absint( wp_unslash( $_POST['post_id'] ?? 0 ) );
 		$data    = array(
-			'name'    => sanitize_text_field( wp_unslash( $_POST['name'] ?? '' ) ),
-			'email'   => sanitize_email( wp_unslash( $_POST['email'] ?? '' ) ),
-			'phone'   => sanitize_text_field( wp_unslash( $_POST['phone'] ?? '' ) ),
-			'message' => sanitize_textarea_field( wp_unslash( $_POST['message'] ?? '' ) ),
+			'name'              => sanitize_text_field( wp_unslash( $_POST['name'] ?? '' ) ),
+			'email'             => sanitize_email( wp_unslash( $_POST['email'] ?? '' ) ),
+			'phone'             => sanitize_text_field( wp_unslash( $_POST['phone'] ?? '' ) ),
+			'city'              => sanitize_text_field( wp_unslash( $_POST['city'] ?? '' ) ),
+			'gender'            => sanitize_text_field( wp_unslash( $_POST['gender'] ?? '' ) ),
+			'marketing_consent' => empty( $_POST['marketing_consent'] ) ? 0 : 1,
+			'message'           => sanitize_textarea_field( wp_unslash( $_POST['message'] ?? '' ) ),
 		);
 
 		$result = self::save_lead( $post_id, $data );
@@ -71,6 +74,9 @@ class Kivun_Workshops {
 		$name    = sanitize_text_field( $data['name'] ?? '' );
 		$email   = sanitize_email( $data['email'] ?? '' );
 		$phone   = sanitize_text_field( $data['phone'] ?? '' );
+		$city    = sanitize_text_field( $data['city'] ?? '' );
+		$gender  = sanitize_text_field( $data['gender'] ?? '' );
+		$consent = empty( $data['marketing_consent'] ) ? 0 : 1;
 		$message = sanitize_textarea_field( $data['message'] ?? '' );
 
 		if ( ! $post_id || ! $name || ! $phone ) {
@@ -107,19 +113,22 @@ class Kivun_Workshops {
 		$wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$wpdb->prefix . 'kivun_registrations',
 			array(
-				'course_id'  => $post_id,
-				'name'       => $name,
-				'email'      => $email ? $email : '',
-				'phone'      => $phone,
-				'message'    => $message,
-				'status'     => 'new_lead',
-				'type'       => $type,
-				'created_at' => current_time( 'mysql' ),
+				'course_id'         => $post_id,
+				'name'              => $name,
+				'email'             => $email ? $email : '',
+				'phone'             => $phone,
+				'city'              => $city,
+				'gender'            => $gender,
+				'marketing_consent' => $consent,
+				'message'           => $message,
+				'status'            => 'new_lead',
+				'type'              => $type,
+				'created_at'        => current_time( 'mysql' ),
 			),
-			array( '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s' )
+			array( '%d', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s' )
 		);
 
-		Kivun_Mailer::send_lead_notification( $post_id, compact( 'name', 'email', 'phone', 'message' ), $type );
+		Kivun_Mailer::send_lead_notification( $post_id, compact( 'name', 'email', 'phone', 'city', 'gender', 'message' ), $type );
 		do_action( 'kivun_after_lead', $post_id, compact( 'name', 'email', 'phone', 'message' ) );
 
 		return true;

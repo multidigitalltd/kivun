@@ -75,10 +75,13 @@ class Kivun_Installer {
 				'status'          => "varchar(20) NOT NULL DEFAULT 'new'",
 			),
 			$wpdb->prefix . 'kivun_registrations' => array(
-				'message' => 'text',
-				'notes'   => 'text',
-				'type'    => "varchar(20) NOT NULL DEFAULT 'registration'",
-				'status'  => "varchar(20) NOT NULL DEFAULT 'pending'",
+				'city'              => "varchar(100) NOT NULL DEFAULT ''",
+				'gender'            => "varchar(20) NOT NULL DEFAULT ''",
+				'marketing_consent' => 'tinyint(1) NOT NULL DEFAULT 0',
+				'message'           => 'text',
+				'notes'             => 'text',
+				'type'              => "varchar(20) NOT NULL DEFAULT 'registration'",
+				'status'            => "varchar(20) NOT NULL DEFAULT 'pending'",
 			),
 		);
 
@@ -120,6 +123,9 @@ class Kivun_Installer {
 				name        varchar(100)        NOT NULL,
 				email       varchar(100)        NOT NULL DEFAULT '',
 				phone       varchar(30)         NOT NULL DEFAULT '',
+				city        varchar(100)        NOT NULL DEFAULT '',
+				gender      varchar(20)         NOT NULL DEFAULT '',
+				marketing_consent tinyint(1)    NOT NULL DEFAULT 0,
 				message     text,
 				notes       text,
 				type        varchar(20)         NOT NULL DEFAULT 'registration',
