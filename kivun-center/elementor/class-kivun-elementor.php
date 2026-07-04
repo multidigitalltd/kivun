@@ -113,8 +113,9 @@ class Kivun_Elementor {
 		require_once KIVUN_DIR . 'elementor/tags/class-kivun-tag-workshop-capacity.php';
 		require_once KIVUN_DIR . 'elementor/tags/class-kivun-tag-landing-short.php';
 		require_once KIVUN_DIR . 'elementor/tags/class-kivun-tag-landing-cost.php';
-		require_once KIVUN_DIR . 'elementor/tags/class-kivun-tag-landing-cta-text.php';
-		require_once KIVUN_DIR . 'elementor/tags/class-kivun-tag-landing-cta-button.php';
+		require_once KIVUN_DIR . 'elementor/tags/class-kivun-tag-cta-title.php';
+		require_once KIVUN_DIR . 'elementor/tags/class-kivun-tag-cta-content.php';
+		require_once KIVUN_DIR . 'elementor/tags/class-kivun-tag-cta-button.php';
 
 		// Register the Kivun group so all tags appear under one section.
 		$manager->register_group( 'kivun', array( 'title' => __( 'Kivun Center', 'kivun' ) ) );
@@ -139,8 +140,9 @@ class Kivun_Elementor {
 			Kivun_Tag_Workshop_Capacity::class,
 			Kivun_Tag_Landing_Short::class,
 			Kivun_Tag_Landing_Cost::class,
-			Kivun_Tag_Landing_CTA_Text::class,
-			Kivun_Tag_Landing_CTA_Button::class,
+			Kivun_Tag_CTA_Title::class,
+			Kivun_Tag_CTA_Content::class,
+			Kivun_Tag_CTA_Button::class,
 		) as $class ) {
 			$manager->register( new $class() );
 		}

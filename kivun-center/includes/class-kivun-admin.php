@@ -129,6 +129,22 @@ class Kivun_Admin {
 				<th><?php esc_html_e( 'אימייל לקבלת הרשמות', 'kivun' ); ?></th>
 				<td><input type="email" name="_kivun_contact_email" value="<?php echo esc_attr( $f( '_kivun_contact_email' ) ); ?>"></td>
 			</tr>
+			<tr>
+				<th colspan="2" style="padding-top:18px"><strong><?php esc_html_e( 'באנר הנעה לפעולה (CTA)', 'kivun' ); ?></strong>
+				<small style="font-weight:400">— לשאיבה בבאנר שבנוי ב‑Elementor דרך תגיות דינמיות</small></th>
+			</tr>
+			<tr>
+				<th><?php esc_html_e( 'כותרת הבאנר', 'kivun' ); ?></th>
+				<td><input type="text" name="_kivun_cta_title" value="<?php echo esc_attr( $f( '_kivun_cta_title' ) ); ?>"></td>
+			</tr>
+			<tr>
+				<th><?php esc_html_e( 'תוכן קצר', 'kivun' ); ?></th>
+				<td><textarea name="_kivun_cta_content" rows="2"><?php echo esc_textarea( $f( '_kivun_cta_content' ) ); ?></textarea></td>
+			</tr>
+			<tr>
+				<th><?php esc_html_e( 'טקסט הכפתור', 'kivun' ); ?></th>
+				<td><input type="text" name="_kivun_cta_button" value="<?php echo esc_attr( $f( '_kivun_cta_button' ) ); ?>" placeholder="<?php esc_attr_e( 'ריק = "להרשמה ל<שם הפריט>"', 'kivun' ); ?>"></td>
+			</tr>
 		</table>
 		<?php
 	}
@@ -528,6 +544,9 @@ class Kivun_Admin {
 				'_kivun_benefits'        => 'textarea',
 				'_kivun_capacity'        => 'absint',
 				'_kivun_contact_email'   => 'email',
+				'_kivun_cta_title'       => 'text',
+				'_kivun_cta_content'     => 'textarea',
+				'_kivun_cta_button'      => 'text',
 			) as $key => $type ) {
 				self::save_field( $post_id, $key, $type );
 			}

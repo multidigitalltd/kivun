@@ -1,6 +1,6 @@
 <?php
 /**
- * Landing page CTA text dynamic tag.
+ * CTA banner title dynamic tag (courses & landing pages).
  *
  * @package Kivun
  */
@@ -8,9 +8,9 @@
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Dynamic tag for the landing page call-to-action text.
+ * Dynamic tag for the CTA banner title.
  */
-class Kivun_Tag_Landing_CTA_Text extends Kivun_Workshop_Tag_Base {
+class Kivun_Tag_CTA_Title extends Kivun_Workshop_Tag_Base {
 
 	/**
 	 * Get the tag name.
@@ -18,7 +18,7 @@ class Kivun_Tag_Landing_CTA_Text extends Kivun_Workshop_Tag_Base {
 	 * @return string The tag name.
 	 */
 	public function get_name(): string {
-		return 'kivun-landing-cta-text';
+		return 'kivun-cta-title';
 	}
 
 	/**
@@ -27,7 +27,7 @@ class Kivun_Tag_Landing_CTA_Text extends Kivun_Workshop_Tag_Base {
 	 * @return string The tag title.
 	 */
 	public function get_title(): string {
-		return __( 'דף נחיתה — טקסט הנעה לפעולה', 'kivun' );
+		return __( 'הנעה לפעולה — כותרת', 'kivun' );
 	}
 
 	/**
@@ -36,6 +36,6 @@ class Kivun_Tag_Landing_CTA_Text extends Kivun_Workshop_Tag_Base {
 	 * @return void
 	 */
 	public function render(): void {
-		echo esc_html( (string) get_post_meta( get_the_ID(), '_kivun_lp_cta_text', true ) );
+		echo esc_html( (string) get_post_meta( get_the_ID(), '_kivun_cta_title', true ) );
 	}
 }

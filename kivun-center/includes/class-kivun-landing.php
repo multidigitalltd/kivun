@@ -59,8 +59,9 @@ class Kivun_Landing {
 			'_kivun_lp_cost'       => 'sanitize_text_field',
 			'_kivun_ws_date'       => 'sanitize_text_field',
 			'_kivun_contact_email' => 'sanitize_email',
-			'_kivun_lp_cta_text'   => 'sanitize_text_field',
-			'_kivun_lp_cta_btn'    => 'sanitize_text_field',
+			'_kivun_cta_title'     => 'sanitize_text_field',
+			'_kivun_cta_content'   => 'sanitize_textarea_field',
+			'_kivun_cta_button'    => 'sanitize_text_field',
 		);
 	}
 
@@ -150,21 +151,22 @@ class Kivun_Landing {
 			$landing_id = 0;
 		}
 
-		$title     = $post ? $post->post_title : '';
-		$long      = $post ? $post->post_content : '';
-		$status    = $post ? $post->post_status : 'publish';
-		$slug      = $post ? $post->post_name : '';
-		$slug_base = trailingslashit( home_url( '/landing/' ) );
-		$short     = $landing_id ? (string) get_post_meta( $landing_id, '_kivun_lp_short', true ) : '';
-		$audience  = $landing_id ? (string) get_post_meta( $landing_id, '_kivun_ws_audience', true ) : '';
-		$duration  = $landing_id ? (string) get_post_meta( $landing_id, '_kivun_ws_duration', true ) : '';
-		$cost      = $landing_id ? (string) get_post_meta( $landing_id, '_kivun_lp_cost', true ) : '';
-		$date      = $landing_id ? (string) get_post_meta( $landing_id, '_kivun_ws_date', true ) : '';
-		$email     = $landing_id ? (string) get_post_meta( $landing_id, '_kivun_contact_email', true ) : '';
-		$cta_text  = $landing_id ? (string) get_post_meta( $landing_id, '_kivun_lp_cta_text', true ) : '';
-		$cta_btn   = $landing_id ? (string) get_post_meta( $landing_id, '_kivun_lp_cta_btn', true ) : '';
-		$thumb_id  = $landing_id ? (int) get_post_thumbnail_id( $landing_id ) : 0;
-		$thumb_url = $thumb_id ? (string) wp_get_attachment_image_url( $thumb_id, 'medium' ) : '';
+		$title       = $post ? $post->post_title : '';
+		$long        = $post ? $post->post_content : '';
+		$status      = $post ? $post->post_status : 'publish';
+		$slug        = $post ? $post->post_name : '';
+		$slug_base   = trailingslashit( home_url( '/landing/' ) );
+		$short       = $landing_id ? (string) get_post_meta( $landing_id, '_kivun_lp_short', true ) : '';
+		$audience    = $landing_id ? (string) get_post_meta( $landing_id, '_kivun_ws_audience', true ) : '';
+		$duration    = $landing_id ? (string) get_post_meta( $landing_id, '_kivun_ws_duration', true ) : '';
+		$cost        = $landing_id ? (string) get_post_meta( $landing_id, '_kivun_lp_cost', true ) : '';
+		$date        = $landing_id ? (string) get_post_meta( $landing_id, '_kivun_ws_date', true ) : '';
+		$email       = $landing_id ? (string) get_post_meta( $landing_id, '_kivun_contact_email', true ) : '';
+		$cta_title   = $landing_id ? (string) get_post_meta( $landing_id, '_kivun_cta_title', true ) : '';
+		$cta_content = $landing_id ? (string) get_post_meta( $landing_id, '_kivun_cta_content', true ) : '';
+		$cta_button  = $landing_id ? (string) get_post_meta( $landing_id, '_kivun_cta_button', true ) : '';
+		$thumb_id    = $landing_id ? (int) get_post_thumbnail_id( $landing_id ) : 0;
+		$thumb_url   = $thumb_id ? (string) wp_get_attachment_image_url( $thumb_id, 'medium' ) : '';
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only success flag from a safe redirect.
 		$msg = isset( $_GET['kivun_msg'] ) ? sanitize_key( wp_unslash( $_GET['kivun_msg'] ) ) : '';
@@ -242,14 +244,17 @@ class Kivun_Landing {
 						</div>
 
 						<div class="kivun-lp-card">
-							<label class="kivun-lp-label"><?php esc_html_e( 'הנעה לפעולה (CTA)', 'kivun' ); ?></label>
+							<label class="kivun-lp-label"><?php esc_html_e( 'באנר הנעה לפעולה (CTA)', 'kivun' ); ?></label>
 							<p class="kivun-lp-hint"><?php esc_html_e( 'ערכים לשאיבה בבאנר ה‑CTA שבנית ב‑Elementor (דרך תגיות דינמיות).', 'kivun' ); ?></p>
 
-							<label class="kivun-lp-sub" for="kivun-lp-cta-text"><?php esc_html_e( 'טקסט הנעה לפעולה', 'kivun' ); ?></label>
-							<input type="text" id="kivun-lp-cta-text" name="cta_text" class="kivun-lp-input" value="<?php echo esc_attr( $cta_text ); ?>" placeholder="<?php esc_attr_e( 'למשל: הצטרפו עוד היום ותתחילו לזוז קדימה', 'kivun' ); ?>">
+							<label class="kivun-lp-sub" for="kivun-lp-cta-title"><?php esc_html_e( 'כותרת הבאנר', 'kivun' ); ?></label>
+							<input type="text" id="kivun-lp-cta-title" name="cta_title" class="kivun-lp-input" value="<?php echo esc_attr( $cta_title ); ?>" placeholder="<?php esc_attr_e( 'למשל: רוצים להתקדם?', 'kivun' ); ?>">
 
-							<label class="kivun-lp-sub" for="kivun-lp-cta-btn"><?php esc_html_e( 'טקסט הכפתור', 'kivun' ); ?></label>
-							<input type="text" id="kivun-lp-cta-btn" name="cta_btn" class="kivun-lp-input" value="<?php echo esc_attr( $cta_btn ); ?>" placeholder="<?php esc_attr_e( 'ריק = "להרשמה ל<שם הדף>"', 'kivun' ); ?>">
+							<label class="kivun-lp-sub" for="kivun-lp-cta-content"><?php esc_html_e( 'תוכן קצר', 'kivun' ); ?></label>
+							<textarea id="kivun-lp-cta-content" name="cta_content" class="kivun-lp-input" rows="2" placeholder="<?php esc_attr_e( 'למשל: השאירו פרטים ונחזור אליכם עם כל המידע', 'kivun' ); ?>"><?php echo esc_textarea( $cta_content ); ?></textarea>
+
+							<label class="kivun-lp-sub" for="kivun-lp-cta-button"><?php esc_html_e( 'טקסט הכפתור', 'kivun' ); ?></label>
+							<input type="text" id="kivun-lp-cta-button" name="cta_button" class="kivun-lp-input" value="<?php echo esc_attr( $cta_button ); ?>" placeholder="<?php esc_attr_e( 'ריק = "להרשמה ל<שם הדף>"', 'kivun' ); ?>">
 						</div>
 
 					</div>
@@ -457,8 +462,9 @@ class Kivun_Landing {
 			'_kivun_lp_cost'       => 'cost',
 			'_kivun_ws_date'       => 'date',
 			'_kivun_contact_email' => 'contact_email',
-			'_kivun_lp_cta_text'   => 'cta_text',
-			'_kivun_lp_cta_btn'    => 'cta_btn',
+			'_kivun_cta_title'     => 'cta_title',
+			'_kivun_cta_content'   => 'cta_content',
+			'_kivun_cta_button'    => 'cta_button',
 		);
 		return $map[ $meta_key ] ?? null;
 	}
