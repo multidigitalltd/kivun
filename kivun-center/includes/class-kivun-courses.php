@@ -67,9 +67,6 @@ class Kivun_Courses {
 		$name    = sanitize_text_field( $data['name'] ?? '' );
 		$email   = sanitize_email( $data['email'] ?? '' );
 		$phone   = sanitize_text_field( $data['phone'] ?? '' );
-		$city    = sanitize_text_field( $data['city'] ?? '' );
-		$gender  = sanitize_text_field( $data['gender'] ?? '' );
-		$consent = empty( $data['marketing_consent'] ) ? 0 : 1;
 		$message = sanitize_textarea_field( $data['message'] ?? '' );
 
 		if ( ! $course_id || ! $name || ! is_email( $email ) ) {
@@ -94,21 +91,18 @@ class Kivun_Courses {
 		$wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$wpdb->prefix . 'kivun_registrations',
 			array(
-				'course_id'         => $course_id,
-				'name'              => $name,
-				'email'             => $email,
-				'phone'             => $phone,
-				'city'              => $city,
-				'gender'            => $gender,
-				'marketing_consent' => $consent,
-				'message'           => $message,
-				'status'            => 'pending',
-				'created_at'        => current_time( 'mysql' ),
+				'course_id'  => $course_id,
+				'name'       => $name,
+				'email'      => $email,
+				'phone'      => $phone,
+				'message'    => $message,
+				'status'     => 'pending',
+				'created_at' => current_time( 'mysql' ),
 			),
-			array( '%d', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s' )
+			array( '%d', '%s', '%s', '%s', '%s', '%s', '%s' )
 		);
 
-		Kivun_Mailer::send_course_registration( $course_id, compact( 'name', 'email', 'phone', 'city', 'gender', 'message' ) );
+		Kivun_Mailer::send_course_registration( $course_id, compact( 'name', 'email', 'phone', 'message' ) );
 		do_action( 'kivun_after_registration', $course_id, compact( 'name', 'email', 'phone', 'message' ) );
 
 		return true;
