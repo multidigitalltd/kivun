@@ -39,6 +39,9 @@ class Kivun_Admin {
 
 		// Notes save.
 		add_action( 'wp_ajax_kivun_save_note', array( __CLASS__, 'ajax_save_note' ) );
+
+		// Delete a CRM row (registration / application).
+		add_action( 'wp_ajax_kivun_delete_row', array( __CLASS__, 'ajax_delete_row' ) );
 	}
 
 	// ── Meta boxes ─────────────────────────────────────────────────────────────.
@@ -466,6 +469,35 @@ class Kivun_Admin {
 			array( 'status' => $status ),
 			array( 'id' => $id ),
 			array( '%s' ),
+			array( '%d' )
+		);
+
+		wp_send_json_success();
+	}
+
+	/**
+	 * AJAX handler: delete a CRM row (registration or application).
+	 *
+	 * @return void
+	 */
+	public static function ajax_delete_row(): void {
+		check_ajax_referer( 'kivun_admin_nonce', 'nonce' );
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error();
+		}
+
+		$table = sanitize_key( wp_unslash( $_POST['table'] ?? '' ) );
+		$id    = absint( wp_unslash( $_POST['id'] ?? 0 ) );
+
+		if ( ! in_array( $table, array( 'registrations', 'applications' ), true ) || ! $id ) {
+			wp_send_json_error();
+		}
+
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$wpdb->delete(
+			$wpdb->prefix . 'kivun_' . $table,
+			array( 'id' => $id ),
 			array( '%d' )
 		);
 
@@ -1031,10 +1063,11 @@ class Kivun_Admin {
 					<th><?php esc_html_e( 'הערות', 'kivun' ); ?></th>
 					<th style="width:120px"><?php esc_html_e( 'תאריך', 'kivun' ); ?></th>
 					<th style="width:145px"><?php esc_html_e( 'סטטוס', 'kivun' ); ?></th>
+					<th style="width:60px"><?php esc_html_e( 'מחיקה', 'kivun' ); ?></th>
 				</tr></thead>
 				<tbody>
 				<?php if ( ! $rows ) : ?>
-					<tr><td colspan="8"><?php esc_html_e( 'לא נמצאו רשומות.', 'kivun' ); ?></td></tr>
+					<tr><td colspan="12"><?php esc_html_e( 'לא נמצאו רשומות.', 'kivun' ); ?></td></tr>
 				<?php else : ?>
 					<?php foreach ( $rows as $r ) : ?>
 						<?php $type_label = $type_labels[ $r->type ?? 'registration' ] ?? $r->type; ?>
@@ -1066,6 +1099,9 @@ class Kivun_Admin {
 								// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Returns pre-escaped HTML.
 								echo self::status_select( 'registrations', (int) $r->id, $r->status, $reg_statuses );
 								?>
+							</td>
+							<td>
+								<button type="button" class="button-link kivun-delete-row" data-table="registrations" data-id="<?php echo esc_attr( $r->id ); ?>" style="color:#b32d2e" title="<?php esc_attr_e( 'מחיקה', 'kivun' ); ?>">ð</button>
 							</td>
 						</tr>
 					<?php endforeach; ?>

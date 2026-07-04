@@ -50,6 +50,34 @@
 		});
 	});
 
+	// Delete a CRM row.
+	document.addEventListener('click', function (e) {
+		var btn = e.target.closest('.kivun-delete-row');
+		if (!btn) { return; }
+		e.preventDefault();
+
+		if (!window.confirm('למחוק את הרשומה? הפעולה אינה הפיכה.')) { return; }
+
+		btn.disabled = true;
+		post({
+			action: 'kivun_delete_row',
+			nonce: kivunCrm.nonce,
+			table: btn.dataset.table,
+			id: btn.dataset.id
+		}).then(function (res) {
+			if (res.success) {
+				var row = btn.closest('tr');
+				if (row) { row.parentNode.removeChild(row); }
+			} else {
+				btn.disabled = false;
+				window.alert('המחיקה נכשלה.');
+			}
+		}).catch(function () {
+			btn.disabled = false;
+			window.alert('המחיקה נכשלה.');
+		});
+	});
+
 	// Notes textarea — auto-save on blur.
 	document.addEventListener('blur', function (e) {
 		var note = e.target.closest('.kivun-notes-input');
