@@ -117,6 +117,34 @@ class Kivun_Course_Registration_Action extends Action_Base {
 		);
 
 		$widget->add_control(
+			'kivun_field_city',
+			array(
+				'label'   => __( 'מזהה שדה: עיר', 'kivun' ),
+				'type'    => Controls_Manager::TEXT,
+				'default' => 'city',
+			)
+		);
+
+		$widget->add_control(
+			'kivun_field_gender',
+			array(
+				'label'   => __( 'מזהה שדה: מגדר', 'kivun' ),
+				'type'    => Controls_Manager::TEXT,
+				'default' => 'gender',
+			)
+		);
+
+		$widget->add_control(
+			'kivun_field_consent',
+			array(
+				'label'       => __( 'מזהה שדה: אישור דיוור', 'kivun' ),
+				'type'        => Controls_Manager::TEXT,
+				'default'     => 'consent',
+				'description' => __( 'שדה Acceptance/צ׳קבוקס. סימון = הסכמה לקבלת דיוור.', 'kivun' ),
+			)
+		);
+
+		$widget->add_control(
 			'kivun_field_message',
 			array(
 				'label'   => __( 'מזהה שדה: הודעה', 'kivun' ),
@@ -148,10 +176,13 @@ class Kivun_Course_Registration_Action extends Action_Base {
 		};
 
 		$data = array(
-			'name'    => $get_value( $settings['kivun_field_name'] ?? 'name' ),
-			'email'   => $get_value( $settings['kivun_field_email'] ?? 'email' ),
-			'phone'   => $get_value( $settings['kivun_field_phone'] ?? 'phone' ),
-			'message' => $get_value( $settings['kivun_field_message'] ?? 'message' ),
+			'name'              => $get_value( $settings['kivun_field_name'] ?? 'name' ),
+			'email'             => $get_value( $settings['kivun_field_email'] ?? 'email' ),
+			'phone'             => $get_value( $settings['kivun_field_phone'] ?? 'phone' ),
+			'city'              => $get_value( $settings['kivun_field_city'] ?? 'city' ),
+			'gender'            => $get_value( $settings['kivun_field_gender'] ?? 'gender' ),
+			'marketing_consent' => '' !== trim( (string) $get_value( $settings['kivun_field_consent'] ?? 'consent' ) ) ? 1 : 0,
+			'message'           => $get_value( $settings['kivun_field_message'] ?? 'message' ),
 		);
 
 		// Resolve the target course.
@@ -161,13 +192,20 @@ class Kivun_Course_Registration_Action extends Action_Base {
 			$course_id = absint( $settings['kivun_course_id'] ?? 0 );
 		} elseif ( 'field' === $source ) {
 			$course_id = absint( $get_value( $settings['kivun_field_course'] ?? 'course_id' ) );
-		} else {
-			$referer   = wp_get_referer();
-			$course_id = $referer ? url_to_postid( $referer ) : 0;
+		}
+
+		// Fallback (and the default "current" source): resolve from the page the
+		// form was submitted on. Robust when the hidden field / manual id is empty.
+		if ( get_post_type( $course_id ) !== 'kivun_course' ) {
+			$referer  = wp_get_referer();
+			$from_url = $referer ? url_to_postid( $referer ) : 0;
+			if ( 'kivun_course' === get_post_type( $from_url ) ) {
+				$course_id = $from_url;
+			}
 		}
 
 		if ( ! $course_id || get_post_type( $course_id ) !== 'kivun_course' ) {
-			$ajax_handler->add_error_message( __( 'לא נמצא קורס לשיוך ההרשמה. בדקו את הגדרת "מקור הקורס".', 'kivun' ) );
+			$ajax_handler->add_error_message( __( 'לא נמצא קורס לשיוך ההרשמה. ודאו שהטופס נמצא בעמוד הקורס, או ששדה הקורס הנסתר מכיל [kivun_course_id].', 'kivun' ) );
 			return;
 		}
 
@@ -203,6 +241,9 @@ class Kivun_Course_Registration_Action extends Action_Base {
 			$element['settings']['kivun_field_name'],
 			$element['settings']['kivun_field_email'],
 			$element['settings']['kivun_field_phone'],
+			$element['settings']['kivun_field_city'],
+			$element['settings']['kivun_field_gender'],
+			$element['settings']['kivun_field_consent'],
 			$element['settings']['kivun_field_message']
 		);
 

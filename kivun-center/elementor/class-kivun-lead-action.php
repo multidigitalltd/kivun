@@ -192,9 +192,16 @@ class Kivun_Lead_Action extends Action_Base {
 			$post_id = absint( $settings['kivun_lead_post_id'] ?? 0 );
 		} elseif ( 'field' === $source ) {
 			$post_id = absint( $get_value( $settings['kivun_lead_field_post'] ?? 'post_id' ) );
-		} else {
-			$referer = wp_get_referer();
-			$post_id = $referer ? url_to_postid( $referer ) : 0;
+		}
+
+		// Fallback (and the default "current" source): resolve from the page the
+		// form was submitted on.
+		if ( ! in_array( get_post_type( $post_id ), array( 'kivun_course', 'kivun_workshop' ), true ) ) {
+			$referer  = wp_get_referer();
+			$from_url = $referer ? url_to_postid( $referer ) : 0;
+			if ( in_array( get_post_type( $from_url ), array( 'kivun_course', 'kivun_workshop' ), true ) ) {
+				$post_id = $from_url;
+			}
 		}
 
 		$result = Kivun_Workshops::save_lead( $post_id, $data );
