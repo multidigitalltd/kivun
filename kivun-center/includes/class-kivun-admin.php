@@ -1101,7 +1101,7 @@ class Kivun_Admin {
 								?>
 							</td>
 							<td>
-								<button type="button" class="button-link kivun-delete-row" data-table="registrations" data-id="<?php echo esc_attr( $r->id ); ?>" style="color:#b32d2e" title="<?php esc_attr_e( 'מחיקה', 'kivun' ); ?>">ð</button>
+								<button type="button" class="button-link kivun-delete-row" data-table="registrations" data-id="<?php echo esc_attr( $r->id ); ?>" style="color:#b32d2e" title="<?php esc_attr_e( 'מחיקה', 'kivun' ); ?>"><span class="dashicons dashicons-trash" aria-hidden="true"></span><span class="screen-reader-text"><?php esc_html_e( 'מחיקה', 'kivun' ); ?></span></button>
 							</td>
 						</tr>
 					<?php endforeach; ?>

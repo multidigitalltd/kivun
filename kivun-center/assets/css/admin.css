@@ -20,6 +20,9 @@
 .kivun-notes-input { font-size: 12px; width: 100%; min-width: 130px; border: 1px solid #ddd; border-radius: 4px; padding: 4px 6px; resize: vertical; background: #fffde7; }
 .kivun-notes-input:focus { border-color: #2563eb; outline: none; }
 .kivun-saved-indicator { font-size: 12px; font-weight: 600; margin-right: 4px; }
+.kivun-delete-row { cursor: pointer; }
+.kivun-delete-row .dashicons { width: 20px; height: 20px; font-size: 20px; line-height: 1; vertical-align: middle; }
+.kivun-delete-row:hover .dashicons { color: #b32d2e; }
 
 /* ── CRM list pages (applications / registrations) ────────────────────────── */
 .kivun-apps-admin-filter { padding: 12px 14px; background: #fff; border: 1px solid #e2e4e7; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,.04); }
