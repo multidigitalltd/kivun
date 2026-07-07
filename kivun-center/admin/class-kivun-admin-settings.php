@@ -113,6 +113,8 @@ class Kivun_Admin_Settings {
 				'allow_cv_upload'        => ! empty( $_POST['allow_cv_upload'] ),
 				'cv_max_size_mb'         => absint( $_POST['cv_max_size_mb'] ?? 5 ),
 				'webhook_url'            => esc_url_raw( wp_unslash( $_POST['webhook_url'] ?? '' ) ),
+				'forms_router_email'     => sanitize_email( wp_unslash( $_POST['forms_router_email'] ?? '' ) ),
+				'forms_router_webhook'   => esc_url_raw( wp_unslash( $_POST['forms_router_webhook'] ?? '' ) ),
 				'turnstile_site_key'     => sanitize_text_field( wp_unslash( $_POST['turnstile_site_key'] ?? '' ) ),
 				'turnstile_secret_key'   => sanitize_text_field( wp_unslash( $_POST['turnstile_secret_key'] ?? '' ) ),
 			)
@@ -238,6 +240,26 @@ class Kivun_Admin_Settings {
 						<p class="description">
 							<?php esc_html_e( 'POST (JSON) יישלח לכתובת זו בכל ליד, הרשמה או מועמדות חדשה.', 'kivun' ); ?><br>
 							<?php esc_html_e( 'משדות: event, post_id, post_title, name, email, phone, message, timestamp.', 'kivun' ); ?>
+						</p>
+					</td>
+				</tr>
+				<tr>
+					<th colspan="2" style="padding-top:20px"><h2 style="margin:0"><?php esc_html_e( 'ניתוב גלובלי לכל טפסי Elementor', 'kivun' ); ?></h2>
+					<p class="description" style="font-weight:400"><?php esc_html_e( 'חל על כל טופס Elementor באתר (לא רק טפסי הקורסים/דפי הנחיתה). כל הגשה תישלח גם ליעדים הבאים — בנוסף לפעולות של הטופס עצמו.', 'kivun' ); ?></p></th>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'אימייל מרכזי לכל הטפסים', 'kivun' ); ?></th>
+					<td>
+						<input type="email" name="forms_router_email" value="<?php echo esc_attr( $o( 'forms_router_email' ) ); ?>" class="regular-text" placeholder="leads@example.com">
+						<p class="description"><?php esc_html_e( 'כל הגשת טופס Elementor באתר תישלח גם לכתובת הזו. השאר ריק כדי לבטל.', 'kivun' ); ?></p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'Webhook לכל הטפסים (CRM)', 'kivun' ); ?></th>
+					<td>
+						<input type="url" name="forms_router_webhook" value="<?php echo esc_attr( $o( 'forms_router_webhook' ) ); ?>" class="large-text" placeholder="https://...">
+						<p class="description">
+							<?php esc_html_e( 'POST (JSON) לכל הגשת טופס Elementor. שדות: event, form_name, page_url, site, fields.', 'kivun' ); ?>
 						</p>
 					</td>
 				</tr>

@@ -39,6 +39,7 @@ class Kivun_Core {
 		Kivun_Cookies::init();
 		Kivun_Support::init();
 		Kivun_CTA::init();
+		Kivun_Forms_Router::init();
 
 		// Elementor — only when Elementor Pro is active.
 		add_action(
@@ -88,6 +89,7 @@ class Kivun_Core {
 			'class-kivun-cookies',
 			'class-kivun-support',
 			'class-kivun-cta',
+			'class-kivun-forms-router',
 		) as $file ) {
 			require_once $dir . $file . '.php';
 		}
