@@ -771,3 +771,9 @@
 .kivun-app-note { width: 100%; min-width: 150px; padding: .5rem; border: 1px solid var(--kivun-border); border-radius: 10px; font: inherit; font-size: .82rem; resize: vertical; background: #fff; }
 .kivun-app-status-select { padding: .45rem .6rem; border: 1px solid var(--kivun-border); border-radius: 10px; font: inherit; font-size: .82rem; background: #fff; }
 .kivun-saved-indicator { display: block; font-size: .72rem; margin-top: .2rem; color: #1a7a40; }
+
+/* Session registration status notice (Elementor pages). */
+.kivun-session-status { display: flex; align-items: center; gap: .55rem; padding: 1rem 1.25rem; border-radius: 12px; font-weight: 600; font-size: 1.05rem; line-height: 1.5; margin: 0 0 1.25rem; }
+.kivun-session-status__icon { flex: 0 0 auto; }
+.kivun-session-status--closed { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+.kivun-session-status--open { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }

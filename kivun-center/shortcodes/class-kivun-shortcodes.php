@@ -24,6 +24,7 @@ class Kivun_Shortcodes {
 			'kivun_course_register'    => 'render_course_register',
 			'kivun_course_id'          => 'render_course_id',
 			'kivun_post_id'            => 'render_post_id',
+			'kivun_session_status'     => 'render_session_status',
 			'kivun_course_interest'    => 'render_course_interest',
 			'kivun_workshops'          => 'render_workshops',
 			'kivun_workshop_single'    => 'render_workshop_single',
@@ -405,6 +406,60 @@ class Kivun_Shortcodes {
 		}
 
 		return in_array( get_post_type( $id ), array( 'kivun_course', 'kivun_workshop', 'kivun_session' ), true ) ? (string) $id : '';
+	}
+
+	/**
+	 * Render a "registration closed" notice for a session whose validity date has
+	 * passed. Outputs nothing while registration is still open (unless an "open"
+	 * message is supplied). Built for Elementor pages — drop it into a Shortcode
+	 * or HTML widget above the form.
+	 *
+	 * Attributes:
+	 *  - id     : Session ID (default: the current/queried session).
+	 *  - closed : Message shown when registration is closed.
+	 *  - open   : Optional message shown while registration is open (default: none).
+	 *
+	 * @param mixed $atts Shortcode attributes.
+	 * @return string Rendered HTML, or empty string.
+	 */
+	public static function render_session_status( $atts ): string {
+		$atts = shortcode_atts(
+			array(
+				'id'     => 0,
+				'closed' => __( 'ההרשמה לסדנה נסגרה — היא תיפתח שוב במחזור הבא.', 'kivun' ),
+				'open'   => '',
+			),
+			$atts,
+			'kivun_session_status'
+		);
+
+		$id = absint( $atts['id'] );
+		if ( ! $id ) {
+			$id = (int) get_the_ID();
+			if ( 'kivun_session' !== get_post_type( $id ) ) {
+				$queried = get_queried_object_id();
+				if ( $queried && 'kivun_session' === get_post_type( $queried ) ) {
+					$id = (int) $queried;
+				}
+			}
+		}
+
+		if ( 'kivun_session' !== get_post_type( $id ) ) {
+			return '';
+		}
+
+		if ( kivun_session_registration_open( $id ) ) {
+			return '' !== trim( (string) $atts['open'] )
+				? '<div class="kivun-session-status kivun-session-status--open" role="status">' . esc_html( $atts['open'] ) . '</div>'
+				: '';
+		}
+
+		$lock = '<svg class="kivun-session-status__icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path fill="currentColor" d="M12 1a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-9a2 2 0 0 0-2-2h-1V6a5 5 0 0 0-5-5Zm3 8H9V6a3 3 0 0 1 6 0v3Z"/></svg>';
+
+		return '<div class="kivun-session-status kivun-session-status--closed" role="status">'
+			. $lock
+			. '<span>' . esc_html( $atts['closed'] ) . '</span>'
+			. '</div>';
 	}
 
 	// ── My applications (personal area) ──────────────────────────────────────
