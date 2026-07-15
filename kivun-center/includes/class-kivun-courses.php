@@ -37,6 +37,7 @@ class Kivun_Courses {
 			'name'    => sanitize_text_field( wp_unslash( $_POST['name'] ?? '' ) ),
 			'email'   => sanitize_email( wp_unslash( $_POST['email'] ?? '' ) ),
 			'phone'   => sanitize_text_field( wp_unslash( $_POST['phone'] ?? '' ) ),
+			'city'    => sanitize_text_field( wp_unslash( $_POST['city'] ?? '' ) ),
 			'message' => sanitize_textarea_field( wp_unslash( $_POST['message'] ?? '' ) ),
 		);
 
@@ -67,6 +68,7 @@ class Kivun_Courses {
 		$name    = sanitize_text_field( $data['name'] ?? '' );
 		$email   = sanitize_email( $data['email'] ?? '' );
 		$phone   = sanitize_text_field( $data['phone'] ?? '' );
+		$city    = sanitize_text_field( $data['city'] ?? '' );
 		$message = sanitize_textarea_field( $data['message'] ?? '' );
 
 		if ( ! $name || ! is_email( $email ) ) {
@@ -95,15 +97,16 @@ class Kivun_Courses {
 				'name'       => $name,
 				'email'      => $email,
 				'phone'      => $phone,
+				'city'       => $city,
 				'message'    => $message,
 				'status'     => 'pending',
 				'created_at' => current_time( 'mysql' ),
 			),
-			array( '%d', '%s', '%s', '%s', '%s', '%s', '%s' )
+			array( '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s' )
 		);
 
-		Kivun_Mailer::send_course_registration( $course_id, compact( 'name', 'email', 'phone', 'message' ) );
-		do_action( 'kivun_after_registration', $course_id, compact( 'name', 'email', 'phone', 'message' ) );
+		Kivun_Mailer::send_course_registration( $course_id, compact( 'name', 'email', 'phone', 'city', 'message' ) );
+		do_action( 'kivun_after_registration', $course_id, compact( 'name', 'email', 'phone', 'city', 'message' ) );
 
 		return true;
 	}

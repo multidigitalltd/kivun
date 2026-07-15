@@ -117,6 +117,15 @@ class Kivun_Course_Registration_Action extends Action_Base {
 		);
 
 		$widget->add_control(
+			'kivun_field_city',
+			array(
+				'label'   => __( 'מזהה שדה: עיר', 'kivun' ),
+				'type'    => Controls_Manager::TEXT,
+				'default' => 'city',
+			)
+		);
+
+		$widget->add_control(
 			'kivun_field_message',
 			array(
 				'label'   => __( 'מזהה שדה: הודעה', 'kivun' ),
@@ -151,6 +160,7 @@ class Kivun_Course_Registration_Action extends Action_Base {
 			'name'    => $get_value( $settings['kivun_field_name'] ?? 'name' ),
 			'email'   => $get_value( $settings['kivun_field_email'] ?? 'email' ),
 			'phone'   => $get_value( $settings['kivun_field_phone'] ?? 'phone' ),
+			'city'    => $get_value( $settings['kivun_field_city'] ?? 'city' ),
 			'message' => $get_value( $settings['kivun_field_message'] ?? 'message' ),
 		);
 
@@ -207,6 +217,7 @@ class Kivun_Course_Registration_Action extends Action_Base {
 			$element['settings']['kivun_field_name'],
 			$element['settings']['kivun_field_email'],
 			$element['settings']['kivun_field_phone'],
+			$element['settings']['kivun_field_city'],
 			$element['settings']['kivun_field_message']
 		);
 

@@ -115,6 +115,9 @@ class Kivun_Admin_Settings {
 				'webhook_url'            => esc_url_raw( wp_unslash( $_POST['webhook_url'] ?? '' ) ),
 				'forms_router_email'     => sanitize_email( wp_unslash( $_POST['forms_router_email'] ?? '' ) ),
 				'forms_router_webhook'   => esc_url_raw( wp_unslash( $_POST['forms_router_webhook'] ?? '' ) ),
+				'whatsapp_enabled'       => ! empty( $_POST['whatsapp_enabled'] ),
+				'whatsapp_number'        => sanitize_text_field( wp_unslash( $_POST['whatsapp_number'] ?? '' ) ),
+				'whatsapp_message'       => sanitize_text_field( wp_unslash( $_POST['whatsapp_message'] ?? '' ) ),
 				'turnstile_site_key'     => sanitize_text_field( wp_unslash( $_POST['turnstile_site_key'] ?? '' ) ),
 				'turnstile_secret_key'   => sanitize_text_field( wp_unslash( $_POST['turnstile_secret_key'] ?? '' ) ),
 			)
@@ -261,6 +264,33 @@ class Kivun_Admin_Settings {
 						<p class="description">
 							<?php esc_html_e( 'POST (JSON) לכל הגשת טופס Elementor. שדות: event, form_name, page_url, site, fields.', 'kivun' ); ?>
 						</p>
+					</td>
+				</tr>
+				<tr>
+					<th colspan="2" style="padding-top:20px"><h2 style="margin:0"><?php esc_html_e( 'כפתור וואטסאפ דביק', 'kivun' ); ?></h2>
+					<p class="description" style="font-weight:400"><?php esc_html_e( 'כפתור וואטסאפ צף שמופיע בכל עמודי האתר. הגולש לוחץ ונפתחת שיחה אליכם.', 'kivun' ); ?></p></th>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'הצג כפתור וואטסאפ', 'kivun' ); ?></th>
+					<td>
+						<label>
+							<input type="checkbox" name="whatsapp_enabled" value="1" <?php checked( (bool) $o( 'whatsapp_enabled', false ) ); ?>>
+							<?php esc_html_e( 'הפעל את כפתור הוואטסאפ הדביק בכל האתר.', 'kivun' ); ?>
+						</label>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'מספר וואטסאפ', 'kivun' ); ?></th>
+					<td>
+						<input type="text" name="whatsapp_number" value="<?php echo esc_attr( $o( 'whatsapp_number' ) ); ?>" class="regular-text" dir="ltr" placeholder="972501234567">
+						<p class="description"><?php esc_html_e( 'בפורמט בינלאומי ללא + וללא רווחים. לדוגמה: מספר ישראלי 050-123-4567 יוזן כ‑972501234567.', 'kivun' ); ?></p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'הודעת פתיחה', 'kivun' ); ?></th>
+					<td>
+						<input type="text" name="whatsapp_message" value="<?php echo esc_attr( $o( 'whatsapp_message' ) ); ?>" class="large-text" placeholder="<?php esc_attr_e( 'היי, הגעתי מהאתר ואשמח לקבל פרטים', 'kivun' ); ?>">
+						<p class="description"><?php esc_html_e( 'טקסט שיופיע כבר מוכן בשיחה כשהגולש לוחץ. השאר ריק לשיחה ריקה.', 'kivun' ); ?></p>
 					</td>
 				</tr>
 				<tr>

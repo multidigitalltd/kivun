@@ -36,6 +36,13 @@ class Kivun_Landing {
 		add_action( 'admin_menu', array( __CLASS__, 'admin_menu' ) );
 		add_action( 'admin_post_kivun_save_landing', array( __CLASS__, 'handle_save' ) );
 
+		// Hide every "add new landing page" entry point — landing pages are now
+		// created only from the unified "פרסום תוכן" screen. Runs late so it
+		// removes both the native and the dedicated submenu items.
+		add_action( 'admin_menu', array( __CLASS__, 'hide_add_new' ), 999 );
+		add_action( 'admin_head', array( __CLASS__, 'hide_add_new_button' ) );
+		add_action( 'admin_bar_menu', array( __CLASS__, 'hide_admin_bar_add_new' ), 999 );
+
 		// Steer staff to the modern form instead of the default WP editor.
 		add_action( 'load-post-new.php', array( __CLASS__, 'redirect_native_new' ) );
 		add_action( 'load-post.php', array( __CLASS__, 'redirect_native_edit' ) );
@@ -79,6 +86,45 @@ class Kivun_Landing {
 			self::PAGE,
 			array( __CLASS__, 'form_page' )
 		);
+	}
+
+	/**
+	 * Remove the landing-page "Add New" menu items (native + dedicated form).
+	 *
+	 * The form page stays registered so editing an existing landing page still
+	 * works; only the create entry points are hidden.
+	 *
+	 * @return void
+	 */
+	public static function hide_add_new(): void {
+		$parent = 'edit.php?post_type=' . self::POST_TYPE;
+		remove_submenu_page( $parent, 'post-new.php?post_type=' . self::POST_TYPE );
+		remove_submenu_page( $parent, self::PAGE );
+	}
+
+	/**
+	 * Hide the "Add New" button on the landing-page list screen.
+	 *
+	 * @return void
+	 */
+	public static function hide_add_new_button(): void {
+		$screen = get_current_screen();
+		if ( ! $screen || 'edit-' . self::POST_TYPE !== $screen->id ) {
+			return;
+		}
+		echo '<style>.wrap .page-title-action{display:none!important}</style>';
+	}
+
+	/**
+	 * Remove the landing page from the admin-bar "+ New" menu.
+	 *
+	 * @param \WP_Admin_Bar $bar The admin bar instance.
+	 * @return void
+	 */
+	public static function hide_admin_bar_add_new( $bar ): void {
+		if ( is_object( $bar ) && method_exists( $bar, 'remove_node' ) ) {
+			$bar->remove_node( 'new-' . self::POST_TYPE );
+		}
 	}
 
 	/**

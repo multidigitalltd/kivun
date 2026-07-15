@@ -1,10 +1,10 @@
 {
   "name": "kivun-center",
-  "version": "1.41.0",
+  "version": "1.42.0",
   "private": true,
   "description": "Build tooling for Kivun Center plugin assets (minification).",
   "scripts": {
-    "build:css": "cleancss -o assets/css/frontend.min.css assets/css/frontend.css && cleancss -o assets/css/admin.min.css assets/css/admin.css && cleancss -o assets/css/accessibility.min.css assets/css/accessibility.css && cleancss -o assets/css/cookies.min.css assets/css/cookies.css",
+    "build:css": "cleancss -o assets/css/frontend.min.css assets/css/frontend.css && cleancss -o assets/css/admin.min.css assets/css/admin.css && cleancss -o assets/css/accessibility.min.css assets/css/accessibility.css && cleancss -o assets/css/cookies.min.css assets/css/cookies.css && cleancss -o assets/css/whatsapp.min.css assets/css/whatsapp.css",
     "build:js": "terser assets/js/frontend.js -c -m -o assets/js/frontend.min.js && terser assets/js/admin-crm.js -c -m -o assets/js/admin-crm.min.js && terser assets/js/accessibility.js -c -m -o assets/js/accessibility.min.js && terser assets/js/cookies.js -c -m -o assets/js/cookies.min.js",
     "build": "npm run build:css && npm run build:js"
   },
