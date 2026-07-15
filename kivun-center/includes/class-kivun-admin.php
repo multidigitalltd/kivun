@@ -54,12 +54,72 @@ class Kivun_Admin {
 	public static function register_meta_boxes(): void {
 		add_meta_box( 'kivun_course_details', 'פרטי קורס', array( __CLASS__, 'course_meta_box' ), 'kivun_course', 'normal', 'high' );
 		add_meta_box( 'kivun_workshop_details', 'פרטי סדנה', array( __CLASS__, 'workshop_meta_box' ), 'kivun_workshop', 'normal', 'high' );
+		add_meta_box( 'kivun_session_details', 'פרטי סדנה', array( __CLASS__, 'session_meta_box' ), 'kivun_session', 'normal', 'high' );
 		add_meta_box( 'kivun_job_details', 'פרטי משרה', array( __CLASS__, 'job_meta_box' ), 'kivun_job', 'normal', 'high' );
 
 		// CRM metaboxes.
 		add_meta_box( 'kivun_course_leads', 'הרשמות ולידים', array( __CLASS__, 'registrations_metabox' ), 'kivun_course', 'normal', 'default' );
 		add_meta_box( 'kivun_workshop_leads', 'הרשמות לסדנה', array( __CLASS__, 'registrations_metabox' ), 'kivun_workshop', 'normal', 'default' );
+		add_meta_box( 'kivun_session_leads', 'הרשמות לסדנה', array( __CLASS__, 'registrations_metabox' ), 'kivun_session', 'normal', 'default' );
 		add_meta_box( 'kivun_job_apps', 'מועמדויות וקו"ח', array( __CLASS__, 'applications_metabox' ), 'kivun_job', 'normal', 'default' );
+	}
+
+	/**
+	 * Render the session (workshop) details metabox.
+	 *
+	 * @param \WP_Post $post The session post being edited.
+	 * @return void
+	 */
+	public static function session_meta_box( \WP_Post $post ): void {
+		wp_nonce_field( 'kivun_save_session', 'kivun_session_nonce' );
+		$f    = fn( $key ) => get_post_meta( $post->ID, $key, true );
+		$open = kivun_session_registration_open( $post->ID );
+		?>
+		<table class="kivun-meta-table">
+			<tr>
+				<th><?php esc_html_e( 'תיאור קצר', 'kivun' ); ?></th>
+				<td><textarea name="_kivun_session_short" rows="2"><?php echo esc_textarea( $f( '_kivun_session_short' ) ); ?></textarea></td>
+			</tr>
+			<tr>
+				<th><?php esc_html_e( 'קהל יעד', 'kivun' ); ?></th>
+				<td><input type="text" name="_kivun_session_audience" value="<?php echo esc_attr( $f( '_kivun_session_audience' ) ); ?>"></td>
+			</tr>
+			<tr>
+				<th><?php esc_html_e( 'תאריך / מועד', 'kivun' ); ?></th>
+				<td><input type="text" name="_kivun_session_date" value="<?php echo esc_attr( $f( '_kivun_session_date' ) ); ?>" placeholder="15.9.2025 | 18:00"></td>
+			</tr>
+			<tr>
+				<th><?php esc_html_e( 'משך', 'kivun' ); ?></th>
+				<td><input type="text" name="_kivun_session_duration" value="<?php echo esc_attr( $f( '_kivun_session_duration' ) ); ?>"></td>
+			</tr>
+			<tr>
+				<th><?php esc_html_e( 'מיקום', 'kivun' ); ?></th>
+				<td><input type="text" name="_kivun_session_location" value="<?php echo esc_attr( $f( '_kivun_session_location' ) ); ?>"></td>
+			</tr>
+			<tr>
+				<th><?php esc_html_e( 'מקסימום משתתפים', 'kivun' ); ?></th>
+				<td><input type="number" name="_kivun_capacity" value="<?php echo esc_attr( $f( '_kivun_capacity' ) ); ?>" min="1"></td>
+			</tr>
+			<tr>
+				<th><?php esc_html_e( 'אימייל לקבלת הרשמות', 'kivun' ); ?></th>
+				<td><input type="email" name="_kivun_contact_email" value="<?php echo esc_attr( $f( '_kivun_contact_email' ) ); ?>"></td>
+			</tr>
+			<tr>
+				<th><?php esc_html_e( 'תוקף ההרשמה (עד תאריך)', 'kivun' ); ?></th>
+				<td>
+					<input type="date" name="_kivun_session_valid_until" value="<?php echo esc_attr( $f( '_kivun_session_valid_until' ) ); ?>">
+					<p class="description">
+						<?php
+						echo $open
+							? '<span style="color:#1a7a40;font-weight:600">' . esc_html__( 'ההרשמה פתוחה.', 'kivun' ) . '</span> '
+							: '<span style="color:#b32d2e;font-weight:600">' . esc_html__( 'ההרשמה סגורה.', 'kivun' ) . '</span> ';
+						esc_html_e( 'אחרי תאריך זה ההרשמה נסגרת. עדכון לתאריך עתידי פותח מחזור חדש. ריק = תמיד פתוח.', 'kivun' );
+						?>
+					</p>
+				</td>
+			</tr>
+		</table>
+		<?php
 	}
 
 	/**
@@ -231,6 +291,7 @@ class Kivun_Admin {
 			'registration' => 'הרשמה',
 			'lead'         => 'מתעניין',
 			'workshop'     => 'דף נחיתה',
+			'session'      => 'סדנה',
 		);
 
 		printf(
@@ -599,6 +660,28 @@ class Kivun_Admin {
 				'_kivun_ws_audience'   => 'textarea',
 				'_kivun_ws_capacity'   => 'absint',
 				'_kivun_contact_email' => 'email',
+			) as $key => $type ) {
+				self::save_field( $post_id, $key, $type );
+			}
+		}
+
+		if ( 'kivun_session' === $post->post_type ) {
+			if ( ! isset( $_POST['kivun_session_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['kivun_session_nonce'] ) ), 'kivun_save_session' ) ) {
+				return;
+			}
+			if ( ! current_user_can( 'edit_post', $post_id ) ) {
+				return;
+			}
+
+			foreach ( array(
+				'_kivun_session_short'       => 'textarea',
+				'_kivun_session_audience'    => 'text',
+				'_kivun_session_date'        => 'text',
+				'_kivun_session_duration'    => 'text',
+				'_kivun_session_location'    => 'text',
+				'_kivun_capacity'            => 'absint',
+				'_kivun_contact_email'       => 'email',
+				'_kivun_session_valid_until' => 'text',
 			) as $key => $type ) {
 				self::save_field( $post_id, $key, $type );
 			}
@@ -981,6 +1064,7 @@ class Kivun_Admin {
 			'registration' => 'הרשמה',
 			'lead'         => 'מתעניין',
 			'workshop'     => 'דף נחיתה',
+			'session'      => 'סדנה',
 		);
 
 		$conds = array();
@@ -1010,7 +1094,7 @@ class Kivun_Admin {
 
 		$courses = get_posts(
 			array(
-				'post_type'              => array( 'kivun_course', 'kivun_workshop' ),
+				'post_type'              => array( 'kivun_course', 'kivun_workshop', 'kivun_session' ),
 				'post_status'            => array( 'publish', 'draft', 'pending' ),
 				'posts_per_page'         => -1,
 				'orderby'                => 'title',

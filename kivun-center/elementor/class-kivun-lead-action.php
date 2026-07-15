@@ -197,6 +197,14 @@ class Kivun_Lead_Action extends Action_Base {
 			$post_id = $referer ? url_to_postid( $referer ) : 0;
 		}
 
+		if ( ! in_array( get_post_type( $post_id ), array( 'kivun_course', 'kivun_workshop', 'kivun_session' ), true ) ) {
+			$referer  = wp_get_referer();
+			$from_url = $referer ? url_to_postid( $referer ) : 0;
+			if ( in_array( get_post_type( $from_url ), array( 'kivun_course', 'kivun_workshop', 'kivun_session' ), true ) ) {
+				$post_id = $from_url;
+			}
+		}
+
 		$result = Kivun_Workshops::save_lead( $post_id, $data );
 
 		// A duplicate is not a real error — the visitor already registered, so

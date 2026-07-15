@@ -397,14 +397,14 @@ class Kivun_Shortcodes {
 	public static function render_post_id(): string {
 		$id = (int) get_the_ID();
 
-		if ( ! in_array( get_post_type( $id ), array( 'kivun_course', 'kivun_workshop' ), true ) ) {
+		if ( ! in_array( get_post_type( $id ), array( 'kivun_course', 'kivun_workshop', 'kivun_session' ), true ) ) {
 			$queried = get_queried_object_id();
-			if ( $queried && in_array( get_post_type( $queried ), array( 'kivun_course', 'kivun_workshop' ), true ) ) {
+			if ( $queried && in_array( get_post_type( $queried ), array( 'kivun_course', 'kivun_workshop', 'kivun_session' ), true ) ) {
 				$id = (int) $queried;
 			}
 		}
 
-		return in_array( get_post_type( $id ), array( 'kivun_course', 'kivun_workshop' ), true ) ? (string) $id : '';
+		return in_array( get_post_type( $id ), array( 'kivun_course', 'kivun_workshop', 'kivun_session' ), true ) ? (string) $id : '';
 	}
 
 	// ── My applications (personal area) ──────────────────────────────────────

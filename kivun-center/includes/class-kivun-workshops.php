@@ -52,7 +52,7 @@ class Kivun_Workshops {
 			wp_send_json_error( array( 'message' => $result->get_error_message() ) );
 		}
 
-		$msg = 'kivun_workshop' === get_post_type( $post_id )
+		$msg = in_array( get_post_type( $post_id ), array( 'kivun_workshop', 'kivun_session' ), true )
 			? __( 'ההרשמה התקבלה! נציג יצור איתך קשר בהקדם.', 'kivun' )
 			: __( 'פנייתך התקבלה! נציג יצור איתך קשר בהקדם לפרטים נוספים.', 'kivun' );
 
@@ -84,16 +84,27 @@ class Kivun_Workshops {
 		}
 
 		$post_type = get_post_type( $post_id );
-		if ( ! $post_id || ! in_array( $post_type, array( 'kivun_course', 'kivun_workshop' ), true ) ) {
+		if ( ! $post_id || ! in_array( $post_type, array( 'kivun_course', 'kivun_workshop', 'kivun_session' ), true ) ) {
 			return new \WP_Error( 'kivun_no_post', __( 'לא נמצא הדף לשיוך הפנייה. בדקו את הגדרת "מקור הדף" או את השדה הנסתר.', 'kivun' ) );
 		}
 
+		// Workshop (session) validity: registration closes after the deadline
+		// and reopens when the admin sets a new opening date.
+		if ( 'kivun_session' === $post_type && ! kivun_session_registration_open( $post_id ) ) {
+			return new \WP_Error( 'kivun_session_closed', __( 'ההרשמה לסדנה נסגרה — היא תיפתח שוב במחזור הבא.', 'kivun' ) );
+		}
+
 		// Capacity check for landing pages / workshops.
-		if ( 'kivun_workshop' === $post_type && kivun_is_full( $post_id ) ) {
+		if ( in_array( $post_type, array( 'kivun_workshop', 'kivun_session' ), true ) && kivun_is_full( $post_id ) ) {
 			return new \WP_Error( 'kivun_full', __( 'מצטערים, ההרשמה מלאה כרגע. השאירו פרטים ונעדכן אם ייפתח מקום.', 'kivun' ) );
 		}
 
-		$type = 'kivun_workshop' === $post_type ? 'workshop' : 'lead';
+		$type = 'lead';
+		if ( 'kivun_workshop' === $post_type ) {
+			$type = 'workshop';
+		} elseif ( 'kivun_session' === $post_type ) {
+			$type = 'session';
+		}
 
 		// Duplicate check — phone is mandatory for leads, use it as primary key.
 		global $wpdb;

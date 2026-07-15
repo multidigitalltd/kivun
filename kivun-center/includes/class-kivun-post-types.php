@@ -63,6 +63,24 @@ class Kivun_Post_Types {
 			)
 		);
 
+		// ── Workshops / sessions (separate from landing pages) ────────────────
+		register_post_type(
+			'kivun_session',
+			array(
+				'labels'        => self::labels( 'סדנה', 'סדנאות' ),
+				'public'        => true,
+				'has_archive'   => true,
+				'menu_icon'     => 'dashicons-groups',
+				'menu_position' => 7,
+				'supports'      => array( 'title', 'editor', 'thumbnail', 'excerpt' ),
+				'rewrite'       => array(
+					'slug'       => 'sessions',
+					'with_front' => false,
+				),
+				'show_in_rest'  => true,
+			)
+		);
+
 		// ── Jobs ─────────────────────────────────────────────────────────────
 		register_post_type(
 			'kivun_job',

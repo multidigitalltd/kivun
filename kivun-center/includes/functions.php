@@ -45,3 +45,23 @@ function kivun_is_full( int $post_id ): bool {
 	$left = kivun_get_spots_left( $post_id );
 	return null !== $left && 0 === $left;
 }
+
+/**
+ * Whether a workshop/session is currently open for registration.
+ *
+ * Registration closes once the validity date (_kivun_session_valid_until) has
+ * passed; setting a new future date reopens it. No date = always open.
+ *
+ * @param int $post_id The session (kivun_session) post ID.
+ * @return bool True when registration is open.
+ */
+function kivun_session_registration_open( int $post_id ): bool {
+	$valid_until = (string) get_post_meta( $post_id, '_kivun_session_valid_until', true );
+	if ( '' === trim( $valid_until ) ) {
+		return true;
+	}
+
+	// The date field stores Y-m-d; compare as site-local date strings (the
+	// deadline day is inclusive).
+	return current_time( 'Y-m-d' ) <= $valid_until;
+}

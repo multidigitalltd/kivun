@@ -90,6 +90,7 @@ class Kivun_Export {
 			'registration' => 'הרשמה',
 			'lead'         => 'מתעניין',
 			'workshop'     => 'דף נחיתה',
+			'session'      => 'סדנה',
 		);
 
 		foreach ( $rows as $r ) {
