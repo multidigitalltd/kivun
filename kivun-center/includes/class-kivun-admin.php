@@ -115,9 +115,9 @@ class Kivun_Admin {
 					<p class="description">
 						<?php
 						echo $open
-							? '<span style="color:#1a7a40;font-weight:600">' . esc_html__( 'ההרשמה פתוחה.', 'kivun' ) . '</span> '
-							: '<span style="color:#b32d2e;font-weight:600">' . esc_html__( 'ההרשמה סגורה.', 'kivun' ) . '</span> ';
-						esc_html_e( 'אחרי תאריך זה ההרשמה נסגרת. עדכון לתאריך עתידי פותח מחזור חדש. ריק = תמיד פתוח.', 'kivun' );
+							? '<span style="color:#1a7a40;font-weight:600">' . esc_html__( 'המחזור הנוכחי פתוח.', 'kivun' ) . '</span> '
+							: '<span style="color:#b45309;font-weight:600">' . esc_html__( 'המחזור הנוכחי סגור — נרשמים חדשים נכנסים כרשומות "למחזור הבא".', 'kivun' ) . '</span> ';
+						esc_html_e( 'אחרי תאריך זה המחזור הנוכחי נסגר, אך ההרשמה נשארת פתוחה והנרשמים נשמרים למחזור הבא. עדכון לתאריך עתידי פותח מחזור חדש. ריק = תמיד פתוח.', 'kivun' );
 						?>
 					</p>
 				</td>
@@ -283,6 +283,8 @@ class Kivun_Admin {
 		}
 
 		$reg_statuses = array(
+			'new_lead'     => 'ליד חדש',
+			'next_cycle'   => 'למחזור הבא',
 			'new'          => 'חדש',
 			'contacted'    => 'נוצר קשר',
 			'interested'   => 'מעוניין',
@@ -1057,6 +1059,8 @@ class Kivun_Admin {
 		$search = isset( $_GET['s'] ) ? sanitize_text_field( wp_unslash( $_GET['s'] ) ) : '';
 
 		$reg_statuses = array(
+			'new_lead'     => 'ליד חדש',
+			'next_cycle'   => 'למחזור הבא',
 			'new'          => 'חדש',
 			'contacted'    => 'נוצר קשר',
 			'interested'   => 'מעוניין',

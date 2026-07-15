@@ -52,9 +52,14 @@ class Kivun_Workshops {
 			wp_send_json_error( array( 'message' => $result->get_error_message() ) );
 		}
 
-		$msg = in_array( get_post_type( $post_id ), array( 'kivun_workshop', 'kivun_session' ), true )
-			? __( 'ההרשמה התקבלה! נציג יצור איתך קשר בהקדם.', 'kivun' )
-			: __( 'פנייתך התקבלה! נציג יצור איתך קשר בהקדם לפרטים נוספים.', 'kivun' );
+		$post_type = get_post_type( $post_id );
+		if ( 'kivun_session' === $post_type && ! kivun_session_registration_open( $post_id ) ) {
+			$msg = __( 'המחזור הנוכחי סגור — נרשמת לרשימה למחזור הבא. נעדכן אותך כשייפתח!', 'kivun' );
+		} elseif ( in_array( $post_type, array( 'kivun_workshop', 'kivun_session' ), true ) ) {
+			$msg = __( 'ההרשמה התקבלה! נציג יצור איתך קשר בהקדם.', 'kivun' );
+		} else {
+			$msg = __( 'פנייתך התקבלה! נציג יצור איתך קשר בהקדם לפרטים נוספים.', 'kivun' );
+		}
 
 		wp_send_json_success( array( 'message' => $msg ) );
 	}
@@ -88,14 +93,14 @@ class Kivun_Workshops {
 			return new \WP_Error( 'kivun_no_post', __( 'לא נמצא הדף לשיוך הפנייה. בדקו את הגדרת "מקור הדף" או את השדה הנסתר.', 'kivun' ) );
 		}
 
-		// Workshop (session) validity: registration closes after the deadline
-		// and reopens when the admin sets a new opening date.
-		if ( 'kivun_session' === $post_type && ! kivun_session_registration_open( $post_id ) ) {
-			return new \WP_Error( 'kivun_session_closed', __( 'ההרשמה לסדנה נסגרה — היא תיפתח שוב במחזור הבא.', 'kivun' ) );
-		}
+		// Session validity: once the deadline passes the CURRENT cycle closes, but
+		// registration stays open — new sign-ups are collected for the NEXT cycle
+		// (the admin reopens the current cycle by setting a new future date).
+		$is_next_cycle = ( 'kivun_session' === $post_type && ! kivun_session_registration_open( $post_id ) );
 
-		// Capacity check for landing pages / workshops.
-		if ( in_array( $post_type, array( 'kivun_workshop', 'kivun_session' ), true ) && kivun_is_full( $post_id ) ) {
+		// Capacity applies to the currently-open cycle only. Next-cycle sign-ups are
+		// a waiting list and are never blocked by the current cycle being full.
+		if ( in_array( $post_type, array( 'kivun_workshop', 'kivun_session' ), true ) && ! $is_next_cycle && kivun_is_full( $post_id ) ) {
 			return new \WP_Error( 'kivun_full', __( 'מצטערים, ההרשמה מלאה כרגע. השאירו פרטים ונעדכן אם ייפתח מקום.', 'kivun' ) );
 		}
 
@@ -105,6 +110,9 @@ class Kivun_Workshops {
 		} elseif ( 'kivun_session' === $post_type ) {
 			$type = 'session';
 		}
+
+		// Mark next-cycle sign-ups so staff can tell them apart in the CRM.
+		$status = $is_next_cycle ? 'next_cycle' : 'new_lead';
 
 		// Duplicate check — phone is mandatory for leads, use it as primary key.
 		global $wpdb;
@@ -132,14 +140,16 @@ class Kivun_Workshops {
 				'gender'            => $gender,
 				'marketing_consent' => $consent,
 				'message'           => $message,
-				'status'            => 'new_lead',
+				'status'            => $status,
 				'type'              => $type,
 				'created_at'        => current_time( 'mysql' ),
 			),
 			array( '%d', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s' )
 		);
 
-		Kivun_Mailer::send_lead_notification( $post_id, compact( 'name', 'email', 'phone', 'city', 'gender', 'message' ), $type );
+		$notify               = compact( 'name', 'email', 'phone', 'city', 'gender', 'message' );
+		$notify['next_cycle'] = $is_next_cycle;
+		Kivun_Mailer::send_lead_notification( $post_id, $notify, $type );
 		do_action( 'kivun_after_lead', $post_id, compact( 'name', 'email', 'phone', 'message' ) );
 
 		return true;

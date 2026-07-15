@@ -426,7 +426,7 @@ class Kivun_Shortcodes {
 		$atts = shortcode_atts(
 			array(
 				'id'     => 0,
-				'closed' => __( 'ההרשמה לסדנה נסגרה — היא תיפתח שוב במחזור הבא.', 'kivun' ),
+				'closed' => __( 'המחזור הנוכחי נסגר — נרשמו עכשיו ונעדכן אתכם כשייפתח המחזור הבא.', 'kivun' ),
 				'open'   => '',
 			),
 			$atts,
@@ -454,10 +454,10 @@ class Kivun_Shortcodes {
 				: '';
 		}
 
-		$lock = '<svg class="kivun-session-status__icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path fill="currentColor" d="M12 1a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-9a2 2 0 0 0-2-2h-1V6a5 5 0 0 0-5-5Zm3 8H9V6a3 3 0 0 1 6 0v3Z"/></svg>';
+		$icon = '<svg class="kivun-session-status__icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path fill="currentColor" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm0 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16Zm1-13h-2v6l5 3 1-1.7-4-2.3V7Z"/></svg>';
 
 		return '<div class="kivun-session-status kivun-session-status--closed" role="status">'
-			. $lock
+			. $icon
 			. '<span>' . esc_html( $atts['closed'] ) . '</span>'
 			. '</div>';
 	}

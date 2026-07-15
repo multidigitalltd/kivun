@@ -66,6 +66,11 @@ class Kivun_Mailer {
 			? sprintf( '[%s] הרשמה חדשה לסדנה: %s', get_bloginfo( 'name' ), $title )
 			: sprintf( '[%s] מתעניין/ת חדש/ה — %s', get_bloginfo( 'name' ), $title );
 
+		// A sign-up that arrived after the current cycle closed — for the next cycle.
+		if ( ! empty( $data['next_cycle'] ) ) {
+			$subject = sprintf( '[%s] הרשמה למחזור הבא — %s', get_bloginfo( 'name' ), $title );
+		}
+
 		$body = sprintf(
 			'<p><strong>%s</strong> — %s</p>
 			<ul>
