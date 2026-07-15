@@ -93,6 +93,10 @@ class Kivun_Admin {
 				<td><input type="text" name="_kivun_session_duration" value="<?php echo esc_attr( $f( '_kivun_session_duration' ) ); ?>"></td>
 			</tr>
 			<tr>
+				<th><?php esc_html_e( 'עלות', 'kivun' ); ?></th>
+				<td><input type="text" name="_kivun_session_cost" value="<?php echo esc_attr( $f( '_kivun_session_cost' ) ); ?>" placeholder="חינם / 120 ₪"></td>
+			</tr>
+			<tr>
 				<th><?php esc_html_e( 'מיקום', 'kivun' ); ?></th>
 				<td><input type="text" name="_kivun_session_location" value="<?php echo esc_attr( $f( '_kivun_session_location' ) ); ?>"></td>
 			</tr>
@@ -678,6 +682,7 @@ class Kivun_Admin {
 				'_kivun_session_audience'    => 'text',
 				'_kivun_session_date'        => 'text',
 				'_kivun_session_duration'    => 'text',
+				'_kivun_session_cost'        => 'text',
 				'_kivun_session_location'    => 'text',
 				'_kivun_capacity'            => 'absint',
 				'_kivun_contact_email'       => 'email',

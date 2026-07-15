@@ -3,9 +3,10 @@
  * Unified content creator & editor: one admin form that publishes and edits a
  * landing page, a course and/or a workshop from a single shared set of content.
  *
- * Posts created together are linked by a shared `_kivun_content_group` meta, so
- * editing the shared content (title, descriptions, image, audience) updates all
- * of them at once.
+ * The shared content mirrors the full landing-page field set (title, URL slug,
+ * short/long descriptions, image, audience, duration, cost, date, lead email,
+ * CTA) and is mapped into each post type's own meta. Posts created together are
+ * linked by a shared `_kivun_content_group` meta, so editing updates them all.
  *
  * @package Kivun
  */
@@ -108,78 +109,103 @@ class Kivun_Content_Creator {
 	 */
 	private static function form_values( array $group_posts ): array {
 		$v = array(
-			'title'               => '',
-			'short'               => '',
-			'long'                => '',
-			'audience'            => '',
-			'status'              => 'publish',
-			'thumb_id'            => '0',
-			'landing_cta_title'   => '',
-			'landing_cta_content' => '',
-			'landing_cta_button'  => '',
-			'landing_email'       => '',
-			'course_price'        => '0',
-			'course_schedule'     => '',
-			'course_duration'     => '',
-			'course_capacity'     => '',
-			'course_email'        => '',
-			'session_date'        => '',
-			'session_duration'    => '',
-			'session_location'    => '',
-			'session_capacity'    => '',
-			'session_email'       => '',
-			'session_valid_until' => '',
+			'title'            => '',
+			'slug'             => '',
+			'short'            => '',
+			'long'             => '',
+			'audience'         => '',
+			'duration'         => '',
+			'cost'             => '',
+			'date'             => '',
+			'email'            => '',
+			'cta_title'        => '',
+			'cta_content'      => '',
+			'cta_button'       => '',
+			'status'           => 'publish',
+			'thumb_id'         => '0',
+			'course_capacity'  => '',
+			'course_wc'        => '',
+			'session_location' => '',
+			'session_capacity' => '',
+			'session_valid'    => '',
 		);
 
 		if ( ! $group_posts ) {
 			return $v;
 		}
 
-		// Shared content comes from the primary (first available) post.
-		$primary_key   = array_key_first( $group_posts );
-		$primary       = (int) $group_posts[ $primary_key ];
+		$primary_key = array_key_first( $group_posts );
+		$primary     = (int) $group_posts[ $primary_key ];
+
 		$v['title']    = get_the_title( $primary );
+		$v['slug']     = get_post_field( 'post_name', $primary );
 		$v['long']     = (string) get_post_field( 'post_content', $primary );
 		$v['status']   = (string) get_post_status( $primary );
 		$v['thumb_id'] = (string) (int) get_post_thumbnail_id( $primary );
 
-		if ( 'landing' === $primary_key ) {
-			$v['short']    = (string) get_post_meta( $primary, '_kivun_lp_short', true );
-			$v['audience'] = (string) get_post_meta( $primary, '_kivun_ws_audience', true );
-		} elseif ( 'course' === $primary_key ) {
-			$v['short']    = (string) get_post_field( 'post_excerpt', $primary );
-			$v['audience'] = (string) get_post_meta( $primary, '_kivun_target_audience', true );
-		} else {
-			$v['short']    = (string) get_post_meta( $primary, '_kivun_session_short', true );
-			$v['audience'] = (string) get_post_meta( $primary, '_kivun_session_audience', true );
+		// Shared fields — read from whichever primary type exists, per its keys.
+		$keys = self::shared_meta_keys( $primary_key );
+		foreach ( $keys as $field => $meta_key ) {
+			if ( 'excerpt' === $meta_key ) {
+				$v[ $field ] = (string) get_post_field( 'post_excerpt', $primary );
+			} else {
+				$v[ $field ] = (string) get_post_meta( $primary, $meta_key, true );
+			}
 		}
+		// CTA is stored on the same keys for every type.
+		$v['cta_title']   = (string) get_post_meta( $primary, '_kivun_cta_title', true );
+		$v['cta_content'] = (string) get_post_meta( $primary, '_kivun_cta_content', true );
+		$v['cta_button']  = (string) get_post_meta( $primary, '_kivun_cta_button', true );
 
-		if ( isset( $group_posts['landing'] ) ) {
-			$lid                      = $group_posts['landing'];
-			$v['landing_cta_title']   = (string) get_post_meta( $lid, '_kivun_cta_title', true );
-			$v['landing_cta_content'] = (string) get_post_meta( $lid, '_kivun_cta_content', true );
-			$v['landing_cta_button']  = (string) get_post_meta( $lid, '_kivun_cta_button', true );
-			$v['landing_email']       = (string) get_post_meta( $lid, '_kivun_contact_email', true );
-		}
 		if ( isset( $group_posts['course'] ) ) {
-			$cid                  = $group_posts['course'];
-			$v['course_price']    = (string) get_post_meta( $cid, '_kivun_price', true );
-			$v['course_schedule'] = (string) get_post_meta( $cid, '_kivun_schedule', true );
-			$v['course_duration'] = (string) get_post_meta( $cid, '_kivun_duration', true );
-			$v['course_capacity'] = (string) get_post_meta( $cid, '_kivun_capacity', true );
-			$v['course_email']    = (string) get_post_meta( $cid, '_kivun_contact_email', true );
+			$v['course_capacity'] = (string) get_post_meta( $group_posts['course'], '_kivun_capacity', true );
+			$v['course_wc']       = (string) get_post_meta( $group_posts['course'], '_kivun_wc_product_id', true );
 		}
 		if ( isset( $group_posts['session'] ) ) {
-			$sid                      = $group_posts['session'];
-			$v['session_date']        = (string) get_post_meta( $sid, '_kivun_session_date', true );
-			$v['session_duration']    = (string) get_post_meta( $sid, '_kivun_session_duration', true );
-			$v['session_location']    = (string) get_post_meta( $sid, '_kivun_session_location', true );
-			$v['session_capacity']    = (string) get_post_meta( $sid, '_kivun_capacity', true );
-			$v['session_email']       = (string) get_post_meta( $sid, '_kivun_contact_email', true );
-			$v['session_valid_until'] = (string) get_post_meta( $sid, '_kivun_session_valid_until', true );
+			$v['session_location'] = (string) get_post_meta( $group_posts['session'], '_kivun_session_location', true );
+			$v['session_capacity'] = (string) get_post_meta( $group_posts['session'], '_kivun_capacity', true );
+			$v['session_valid']    = (string) get_post_meta( $group_posts['session'], '_kivun_session_valid_until', true );
 		}
 
 		return $v;
+	}
+
+	/**
+	 * Shared field => meta key mapping for a given type.
+	 *
+	 * @param string $type_key The type key (landing/course/session).
+	 * @return array<string,string> Shared field => meta key ('excerpt' = post_excerpt).
+	 */
+	private static function shared_meta_keys( string $type_key ): array {
+		if ( 'course' === $type_key ) {
+			return array(
+				'short'    => 'excerpt',
+				'audience' => '_kivun_target_audience',
+				'duration' => '_kivun_duration',
+				'cost'     => '_kivun_price',
+				'date'     => '_kivun_schedule',
+				'email'    => '_kivun_contact_email',
+			);
+		}
+		if ( 'session' === $type_key ) {
+			return array(
+				'short'    => '_kivun_session_short',
+				'audience' => '_kivun_session_audience',
+				'duration' => '_kivun_session_duration',
+				'cost'     => '_kivun_session_cost',
+				'date'     => '_kivun_session_date',
+				'email'    => '_kivun_contact_email',
+			);
+		}
+		// Landing.
+		return array(
+			'short'    => '_kivun_lp_short',
+			'audience' => '_kivun_ws_audience',
+			'duration' => '_kivun_ws_duration',
+			'cost'     => '_kivun_lp_cost',
+			'date'     => '_kivun_ws_date',
+			'email'    => '_kivun_contact_email',
+		);
 	}
 
 	/**
@@ -202,8 +228,7 @@ class Kivun_Content_Creator {
 		$v           = self::form_values( $group_posts );
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only success flag from a safe redirect.
-		$saved = ! empty( $_GET['kivun_saved'] );
-
+		$saved     = ! empty( $_GET['kivun_saved'] );
 		$sections  = array(
 			'landing' => __( 'דף נחיתה', 'kivun' ),
 			'course'  => __( 'קורס', 'kivun' ),
@@ -230,6 +255,10 @@ class Kivun_Content_Creator {
 						<div class="kivun-lp-card">
 							<label class="kivun-lp-label" for="kivun-cc-title"><?php esc_html_e( 'כותרת', 'kivun' ); ?> <span class="kivun-lp-req">*</span></label>
 							<input type="text" id="kivun-cc-title" name="title" class="kivun-lp-input kivun-lp-input--lg" value="<?php echo esc_attr( $v['title'] ); ?>" required>
+
+							<label class="kivun-lp-sub" for="kivun-cc-slug"><?php esc_html_e( 'כתובת URL (Slug)', 'kivun' ); ?></label>
+							<input type="text" id="kivun-cc-slug" name="slug" class="kivun-lp-input" dir="ltr" value="<?php echo esc_attr( $v['slug'] ); ?>" placeholder="my-content">
+							<p class="kivun-lp-hint"><?php esc_html_e( 'משמש לכל שלושת הפוסטים (כל אחד תחת הבסיס שלו). ריק = נוצר מהכותרת.', 'kivun' ); ?></p>
 						</div>
 
 						<div class="kivun-lp-card">
@@ -265,53 +294,48 @@ class Kivun_Content_Creator {
 						</div>
 
 						<div class="kivun-lp-card">
-							<label class="kivun-lp-label"><?php esc_html_e( 'קהל יעד', 'kivun' ); ?></label>
-							<input type="text" name="audience" class="kivun-lp-input" value="<?php echo esc_attr( $v['audience'] ); ?>" placeholder="<?php esc_attr_e( 'למשל: מחפשי עבודה', 'kivun' ); ?>">
-						</div>
-
-						<!-- Landing-specific -->
-						<div class="kivun-lp-card kivun-cc-section" data-type="landing" <?php echo isset( $group_posts['landing'] ) ? '' : 'hidden'; ?>>
-							<h3><?php esc_html_e( 'פרטי דף נחיתה', 'kivun' ); ?></h3>
-							<label class="kivun-lp-sub"><?php esc_html_e( 'CTA — כותרת', 'kivun' ); ?></label>
-							<input type="text" name="landing_cta_title" class="kivun-lp-input" value="<?php echo esc_attr( $v['landing_cta_title'] ); ?>">
-							<label class="kivun-lp-sub"><?php esc_html_e( 'CTA — תוכן', 'kivun' ); ?></label>
-							<textarea name="landing_cta_content" class="kivun-lp-input" rows="2"><?php echo esc_textarea( $v['landing_cta_content'] ); ?></textarea>
-							<label class="kivun-lp-sub"><?php esc_html_e( 'CTA — טקסט כפתור', 'kivun' ); ?></label>
-							<input type="text" name="landing_cta_button" class="kivun-lp-input" value="<?php echo esc_attr( $v['landing_cta_button'] ); ?>">
-							<label class="kivun-lp-sub"><?php esc_html_e( 'אימייל לקבלת לידים', 'kivun' ); ?></label>
-							<input type="email" name="landing_email" class="kivun-lp-input" value="<?php echo esc_attr( $v['landing_email'] ); ?>">
-						</div>
-
-						<!-- Course-specific -->
-						<div class="kivun-lp-card kivun-cc-section" data-type="course" <?php echo isset( $group_posts['course'] ) ? '' : 'hidden'; ?>>
-							<h3><?php esc_html_e( 'פרטי קורס', 'kivun' ); ?></h3>
-							<label class="kivun-lp-sub"><?php esc_html_e( 'עלות (₪, 0 = חינם)', 'kivun' ); ?></label>
-							<input type="number" name="course_price" class="kivun-lp-input" min="0" value="<?php echo esc_attr( $v['course_price'] ); ?>">
-							<label class="kivun-lp-sub"><?php esc_html_e( 'זמנים / מועדים', 'kivun' ); ?></label>
-							<input type="text" name="course_schedule" class="kivun-lp-input" value="<?php echo esc_attr( $v['course_schedule'] ); ?>">
+							<label class="kivun-lp-label"><?php esc_html_e( 'פרטים', 'kivun' ); ?></label>
+							<label class="kivun-lp-sub"><?php esc_html_e( 'קהל יעד', 'kivun' ); ?></label>
+							<input type="text" name="audience" class="kivun-lp-input" value="<?php echo esc_attr( $v['audience'] ); ?>">
 							<label class="kivun-lp-sub"><?php esc_html_e( 'משך', 'kivun' ); ?></label>
-							<input type="text" name="course_duration" class="kivun-lp-input" value="<?php echo esc_attr( $v['course_duration'] ); ?>">
+							<input type="text" name="duration" class="kivun-lp-input" value="<?php echo esc_attr( $v['duration'] ); ?>">
+							<label class="kivun-lp-sub"><?php esc_html_e( 'עלות', 'kivun' ); ?></label>
+							<input type="text" name="cost" class="kivun-lp-input" value="<?php echo esc_attr( $v['cost'] ); ?>" placeholder="<?php esc_attr_e( 'חינם / 120 ₪', 'kivun' ); ?>">
+							<label class="kivun-lp-sub"><?php esc_html_e( 'תאריך / מועד', 'kivun' ); ?></label>
+							<input type="text" name="date" class="kivun-lp-input" value="<?php echo esc_attr( $v['date'] ); ?>" placeholder="<?php esc_attr_e( '15.9.2025 בשעה 18:00', 'kivun' ); ?>">
+							<label class="kivun-lp-sub"><?php esc_html_e( 'אימייל לקבלת לידים/הרשמות', 'kivun' ); ?></label>
+							<input type="email" name="email" class="kivun-lp-input" value="<?php echo esc_attr( $v['email'] ); ?>">
+						</div>
+
+						<div class="kivun-lp-card">
+							<label class="kivun-lp-label"><?php esc_html_e( 'באנר הנעה לפעולה (CTA)', 'kivun' ); ?></label>
+							<label class="kivun-lp-sub"><?php esc_html_e( 'כותרת', 'kivun' ); ?></label>
+							<input type="text" name="cta_title" class="kivun-lp-input" value="<?php echo esc_attr( $v['cta_title'] ); ?>">
+							<label class="kivun-lp-sub"><?php esc_html_e( 'תוכן', 'kivun' ); ?></label>
+							<textarea name="cta_content" class="kivun-lp-input" rows="2"><?php echo esc_textarea( $v['cta_content'] ); ?></textarea>
+							<label class="kivun-lp-sub"><?php esc_html_e( 'טקסט כפתור', 'kivun' ); ?></label>
+							<input type="text" name="cta_button" class="kivun-lp-input" value="<?php echo esc_attr( $v['cta_button'] ); ?>">
+						</div>
+
+						<!-- Course-only extras -->
+						<div class="kivun-lp-card kivun-cc-section" data-type="course" <?php echo isset( $group_posts['course'] ) ? '' : 'hidden'; ?>>
+							<h3><?php esc_html_e( 'קורס — פרטים נוספים', 'kivun' ); ?></h3>
 							<label class="kivun-lp-sub"><?php esc_html_e( 'מקסימום משתתפים', 'kivun' ); ?></label>
 							<input type="number" name="course_capacity" class="kivun-lp-input" min="0" value="<?php echo esc_attr( $v['course_capacity'] ); ?>">
-							<label class="kivun-lp-sub"><?php esc_html_e( 'אימייל לקבלת הרשמות', 'kivun' ); ?></label>
-							<input type="email" name="course_email" class="kivun-lp-input" value="<?php echo esc_attr( $v['course_email'] ); ?>">
+							<label class="kivun-lp-sub"><?php esc_html_e( 'מזהה מוצר WooCommerce (אופציונלי)', 'kivun' ); ?></label>
+							<input type="number" name="course_wc" class="kivun-lp-input" min="0" value="<?php echo esc_attr( $v['course_wc'] ); ?>">
+							<p class="kivun-lp-hint"><?php esc_html_e( 'לקורס בתשלום: מזהה מוצר WooCommerce. ריק = חינם / לפי שדה העלות.', 'kivun' ); ?></p>
 						</div>
 
-						<!-- Workshop-specific -->
+						<!-- Session-only extras -->
 						<div class="kivun-lp-card kivun-cc-section" data-type="session" <?php echo isset( $group_posts['session'] ) ? '' : 'hidden'; ?>>
-							<h3><?php esc_html_e( 'פרטי סדנה', 'kivun' ); ?></h3>
-							<label class="kivun-lp-sub"><?php esc_html_e( 'תאריך / מועד', 'kivun' ); ?></label>
-							<input type="text" name="session_date" class="kivun-lp-input" value="<?php echo esc_attr( $v['session_date'] ); ?>" placeholder="<?php esc_attr_e( 'למשל: 15.9.2025 בשעה 18:00', 'kivun' ); ?>">
-							<label class="kivun-lp-sub"><?php esc_html_e( 'משך', 'kivun' ); ?></label>
-							<input type="text" name="session_duration" class="kivun-lp-input" value="<?php echo esc_attr( $v['session_duration'] ); ?>">
+							<h3><?php esc_html_e( 'סדנה — פרטים נוספים', 'kivun' ); ?></h3>
 							<label class="kivun-lp-sub"><?php esc_html_e( 'מיקום', 'kivun' ); ?></label>
 							<input type="text" name="session_location" class="kivun-lp-input" value="<?php echo esc_attr( $v['session_location'] ); ?>">
 							<label class="kivun-lp-sub"><?php esc_html_e( 'מקסימום משתתפים', 'kivun' ); ?></label>
 							<input type="number" name="session_capacity" class="kivun-lp-input" min="0" value="<?php echo esc_attr( $v['session_capacity'] ); ?>">
-							<label class="kivun-lp-sub"><?php esc_html_e( 'אימייל לקבלת הרשמות', 'kivun' ); ?></label>
-							<input type="email" name="session_email" class="kivun-lp-input" value="<?php echo esc_attr( $v['session_email'] ); ?>">
 							<label class="kivun-lp-sub"><?php esc_html_e( 'תוקף ההרשמה (עד תאריך)', 'kivun' ); ?></label>
-							<input type="date" name="session_valid_until" class="kivun-lp-input" dir="ltr" value="<?php echo esc_attr( $v['session_valid_until'] ); ?>">
+							<input type="date" name="session_valid_until" class="kivun-lp-input" dir="ltr" value="<?php echo esc_attr( $v['session_valid'] ); ?>">
 							<p class="kivun-lp-hint"><?php esc_html_e( 'אחרי תאריך זה ההרשמה נסגרת. לפתיחת מחזור חדש — עדכנו את התאריך.', 'kivun' ); ?></p>
 						</div>
 
@@ -492,53 +516,76 @@ class Kivun_Content_Creator {
 			wp_die( esc_html__( 'יש להזין כותרת.', 'kivun' ) );
 		}
 
-		$long     = isset( $_POST['long'] ) ? wp_kses_post( wp_unslash( $_POST['long'] ) ) : '';
-		$short    = isset( $_POST['short'] ) ? wp_kses_post( wp_unslash( $_POST['short'] ) ) : '';
-		$audience = isset( $_POST['audience'] ) ? sanitize_text_field( wp_unslash( $_POST['audience'] ) ) : '';
-		$status   = ( isset( $_POST['status'] ) && 'draft' === $_POST['status'] ) ? 'draft' : 'publish';
+		$s = array(
+			'title'    => $title,
+			'slug'     => isset( $_POST['slug'] ) ? sanitize_title( wp_unslash( $_POST['slug'] ) ) : '',
+			'long'     => isset( $_POST['long'] ) ? wp_kses_post( wp_unslash( $_POST['long'] ) ) : '',
+			'short'    => isset( $_POST['short'] ) ? wp_kses_post( wp_unslash( $_POST['short'] ) ) : '',
+			'audience' => isset( $_POST['audience'] ) ? sanitize_text_field( wp_unslash( $_POST['audience'] ) ) : '',
+			'duration' => isset( $_POST['duration'] ) ? sanitize_text_field( wp_unslash( $_POST['duration'] ) ) : '',
+			'cost'     => isset( $_POST['cost'] ) ? sanitize_text_field( wp_unslash( $_POST['cost'] ) ) : '',
+			'date'     => isset( $_POST['date'] ) ? sanitize_text_field( wp_unslash( $_POST['date'] ) ) : '',
+			'email'    => isset( $_POST['email'] ) ? sanitize_email( wp_unslash( $_POST['email'] ) ) : '',
+			'cta_t'    => isset( $_POST['cta_title'] ) ? sanitize_text_field( wp_unslash( $_POST['cta_title'] ) ) : '',
+			'cta_c'    => isset( $_POST['cta_content'] ) ? sanitize_textarea_field( wp_unslash( $_POST['cta_content'] ) ) : '',
+			'cta_b'    => isset( $_POST['cta_button'] ) ? sanitize_text_field( wp_unslash( $_POST['cta_button'] ) ) : '',
+			'status'   => ( isset( $_POST['status'] ) && 'draft' === $_POST['status'] ) ? 'draft' : 'publish',
+		);
+
 		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized per value below.
 		$publish = isset( $_POST['publish'] ) ? array_map( 'sanitize_key', (array) wp_unslash( $_POST['publish'] ) ) : array();
 		$group   = isset( $_POST['group'] ) ? sanitize_text_field( wp_unslash( $_POST['group'] ) ) : '';
 		if ( '' === trim( $group ) ) {
 			$group = wp_generate_uuid4();
 		}
+		$thumb_id = self::resolve_thumbnail();
 
-		$thumb_id    = self::resolve_thumbnail();
-		$group_posts = self::group_posts( $group );
-		$shared      = compact( 'title', 'long', 'status' );
+		$cta = array(
+			'_kivun_cta_title'   => $s['cta_t'],
+			'_kivun_cta_content' => $s['cta_c'],
+			'_kivun_cta_button'  => $s['cta_b'],
+		);
 
 		if ( in_array( 'landing', $publish, true ) ) {
 			self::upsert(
 				$group,
 				'kivun_workshop',
-				$shared,
+				$s,
 				'',
 				$thumb_id,
-				array(
-					'_kivun_lp_short'      => $short,
-					'_kivun_ws_audience'   => $audience,
-					'_kivun_contact_email' => sanitize_email( wp_unslash( $_POST['landing_email'] ?? '' ) ),
-					'_kivun_cta_title'     => sanitize_text_field( wp_unslash( $_POST['landing_cta_title'] ?? '' ) ),
-					'_kivun_cta_content'   => sanitize_textarea_field( wp_unslash( $_POST['landing_cta_content'] ?? '' ) ),
-					'_kivun_cta_button'    => sanitize_text_field( wp_unslash( $_POST['landing_cta_button'] ?? '' ) ),
+				array_merge(
+					array(
+						'_kivun_lp_short'      => $s['short'],
+						'_kivun_ws_audience'   => $s['audience'],
+						'_kivun_ws_duration'   => $s['duration'],
+						'_kivun_lp_cost'       => $s['cost'],
+						'_kivun_ws_date'       => $s['date'],
+						'_kivun_contact_email' => $s['email'],
+					),
+					$cta
 				)
 			);
 		}
 
 		if ( in_array( 'course', $publish, true ) ) {
+			$price = (int) preg_replace( '/[^0-9]/', '', $s['cost'] );
 			self::upsert(
 				$group,
 				'kivun_course',
-				$shared,
-				$short,
+				$s,
+				$s['short'],
 				$thumb_id,
-				array(
-					'_kivun_target_audience' => $audience,
-					'_kivun_schedule'        => sanitize_text_field( wp_unslash( $_POST['course_schedule'] ?? '' ) ),
-					'_kivun_duration'        => sanitize_text_field( wp_unslash( $_POST['course_duration'] ?? '' ) ),
-					'_kivun_price'           => absint( $_POST['course_price'] ?? 0 ),
-					'_kivun_capacity'        => absint( $_POST['course_capacity'] ?? 0 ),
-					'_kivun_contact_email'   => sanitize_email( wp_unslash( $_POST['course_email'] ?? '' ) ),
+				array_merge(
+					array(
+						'_kivun_target_audience' => $s['audience'],
+						'_kivun_duration'        => $s['duration'],
+						'_kivun_price'           => $price,
+						'_kivun_schedule'        => $s['date'],
+						'_kivun_capacity'        => absint( $_POST['course_capacity'] ?? 0 ),
+						'_kivun_wc_product_id'   => absint( $_POST['course_wc'] ?? 0 ),
+						'_kivun_contact_email'   => $s['email'],
+					),
+					$cta
 				)
 			);
 		}
@@ -547,23 +594,25 @@ class Kivun_Content_Creator {
 			self::upsert(
 				$group,
 				'kivun_session',
-				$shared,
+				$s,
 				'',
 				$thumb_id,
-				array(
-					'_kivun_session_short'       => $short,
-					'_kivun_session_audience'    => $audience,
-					'_kivun_session_date'        => sanitize_text_field( wp_unslash( $_POST['session_date'] ?? '' ) ),
-					'_kivun_session_duration'    => sanitize_text_field( wp_unslash( $_POST['session_duration'] ?? '' ) ),
-					'_kivun_session_location'    => sanitize_text_field( wp_unslash( $_POST['session_location'] ?? '' ) ),
-					'_kivun_capacity'            => absint( $_POST['session_capacity'] ?? 0 ),
-					'_kivun_contact_email'       => sanitize_email( wp_unslash( $_POST['session_email'] ?? '' ) ),
-					'_kivun_session_valid_until' => sanitize_text_field( wp_unslash( $_POST['session_valid_until'] ?? '' ) ),
+				array_merge(
+					array(
+						'_kivun_session_short'       => $s['short'],
+						'_kivun_session_audience'    => $s['audience'],
+						'_kivun_session_duration'    => $s['duration'],
+						'_kivun_session_cost'        => $s['cost'],
+						'_kivun_session_date'        => $s['date'],
+						'_kivun_session_location'    => sanitize_text_field( wp_unslash( $_POST['session_location'] ?? '' ) ),
+						'_kivun_capacity'            => absint( $_POST['session_capacity'] ?? 0 ),
+						'_kivun_contact_email'       => $s['email'],
+						'_kivun_session_valid_until' => sanitize_text_field( wp_unslash( $_POST['session_valid_until'] ?? '' ) ),
+					),
+					$cta
 				)
 			);
 		}
-
-		unset( $group_posts );
 
 		wp_safe_redirect(
 			add_query_arg(
@@ -583,7 +632,7 @@ class Kivun_Content_Creator {
 	 *
 	 * @param string $group     The content group id.
 	 * @param string $post_type The target post type.
-	 * @param array  $shared    Shared fields: title, long, status.
+	 * @param array  $shared    Shared fields (title, slug, long, status).
 	 * @param string $excerpt   Optional excerpt (short description).
 	 * @param int    $thumb_id  Featured image attachment ID (0 = leave as is).
 	 * @param array  $meta       Meta key => value pairs.
@@ -609,6 +658,9 @@ class Kivun_Content_Creator {
 			'post_excerpt' => $excerpt,
 			'post_status'  => $shared['status'],
 		);
+		if ( '' !== $shared['slug'] ) {
+			$postarr['post_name'] = $shared['slug'];
+		}
 
 		if ( $existing ) {
 			$postarr['ID'] = (int) $existing[0];
