@@ -6,6 +6,10 @@
  * single central email address and/or a single webhook (for a CRM), both
  * configured in one place under Kivun Center → Settings.
  *
+ * When the form is submitted from a specific course, workshop (session) or
+ * landing page that has its own "אימייל לקבלת הלידים" set, that per-post address
+ * overrides the central one — so each page can route its own leads.
+ *
  * @package Kivun
  */
 
@@ -35,7 +39,10 @@ class Kivun_Forms_Router {
 	public static function on_record( $record, $handler ): void {
 		unset( $handler );
 
-		$email   = (string) Kivun_Admin_Settings::get( 'forms_router_email', '' );
+		$page_url = (string) wp_get_referer();
+
+		// A specific course/workshop/landing page email overrides the central one.
+		$email   = self::resolve_email( $page_url );
 		$webhook = (string) Kivun_Admin_Settings::get( 'forms_router_webhook', '' );
 		if ( '' === trim( $email ) && '' === trim( $webhook ) ) {
 			return;
@@ -60,7 +67,6 @@ class Kivun_Forms_Router {
 		if ( method_exists( $record, 'get_form_settings' ) ) {
 			$form_name = (string) $record->get_form_settings( 'form_name' );
 		}
-		$page_url = (string) wp_get_referer();
 
 		/**
 		 * Allow skipping the global router for a specific submission.
@@ -79,6 +85,30 @@ class Kivun_Forms_Router {
 		if ( '' !== trim( $webhook ) ) {
 			self::send_webhook( $webhook, $form_name, $fields, $page_url );
 		}
+	}
+
+	/**
+	 * Decide which email should receive the submission.
+	 *
+	 * When the form was submitted from a specific course, workshop (session) or
+	 * landing page that defines its own contact email, that address wins.
+	 * Otherwise the central "forms router" address is used.
+	 *
+	 * @param string $page_url The URL the form was submitted from.
+	 * @return string The destination email (may be empty).
+	 */
+	private static function resolve_email( string $page_url ): string {
+		$central = (string) Kivun_Admin_Settings::get( 'forms_router_email', '' );
+
+		$post_id = '' !== $page_url ? url_to_postid( $page_url ) : 0;
+		if ( $post_id && in_array( get_post_type( $post_id ), array( 'kivun_course', 'kivun_workshop', 'kivun_session' ), true ) ) {
+			$specific = (string) get_post_meta( $post_id, '_kivun_contact_email', true );
+			if ( '' !== trim( $specific ) && is_email( $specific ) ) {
+				return $specific;
+			}
+		}
+
+		return $central;
 	}
 
 	/**

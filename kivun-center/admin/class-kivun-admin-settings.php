@@ -254,7 +254,7 @@ class Kivun_Admin_Settings {
 					<th scope="row"><?php esc_html_e( 'אימייל מרכזי לכל הטפסים', 'kivun' ); ?></th>
 					<td>
 						<input type="email" name="forms_router_email" value="<?php echo esc_attr( $o( 'forms_router_email' ) ); ?>" class="regular-text" placeholder="leads@example.com">
-						<p class="description"><?php esc_html_e( 'כל הגשת טופס Elementor באתר תישלח גם לכתובת הזו. השאר ריק כדי לבטל.', 'kivun' ); ?></p>
+						<p class="description"><?php esc_html_e( 'כל הגשת טופס Elementor באתר תישלח גם לכתובת הזו. השאר ריק כדי לבטל.', 'kivun' ); ?><br><?php esc_html_e( 'אם הטופס נשלח מקורס / סדנה / דף נחיתה שהוגדר לו "אימייל לקבלת הלידים" — הכתובת הספציפית של אותו עמוד גוברת על הכתובת המרכזית.', 'kivun' ); ?></p>
 					</td>
 				</tr>
 				<tr>
