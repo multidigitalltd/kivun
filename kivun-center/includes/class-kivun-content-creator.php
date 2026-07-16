@@ -36,6 +36,11 @@ class Kivun_Content_Creator {
 	public static function init(): void {
 		add_action( 'admin_menu', array( __CLASS__, 'admin_menu' ) );
 		add_action( 'admin_post_kivun_create_content', array( __CLASS__, 'handle_save' ) );
+
+		// Front-end: a shortcode that lets authorised users publish content from a
+		// public page, without entering wp-admin.
+		add_shortcode( 'kivun_content_creator', array( __CLASS__, 'shortcode' ) );
+		add_action( 'admin_post_kivun_create_content_front', array( __CLASS__, 'handle_front_save' ) );
 	}
 
 	/**
@@ -511,9 +516,36 @@ class Kivun_Content_Creator {
 			wp_die( esc_html__( 'אין לך הרשאה.', 'kivun' ) );
 		}
 
+		$result = self::run_save();
+		if ( is_wp_error( $result ) ) {
+			wp_die( esc_html( $result->get_error_message() ) );
+		}
+
+		wp_safe_redirect(
+			add_query_arg(
+				array(
+					'page'        => self::PAGE,
+					'group'       => rawurlencode( $result ),
+					'kivun_saved' => 1,
+				),
+				admin_url( 'admin.php' )
+			)
+		);
+		exit;
+	}
+
+	/**
+	 * Read the submitted content and create/update the selected posts.
+	 *
+	 * The caller MUST verify a nonce and the user capability before invoking it.
+	 *
+	 * @return string|\WP_Error The content group id on success, or an error.
+	 */
+	public static function run_save() {
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- The caller verifies the nonce before calling run_save().
 		$title = isset( $_POST['title'] ) ? sanitize_text_field( wp_unslash( $_POST['title'] ) ) : '';
 		if ( '' === $title ) {
-			wp_die( esc_html__( 'יש להזין כותרת.', 'kivun' ) );
+			return new \WP_Error( 'kivun_no_title', __( 'יש להזין כותרת.', 'kivun' ) );
 		}
 
 		$s = array(
@@ -614,17 +646,8 @@ class Kivun_Content_Creator {
 			);
 		}
 
-		wp_safe_redirect(
-			add_query_arg(
-				array(
-					'page'        => self::PAGE,
-					'group'       => rawurlencode( $group ),
-					'kivun_saved' => 1,
-				),
-				admin_url( 'admin.php' )
-			)
-		);
-		exit;
+		return $group;
+		// phpcs:enable WordPress.Security.NonceVerification.Missing
 	}
 
 	/**
@@ -703,7 +726,342 @@ class Kivun_Content_Creator {
 			}
 		}
 
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in handle_save().
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified by the caller.
 		return isset( $_POST['thumbnail_id'] ) ? absint( wp_unslash( $_POST['thumbnail_id'] ) ) : 0;
+	}
+
+	// ── Front-end shortcode ───────────────────────────────────────────────────
+
+	/**
+	 * Shortcode: render the content-creation form on a public page for logged-in
+	 * users who can create content.
+	 *
+	 * @param mixed $atts Shortcode attributes (unused).
+	 * @return string Rendered HTML.
+	 */
+	public static function shortcode( $atts = array() ): string {
+		unset( $atts );
+
+		if ( ! is_user_logged_in() ) {
+			return self::front_login_notice();
+		}
+		if ( ! current_user_can( 'edit_posts' ) ) {
+			return '<div class="kivun-cc-front"><div class="kivun-cc-note kivun-cc-note--error">'
+				. esc_html__( 'אין לך הרשאה להזין תוכן. פנו למנהל המערכת.', 'kivun' )
+				. '</div></div>';
+		}
+
+		Kivun_Core::enqueue_frontend_assets();
+
+		ob_start();
+		self::front_form();
+		return (string) ob_get_clean();
+	}
+
+	/**
+	 * Handle the front-end submission (logged-in authorised users only).
+	 *
+	 * @return void
+	 */
+	public static function handle_front_save(): void {
+		if ( ! is_user_logged_in() || ! current_user_can( 'edit_posts' ) ) {
+			wp_die( esc_html__( 'אין לך הרשאה.', 'kivun' ) );
+		}
+		if ( ! isset( $_POST['kivun_cc_front_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['kivun_cc_front_nonce'] ) ), 'kivun_create_content_front' ) ) {
+			wp_die( esc_html__( 'בקשה לא תקפה.', 'kivun' ) );
+		}
+
+		$redirect = isset( $_POST['redirect'] ) ? esc_url_raw( wp_unslash( $_POST['redirect'] ) ) : '';
+		if ( '' === $redirect ) {
+			$redirect = home_url();
+		}
+
+		$result = self::run_save();
+		if ( is_wp_error( $result ) ) {
+			$redirect = add_query_arg( 'kivun_cc_error', 1, $redirect );
+		} else {
+			$redirect = add_query_arg(
+				array(
+					'kivun_group' => rawurlencode( $result ),
+					'kivun_saved' => 1,
+				),
+				$redirect
+			);
+		}
+
+		wp_safe_redirect( $redirect );
+		exit;
+	}
+
+	/**
+	 * A styled "please log in" notice with a login link back to this page.
+	 *
+	 * @return string
+	 */
+	private static function front_login_notice(): string {
+		$here  = (string) get_permalink();
+		$here  = $here ? $here : home_url();
+		$login = wp_login_url( $here );
+		return '<div class="kivun-cc-front"><div class="kivun-cc-note">'
+			. esc_html__( 'כדי להזין תוכן יש להתחבר תחילה.', 'kivun' )
+			. ' <a class="kivun-cc-btn kivun-cc-btn--sm" href="' . esc_url( $login ) . '">' . esc_html__( 'התחברות', 'kivun' ) . '</a>'
+			. '</div></div>';
+	}
+
+	/**
+	 * Render the branded front-end create/edit form.
+	 *
+	 * @return void
+	 */
+	private static function front_form(): void {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only prefill.
+		$group       = isset( $_GET['kivun_group'] ) ? sanitize_text_field( wp_unslash( $_GET['kivun_group'] ) ) : '';
+		$group_posts = self::group_posts( $group );
+		$editing     = (bool) $group_posts;
+		$v           = self::form_values( $group_posts );
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only status flag.
+		$saved = ! empty( $_GET['kivun_saved'] );
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only status flag.
+		$error = ! empty( $_GET['kivun_cc_error'] );
+
+		$page_url   = (string) get_permalink();
+		$page_url   = $page_url ? $page_url : home_url();
+		$can_upload = current_user_can( 'upload_files' );
+		$thumb_url  = (int) $v['thumb_id'] ? (string) wp_get_attachment_image_url( (int) $v['thumb_id'], 'medium' ) : '';
+		$sections   = array(
+			'landing' => __( 'דף נחיתה', 'kivun' ),
+			'course'  => __( 'קורס', 'kivun' ),
+			'session' => __( 'סדנה', 'kivun' ),
+		);
+		?>
+		<div class="kivun-cc-front">
+			<div class="kivun-cc-head">
+				<h2 class="kivun-cc-title"><?php echo $editing ? esc_html__( 'עריכת תוכן', 'kivun' ) : esc_html__( 'פרסום תוכן חדש', 'kivun' ); ?></h2>
+				<p class="kivun-cc-lead"><?php esc_html_e( 'מלאו את התוכן פעם אחת, סמנו מה לפרסם — דף נחיתה, קורס וסדנה נוצרים ומתעדכנים יחד.', 'kivun' ); ?></p>
+			</div>
+
+			<?php if ( $saved ) : ?>
+				<div class="kivun-cc-note kivun-cc-note--success"><?php esc_html_e( 'התוכן נשמר בהצלחה.', 'kivun' ); ?></div>
+			<?php endif; ?>
+			<?php if ( $error ) : ?>
+				<div class="kivun-cc-note kivun-cc-note--error"><?php esc_html_e( 'שמירת התוכן נכשלה — ודאו שמילאתם כותרת.', 'kivun' ); ?></div>
+			<?php endif; ?>
+
+			<form class="kivun-cc-form" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" enctype="multipart/form-data">
+				<input type="hidden" name="action" value="kivun_create_content_front">
+				<input type="hidden" name="group" value="<?php echo esc_attr( $group ); ?>">
+				<input type="hidden" name="redirect" value="<?php echo esc_url( $page_url ); ?>">
+				<?php wp_nonce_field( 'kivun_create_content_front', 'kivun_cc_front_nonce' ); ?>
+
+				<div class="kivun-cc-grid">
+					<div class="kivun-cc-main">
+
+						<div class="kivun-cc-card">
+							<label class="kivun-cc-label" for="kivun-ccf-title"><?php esc_html_e( 'כותרת', 'kivun' ); ?> <span class="kivun-cc-req">*</span></label>
+							<input type="text" id="kivun-ccf-title" name="title" class="kivun-cc-input kivun-cc-input--lg" value="<?php echo esc_attr( $v['title'] ); ?>" required>
+
+							<label class="kivun-cc-sub" for="kivun-ccf-slug"><?php esc_html_e( 'כתובת URL (Slug)', 'kivun' ); ?></label>
+							<input type="text" id="kivun-ccf-slug" name="slug" class="kivun-cc-input" dir="ltr" value="<?php echo esc_attr( $v['slug'] ); ?>" placeholder="my-content">
+							<p class="kivun-cc-hint"><?php esc_html_e( 'ריק = נוצר אוטומטית מהכותרת.', 'kivun' ); ?></p>
+						</div>
+
+						<div class="kivun-cc-card">
+							<label class="kivun-cc-label" for="kivun-ccf-short"><?php esc_html_e( 'תיאור קצר', 'kivun' ); ?></label>
+							<textarea id="kivun-ccf-short" name="short" class="kivun-cc-input kivun-cc-textarea" rows="3"><?php echo esc_textarea( $v['short'] ); ?></textarea>
+
+							<label class="kivun-cc-label" for="kivun-ccf-long" style="margin-top:1rem"><?php esc_html_e( 'תיאור מלא', 'kivun' ); ?></label>
+							<textarea id="kivun-ccf-long" name="long" class="kivun-cc-input kivun-cc-textarea" rows="9"><?php echo esc_textarea( $v['long'] ); ?></textarea>
+						</div>
+
+						<div class="kivun-cc-card">
+							<label class="kivun-cc-label"><?php esc_html_e( 'פרטים', 'kivun' ); ?></label>
+							<div class="kivun-cc-row">
+								<div>
+									<label class="kivun-cc-sub"><?php esc_html_e( 'קהל יעד', 'kivun' ); ?></label>
+									<input type="text" name="audience" class="kivun-cc-input" value="<?php echo esc_attr( $v['audience'] ); ?>">
+								</div>
+								<div>
+									<label class="kivun-cc-sub"><?php esc_html_e( 'משך', 'kivun' ); ?></label>
+									<input type="text" name="duration" class="kivun-cc-input" value="<?php echo esc_attr( $v['duration'] ); ?>">
+								</div>
+							</div>
+							<div class="kivun-cc-row">
+								<div>
+									<label class="kivun-cc-sub"><?php esc_html_e( 'עלות', 'kivun' ); ?></label>
+									<input type="text" name="cost" class="kivun-cc-input" value="<?php echo esc_attr( $v['cost'] ); ?>" placeholder="<?php esc_attr_e( 'חינם / 120 ₪', 'kivun' ); ?>">
+								</div>
+								<div>
+									<label class="kivun-cc-sub"><?php esc_html_e( 'תאריך / מועד', 'kivun' ); ?></label>
+									<input type="text" name="date" class="kivun-cc-input" value="<?php echo esc_attr( $v['date'] ); ?>" placeholder="<?php esc_attr_e( '15.9.2025 בשעה 18:00', 'kivun' ); ?>">
+								</div>
+							</div>
+							<label class="kivun-cc-sub"><?php esc_html_e( 'אימייל לקבלת לידים/הרשמות', 'kivun' ); ?></label>
+							<input type="email" name="email" class="kivun-cc-input" dir="ltr" value="<?php echo esc_attr( $v['email'] ); ?>">
+						</div>
+
+						<div class="kivun-cc-card">
+							<label class="kivun-cc-label"><?php esc_html_e( 'באנר הנעה לפעולה (CTA)', 'kivun' ); ?></label>
+							<label class="kivun-cc-sub"><?php esc_html_e( 'כותרת', 'kivun' ); ?></label>
+							<input type="text" name="cta_title" class="kivun-cc-input" value="<?php echo esc_attr( $v['cta_title'] ); ?>">
+							<label class="kivun-cc-sub"><?php esc_html_e( 'תוכן', 'kivun' ); ?></label>
+							<textarea name="cta_content" class="kivun-cc-input kivun-cc-textarea" rows="2"><?php echo esc_textarea( $v['cta_content'] ); ?></textarea>
+							<label class="kivun-cc-sub"><?php esc_html_e( 'טקסט כפתור', 'kivun' ); ?></label>
+							<input type="text" name="cta_button" class="kivun-cc-input" value="<?php echo esc_attr( $v['cta_button'] ); ?>">
+						</div>
+
+						<div class="kivun-cc-card kivun-cc-section" data-type="course" <?php echo isset( $group_posts['course'] ) ? '' : 'hidden'; ?>>
+							<h3 class="kivun-cc-h3"><?php esc_html_e( 'קורס — פרטים נוספים', 'kivun' ); ?></h3>
+							<label class="kivun-cc-sub"><?php esc_html_e( 'מקסימום משתתפים', 'kivun' ); ?></label>
+							<input type="number" name="course_capacity" class="kivun-cc-input" min="0" value="<?php echo esc_attr( $v['course_capacity'] ); ?>">
+							<label class="kivun-cc-sub"><?php esc_html_e( 'מזהה מוצר WooCommerce (אופציונלי)', 'kivun' ); ?></label>
+							<input type="number" name="course_wc" class="kivun-cc-input" min="0" value="<?php echo esc_attr( $v['course_wc'] ); ?>">
+							<p class="kivun-cc-hint"><?php esc_html_e( 'לקורס בתשלום: מזהה מוצר WooCommerce. ריק = חינם / לפי שדה העלות.', 'kivun' ); ?></p>
+						</div>
+
+						<div class="kivun-cc-card kivun-cc-section" data-type="session" <?php echo isset( $group_posts['session'] ) ? '' : 'hidden'; ?>>
+							<h3 class="kivun-cc-h3"><?php esc_html_e( 'סדנה — פרטים נוספים', 'kivun' ); ?></h3>
+							<label class="kivun-cc-sub"><?php esc_html_e( 'מיקום', 'kivun' ); ?></label>
+							<input type="text" name="session_location" class="kivun-cc-input" value="<?php echo esc_attr( $v['session_location'] ); ?>">
+							<label class="kivun-cc-sub"><?php esc_html_e( 'מקסימום משתתפים', 'kivun' ); ?></label>
+							<input type="number" name="session_capacity" class="kivun-cc-input" min="0" value="<?php echo esc_attr( $v['session_capacity'] ); ?>">
+							<label class="kivun-cc-sub"><?php esc_html_e( 'תוקף ההרשמה (עד תאריך)', 'kivun' ); ?></label>
+							<input type="date" name="session_valid_until" class="kivun-cc-input" dir="ltr" value="<?php echo esc_attr( $v['session_valid'] ); ?>">
+							<p class="kivun-cc-hint"><?php esc_html_e( 'אחרי תאריך זה המחזור הנוכחי נסגר; ההרשמה נשמרת למחזור הבא. עדכון תאריך פותח מחזור חדש.', 'kivun' ); ?></p>
+						</div>
+
+					</div>
+
+					<div class="kivun-cc-side">
+						<div class="kivun-cc-card">
+							<label class="kivun-cc-label"><?php esc_html_e( 'מה לפרסם?', 'kivun' ); ?></label>
+							<?php foreach ( $sections as $key => $label ) : ?>
+								<label class="kivun-cc-check">
+									<input type="checkbox" name="publish[]" value="<?php echo esc_attr( $key ); ?>" class="kivun-cc-toggle" data-type="<?php echo esc_attr( $key ); ?>" <?php checked( isset( $group_posts[ $key ] ) ); ?>>
+									<span><?php echo esc_html( $label ); ?></span>
+									<?php if ( isset( $group_posts[ $key ] ) ) : ?>
+										<a class="kivun-cc-view" href="<?php echo esc_url( (string) get_permalink( $group_posts[ $key ] ) ); ?>" target="_blank" rel="noopener">↗</a>
+									<?php endif; ?>
+								</label>
+							<?php endforeach; ?>
+							<p class="kivun-cc-hint"><?php esc_html_e( 'בחרו לפחות סוג אחד.', 'kivun' ); ?></p>
+							<button type="submit" class="kivun-cc-btn kivun-cc-btn--block"><?php echo $editing ? esc_html__( 'שמירת שינויים', 'kivun' ) : esc_html__( 'פרסום', 'kivun' ); ?></button>
+							<?php if ( $editing ) : ?>
+								<a class="kivun-cc-link" href="<?php echo esc_url( remove_query_arg( array( 'kivun_group', 'kivun_saved', 'kivun_cc_error' ), $page_url ) ); ?>"><?php esc_html_e( 'תוכן חדש', 'kivun' ); ?></a>
+							<?php endif; ?>
+						</div>
+
+						<div class="kivun-cc-card">
+							<label class="kivun-cc-label"><?php esc_html_e( 'תמונה ראשית', 'kivun' ); ?></label>
+							<div class="kivun-cc-media">
+								<div class="kivun-cc-media__preview" <?php echo $thumb_url ? '' : 'style="display:none"'; ?>><img src="<?php echo esc_url( $thumb_url ); ?>" alt=""></div>
+								<input type="hidden" name="thumbnail_id" value="<?php echo esc_attr( $v['thumb_id'] ); ?>">
+								<?php if ( $can_upload ) : ?>
+									<input type="file" name="thumbnail_file" accept="image/*" class="kivun-cc-file">
+								<?php else : ?>
+									<p class="kivun-cc-hint"><?php esc_html_e( 'אין לך הרשאה להעלות קבצים — התמונה תיקבע ע"י מנהל.', 'kivun' ); ?></p>
+								<?php endif; ?>
+							</div>
+						</div>
+
+						<div class="kivun-cc-card">
+							<label class="kivun-cc-label" for="kivun-ccf-status"><?php esc_html_e( 'סטטוס', 'kivun' ); ?></label>
+							<select id="kivun-ccf-status" name="status" class="kivun-cc-input">
+								<option value="publish" <?php selected( $v['status'], 'publish' ); ?>><?php esc_html_e( 'מפורסם', 'kivun' ); ?></option>
+								<option value="draft" <?php selected( $v['status'], 'draft' ); ?>><?php esc_html_e( 'טיוטה', 'kivun' ); ?></option>
+							</select>
+						</div>
+					</div>
+				</div>
+			</form>
+
+			<?php self::front_groups_list( $page_url ); ?>
+		</div>
+
+		<script>
+		( function () {
+			var scope = document;
+			scope.querySelectorAll( '.kivun-cc-toggle' ).forEach( function ( cb ) {
+				cb.addEventListener( 'change', function () {
+					var sec = scope.querySelector( '.kivun-cc-section[data-type="' + cb.dataset.type + '"]' );
+					if ( sec ) { sec.hidden = ! cb.checked; }
+				} );
+			} );
+			var file = scope.querySelector( '.kivun-cc-file' );
+			if ( file ) {
+				file.addEventListener( 'change', function () {
+					var box = scope.querySelector( '.kivun-cc-media__preview' ),
+						img = box ? box.querySelector( 'img' ) : null;
+					if ( file.files && file.files[0] && img && window.FileReader ) {
+						var r = new FileReader();
+						r.onload = function ( e ) { img.src = e.target.result; box.style.display = ''; };
+						r.readAsDataURL( file.files[0] );
+					}
+				} );
+			}
+		} () );
+		</script>
+		<?php
+	}
+
+	/**
+	 * Render the "content groups" list with front-end edit links.
+	 *
+	 * @param string $page_url The current page URL (edit links point back here).
+	 * @return void
+	 */
+	private static function front_groups_list( string $page_url ): void {
+		$posts = get_posts(
+			array(
+				'post_type'              => array_values( self::type_map() ),
+				'post_status'            => array( 'publish', 'draft', 'pending' ),
+				'posts_per_page'         => 100, // phpcs:ignore WordPress.WP.PostsPerPage.posts_per_page_posts_per_page
+				'meta_key'               => self::GROUP_META, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+				'orderby'                => 'date',
+				'order'                  => 'DESC',
+				'no_found_rows'          => true,
+				'update_post_term_cache' => false,
+			)
+		);
+		if ( ! $posts ) {
+			return;
+		}
+
+		$labels = array(
+			'kivun_workshop' => __( 'דף נחיתה', 'kivun' ),
+			'kivun_course'   => __( 'קורס', 'kivun' ),
+			'kivun_session'  => __( 'סדנה', 'kivun' ),
+		);
+		$groups = array();
+		foreach ( $posts as $p ) {
+			$g = (string) get_post_meta( $p->ID, self::GROUP_META, true );
+			if ( '' === $g ) {
+				continue;
+			}
+			if ( ! isset( $groups[ $g ] ) ) {
+				$groups[ $g ] = array(
+					'title' => get_the_title( $p->ID ),
+					'types' => array(),
+				);
+			}
+			$groups[ $g ]['types'][] = $labels[ $p->post_type ] ?? $p->post_type;
+		}
+		if ( ! $groups ) {
+			return;
+		}
+		?>
+		<div class="kivun-cc-groups">
+			<h3 class="kivun-cc-h3"><?php esc_html_e( 'תכנים קיימים (עריכה)', 'kivun' ); ?></h3>
+			<ul class="kivun-cc-groups__list">
+				<?php foreach ( $groups as $gid => $g ) : ?>
+					<li class="kivun-cc-groups__item">
+						<span class="kivun-cc-groups__title"><?php echo esc_html( $g['title'] ); ?></span>
+						<span class="kivun-cc-groups__types"><?php echo esc_html( implode( ' · ', array_unique( $g['types'] ) ) ); ?></span>
+						<a class="kivun-cc-btn kivun-cc-btn--sm" href="<?php echo esc_url( add_query_arg( 'kivun_group', rawurlencode( $gid ), remove_query_arg( array( 'kivun_saved', 'kivun_cc_error' ), $page_url ) ) ); ?>"><?php esc_html_e( 'עריכה', 'kivun' ); ?></a>
+					</li>
+				<?php endforeach; ?>
+			</ul>
+		</div>
+		<?php
 	}
 }
