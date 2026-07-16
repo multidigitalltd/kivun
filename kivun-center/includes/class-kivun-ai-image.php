@@ -157,37 +157,92 @@ class Kivun_AI_Image {
 	}
 
 	/**
-	 * Save raw PNG bytes as a media attachment.
+	 * Crop the raw image to a fixed 16:9 landscape, compress it to at most
+	 * 300 KB, and save it as a media attachment.
 	 *
 	 * @param string $bytes The image bytes.
 	 * @param string $title Title used for the attachment.
 	 * @return array{id:int,url:string}|\WP_Error
 	 */
 	private static function store_attachment( string $bytes, string $title ) {
-		$filename = sanitize_file_name( 'kivun-ai-' . wp_generate_uuid4() . '.png' );
-		$upload   = wp_upload_bits( $filename, null, $bytes );
-		if ( ! empty( $upload['error'] ) ) {
-			return new \WP_Error( 'kivun_ai_upload', (string) $upload['error'] );
+		require_once ABSPATH . 'wp-admin/includes/image.php';
+		require_once ABSPATH . 'wp-admin/includes/file.php';
+
+		$tmp = wp_tempnam( 'kivun-ai.png' );
+		if ( ! $tmp ) {
+			return new \WP_Error( 'kivun_ai_tmp', __( 'שגיאה בעיבוד התמונה.', 'kivun' ) );
 		}
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Writing decoded image bytes to a temp file for the image editor.
+		file_put_contents( $tmp, $bytes );
+
+		$editor = wp_get_image_editor( $tmp );
+		if ( is_wp_error( $editor ) ) {
+			wp_delete_file( $tmp );
+			return $editor;
+		}
+
+		// Center-crop to exactly 16:9, then scale down to 1280×720.
+		$size  = $editor->get_size();
+		$width = (int) ( $size['width'] ?? 0 );
+		$hgt   = (int) ( $size['height'] ?? 0 );
+		$ratio = 16 / 9;
+		if ( $width > 0 && $hgt > 0 ) {
+			if ( $width / $hgt > $ratio ) {
+				$crop_w = (int) round( $hgt * $ratio );
+				$editor->crop( (int) round( ( $width - $crop_w ) / 2 ), 0, $crop_w, $hgt );
+			} else {
+				$crop_h = (int) round( $width / $ratio );
+				$editor->crop( 0, (int) round( ( $hgt - $crop_h ) / 2 ), $width, $crop_h );
+			}
+		}
+		$editor->resize( 1280, 720, true );
+
+		$uploads = wp_upload_dir();
+		if ( ! empty( $uploads['error'] ) ) {
+			wp_delete_file( $tmp );
+			return new \WP_Error( 'kivun_ai_uploaddir', (string) $uploads['error'] );
+		}
+		$filename = wp_unique_filename( $uploads['path'], 'kivun-ai-' . wp_generate_uuid4() . '.jpg' );
+		$dest     = trailingslashit( $uploads['path'] ) . $filename;
+
+		// Save as JPEG, lowering quality until the file is at most 300 KB.
+		$max_bytes = 300 * 1024;
+		$saved     = null;
+		foreach ( array( 85, 75, 65, 55, 45 ) as $quality ) {
+			$editor->set_quality( $quality );
+			$saved = $editor->save( $dest, 'image/jpeg' );
+			if ( is_wp_error( $saved ) ) {
+				wp_delete_file( $tmp );
+				return $saved;
+			}
+			if ( ! empty( $saved['path'] ) && file_exists( $saved['path'] ) && filesize( $saved['path'] ) <= $max_bytes ) {
+				break;
+			}
+		}
+		wp_delete_file( $tmp );
+
+		if ( ! is_array( $saved ) || empty( $saved['path'] ) ) {
+			return new \WP_Error( 'kivun_ai_save', __( 'שמירת התמונה נכשלה.', 'kivun' ) );
+		}
+		$file = (string) $saved['path'];
 
 		$attachment_id = wp_insert_attachment(
 			array(
-				'post_mime_type' => 'image/png',
+				'post_mime_type' => 'image/jpeg',
 				'post_title'     => $title,
 				'post_content'   => '',
 				'post_status'    => 'inherit',
 			),
-			$upload['file']
+			$file
 		);
 		if ( is_wp_error( $attachment_id ) || ! $attachment_id ) {
 			return new \WP_Error( 'kivun_ai_attach', __( 'שמירת התמונה נכשלה.', 'kivun' ) );
 		}
 
-		require_once ABSPATH . 'wp-admin/includes/image.php';
-		$meta = wp_generate_attachment_metadata( (int) $attachment_id, $upload['file'] );
+		$meta = wp_generate_attachment_metadata( (int) $attachment_id, $file );
 		wp_update_attachment_metadata( (int) $attachment_id, $meta );
 
-		$url = (string) wp_get_attachment_image_url( (int) $attachment_id, 'medium' );
+		$url = (string) wp_get_attachment_image_url( (int) $attachment_id, 'large' );
 		if ( '' === $url ) {
 			$url = (string) wp_get_attachment_url( (int) $attachment_id );
 		}
@@ -264,29 +319,14 @@ class Kivun_AI_Image {
 	}
 
 	/**
-	 * Resolve the API "size" string for the configured orientation and model.
+	 * Resolve the API "size" — always the widest landscape the model supports,
+	 * so there is enough material to crop to a fixed 16:9.
 	 *
 	 * @param string $model The model name.
 	 * @return string
 	 */
 	private static function size_for( string $model ): string {
-		$orientation = (string) Kivun_Admin_Settings::get( 'ai_image_orientation', 'landscape' );
-
-		if ( 'dall-e-3' === $model ) {
-			$map = array(
-				'landscape' => '1792x1024',
-				'portrait'  => '1024x1792',
-				'square'    => '1024x1024',
-			);
-		} else {
-			$map = array(
-				'landscape' => '1536x1024',
-				'portrait'  => '1024x1536',
-				'square'    => '1024x1024',
-			);
-		}
-
-		return $map[ $orientation ] ?? $map['landscape'];
+		return 'dall-e-3' === $model ? '1792x1024' : '1536x1024';
 	}
 
 	/**
