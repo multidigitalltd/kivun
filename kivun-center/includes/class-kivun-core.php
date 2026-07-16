@@ -42,6 +42,7 @@ class Kivun_Core {
 		Kivun_CTA::init();
 		Kivun_Forms_Router::init();
 		Kivun_Content_Creator::init();
+		Kivun_Unified_Meta::init();
 		Kivun_AI_Image::init();
 
 		// Elementor — only when Elementor Pro is active.
@@ -95,6 +96,7 @@ class Kivun_Core {
 			'class-kivun-cta',
 			'class-kivun-forms-router',
 			'class-kivun-content-creator',
+			'class-kivun-unified-meta',
 			'class-kivun-ai-image',
 		) as $file ) {
 			require_once $dir . $file . '.php';

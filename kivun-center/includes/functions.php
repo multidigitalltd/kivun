@@ -65,3 +65,71 @@ function kivun_session_registration_open( int $post_id ): bool {
 	// deadline day is inclusive).
 	return current_time( 'Y-m-d' ) <= $valid_until;
 }
+
+/**
+ * Per-type storage map for the shared content fields.
+ *
+ * Each content type stores the same logical field under a different key; this
+ * is the single source of truth for where each one lives ('excerpt' means the
+ * native post_excerpt rather than a meta key).
+ *
+ * @param string $post_type The post type.
+ * @return array<string,string> Shared field => storage key (or 'excerpt').
+ */
+function kivun_content_field_map( string $post_type ): array {
+	switch ( $post_type ) {
+		case 'kivun_course':
+			return array(
+				'short'    => 'excerpt',
+				'audience' => '_kivun_target_audience',
+				'duration' => '_kivun_duration',
+				'cost'     => '_kivun_price',
+				'date'     => '_kivun_schedule',
+			);
+		case 'kivun_session':
+			return array(
+				'short'    => '_kivun_session_short',
+				'audience' => '_kivun_session_audience',
+				'duration' => '_kivun_session_duration',
+				'cost'     => '_kivun_session_cost',
+				'date'     => '_kivun_session_date',
+			);
+		case 'kivun_workshop':
+			return array(
+				'short'    => '_kivun_lp_short',
+				'audience' => '_kivun_ws_audience',
+				'duration' => '_kivun_ws_duration',
+				'cost'     => '_kivun_lp_cost',
+				'date'     => '_kivun_ws_date',
+			);
+	}
+	return array();
+}
+
+/**
+ * Resolve a shared content field to its stored value for any Kivun type.
+ *
+ * @param int    $post_id The post ID.
+ * @param string $field   Shared field key (short/audience/duration/cost/date).
+ * @return string The stored value (may contain HTML for 'short').
+ */
+function kivun_get_field( int $post_id, string $field ): string {
+	$map = kivun_content_field_map( get_post_type( $post_id ) );
+	if ( ! isset( $map[ $field ] ) ) {
+		return '';
+	}
+	if ( 'excerpt' === $map[ $field ] ) {
+		return (string) get_post_field( 'post_excerpt', $post_id );
+	}
+	return (string) get_post_meta( $post_id, $map[ $field ], true );
+}
+
+/**
+ * Unified "short description" for any Kivun content type.
+ *
+ * @param int $post_id The post ID.
+ * @return string The short description (may contain HTML).
+ */
+function kivun_get_short( int $post_id ): string {
+	return kivun_get_field( $post_id, 'short' );
+}
