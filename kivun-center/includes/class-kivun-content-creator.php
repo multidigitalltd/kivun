@@ -379,7 +379,15 @@ class Kivun_Content_Creator {
 								<p class="kivun-lp-hint"><?php esc_html_e( 'או העלאת קובץ:', 'kivun' ); ?></p>
 								<input type="file" name="thumbnail_file" accept="image/*">
 								<?php if ( $ai_ready ) : ?>
-									<p style="margin:.75rem 0 .35rem">
+									<label class="kivun-lp-sub" style="margin-top:.75rem"><?php esc_html_e( 'סגנון התמונה', 'kivun' ); ?></label>
+									<select class="kivun-lp-input kivun-cc-ai-style">
+										<?php foreach ( Kivun_AI_Image::styles() as $skey => $slabel ) : ?>
+											<option value="<?php echo esc_attr( $skey ); ?>"><?php echo esc_html( $slabel ); ?></option>
+										<?php endforeach; ?>
+									</select>
+									<label class="kivun-lp-sub"><?php esc_html_e( 'תיאור חופשי לתמונה (אופציונלי)', 'kivun' ); ?></label>
+									<textarea class="kivun-lp-input kivun-cc-ai-prompt" rows="2" placeholder="<?php esc_attr_e( 'אם ריק — ייווצר מהכותרת והתיאור הקצר', 'kivun' ); ?>"></textarea>
+									<p style="margin:.5rem 0 .35rem">
 										<button type="button" class="button kivun-cc-ai-btn" data-ajax="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>" data-nonce="<?php echo esc_attr( wp_create_nonce( 'kivun_ai_image' ) ); ?>">
 											<?php esc_html_e( '✨ צור תמונה עם AI', 'kivun' ); ?>
 										</button>
@@ -447,11 +455,14 @@ class Kivun_Content_Creator {
 			var aiBtn = document.querySelector( '.kivun-cc-ai-btn' );
 			if ( aiBtn ) {
 				aiBtn.addEventListener( 'click', function () {
-					var titleEl = document.querySelector( '[name="title"]' ),
-						title   = titleEl ? titleEl.value.trim() : '',
-						status  = document.querySelector( '.kivun-cc-ai-status' );
-					if ( ! title ) {
-						if ( status ) { status.textContent = '<?php echo esc_js( __( 'מלאו כותרת קודם.', 'kivun' ) ); ?>'; }
+					var titleEl  = document.querySelector( '[name="title"]' ),
+						title    = titleEl ? titleEl.value.trim() : '',
+						status   = document.querySelector( '.kivun-cc-ai-status' ),
+						styleEl  = document.querySelector( '.kivun-cc-ai-style' ),
+						promptEl = document.querySelector( '.kivun-cc-ai-prompt' ),
+						custom   = promptEl ? promptEl.value.trim() : '';
+					if ( ! title && ! custom ) {
+						if ( status ) { status.textContent = '<?php echo esc_js( __( 'מלאו כותרת או תיאור חופשי.', 'kivun' ) ); ?>'; }
 						return;
 					}
 					var shortVal = ( window.tinymce && tinymce.get( 'kivun_cc_short' ) )
@@ -464,6 +475,8 @@ class Kivun_Content_Creator {
 					fd.append( 'title', title );
 					fd.append( 'desc', shortVal );
 					fd.append( 'type', typeEl ? typeEl.dataset.type : '' );
+					fd.append( 'style', styleEl ? styleEl.value : 'photo' );
+					fd.append( 'prompt', custom );
 
 					aiBtn.disabled = true;
 					if ( status ) { status.textContent = '<?php echo esc_js( __( 'יוצר תמונה… זה עשוי לקחת עד דקה', 'kivun' ) ); ?>'; }
@@ -1118,11 +1131,18 @@ class Kivun_Content_Creator {
 								<?php endif; ?>
 								<?php if ( $ai_ready ) : ?>
 									<div class="kivun-cc-ai">
+										<label class="kivun-cc-sub"><?php esc_html_e( 'סגנון התמונה', 'kivun' ); ?></label>
+										<select class="kivun-cc-input kivun-cc-ai-style">
+											<?php foreach ( Kivun_AI_Image::styles() as $skey => $slabel ) : ?>
+												<option value="<?php echo esc_attr( $skey ); ?>"><?php echo esc_html( $slabel ); ?></option>
+											<?php endforeach; ?>
+										</select>
+										<label class="kivun-cc-sub"><?php esc_html_e( 'תיאור חופשי לתמונה (אופציונלי)', 'kivun' ); ?></label>
+										<textarea class="kivun-cc-input kivun-cc-textarea kivun-cc-ai-prompt" rows="2" placeholder="<?php esc_attr_e( 'אם ריק — התמונה תיווצר מהכותרת והתיאור הקצר של העמוד', 'kivun' ); ?>"></textarea>
 										<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost kivun-cc-ai-btn" data-ajax="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>" data-nonce="<?php echo esc_attr( wp_create_nonce( 'kivun_ai_image' ) ); ?>">
 											<?php esc_html_e( '✨ צור תמונה עם AI', 'kivun' ); ?>
 										</button>
 										<span class="kivun-cc-ai-status" role="status" aria-live="polite"></span>
-										<p class="kivun-cc-hint"><?php esc_html_e( 'התמונה נוצרת מהכותרת והתיאור הקצר. מלאו אותם קודם.', 'kivun' ); ?></p>
 									</div>
 								<?php endif; ?>
 							</div>
@@ -1183,11 +1203,14 @@ class Kivun_Content_Creator {
 			var aiBtn = scope.querySelector( '.kivun-cc-ai-btn' );
 			if ( aiBtn ) {
 				aiBtn.addEventListener( 'click', function () {
-					var titleEl = scope.querySelector( '[name="title"]' ),
-						title   = titleEl ? titleEl.value.trim() : '',
-						status  = scope.querySelector( '.kivun-cc-ai-status' );
-					if ( ! title ) {
-						if ( status ) { status.textContent = '<?php echo esc_js( __( 'מלאו כותרת קודם.', 'kivun' ) ); ?>'; }
+					var titleEl  = scope.querySelector( '[name="title"]' ),
+						title    = titleEl ? titleEl.value.trim() : '',
+						status   = scope.querySelector( '.kivun-cc-ai-status' ),
+						styleEl  = scope.querySelector( '.kivun-cc-ai-style' ),
+						promptEl = scope.querySelector( '.kivun-cc-ai-prompt' ),
+						custom   = promptEl ? promptEl.value.trim() : '';
+					if ( ! title && ! custom ) {
+						if ( status ) { status.textContent = '<?php echo esc_js( __( 'מלאו כותרת או תיאור חופשי.', 'kivun' ) ); ?>'; }
 						return;
 					}
 					var shortEl = scope.querySelector( '[name="short"]' ),
@@ -1198,6 +1221,8 @@ class Kivun_Content_Creator {
 					fd.append( 'title', title );
 					fd.append( 'desc', shortEl ? shortEl.value : '' );
 					fd.append( 'type', typeEl ? typeEl.dataset.type : '' );
+					fd.append( 'style', styleEl ? styleEl.value : 'photo' );
+					fd.append( 'prompt', custom );
 
 					aiBtn.disabled = true;
 					if ( status ) { status.textContent = '<?php echo esc_js( __( 'יוצר תמונה… זה עשוי לקחת עד דקה', 'kivun' ) ); ?>'; }

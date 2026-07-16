@@ -41,6 +41,21 @@ class Kivun_AI_Image {
 	}
 
 	/**
+	 * Selectable image styles: key => Hebrew label (shown in the form dropdown).
+	 *
+	 * @return array<string,string>
+	 */
+	public static function styles(): array {
+		return array(
+			'photo'        => __( 'צילום ריאליסטי', 'kivun' ),
+			'illustration' => __( 'איור', 'kivun' ),
+			'minimal'      => __( 'מינימלי ונקי', 'kivun' ),
+			'3d'           => __( 'תלת-ממד', 'kivun' ),
+			'abstract'     => __( 'רקע מופשט', 'kivun' ),
+		);
+	}
+
+	/**
 	 * AJAX: generate an image from the submitted content and attach it.
 	 *
 	 * @return void
@@ -52,15 +67,18 @@ class Kivun_AI_Image {
 			wp_send_json_error( array( 'message' => __( 'אין לך הרשאה ליצירת תמונות.', 'kivun' ) ) );
 		}
 
-		$title = isset( $_POST['title'] ) ? sanitize_text_field( wp_unslash( $_POST['title'] ) ) : '';
-		$desc  = isset( $_POST['desc'] ) ? sanitize_textarea_field( wp_unslash( $_POST['desc'] ) ) : '';
-		$type  = isset( $_POST['type'] ) ? sanitize_key( wp_unslash( $_POST['type'] ) ) : '';
+		$title  = isset( $_POST['title'] ) ? sanitize_text_field( wp_unslash( $_POST['title'] ) ) : '';
+		$desc   = isset( $_POST['desc'] ) ? sanitize_textarea_field( wp_unslash( $_POST['desc'] ) ) : '';
+		$type   = isset( $_POST['type'] ) ? sanitize_key( wp_unslash( $_POST['type'] ) ) : '';
+		$style  = isset( $_POST['style'] ) ? sanitize_key( wp_unslash( $_POST['style'] ) ) : 'photo';
+		$custom = isset( $_POST['prompt'] ) ? sanitize_textarea_field( wp_unslash( $_POST['prompt'] ) ) : '';
 
-		if ( '' === $title ) {
-			wp_send_json_error( array( 'message' => __( 'יש להזין כותרת לפני יצירת תמונה.', 'kivun' ) ) );
+		// A title is only required when there is no free-text prompt to work from.
+		if ( '' === $title && '' === trim( $custom ) ) {
+			wp_send_json_error( array( 'message' => __( 'מלאו כותרת או תיאור חופשי לתמונה.', 'kivun' ) ) );
 		}
 
-		$result = self::generate( $title, wp_strip_all_tags( $desc ), $type );
+		$result = self::generate( $title, wp_strip_all_tags( $desc ), $type, $style, wp_strip_all_tags( $custom ) );
 		if ( is_wp_error( $result ) ) {
 			wp_send_json_error( array( 'message' => $result->get_error_message() ) );
 		}
@@ -71,12 +89,14 @@ class Kivun_AI_Image {
 	/**
 	 * Generate an image and store it as an attachment.
 	 *
-	 * @param string $title Content title.
-	 * @param string $desc  Short description (plain text).
-	 * @param string $type  Content type key (landing/course/session).
+	 * @param string $title  Content title.
+	 * @param string $desc   Short description (plain text).
+	 * @param string $type   Content type key (landing/course/session).
+	 * @param string $style  Style key (see styles()).
+	 * @param string $custom Optional free-text prompt; overrides the derived subject.
 	 * @return array{id:int,url:string}|\WP_Error
 	 */
-	public static function generate( string $title, string $desc, string $type ) {
+	public static function generate( string $title, string $desc, string $type, string $style = 'photo', string $custom = '' ) {
 		$key = trim( (string) Kivun_Admin_Settings::get( 'openai_api_key', '' ) );
 		if ( '' === $key ) {
 			return new \WP_Error( 'kivun_ai_no_key', __( 'לא הוגדר מפתח API. הזינו אותו בהגדרות → Kivun Center.', 'kivun' ) );
@@ -87,7 +107,7 @@ class Kivun_AI_Image {
 
 		$body = array(
 			'model'   => $model,
-			'prompt'  => self::build_prompt( $title, $desc, $type ),
+			'prompt'  => self::build_prompt( $title, $desc, $type, $style, $custom ),
 			'n'       => 1,
 			'size'    => self::size_for( $model ),
 			'quality' => self::quality_for( $model ),
@@ -179,26 +199,38 @@ class Kivun_AI_Image {
 	}
 
 	/**
-	 * Build the generation prompt from the content.
+	 * Build the generation prompt from the style, an optional free-text subject,
+	 * and — when no free text is given — the page content (title + description).
 	 *
-	 * @param string $title Content title.
-	 * @param string $desc  Short description.
-	 * @param string $type  Content type key.
+	 * @param string $title  Content title.
+	 * @param string $desc   Short description.
+	 * @param string $type   Content type key.
+	 * @param string $style  Style key.
+	 * @param string $custom Optional free-text subject.
 	 * @return string
 	 */
-	private static function build_prompt( string $title, string $desc, string $type ): string {
-		$labels     = array(
-			'landing' => 'landing page',
-			'course'  => 'course',
-			'session' => 'workshop',
-		);
-		$type_label = $labels[ $type ] ?? 'page';
+	private static function build_prompt( string $title, string $desc, string $type, string $style, string $custom ): string {
+		if ( '' !== trim( $custom ) ) {
+			$subject = trim( $custom );
+		} else {
+			$labels     = array(
+				'landing' => 'landing page',
+				'course'  => 'course',
+				'session' => 'workshop',
+			);
+			$type_label = $labels[ $type ] ?? 'page';
+			$subject    = sprintf(
+				'a %1$s titled "%2$s"%3$s',
+				$type_label,
+				$title,
+				'' !== $desc ? ', about ' . $desc : ''
+			);
+		}
 
 		$prompt = sprintf(
-			'A professional, modern, clean cover image for a %1$s titled "%2$s".%3$s Bright, welcoming and high quality, suitable as a website hero / featured image. Do not include any text, letters or words in the image.',
-			$type_label,
-			$title,
-			'' !== $desc ? ' Topic: ' . $desc . '.' : ''
+			'%1$s. A clean, modern cover image for %2$s. Bright, welcoming and high quality, suitable as a website hero / featured image. Do not include any text, letters or words in the image.',
+			self::style_fragment( $style ),
+			$subject
 		);
 
 		/**
@@ -208,8 +240,27 @@ class Kivun_AI_Image {
 		 * @param string $title  Content title.
 		 * @param string $desc   Short description.
 		 * @param string $type   Content type key.
+		 * @param string $style  Style key.
+		 * @param string $custom Free-text subject.
 		 */
-		return (string) apply_filters( 'kivun_ai_image_prompt', $prompt, $title, $desc, $type );
+		return (string) apply_filters( 'kivun_ai_image_prompt', $prompt, $title, $desc, $type, $style, $custom );
+	}
+
+	/**
+	 * Map a style key to its English prompt fragment.
+	 *
+	 * @param string $style The style key.
+	 * @return string
+	 */
+	private static function style_fragment( string $style ): string {
+		$map = array(
+			'photo'        => 'Realistic professional photography',
+			'illustration' => 'Modern flat vector illustration',
+			'minimal'      => 'Minimal clean design with lots of negative space and simple shapes',
+			'3d'           => 'Polished 3D render with soft lighting',
+			'abstract'     => 'Abstract geometric background with soft gradients',
+		);
+		return $map[ $style ] ?? $map['photo'];
 	}
 
 	/**
