@@ -118,6 +118,10 @@ class Kivun_Admin_Settings {
 				'whatsapp_enabled'       => ! empty( $_POST['whatsapp_enabled'] ),
 				'whatsapp_number'        => sanitize_text_field( wp_unslash( $_POST['whatsapp_number'] ?? '' ) ),
 				'whatsapp_message'       => sanitize_text_field( wp_unslash( $_POST['whatsapp_message'] ?? '' ) ),
+				'openai_api_key'         => sanitize_text_field( wp_unslash( $_POST['openai_api_key'] ?? '' ) ),
+				'ai_image_model'         => sanitize_text_field( wp_unslash( $_POST['ai_image_model'] ?? 'gpt-image-1' ) ),
+				'ai_image_orientation'   => sanitize_key( wp_unslash( $_POST['ai_image_orientation'] ?? 'landscape' ) ),
+				'ai_image_quality'       => sanitize_key( wp_unslash( $_POST['ai_image_quality'] ?? 'medium' ) ),
 				'turnstile_site_key'     => sanitize_text_field( wp_unslash( $_POST['turnstile_site_key'] ?? '' ) ),
 				'turnstile_secret_key'   => sanitize_text_field( wp_unslash( $_POST['turnstile_secret_key'] ?? '' ) ),
 			)
@@ -291,6 +295,47 @@ class Kivun_Admin_Settings {
 					<td>
 						<input type="text" name="whatsapp_message" value="<?php echo esc_attr( $o( 'whatsapp_message' ) ); ?>" class="large-text" placeholder="<?php esc_attr_e( 'היי, הגעתי מהאתר ואשמח לקבל פרטים', 'kivun' ); ?>">
 						<p class="description"><?php esc_html_e( 'טקסט שיופיע כבר מוכן בשיחה כשהגולש לוחץ. השאר ריק לשיחה ריקה.', 'kivun' ); ?></p>
+					</td>
+				</tr>
+				<tr>
+					<th colspan="2" style="padding-top:20px"><h2 style="margin:0"><?php esc_html_e( 'יצירת תמונות AI (תמונה ראשית)', 'kivun' ); ?></h2>
+					<p class="description" style="font-weight:400"><?php esc_html_e( 'מאפשר כפתור "צור תמונה עם AI" בטופס פרסום התוכן. המפתח נשמר בשרת בלבד ואינו נחשף בפרונט.', 'kivun' ); ?></p></th>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'OpenAI API Key', 'kivun' ); ?></th>
+					<td>
+						<input type="password" name="openai_api_key" value="<?php echo esc_attr( $o( 'openai_api_key' ) ); ?>" class="regular-text" autocomplete="off" placeholder="sk-...">
+						<p class="description"><?php esc_html_e( 'מפתח מ-platform.openai.com. יצירת תמונה עולה כסף לפי המודל והאיכות (בקירוב 4–17 סנט לתמונה).', 'kivun' ); ?></p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'מודל', 'kivun' ); ?></th>
+					<td>
+						<select name="ai_image_model">
+							<option value="gpt-image-1" <?php selected( $o( 'ai_image_model', 'gpt-image-1' ), 'gpt-image-1' ); ?>><?php esc_html_e( 'gpt-image-1 (מומלץ — איכות גבוהה)', 'kivun' ); ?></option>
+							<option value="dall-e-3" <?php selected( $o( 'ai_image_model', 'gpt-image-1' ), 'dall-e-3' ); ?>><?php esc_html_e( 'dall-e-3', 'kivun' ); ?></option>
+						</select>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'פורמט', 'kivun' ); ?></th>
+					<td>
+						<select name="ai_image_orientation">
+							<option value="landscape" <?php selected( $o( 'ai_image_orientation', 'landscape' ), 'landscape' ); ?>><?php esc_html_e( 'רוחבי (מומלץ לתמונה ראשית)', 'kivun' ); ?></option>
+							<option value="square" <?php selected( $o( 'ai_image_orientation', 'landscape' ), 'square' ); ?>><?php esc_html_e( 'ריבועי', 'kivun' ); ?></option>
+							<option value="portrait" <?php selected( $o( 'ai_image_orientation', 'landscape' ), 'portrait' ); ?>><?php esc_html_e( 'אנכי', 'kivun' ); ?></option>
+						</select>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'איכות', 'kivun' ); ?></th>
+					<td>
+						<select name="ai_image_quality">
+							<option value="low" <?php selected( $o( 'ai_image_quality', 'medium' ), 'low' ); ?>><?php esc_html_e( 'נמוכה (זול)', 'kivun' ); ?></option>
+							<option value="medium" <?php selected( $o( 'ai_image_quality', 'medium' ), 'medium' ); ?>><?php esc_html_e( 'בינונית (מומלץ)', 'kivun' ); ?></option>
+							<option value="high" <?php selected( $o( 'ai_image_quality', 'medium' ), 'high' ); ?>><?php esc_html_e( 'גבוהה (יקר)', 'kivun' ); ?></option>
+						</select>
+						<p class="description"><?php esc_html_e( 'ב-dall-e-3: בינונית=standard, גבוהה=HD.', 'kivun' ); ?></p>
 					</td>
 				</tr>
 				<tr>

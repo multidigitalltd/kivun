@@ -846,3 +846,8 @@
 .kivun-cc-note--success .kivun-cc-btn:hover { background: #065f46; filter: none; }
 .kivun-cc-btn--ghost { background: transparent; color: var(--kivun-accent); border: 1px solid var(--kivun-accent); }
 .kivun-cc-btn--ghost:hover { background: var(--kivun-accent); color: #fff; filter: none; }
+
+/* Front-end content creator — AI image button. */
+.kivun-cc-ai { margin-top: .75rem; }
+.kivun-cc-ai-btn[disabled] { opacity: .6; cursor: progress; }
+.kivun-cc-ai-status { display: block; margin-top: .4rem; font-size: .82rem; color: var(--kivun-muted); }

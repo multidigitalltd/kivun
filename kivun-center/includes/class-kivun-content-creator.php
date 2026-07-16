@@ -241,6 +241,7 @@ class Kivun_Content_Creator {
 			'session' => __( 'סדנה', 'kivun' ),
 		);
 		$thumb_url = (int) $v['thumb_id'] ? (string) wp_get_attachment_image_url( (int) $v['thumb_id'], 'medium' ) : '';
+		$ai_ready  = current_user_can( 'upload_files' ) && Kivun_AI_Image::is_configured();
 		?>
 		<div class="wrap kivun-lp-admin">
 			<h1><?php echo $editing ? esc_html__( 'עריכת תוכן', 'kivun' ) : esc_html__( 'פרסום תוכן חדש', 'kivun' ); ?></h1>
@@ -377,6 +378,14 @@ class Kivun_Content_Creator {
 								<button type="button" class="button-link kivun-lp-media__remove" <?php echo $thumb_url ? '' : 'style="display:none"'; ?>><?php esc_html_e( 'הסרה', 'kivun' ); ?></button>
 								<p class="kivun-lp-hint"><?php esc_html_e( 'או העלאת קובץ:', 'kivun' ); ?></p>
 								<input type="file" name="thumbnail_file" accept="image/*">
+								<?php if ( $ai_ready ) : ?>
+									<p style="margin:.75rem 0 .35rem">
+										<button type="button" class="button kivun-cc-ai-btn" data-ajax="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>" data-nonce="<?php echo esc_attr( wp_create_nonce( 'kivun_ai_image' ) ); ?>">
+											<?php esc_html_e( '✨ צור תמונה עם AI', 'kivun' ); ?>
+										</button>
+									</p>
+									<span class="kivun-cc-ai-status" style="font-size:12px;color:#555"></span>
+								<?php endif; ?>
 							</div>
 						</div>
 
@@ -432,6 +441,51 @@ class Kivun_Content_Creator {
 					idInput.value = '';
 					if ( preview ) { preview.style.display = 'none'; }
 					removeBtn.style.display = 'none';
+				} );
+			}
+
+			var aiBtn = document.querySelector( '.kivun-cc-ai-btn' );
+			if ( aiBtn ) {
+				aiBtn.addEventListener( 'click', function () {
+					var titleEl = document.querySelector( '[name="title"]' ),
+						title   = titleEl ? titleEl.value.trim() : '',
+						status  = document.querySelector( '.kivun-cc-ai-status' );
+					if ( ! title ) {
+						if ( status ) { status.textContent = '<?php echo esc_js( __( 'מלאו כותרת קודם.', 'kivun' ) ); ?>'; }
+						return;
+					}
+					var shortVal = ( window.tinymce && tinymce.get( 'kivun_cc_short' ) )
+							? tinymce.get( 'kivun_cc_short' ).getContent( { format: 'text' } )
+							: ( ( document.getElementById( 'kivun_cc_short' ) || {} ).value || '' ),
+						typeEl = document.querySelector( '.kivun-cc-toggle:checked' ),
+						fd     = new FormData();
+					fd.append( 'action', 'kivun_generate_ai_image' );
+					fd.append( 'nonce', aiBtn.dataset.nonce );
+					fd.append( 'title', title );
+					fd.append( 'desc', shortVal );
+					fd.append( 'type', typeEl ? typeEl.dataset.type : '' );
+
+					aiBtn.disabled = true;
+					if ( status ) { status.textContent = '<?php echo esc_js( __( 'יוצר תמונה… זה עשוי לקחת עד דקה', 'kivun' ) ); ?>'; }
+
+					fetch( aiBtn.dataset.ajax, { method: 'POST', body: fd, credentials: 'same-origin' } )
+						.then( function ( r ) { return r.json(); } )
+						.then( function ( res ) {
+							aiBtn.disabled = false;
+							if ( res && res.success && res.data ) {
+								if ( idInput ) { idInput.value = res.data.id; }
+								if ( img ) { img.src = res.data.url; }
+								if ( preview ) { preview.style.display = ''; }
+								if ( removeBtn ) { removeBtn.style.display = ''; }
+								if ( status ) { status.textContent = '<?php echo esc_js( __( '✓ נוצרה תמונה', 'kivun' ) ); ?>'; }
+							} else {
+								if ( status ) { status.textContent = ( res && res.data && res.data.message ) ? res.data.message : '<?php echo esc_js( __( 'יצירת התמונה נכשלה', 'kivun' ) ); ?>'; }
+							}
+						} )
+						.catch( function () {
+							aiBtn.disabled = false;
+							if ( status ) { status.textContent = '<?php echo esc_js( __( 'שגיאת רשת', 'kivun' ) ); ?>'; }
+						} );
 				} );
 			}
 		} () );
@@ -900,6 +954,7 @@ class Kivun_Content_Creator {
 		$page_url   = $page_url ? $page_url : home_url();
 		$can_upload = current_user_can( 'upload_files' );
 		$can_delete = current_user_can( 'delete_posts' );
+		$ai_ready   = $can_upload && Kivun_AI_Image::is_configured();
 		$thumb_url  = (int) $v['thumb_id'] ? (string) wp_get_attachment_image_url( (int) $v['thumb_id'], 'medium' ) : '';
 		$sections   = array(
 			'landing' => __( 'דף נחיתה', 'kivun' ),
@@ -1061,6 +1116,15 @@ class Kivun_Content_Creator {
 								<?php else : ?>
 									<p class="kivun-cc-hint"><?php esc_html_e( 'אין לך הרשאה להעלות קבצים — התמונה תיקבע ע"י מנהל.', 'kivun' ); ?></p>
 								<?php endif; ?>
+								<?php if ( $ai_ready ) : ?>
+									<div class="kivun-cc-ai">
+										<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost kivun-cc-ai-btn" data-ajax="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>" data-nonce="<?php echo esc_attr( wp_create_nonce( 'kivun_ai_image' ) ); ?>">
+											<?php esc_html_e( '✨ צור תמונה עם AI', 'kivun' ); ?>
+										</button>
+										<span class="kivun-cc-ai-status" role="status" aria-live="polite"></span>
+										<p class="kivun-cc-hint"><?php esc_html_e( 'התמונה נוצרת מהכותרת והתיאור הקצר. מלאו אותם קודם.', 'kivun' ); ?></p>
+									</div>
+								<?php endif; ?>
 							</div>
 						</div>
 
@@ -1115,6 +1179,50 @@ class Kivun_Content_Creator {
 					if ( ! window.confirm( confirmMsg ) ) { e.preventDefault(); }
 				} );
 			} );
+
+			var aiBtn = scope.querySelector( '.kivun-cc-ai-btn' );
+			if ( aiBtn ) {
+				aiBtn.addEventListener( 'click', function () {
+					var titleEl = scope.querySelector( '[name="title"]' ),
+						title   = titleEl ? titleEl.value.trim() : '',
+						status  = scope.querySelector( '.kivun-cc-ai-status' );
+					if ( ! title ) {
+						if ( status ) { status.textContent = '<?php echo esc_js( __( 'מלאו כותרת קודם.', 'kivun' ) ); ?>'; }
+						return;
+					}
+					var shortEl = scope.querySelector( '[name="short"]' ),
+						typeEl  = scope.querySelector( '.kivun-cc-toggle:checked' ),
+						fd      = new FormData();
+					fd.append( 'action', 'kivun_generate_ai_image' );
+					fd.append( 'nonce', aiBtn.dataset.nonce );
+					fd.append( 'title', title );
+					fd.append( 'desc', shortEl ? shortEl.value : '' );
+					fd.append( 'type', typeEl ? typeEl.dataset.type : '' );
+
+					aiBtn.disabled = true;
+					if ( status ) { status.textContent = '<?php echo esc_js( __( 'יוצר תמונה… זה עשוי לקחת עד דקה', 'kivun' ) ); ?>'; }
+
+					fetch( aiBtn.dataset.ajax, { method: 'POST', body: fd, credentials: 'same-origin' } )
+						.then( function ( r ) { return r.json(); } )
+						.then( function ( res ) {
+							aiBtn.disabled = false;
+							if ( res && res.success && res.data ) {
+								var idEl = scope.querySelector( '[name="thumbnail_id"]' ),
+									box  = scope.querySelector( '.kivun-cc-media__preview' ),
+									img  = box ? box.querySelector( 'img' ) : null;
+								if ( idEl ) { idEl.value = res.data.id; }
+								if ( img ) { img.src = res.data.url; box.style.display = ''; }
+								if ( status ) { status.textContent = '<?php echo esc_js( __( '✓ נוצרה תמונה', 'kivun' ) ); ?>'; }
+							} else {
+								if ( status ) { status.textContent = ( res && res.data && res.data.message ) ? res.data.message : '<?php echo esc_js( __( 'יצירת התמונה נכשלה', 'kivun' ) ); ?>'; }
+							}
+						} )
+						.catch( function () {
+							aiBtn.disabled = false;
+							if ( status ) { status.textContent = '<?php echo esc_js( __( 'שגיאת רשת', 'kivun' ) ); ?>'; }
+						} );
+				} );
+			}
 		} () );
 		</script>
 		<?php
