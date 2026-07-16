@@ -112,3 +112,7 @@
 .kivun-sc-example__label { font-weight: 600; margin-inline-end: .5rem; color: #555; }
 .kivun-sc-example code { cursor: pointer; }
 .kivun-sc-example code:hover { color: #2563eb; }
+
+/* Content creator — AI availability warning. */
+.kivun-cc-ai-warn { margin: .5rem 0; padding: .5rem .7rem; border-radius: 8px; background: #fffbeb; color: #92400e; border: 1px solid #fde68a; font-size: 13px; }
+.kivun-cc-ai-warn a { color: #92400e; }

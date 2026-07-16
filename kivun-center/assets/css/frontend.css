@@ -851,3 +851,6 @@
 .kivun-cc-ai { margin-top: .75rem; }
 .kivun-cc-ai-btn[disabled] { opacity: .6; cursor: progress; }
 .kivun-cc-ai-status { display: block; margin-top: .4rem; font-size: .82rem; color: var(--kivun-muted); }
+
+/* Front-end content creator — AI availability warning. */
+.kivun-cc-ai-warn { margin: 0 0 .6rem; padding: .55rem .75rem; border-radius: 8px; background: #fffbeb; color: #92400e; border: 1px solid #fde68a; font-size: .85rem; font-weight: 600; }

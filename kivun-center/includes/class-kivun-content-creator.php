@@ -234,14 +234,15 @@ class Kivun_Content_Creator {
 		$v           = self::form_values( $group_posts );
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only success flag from a safe redirect.
-		$saved     = ! empty( $_GET['kivun_saved'] );
-		$sections  = array(
+		$saved         = ! empty( $_GET['kivun_saved'] );
+		$sections      = array(
 			'landing' => __( 'דף נחיתה', 'kivun' ),
 			'course'  => __( 'קורס', 'kivun' ),
 			'session' => __( 'סדנה', 'kivun' ),
 		);
-		$thumb_url = (int) $v['thumb_id'] ? (string) wp_get_attachment_image_url( (int) $v['thumb_id'], 'medium' ) : '';
-		$ai_ready  = current_user_can( 'upload_files' ) && Kivun_AI_Image::is_configured();
+		$thumb_url     = (int) $v['thumb_id'] ? (string) wp_get_attachment_image_url( (int) $v['thumb_id'], 'medium' ) : '';
+		$ai_show       = current_user_can( 'upload_files' );
+		$ai_configured = Kivun_AI_Image::is_configured();
 		?>
 		<div class="wrap kivun-lp-admin">
 			<h1><?php echo $editing ? esc_html__( 'עריכת תוכן', 'kivun' ) : esc_html__( 'פרסום תוכן חדש', 'kivun' ); ?></h1>
@@ -378,7 +379,20 @@ class Kivun_Content_Creator {
 								<button type="button" class="button-link kivun-lp-media__remove" <?php echo $thumb_url ? '' : 'style="display:none"'; ?>><?php esc_html_e( 'הסרה', 'kivun' ); ?></button>
 								<p class="kivun-lp-hint"><?php esc_html_e( 'או העלאת קובץ:', 'kivun' ); ?></p>
 								<input type="file" name="thumbnail_file" accept="image/*">
-								<?php if ( $ai_ready ) : ?>
+								<?php if ( $ai_show ) : ?>
+									<?php if ( ! $ai_configured ) : ?>
+										<p class="kivun-cc-ai-warn" style="margin-top:.6rem">
+											<?php
+											echo wp_kses_post(
+												sprintf(
+													/* translators: %s: link to the settings page. */
+													__( '⚠️ היצירה האוטומטית כבויה — לא הוגדר מפתח API. <a href="%s">להגדרות</a>.', 'kivun' ),
+													esc_url( admin_url( 'admin.php?page=kivun-settings' ) )
+												)
+											);
+											?>
+										</p>
+									<?php endif; ?>
 									<label class="kivun-lp-sub" style="margin-top:.75rem"><?php esc_html_e( 'סגנון התמונה', 'kivun' ); ?></label>
 									<select class="kivun-lp-input kivun-cc-ai-style">
 										<?php foreach ( Kivun_AI_Image::styles() as $skey => $slabel ) : ?>
@@ -963,13 +977,13 @@ class Kivun_Content_Creator {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only status flag.
 		$deleted = ! empty( $_GET['kivun_deleted'] );
 
-		$page_url   = (string) get_permalink();
-		$page_url   = $page_url ? $page_url : home_url();
-		$can_upload = current_user_can( 'upload_files' );
-		$can_delete = current_user_can( 'delete_posts' );
-		$ai_ready   = $can_upload && Kivun_AI_Image::is_configured();
-		$thumb_url  = (int) $v['thumb_id'] ? (string) wp_get_attachment_image_url( (int) $v['thumb_id'], 'medium' ) : '';
-		$sections   = array(
+		$page_url      = (string) get_permalink();
+		$page_url      = $page_url ? $page_url : home_url();
+		$can_upload    = current_user_can( 'upload_files' );
+		$can_delete    = current_user_can( 'delete_posts' );
+		$ai_configured = Kivun_AI_Image::is_configured();
+		$thumb_url     = (int) $v['thumb_id'] ? (string) wp_get_attachment_image_url( (int) $v['thumb_id'], 'medium' ) : '';
+		$sections      = array(
 			'landing' => __( 'דף נחיתה', 'kivun' ),
 			'course'  => __( 'קורס', 'kivun' ),
 			'session' => __( 'סדנה', 'kivun' ),
@@ -1129,8 +1143,11 @@ class Kivun_Content_Creator {
 								<?php else : ?>
 									<p class="kivun-cc-hint"><?php esc_html_e( 'אין לך הרשאה להעלות קבצים — התמונה תיקבע ע"י מנהל.', 'kivun' ); ?></p>
 								<?php endif; ?>
-								<?php if ( $ai_ready ) : ?>
+								<?php if ( $can_upload ) : ?>
 									<div class="kivun-cc-ai">
+										<?php if ( ! $ai_configured ) : ?>
+											<p class="kivun-cc-ai-warn"><?php esc_html_e( '⚠️ היצירה האוטומטית אינה פעילה כרגע (לא הוגדר מפתח API / נגמרו הקרדיטים). פנו למנהל האתר.', 'kivun' ); ?></p>
+										<?php endif; ?>
 										<label class="kivun-cc-sub"><?php esc_html_e( 'סגנון התמונה', 'kivun' ); ?></label>
 										<select class="kivun-cc-input kivun-cc-ai-style">
 											<?php foreach ( Kivun_AI_Image::styles() as $skey => $slabel ) : ?>

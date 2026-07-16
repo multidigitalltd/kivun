@@ -304,7 +304,19 @@ class Kivun_Admin_Settings {
 					<th scope="row"><?php esc_html_e( 'OpenAI API Key', 'kivun' ); ?></th>
 					<td>
 						<input type="password" name="openai_api_key" value="<?php echo esc_attr( $o( 'openai_api_key' ) ); ?>" class="regular-text" autocomplete="off" placeholder="sk-...">
-						<p class="description"><?php esc_html_e( 'מפתח מ-platform.openai.com. יצירת תמונה עולה כסף לפי המודל והאיכות (בקירוב 4–17 סנט לתמונה).', 'kivun' ); ?></p>
+						<p class="description">
+							<?php
+							echo wp_kses_post(
+								sprintf(
+									/* translators: %s: link to the OpenAI API keys page. */
+									__( 'רכישת/יצירת מפתח כאן: <a href="%s" target="_blank" rel="noopener">platform.openai.com</a>', 'kivun' ),
+									esc_url( 'https://platform.openai.com/api-keys' )
+								)
+							);
+							?>
+							<br>
+							<?php esc_html_e( 'יצירת תמונה עולה כסף לפי המודל והאיכות (בקירוב 4–17 סנט לתמונה). יש לטעון קרדיטים בחשבון ה-OpenAI.', 'kivun' ); ?>
+						</p>
 					</td>
 				</tr>
 				<tr>

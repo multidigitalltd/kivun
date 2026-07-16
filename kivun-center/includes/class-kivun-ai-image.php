@@ -136,10 +136,7 @@ class Kivun_AI_Image {
 		$data = json_decode( (string) wp_remote_retrieve_body( $response ), true );
 
 		if ( 200 !== $code ) {
-			$message = is_array( $data ) && isset( $data['error']['message'] )
-				? (string) $data['error']['message']
-				: __( 'שגיאה בשירות ה-AI. בדקו את המפתח והמכסה.', 'kivun' );
-			return new \WP_Error( 'kivun_ai_api', $message );
+			return new \WP_Error( 'kivun_ai_api', self::friendly_error( $code, $data ) );
 		}
 
 		$b64 = is_array( $data ) && isset( $data['data'][0]['b64_json'] ) ? (string) $data['data'][0]['b64_json'] : '';
@@ -251,6 +248,31 @@ class Kivun_AI_Image {
 			'id'  => (int) $attachment_id,
 			'url' => $url,
 		);
+	}
+
+	/**
+	 * Turn an OpenAI API error into a clear Hebrew message.
+	 *
+	 * @param int   $code HTTP status code.
+	 * @param mixed $data Decoded response body.
+	 * @return string
+	 */
+	private static function friendly_error( int $code, $data ): string {
+		$api_msg = is_array( $data ) && isset( $data['error']['message'] ) ? (string) $data['error']['message'] : '';
+		$type    = '';
+		if ( is_array( $data ) && isset( $data['error']['code'] ) ) {
+			$type = (string) $data['error']['code'];
+		} elseif ( is_array( $data ) && isset( $data['error']['type'] ) ) {
+			$type = (string) $data['error']['type'];
+		}
+
+		if ( 401 === $code || 'invalid_api_key' === $type ) {
+			return __( 'מפתח ה-API שגוי או חסר. בדקו את המפתח בהגדרות → Kivun Center.', 'kivun' );
+		}
+		if ( 'insufficient_quota' === $type || 429 === $code || ( '' !== $api_msg && false !== stripos( $api_msg, 'quota' ) ) ) {
+			return __( 'נגמרו הקרדיטים/המכסה בחשבון ה-OpenAI. יש לטעון קרדיטים ולנסות שוב.', 'kivun' );
+		}
+		return '' !== $api_msg ? $api_msg : __( 'שגיאה בשירות ה-AI. נסו שוב מאוחר יותר.', 'kivun' );
 	}
 
 	/**
