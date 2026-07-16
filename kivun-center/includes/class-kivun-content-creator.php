@@ -41,6 +41,7 @@ class Kivun_Content_Creator {
 		// public page, without entering wp-admin.
 		add_shortcode( 'kivun_content_creator', array( __CLASS__, 'shortcode' ) );
 		add_action( 'admin_post_kivun_create_content_front', array( __CLASS__, 'handle_front_save' ) );
+		add_action( 'admin_post_kivun_delete_content_front', array( __CLASS__, 'handle_front_delete' ) );
 	}
 
 	/**
@@ -794,6 +795,74 @@ class Kivun_Content_Creator {
 	}
 
 	/**
+	 * Handle a front-end "delete whole content group" submission.
+	 *
+	 * @return void
+	 */
+	public static function handle_front_delete(): void {
+		if ( ! is_user_logged_in() || ! current_user_can( 'delete_posts' ) ) {
+			wp_die( esc_html__( 'אין לך הרשאה.', 'kivun' ) );
+		}
+		if ( ! isset( $_POST['kivun_cc_del_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['kivun_cc_del_nonce'] ) ), 'kivun_delete_content_front' ) ) {
+			wp_die( esc_html__( 'בקשה לא תקפה.', 'kivun' ) );
+		}
+
+		$group    = isset( $_POST['group'] ) ? sanitize_text_field( wp_unslash( $_POST['group'] ) ) : '';
+		$redirect = isset( $_POST['redirect'] ) ? esc_url_raw( wp_unslash( $_POST['redirect'] ) ) : '';
+		if ( '' === $redirect ) {
+			$redirect = home_url();
+		}
+		$redirect = remove_query_arg( array( 'kivun_group', 'kivun_saved', 'kivun_cc_error' ), $redirect );
+
+		$deleted  = self::delete_group( $group );
+		$redirect = add_query_arg( $deleted > 0 ? 'kivun_deleted' : 'kivun_cc_error', 1, $redirect );
+
+		wp_safe_redirect( $redirect );
+		exit;
+	}
+
+	/**
+	 * Trash every post linked to a content group (respecting per-post caps).
+	 *
+	 * @param string $group The content group id.
+	 * @return int Number of posts trashed.
+	 */
+	private static function delete_group( string $group ): int {
+		$posts = self::group_posts( $group );
+		if ( ! $posts ) {
+			return 0;
+		}
+
+		$count = 0;
+		foreach ( $posts as $post_id ) {
+			$post_id = (int) $post_id;
+			if ( current_user_can( 'delete_post', $post_id ) && wp_trash_post( $post_id ) ) {
+				++$count;
+			}
+		}
+		return $count;
+	}
+
+	/**
+	 * Build a small stand-alone delete form (posts outside the main form).
+	 *
+	 * @param string $group     The content group id.
+	 * @param string $page_url  Redirect target after deletion.
+	 * @param string $label     Button label.
+	 * @param string $btn_class Button CSS classes.
+	 * @return string Escaped HTML.
+	 */
+	private static function delete_form( string $group, string $page_url, string $label, string $btn_class ): string {
+		return '<form class="kivun-cc-delete-form" method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">'
+			. '<input type="hidden" name="action" value="kivun_delete_content_front">'
+			. '<input type="hidden" name="group" value="' . esc_attr( $group ) . '">'
+			. '<input type="hidden" name="redirect" value="' . esc_url( $page_url ) . '">'
+			. '<input type="hidden" name="kivun_cc_del_nonce" value="' . esc_attr( wp_create_nonce( 'kivun_delete_content_front' ) ) . '">'
+			. '<button type="submit" class="' . esc_attr( $btn_class ) . '">' . esc_html( $label ) . '</button>'
+			. '</form>';
+	}
+
+	/**
 	 * A styled "please log in" notice with a login link back to this page.
 	 *
 	 * @return string
@@ -824,10 +893,13 @@ class Kivun_Content_Creator {
 		$saved = ! empty( $_GET['kivun_saved'] );
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only status flag.
 		$error = ! empty( $_GET['kivun_cc_error'] );
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only status flag.
+		$deleted = ! empty( $_GET['kivun_deleted'] );
 
 		$page_url   = (string) get_permalink();
 		$page_url   = $page_url ? $page_url : home_url();
 		$can_upload = current_user_can( 'upload_files' );
+		$can_delete = current_user_can( 'delete_posts' );
 		$thumb_url  = (int) $v['thumb_id'] ? (string) wp_get_attachment_image_url( (int) $v['thumb_id'], 'medium' ) : '';
 		$sections   = array(
 			'landing' => __( 'דף נחיתה', 'kivun' ),
@@ -845,7 +917,10 @@ class Kivun_Content_Creator {
 				<div class="kivun-cc-note kivun-cc-note--success"><?php esc_html_e( 'התוכן נשמר בהצלחה.', 'kivun' ); ?></div>
 			<?php endif; ?>
 			<?php if ( $error ) : ?>
-				<div class="kivun-cc-note kivun-cc-note--error"><?php esc_html_e( 'שמירת התוכן נכשלה — ודאו שמילאתם כותרת.', 'kivun' ); ?></div>
+				<div class="kivun-cc-note kivun-cc-note--error"><?php esc_html_e( 'הפעולה נכשלה — ודאו שמילאתם כותרת ושיש לכם הרשאה.', 'kivun' ); ?></div>
+			<?php endif; ?>
+			<?php if ( $deleted ) : ?>
+				<div class="kivun-cc-note kivun-cc-note--success"><?php esc_html_e( 'התוכן נמחק (הועבר לפח).', 'kivun' ); ?></div>
 			<?php endif; ?>
 
 			<form class="kivun-cc-form" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" enctype="multipart/form-data">
@@ -975,7 +1050,17 @@ class Kivun_Content_Creator {
 				</div>
 			</form>
 
-			<?php self::front_groups_list( $page_url ); ?>
+			<?php if ( $editing && $can_delete ) : ?>
+				<div class="kivun-cc-card kivun-cc-danger">
+					<div>
+						<strong class="kivun-cc-danger__title"><?php esc_html_e( 'מחיקת התוכן', 'kivun' ); ?></strong>
+						<p class="kivun-cc-hint"><?php esc_html_e( 'מחיקה תעביר לפח את כל הפוסטים המקושרים (דף נחיתה / קורס / סדנה) יחד.', 'kivun' ); ?></p>
+					</div>
+					<?php echo self::delete_form( $group, $page_url, __( 'מחיקת כל התוכן', 'kivun' ), 'kivun-cc-btn kivun-cc-btn--danger' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built from escaped parts in delete_form(). ?>
+				</div>
+			<?php endif; ?>
+
+			<?php self::front_groups_list( $page_url, $can_delete ); ?>
 		</div>
 
 		<script>
@@ -999,18 +1084,25 @@ class Kivun_Content_Creator {
 					}
 				} );
 			}
+			var confirmMsg = '<?php echo esc_js( __( 'למחוק את כל התוכן המקושר? הפעולה תעביר לפח את דף הנחיתה, הקורס והסדנה.', 'kivun' ) ); ?>';
+			scope.querySelectorAll( '.kivun-cc-delete-form' ).forEach( function ( f ) {
+				f.addEventListener( 'submit', function ( e ) {
+					if ( ! window.confirm( confirmMsg ) ) { e.preventDefault(); }
+				} );
+			} );
 		} () );
 		</script>
 		<?php
 	}
 
 	/**
-	 * Render the "content groups" list with front-end edit links.
+	 * Render the "content groups" list with front-end edit (and delete) links.
 	 *
-	 * @param string $page_url The current page URL (edit links point back here).
+	 * @param string $page_url   The current page URL (edit links point back here).
+	 * @param bool   $can_delete Whether the user may delete content groups.
 	 * @return void
 	 */
-	private static function front_groups_list( string $page_url ): void {
+	private static function front_groups_list( string $page_url, bool $can_delete = false ): void {
 		$posts = get_posts(
 			array(
 				'post_type'              => array_values( self::type_map() ),
@@ -1057,7 +1149,12 @@ class Kivun_Content_Creator {
 					<li class="kivun-cc-groups__item">
 						<span class="kivun-cc-groups__title"><?php echo esc_html( $g['title'] ); ?></span>
 						<span class="kivun-cc-groups__types"><?php echo esc_html( implode( ' · ', array_unique( $g['types'] ) ) ); ?></span>
-						<a class="kivun-cc-btn kivun-cc-btn--sm" href="<?php echo esc_url( add_query_arg( 'kivun_group', rawurlencode( $gid ), remove_query_arg( array( 'kivun_saved', 'kivun_cc_error' ), $page_url ) ) ); ?>"><?php esc_html_e( 'עריכה', 'kivun' ); ?></a>
+						<span class="kivun-cc-groups__actions">
+							<a class="kivun-cc-btn kivun-cc-btn--sm" href="<?php echo esc_url( add_query_arg( 'kivun_group', rawurlencode( $gid ), remove_query_arg( array( 'kivun_saved', 'kivun_cc_error', 'kivun_deleted' ), $page_url ) ) ); ?>"><?php esc_html_e( 'עריכה', 'kivun' ); ?></a>
+							<?php if ( $can_delete ) : ?>
+								<?php echo self::delete_form( (string) $gid, $page_url, __( 'מחיקה', 'kivun' ), 'kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--danger' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built from escaped parts in delete_form(). ?>
+							<?php endif; ?>
+						</span>
 					</li>
 				<?php endforeach; ?>
 			</ul>

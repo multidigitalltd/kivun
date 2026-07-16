@@ -829,3 +829,12 @@
 .kivun-cc-groups__title { font-weight: 700; }
 .kivun-cc-groups__types { color: var(--kivun-muted); font-size: .85rem; }
 .kivun-cc-groups__item .kivun-cc-btn { margin-inline-start: auto; }
+
+/* Front-end content creator — delete / danger controls. */
+.kivun-cc-btn--danger { background: #dc2626; }
+.kivun-cc-btn--danger:hover { background: #b91c1c; filter: none; }
+.kivun-cc-danger { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-top: 1.25rem; border: 1px solid #fecaca; background: #fef2f2; }
+.kivun-cc-danger__title { color: #b91c1c; font-size: 1rem; }
+.kivun-cc-delete-form { margin: 0; }
+.kivun-cc-groups__actions { margin-inline-start: auto; display: flex; align-items: center; gap: .5rem; }
+.kivun-cc-groups__item .kivun-cc-btn { margin-inline-start: 0; }
