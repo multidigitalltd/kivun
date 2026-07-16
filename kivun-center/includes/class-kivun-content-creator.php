@@ -914,7 +914,32 @@ class Kivun_Content_Creator {
 			</div>
 
 			<?php if ( $saved ) : ?>
-				<div class="kivun-cc-note kivun-cc-note--success"><?php esc_html_e( 'התוכן נשמר בהצלחה.', 'kivun' ); ?></div>
+				<div class="kivun-cc-note kivun-cc-note--success">
+					<span><?php esc_html_e( 'התוכן פורסם בהצלחה.', 'kivun' ); ?></span>
+					<?php if ( $group_posts ) : ?>
+						<span class="kivun-cc-note__actions">
+							<?php
+							$view_labels = array(
+								'landing' => __( 'דף הנחיתה', 'kivun' ),
+								'course'  => __( 'הקורס', 'kivun' ),
+								'session' => __( 'הסדנה', 'kivun' ),
+							);
+							foreach ( $group_posts as $tkey => $pid ) :
+								$view_url = (string) get_permalink( (int) $pid );
+								if ( '' === $view_url ) {
+									continue;
+								}
+								?>
+								<a class="kivun-cc-btn kivun-cc-btn--sm" href="<?php echo esc_url( $view_url ); ?>" target="_blank" rel="noopener">
+									<?php
+									/* translators: %s: content type label (landing page / course / session). */
+									printf( esc_html__( 'צפייה ב%s ↗', 'kivun' ), esc_html( $view_labels[ $tkey ] ?? '' ) );
+									?>
+								</a>
+							<?php endforeach; ?>
+						</span>
+					<?php endif; ?>
+				</div>
 			<?php endif; ?>
 			<?php if ( $error ) : ?>
 				<div class="kivun-cc-note kivun-cc-note--error"><?php esc_html_e( 'הפעולה נכשלה — ודאו שמילאתם כותרת ושיש לכם הרשאה.', 'kivun' ); ?></div>
@@ -1132,8 +1157,9 @@ class Kivun_Content_Creator {
 			}
 			if ( ! isset( $groups[ $g ] ) ) {
 				$groups[ $g ] = array(
-					'title' => get_the_title( $p->ID ),
-					'types' => array(),
+					'title'   => get_the_title( $p->ID ),
+					'types'   => array(),
+					'view_id' => (int) $p->ID,
 				);
 			}
 			$groups[ $g ]['types'][] = $labels[ $p->post_type ] ?? $p->post_type;
@@ -1150,6 +1176,10 @@ class Kivun_Content_Creator {
 						<span class="kivun-cc-groups__title"><?php echo esc_html( $g['title'] ); ?></span>
 						<span class="kivun-cc-groups__types"><?php echo esc_html( implode( ' · ', array_unique( $g['types'] ) ) ); ?></span>
 						<span class="kivun-cc-groups__actions">
+							<?php $group_view_url = isset( $g['view_id'] ) ? (string) get_permalink( (int) $g['view_id'] ) : ''; ?>
+							<?php if ( '' !== $group_view_url ) : ?>
+								<a class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost" href="<?php echo esc_url( $group_view_url ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'צפייה ↗', 'kivun' ); ?></a>
+							<?php endif; ?>
 							<a class="kivun-cc-btn kivun-cc-btn--sm" href="<?php echo esc_url( add_query_arg( 'kivun_group', rawurlencode( $gid ), remove_query_arg( array( 'kivun_saved', 'kivun_cc_error', 'kivun_deleted' ), $page_url ) ) ); ?>"><?php esc_html_e( 'עריכה', 'kivun' ); ?></a>
 							<?php if ( $can_delete ) : ?>
 								<?php echo self::delete_form( (string) $gid, $page_url, __( 'מחיקה', 'kivun' ), 'kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--danger' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built from escaped parts in delete_form(). ?>

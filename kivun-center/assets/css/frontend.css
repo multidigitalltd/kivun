@@ -838,3 +838,11 @@
 .kivun-cc-delete-form { margin: 0; }
 .kivun-cc-groups__actions { margin-inline-start: auto; display: flex; align-items: center; gap: .5rem; }
 .kivun-cc-groups__item .kivun-cc-btn { margin-inline-start: 0; }
+
+/* Front-end content creator — success view links & ghost button. */
+.kivun-cc-note--success { display: flex; align-items: center; flex-wrap: wrap; gap: .6rem; }
+.kivun-cc-note__actions { display: inline-flex; align-items: center; flex-wrap: wrap; gap: .5rem; margin-inline-start: auto; }
+.kivun-cc-note--success .kivun-cc-btn { background: #047857; }
+.kivun-cc-note--success .kivun-cc-btn:hover { background: #065f46; filter: none; }
+.kivun-cc-btn--ghost { background: transparent; color: var(--kivun-accent); border: 1px solid var(--kivun-accent); }
+.kivun-cc-btn--ghost:hover { background: var(--kivun-accent); color: #fff; filter: none; }
