@@ -921,3 +921,56 @@
 .kivun-employer-login .nsl-container-buttons { display: flex !important; flex-direction: column !important; align-items: center !important; }
 .kivun-employer-login .nsl-container-buttons > a { width: 100%; max-width: 360px; }
 .kivun-employer-login .nsl-button { border-radius: 12px !important; overflow: hidden; }
+
+/* Employer dashboard — uniform, theme-proof tab & action buttons. */
+.kivun-employer-dashboard .kivun-tabs {
+	background: #f2f3f5 !important;
+	border: 1px solid var(--kc-line) !important;
+	border-radius: 999px !important;
+	padding: .3rem !important;
+	gap: .3rem !important;
+	align-items: center !important;
+}
+.kivun-employer-dashboard .kivun-tab,
+.kivun-employer-dashboard .kivun-dashboard-header .kivun-btn--primary {
+	display: inline-flex !important;
+	align-items: center !important;
+	justify-content: center !important;
+	gap: .45rem !important;
+	min-height: 42px !important;
+	padding: .5rem 1.5rem !important;
+	border-radius: 999px !important;
+	font-size: .92rem !important;
+	font-weight: 600 !important;
+	line-height: 1 !important;
+	text-align: center !important;
+	box-shadow: none !important;
+	cursor: pointer !important;
+	white-space: nowrap !important;
+}
+.kivun-employer-dashboard .kivun-tab {
+	background: transparent !important;
+	color: #4b5563 !important;
+	border: none !important;
+}
+.kivun-employer-dashboard .kivun-tab:hover { color: var(--kc-dark) !important; }
+.kivun-employer-dashboard .kivun-tab.is-active {
+	background: var(--kc-accent) !important;
+	color: #fff !important;
+}
+.kivun-employer-dashboard .kivun-dashboard-header .kivun-btn--primary {
+	background: var(--kc-accent) !important;
+	border: 1px solid var(--kc-accent) !important;
+	color: #fff !important;
+}
+.kivun-employer-dashboard .kivun-dashboard-header .kivun-btn--primary:hover {
+	background: var(--kc-dark) !important;
+	border-color: var(--kc-dark) !important;
+	color: #fff !important;
+}
+.kivun-employer-dashboard .kivun-tab-badge {
+	background: var(--kc-accent); color: #fff; border-radius: 999px;
+	padding: 0 .5rem; min-width: 1.3em; height: 1.3em; line-height: 1.3em;
+	font-size: .72rem; text-align: center; font-weight: 700;
+}
+.kivun-employer-dashboard .kivun-tab.is-active .kivun-tab-badge { background: #fff; color: var(--kc-accent); }
