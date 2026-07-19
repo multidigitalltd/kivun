@@ -474,4 +474,46 @@
 		});
 	}, true);
 
+	// ── Employer login: move the social-login button above username/password ──────
+	// Nextend Social Login renders its button wherever it likes (often below the
+	// form); relocate it to just above the login form, regardless of placement.
+	function placeSocialLogin() {
+		var wrap = document.querySelector('.kivun-employer-login');
+		if (!wrap) { return true; }
+		var form = wrap.querySelector('#loginform');
+		if (!form) { return true; }
+
+		var nsl = wrap.querySelector('.nsl-container');
+		if (!nsl) {
+			var node = wrap.nextElementSibling, hops = 0;
+			while (node && hops < 5 && !nsl) {
+				if (node.classList && node.classList.contains('nsl-container')) { nsl = node; }
+				else if (node.querySelector) { nsl = node.querySelector('.nsl-container'); }
+				node = node.nextElementSibling; hops++;
+			}
+		}
+		if (!nsl) { nsl = document.querySelector('.nsl-container'); }
+		if (!nsl) { return false; }
+		if (nsl.parentNode === wrap && nsl.nextElementSibling === form) { return true; }
+		wrap.insertBefore(nsl, form);
+		return true;
+	}
+
+	if (document.querySelector('.kivun-employer-login')) {
+		if (!placeSocialLogin()) {
+			var tries = 0;
+			var timer = setInterval(function () {
+				tries++;
+				if (placeSocialLogin() || tries > 20) { clearInterval(timer); }
+			}, 200);
+		}
+		if (window.MutationObserver) {
+			var host = document.querySelector('.kivun-employer-login');
+			var obs = new MutationObserver(function () { placeSocialLogin(); });
+			if (host && host.parentNode) {
+				obs.observe(host.parentNode, { childList: true, subtree: true });
+			}
+		}
+	}
+
 }());

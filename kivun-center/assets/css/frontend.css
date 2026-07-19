@@ -865,3 +865,19 @@
 .kivun-employer-login__links { order: 1; }
 .kivun-employer-login .nsl-container::after { content: "או"; display: block; text-align: center; color: #888; font-size: .9rem; margin: .75rem 0 0; }
 .kivun-login-turnstile { display: flex; justify-content: center; }
+
+/* Employer dashboard tables — internal scroll so many rows stay reachable even
+   when the surrounding (Elementor) container clips overflow. Sticky headers. */
+.kivun-jobs-table-wrap,
+.kivun-apps-table-wrap {
+	max-height: 70vh;
+	overflow: auto;
+	-webkit-overflow-scrolling: touch;
+}
+.kivun-jobs-table thead th,
+.kivun-apps-table thead th {
+	position: sticky;
+	top: 0;
+	z-index: 2;
+}
+.kivun-job-id { color: #6b7280; font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }

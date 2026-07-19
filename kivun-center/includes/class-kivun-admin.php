@@ -879,6 +879,18 @@ class Kivun_Admin {
 		add_submenu_page( 'edit.php?post_type=kivun_job', 'מועמדויות', 'מועמדויות', 'manage_options', 'kivun-applications', array( __CLASS__, 'applications_page' ) );
 		add_submenu_page( 'edit.php?post_type=kivun_course', 'הרשמות ולידים', 'הרשמות ולידים', 'manage_options', 'kivun-registrations', array( __CLASS__, 'registrations_page' ) );
 
+		// Prominent top-level shortcut to the unified leads & registrations screen
+		// (aggregates every course/session/landing-page lead and all Elementor forms).
+		add_menu_page(
+			'לידים והרשמות',
+			'לידים והרשמות',
+			'manage_options',
+			'edit.php?post_type=kivun_course&page=kivun-registrations',
+			'',
+			'dashicons-groups',
+			'3.5'
+		);
+
 		// Convenience link under "דפי נחיתה" → the same registrations screen,
 		// pre-filtered to landing-page leads (they all share one table).
 		add_submenu_page(

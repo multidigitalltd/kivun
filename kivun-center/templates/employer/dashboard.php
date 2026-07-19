@@ -28,44 +28,6 @@ if ( ! is_user_logged_in() ) {
 			<a href="<?php echo esc_url( wp_lostpassword_url( $kivun_redirect ) ); ?>"><?php esc_html_e( 'שכחתי סיסמה', 'kivun' ); ?></a>
 		</p>
 	</div>
-	<script>
-	( function () {
-		function place() {
-			var wrap = document.querySelector( '.kivun-employer-login' );
-			if ( ! wrap ) { return false; }
-			var form = wrap.querySelector( '#loginform' );
-			if ( ! form ) { return false; }
-
-			// Find the Nextend social-login button — inside the wrapper, inside the
-			// form, or among the wrapper's following siblings (NSL placements vary).
-			var nsl = wrap.querySelector( '.nsl-container' );
-			if ( ! nsl ) {
-				var node = wrap.nextElementSibling, hops = 0;
-				while ( node && hops < 4 && ! nsl ) {
-					if ( node.classList && node.classList.contains( 'nsl-container' ) ) { nsl = node; }
-					else if ( node.querySelector ) { nsl = node.querySelector( '.nsl-container' ); }
-					node = node.nextElementSibling; hops++;
-				}
-			}
-			if ( ! nsl ) { return false; }
-			if ( nsl.parentNode === wrap && nsl.nextElementSibling === form ) { return true; }
-			wrap.insertBefore( nsl, form );
-			return true;
-		}
-
-		function run() {
-			if ( place() ) { return; }
-			var tries = 0;
-			var timer = setInterval( function () {
-				tries++;
-				if ( place() || tries > 15 ) { clearInterval( timer ); }
-			}, 200 );
-		}
-
-		if ( 'loading' !== document.readyState ) { run(); }
-		else { document.addEventListener( 'DOMContentLoaded', run ); }
-	} () );
-	</script>
 	<?php
 	return;
 }
@@ -272,6 +234,7 @@ foreach ( $jobs as $j ) {
 			<table class="kivun-jobs-table">
 				<thead>
 					<tr>
+						<th scope="col"><?php esc_html_e( 'מס׳ משרה', 'kivun' ); ?></th>
 						<th scope="col"><?php esc_html_e( 'כותרת', 'kivun' ); ?></th>
 						<th scope="col"><?php esc_html_e( 'סטטוס', 'kivun' ); ?></th>
 						<th scope="col"><?php esc_html_e( 'הגשות', 'kivun' ); ?></th>
@@ -302,6 +265,7 @@ foreach ( $jobs as $j ) {
 						data-description="<?php echo esc_attr( get_post_meta( $job->ID, '_kivun_description', true ) ); ?>"
 						data-requirements="<?php echo esc_attr( get_post_meta( $job->ID, '_kivun_requirements', true ) ); ?>"
 					>
+						<td><span class="kivun-job-id">#<?php echo esc_html( (string) $job->ID ); ?></span></td>
 						<td><?php echo esc_html( $job->post_title ); ?></td>
 						<td>
 							<span class="kivun-status kivun-status--<?php echo esc_attr( $job->post_status ); ?>">
