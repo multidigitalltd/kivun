@@ -29,6 +29,7 @@ class Kivun_Core {
 		Kivun_Landing::init();
 		Kivun_Jobs::init();
 		Kivun_Employer::init();
+		Kivun_Turnstile_Login::init();
 		Kivun_Admin::init();
 		Kivun_Admin_Settings::init();
 		Kivun_WooCommerce::init();
@@ -82,6 +83,7 @@ class Kivun_Core {
 			'class-kivun-courses',
 			'class-kivun-jobs',
 			'class-kivun-employer',
+			'class-kivun-turnstile-login',
 			'class-kivun-workshops',
 			'class-kivun-landing',
 			'class-kivun-mailer',
