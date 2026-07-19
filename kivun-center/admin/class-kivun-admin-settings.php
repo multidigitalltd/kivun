@@ -310,6 +310,19 @@ class Kivun_Admin_Settings {
 						<input type="email" name="forms_router_email" value="<?php echo esc_attr( $o( 'forms_router_email' ) ); ?>" class="regular-text" placeholder="leads@example.com">
 						<a class="button" style="margin-inline-start:6px" href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=kivun_test_router_email' ), 'kivun_test_router_email' ) ); ?>"><?php esc_html_e( 'שליחת מייל בדיקה', 'kivun' ); ?></a>
 						<p class="description"><?php esc_html_e( 'כל הגשת טופס Elementor באתר תישלח גם לכתובת הזו. השאר ריק כדי לבטל.', 'kivun' ); ?><br><?php esc_html_e( 'אם הטופס נשלח מקורס / סדנה / דף נחיתה שהוגדר לו "אימייל לקבלת הלידים" — הכתובת הספציפית של אותו עמוד גוברת על הכתובת המרכזית.', 'kivun' ); ?><br><strong><?php esc_html_e( 'לבדיקה: שמרו כתובת, לחצו "שליחת מייל בדיקה" — כך תדעו אם הבעיה בשליחת הדואר של השרת או בטופס.', 'kivun' ); ?></strong></p>
+						<?php $router_last = get_option( 'kivun_forms_router_last', array() ); ?>
+						<?php if ( is_array( $router_last ) && ! empty( $router_last['time'] ) ) : ?>
+							<p class="description" style="background:#f6f7f7;border:1px solid #dcdcde;border-radius:6px;padding:8px 10px">
+								<strong><?php esc_html_e( 'ניתוב אחרון של טופס:', 'kivun' ); ?></strong>
+								<?php echo esc_html( (string) $router_last['time'] ); ?>
+								— <?php echo esc_html( (string) ( $router_last['result'] ?? '' ) ); ?>
+								<?php if ( ! empty( $router_last['email'] ) ) : ?>
+									→ <code><?php echo esc_html( (string) $router_last['email'] ); ?></code>
+								<?php endif; ?>
+							</p>
+						<?php else : ?>
+							<p class="description" style="color:#b45309"><?php esc_html_e( '⚠️ עדיין לא נרשם ניתוב של אף טופס. אם שלחתם טופס ולא מופיע כאן — ההוק של Elementor לא מגיע לתוסף (בדקו שאתם על Elementor Pro, או שהטופס משתמש בפעולת Kivun שיש לה גיבוי ניתוב מובנה).', 'kivun' ); ?></p>
+						<?php endif; ?>
 					</td>
 				</tr>
 				<tr>

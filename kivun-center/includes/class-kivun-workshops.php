@@ -150,7 +150,7 @@ class Kivun_Workshops {
 		$notify               = compact( 'name', 'email', 'phone', 'city', 'gender', 'message' );
 		$notify['next_cycle'] = $is_next_cycle;
 		Kivun_Mailer::send_lead_notification( $post_id, $notify, $type );
-		do_action( 'kivun_after_lead', $post_id, compact( 'name', 'email', 'phone', 'message' ) );
+		do_action( 'kivun_after_lead', $post_id, compact( 'name', 'email', 'phone', 'city', 'gender', 'message' ) );
 
 		return true;
 	}
