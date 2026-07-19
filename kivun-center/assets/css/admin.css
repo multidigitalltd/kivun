@@ -116,3 +116,11 @@
 /* Content creator — AI availability warning. */
 .kivun-cc-ai-warn { margin: .5rem 0; padding: .5rem .7rem; border-radius: 8px; background: #fffbeb; color: #92400e; border: 1px solid #fde68a; font-size: 13px; }
 .kivun-cc-ai-warn a { color: #92400e; }
+
+/* Registrations/leads CRM table — readable columns instead of cramped fixed layout. */
+.kivun-reg-scroll { overflow-x: auto; width: 100%; }
+.kivun-reg-table { table-layout: auto !important; min-width: 1000px; }
+.kivun-reg-table th { white-space: nowrap; }
+.kivun-reg-table td { vertical-align: middle; }
+.kivun-reg-table td .kivun-status-select,
+.kivun-reg-table td textarea { max-width: 100%; }

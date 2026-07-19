@@ -1103,6 +1103,16 @@ class Kivun_Admin {
 		}
 		$where = $conds ? 'WHERE ' . implode( ' AND ', $conds ) : '';
 
+		// Per-page + pagination.
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin filter.
+		$per_page = isset( $_GET['per_page'] ) ? absint( wp_unslash( $_GET['per_page'] ) ) : 25;
+		if ( ! in_array( $per_page, array( 25, 50, 100, 200, 500 ), true ) ) {
+			$per_page = 25;
+		}
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin filter.
+		$paged     = isset( $_GET['paged'] ) ? max( 1, absint( wp_unslash( $_GET['paged'] ) ) ) : 1;
+		$limit_sql = $wpdb->prepare( 'LIMIT %d OFFSET %d', $per_page, ( $paged - 1 ) * $per_page );
+
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		$rows  = $wpdb->get_results(
 			"SELECT r.*, p.post_title AS course_title
@@ -1110,10 +1120,14 @@ class Kivun_Admin {
 			 LEFT JOIN {$wpdb->posts} p ON p.ID = r.course_id
 			 $where
 			 ORDER BY r.created_at DESC
-			 LIMIT 500"
+			 $limit_sql"
 		);
+		$found = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}kivun_registrations r $where" );
 		$total = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}kivun_registrations" );
 		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+
+		$total_pages = max( 1, (int) ceil( $found / $per_page ) );
+		$paged       = min( $paged, $total_pages );
 
 		$courses = get_posts(
 			array(
@@ -1154,10 +1168,21 @@ class Kivun_Admin {
 					<?php endforeach; ?>
 				</select>
 				<input type="search" name="s" value="<?php echo esc_attr( $search ); ?>" placeholder="<?php esc_attr_e( 'חיפוש שם / אימייל / טלפון', 'kivun' ); ?>">
+					<select name="per_page" title="<?php esc_attr_e( 'רשומות בעמוד', 'kivun' ); ?>">
+						<?php foreach ( array( 25, 50, 100, 200, 500 ) as $pp_option ) : ?>
+							<option value="<?php echo esc_attr( $pp_option ); ?>" <?php selected( $per_page, $pp_option ); ?>>
+								<?php
+								/* translators: %d: number of rows shown per page. */
+								echo esc_html( sprintf( __( '%d בעמוד', 'kivun' ), $pp_option ) );
+								?>
+							</option>
+						<?php endforeach; ?>
+					</select>
 				<button class="button"><?php esc_html_e( 'סינון', 'kivun' ); ?></button>
 			</form>
 
-			<table class="wp-list-table widefat fixed striped">
+			<div class="kivun-reg-scroll">
+			<table class="wp-list-table widefat striped kivun-reg-table">
 				<thead><tr>
 					<th style="width:130px"><?php esc_html_e( 'שם', 'kivun' ); ?></th>
 					<th><?php esc_html_e( 'קורס / סדנה', 'kivun' ); ?></th>
@@ -1217,6 +1242,39 @@ class Kivun_Admin {
 				<?php endif; ?>
 				</tbody>
 			</table>
+			</div>
+			<?php if ( $total_pages > 1 ) : ?>
+				<?php
+				$kivun_pg_base = array(
+					'post_type' => 'kivun_course',
+					'page'      => 'kivun-registrations',
+					'per_page'  => $per_page,
+				);
+				if ( $course_filter ) {
+					$kivun_pg_base['kivun_course_id'] = $course_filter; }
+				if ( '' !== $type_filter ) {
+					$kivun_pg_base['kivun_type'] = $type_filter; }
+				if ( '' !== $search ) {
+					$kivun_pg_base['s'] = $search; }
+				$kivun_pg_url = function ( $p ) use ( $kivun_pg_base ) {
+					return add_query_arg( array_merge( $kivun_pg_base, array( 'paged' => $p ) ), admin_url( 'edit.php' ) );
+				};
+	?>
+				<div class="tablenav bottom"><div class="tablenav-pages" style="float:none;text-align:center;margin:1rem 0">
+					<span class="displaying-num"><?php echo esc_html( number_format_i18n( $found ) ); ?> <?php esc_html_e( 'רשומות', 'kivun' ); ?></span>
+					<span class="pagination-links" style="margin-inline-start:.75rem">
+						<?php if ( $paged > 1 ) : ?>
+							<a class="button" href="<?php echo esc_url( $kivun_pg_url( 1 ) ); ?>">&laquo;</a>
+							<a class="button" href="<?php echo esc_url( $kivun_pg_url( $paged - 1 ) ); ?>">&lsaquo;</a>
+						<?php endif; ?>
+						<span class="paging-input" style="margin:0 .5rem"><?php echo esc_html( $paged ); ?> <?php esc_html_e( 'מתוך', 'kivun' ); ?> <?php echo esc_html( $total_pages ); ?></span>
+						<?php if ( $paged < $total_pages ) : ?>
+							<a class="button" href="<?php echo esc_url( $kivun_pg_url( $paged + 1 ) ); ?>">&rsaquo;</a>
+							<a class="button" href="<?php echo esc_url( $kivun_pg_url( $total_pages ) ); ?>">&raquo;</a>
+						<?php endif; ?>
+					</span>
+				</div></div>
+			<?php endif; ?>
 		</div>
 		<?php
 	}
