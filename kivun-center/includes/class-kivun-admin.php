@@ -298,6 +298,7 @@ class Kivun_Admin {
 			'lead'         => 'מתעניין',
 			'workshop'     => 'דף נחיתה',
 			'session'      => 'סדנה',
+			'form'         => 'טופס',
 		);
 
 		printf(
@@ -1074,6 +1075,7 @@ class Kivun_Admin {
 			'lead'         => 'מתעניין',
 			'workshop'     => 'דף נחיתה',
 			'session'      => 'סדנה',
+			'form'         => 'טופס',
 		);
 
 		$conds = array();
@@ -1147,6 +1149,7 @@ class Kivun_Admin {
 				<thead><tr>
 					<th style="width:130px"><?php esc_html_e( 'שם', 'kivun' ); ?></th>
 					<th><?php esc_html_e( 'קורס / סדנה', 'kivun' ); ?></th>
+					<th style="width:150px"><?php esc_html_e( 'מקור', 'kivun' ); ?></th>
 					<th style="width:70px"><?php esc_html_e( 'סוג', 'kivun' ); ?></th>
 					<th style="width:150px"><?php esc_html_e( 'אימייל', 'kivun' ); ?></th>
 					<th style="width:105px"><?php esc_html_e( 'טלפון', 'kivun' ); ?></th>
@@ -1160,7 +1163,7 @@ class Kivun_Admin {
 				</tr></thead>
 				<tbody>
 				<?php if ( ! $rows ) : ?>
-					<tr><td colspan="12"><?php esc_html_e( 'לא נמצאו רשומות.', 'kivun' ); ?></td></tr>
+					<tr><td colspan="13"><?php esc_html_e( 'לא נמצאו רשומות.', 'kivun' ); ?></td></tr>
 				<?php else : ?>
 					<?php foreach ( $rows as $r ) : ?>
 						<?php $type_label = $type_labels[ $r->type ?? 'registration' ] ?? $r->type; ?>
@@ -1173,6 +1176,7 @@ class Kivun_Admin {
 									<?php echo esc_html( $r->course_title ? $r->course_title : __( '(נמחק)', 'kivun' ) ); ?>
 								<?php endif; ?>
 							</td>
+							<td><?php echo esc_html( (string) ( $r->source ?? '' ) ); ?></td>
 							<td><?php echo esc_html( $type_label ); ?></td>
 							<td><a href="mailto:<?php echo esc_attr( $r->email ); ?>"><?php echo esc_html( $r->email ); ?></a></td>
 							<td><a href="tel:<?php echo esc_attr( $r->phone ); ?>"><?php echo esc_html( $r->phone ); ?></a></td>

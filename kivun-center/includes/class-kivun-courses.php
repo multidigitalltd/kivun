@@ -99,10 +99,11 @@ class Kivun_Courses {
 				'phone'      => $phone,
 				'city'       => $city,
 				'message'    => $message,
+				'source'     => (string) get_the_title( $course_id ),
 				'status'     => 'pending',
 				'created_at' => current_time( 'mysql' ),
 			),
-			array( '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s' )
+			array( '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' )
 		);
 
 		Kivun_Mailer::send_course_registration( $course_id, compact( 'name', 'email', 'phone', 'city', 'message' ) );

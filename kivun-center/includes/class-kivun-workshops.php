@@ -140,11 +140,12 @@ class Kivun_Workshops {
 				'gender'            => $gender,
 				'marketing_consent' => $consent,
 				'message'           => $message,
+				'source'            => (string) get_the_title( $post_id ),
 				'status'            => $status,
 				'type'              => $type,
 				'created_at'        => current_time( 'mysql' ),
 			),
-			array( '%d', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s' )
+			array( '%d', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%s' )
 		);
 
 		$notify               = compact( 'name', 'email', 'phone', 'city', 'gender', 'message' );
