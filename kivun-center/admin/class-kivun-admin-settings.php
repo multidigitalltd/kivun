@@ -27,6 +27,7 @@ class Kivun_Admin_Settings {
 	public static function init(): void {
 		add_action( 'admin_menu', array( __CLASS__, 'add_menu' ) );
 		add_action( 'admin_post_kivun_save_settings', array( __CLASS__, 'save' ) );
+		add_action( 'admin_post_kivun_test_router_email', array( __CLASS__, 'send_test_email' ) );
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue' ) );
 	}
 
@@ -132,6 +133,46 @@ class Kivun_Admin_Settings {
 	}
 
 	/**
+	 * Send a test email to the central forms-router address, to verify that
+	 * wp_mail delivers and the address is correct — independent of Elementor.
+	 *
+	 * @return void
+	 */
+	public static function send_test_email(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( 'Unauthorized' );
+		}
+		check_admin_referer( 'kivun_test_router_email' );
+
+		$to     = (string) self::get( 'forms_router_email', '' );
+		$result = 'empty';
+
+		if ( '' !== trim( $to ) && is_email( $to ) ) {
+			$sent = wp_mail(
+				$to,
+				sprintf( '[%s] מייל בדיקה — ניתוב טפסים', get_bloginfo( 'name' ) ),
+				sprintf(
+					'<p>%s</p>',
+					sprintf(
+						/* translators: %s: destination email address. */
+						esc_html__( 'זהו מייל בדיקה מהניתוב הכללי של Kivun Center. אם קיבלת אותו — הניתוב לכתובת %s תקין.', 'kivun' ),
+						esc_html( $to )
+					)
+				),
+				array(
+					'Content-Type: text/html; charset=UTF-8',
+					sprintf( 'From: %s <%s>', get_bloginfo( 'name' ), get_option( 'admin_email' ) ),
+				)
+			);
+			$result = $sent ? 'ok' : 'fail';
+		}
+
+		// phpcs:ignore WordPress.Security.SafeRedirect.wp_redirect_wp_redirect -- Internal admin URL redirect.
+		wp_redirect( admin_url( 'admin.php?page=kivun-settings&router_test=' . $result ) );
+		exit;
+	}
+
+	/**
 	 * Retrieve a single stored setting value.
 	 *
 	 * @param string $key           The setting key to read.
@@ -161,6 +202,16 @@ class Kivun_Admin_Settings {
 			<?php // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only display. ?>
 			<?php if ( ! empty( $_GET['saved'] ) ) : ?>
 				<div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'ההגדרות נשמרו.', 'kivun' ); ?></p></div>
+			<?php endif; ?>
+
+			<?php // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only display. ?>
+			<?php $router_test = isset( $_GET['router_test'] ) ? sanitize_key( wp_unslash( $_GET['router_test'] ) ) : ''; ?>
+			<?php if ( 'ok' === $router_test ) : ?>
+				<div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'מייל הבדיקה נשלח. בדקו את תיבת הדואר (כולל ספאם). אם לא הגיע — קיימת בעיית שליחת דואר בשרת (מומלץ תוסף SMTP).', 'kivun' ); ?></p></div>
+			<?php elseif ( 'fail' === $router_test ) : ?>
+				<div class="notice notice-error is-dismissible"><p><?php esc_html_e( 'שליחת מייל הבדיקה נכשלה — wp_mail החזיר שגיאה. השרת אינו שולח דואר. התקינו תוסף SMTP (למשל WP Mail SMTP).', 'kivun' ); ?></p></div>
+			<?php elseif ( 'empty' === $router_test ) : ?>
+				<div class="notice notice-warning is-dismissible"><p><?php esc_html_e( 'לא הוגדרה כתובת "אימייל מרכזי לכל הטפסים". הזינו כתובת ושמרו לפני הבדיקה.', 'kivun' ); ?></p></div>
 			<?php endif; ?>
 
 			<div class="kivun-tab-content kivun-tab-content--single">
@@ -257,7 +308,8 @@ class Kivun_Admin_Settings {
 					<th scope="row"><?php esc_html_e( 'אימייל מרכזי לכל הטפסים', 'kivun' ); ?></th>
 					<td>
 						<input type="email" name="forms_router_email" value="<?php echo esc_attr( $o( 'forms_router_email' ) ); ?>" class="regular-text" placeholder="leads@example.com">
-						<p class="description"><?php esc_html_e( 'כל הגשת טופס Elementor באתר תישלח גם לכתובת הזו. השאר ריק כדי לבטל.', 'kivun' ); ?><br><?php esc_html_e( 'אם הטופס נשלח מקורס / סדנה / דף נחיתה שהוגדר לו "אימייל לקבלת הלידים" — הכתובת הספציפית של אותו עמוד גוברת על הכתובת המרכזית.', 'kivun' ); ?></p>
+						<a class="button" style="margin-inline-start:6px" href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=kivun_test_router_email' ), 'kivun_test_router_email' ) ); ?>"><?php esc_html_e( 'שליחת מייל בדיקה', 'kivun' ); ?></a>
+						<p class="description"><?php esc_html_e( 'כל הגשת טופס Elementor באתר תישלח גם לכתובת הזו. השאר ריק כדי לבטל.', 'kivun' ); ?><br><?php esc_html_e( 'אם הטופס נשלח מקורס / סדנה / דף נחיתה שהוגדר לו "אימייל לקבלת הלידים" — הכתובת הספציפית של אותו עמוד גוברת על הכתובת המרכזית.', 'kivun' ); ?><br><strong><?php esc_html_e( 'לבדיקה: שמרו כתובת, לחצו "שליחת מייל בדיקה" — כך תדעו אם הבעיה בשליחת הדואר של השרת או בטופס.', 'kivun' ); ?></strong></p>
 					</td>
 				</tr>
 				<tr>

@@ -44,11 +44,17 @@ class Kivun_Forms_Router {
 		// A specific course/workshop/landing page email overrides the central one.
 		$email   = self::resolve_email( $page_url );
 		$webhook = (string) Kivun_Admin_Settings::get( 'forms_router_webhook', '' );
+
+		$has_webhook = ( '' !== trim( $webhook ) ) ? 'yes' : 'no';
+		self::log( sprintf( 'new_record fired. resolved email="%s", webhook=%s, page=%s', $email, $has_webhook, $page_url ) );
+
 		if ( '' === trim( $email ) && '' === trim( $webhook ) ) {
+			self::log( 'no destination configured — nothing sent.' );
 			return;
 		}
 
 		if ( ! is_object( $record ) || ! method_exists( $record, 'get' ) ) {
+			self::log( 'record object missing — nothing sent.' );
 			return;
 		}
 
@@ -79,12 +85,33 @@ class Kivun_Forms_Router {
 			return;
 		}
 
-		if ( '' !== trim( $email ) && is_email( $email ) ) {
-			self::send_email( $email, $form_name, $fields );
+		if ( '' !== trim( $email ) ) {
+			if ( is_email( $email ) ) {
+				self::send_email( $email, $form_name, $fields );
+			} else {
+				self::log( sprintf( 'destination "%s" is not a valid email — skipped.', $email ) );
+			}
 		}
 		if ( '' !== trim( $webhook ) ) {
 			self::send_webhook( $webhook, $form_name, $fields, $page_url );
 		}
+	}
+
+	/**
+	 * Write a diagnostic line to the PHP error log when debugging is enabled.
+	 *
+	 * Enable with WP_DEBUG, or force via the `kivun_forms_router_debug` filter.
+	 *
+	 * @param string $message The message to log.
+	 * @return void
+	 */
+	private static function log( string $message ): void {
+		$debug = ( defined( 'WP_DEBUG' ) && WP_DEBUG );
+		if ( ! apply_filters( 'kivun_forms_router_debug', $debug ) ) {
+			return;
+		}
+		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Opt-in diagnostic logging.
+		error_log( '[Kivun Forms Router] ' . $message );
 	}
 
 	/**
@@ -140,7 +167,12 @@ class Kivun_Forms_Router {
 			$rows
 		);
 
-		$headers = array( 'Content-Type: text/html; charset=UTF-8' );
+		$headers = array(
+			'Content-Type: text/html; charset=UTF-8',
+			// A real From address on the site's own domain improves deliverability
+			// (mailbox providers reject/spam mail from a mismatched sender).
+			sprintf( 'From: %s <%s>', get_bloginfo( 'name' ), get_option( 'admin_email' ) ),
+		);
 
 		// Reply directly to the submitter when an email field is present.
 		foreach ( $fields as $value ) {
@@ -151,7 +183,8 @@ class Kivun_Forms_Router {
 			}
 		}
 
-		wp_mail( $to, $subject, $body, $headers );
+		$sent = wp_mail( $to, $subject, $body, $headers );
+		self::log( sprintf( 'wp_mail to %s: %s', $to, $sent ? 'accepted' : 'FAILED' ) );
 	}
 
 	/**
