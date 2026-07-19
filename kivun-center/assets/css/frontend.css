@@ -881,3 +881,43 @@
 	z-index: 2;
 }
 .kivun-job-id { color: #6b7280; font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }
+
+/* Employer dashboard — clean "applications" pill button (theme-proof) + status dot. */
+.kivun-employer-dashboard .kivun-view-job-apps,
+.kivun-employer-dashboard .kivun-link-btn {
+	display: inline-flex !important;
+	align-items: center !important;
+	gap: .35rem !important;
+	background: #eef4ff !important;
+	color: #2457d6 !important;
+	border: 1px solid #d7e3fb !important;
+	border-radius: 8px !important;
+	padding: .3rem .75rem !important;
+	font: inherit !important;
+	font-size: .82rem !important;
+	font-weight: 600 !important;
+	line-height: 1.2 !important;
+	min-height: 0 !important;
+	width: auto !important;
+	text-decoration: none !important;
+	box-shadow: none !important;
+	cursor: pointer !important;
+}
+.kivun-employer-dashboard .kivun-view-job-apps:hover,
+.kivun-employer-dashboard .kivun-link-btn:hover {
+	background: #dfeaff !important;
+	color: #1c48b8 !important;
+	border-color: #c3d6f7 !important;
+}
+.kivun-employer-dashboard .kivun-status { border: 1px solid rgba(0,0,0,.04); }
+.kivun-employer-dashboard .kivun-status::before {
+	content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+	background: currentColor; margin-inline-end: 5px; vertical-align: middle; opacity: .85;
+}
+
+/* Employer login — center the social (Google) button and round its corners. */
+.kivun-employer-login .nsl-container,
+.kivun-employer-login .nsl-container[data-align] { text-align: center !important; width: 100% !important; }
+.kivun-employer-login .nsl-container-buttons { display: flex !important; flex-direction: column !important; align-items: center !important; }
+.kivun-employer-login .nsl-container-buttons > a { width: 100%; max-width: 360px; }
+.kivun-employer-login .nsl-button { border-radius: 12px !important; overflow: hidden; }
