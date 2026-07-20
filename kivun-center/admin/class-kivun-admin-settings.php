@@ -32,7 +32,7 @@ class Kivun_Admin_Settings {
 
 		// Hide the admin menu items the operator chose to hide (runs last so all
 		// Kivun menus are already registered).
-		add_action( 'admin_menu', array( __CLASS__, 'hide_menus' ), 9999 );
+		add_action( 'admin_menu', array( __CLASS__, 'hide_menus' ), 999999 );
 
 		// Always keep a Settings link on the Plugins page — a safety net in case
 		// the Settings menu itself was hidden.
@@ -101,61 +101,58 @@ class Kivun_Admin_Settings {
 	// ── Admin menu visibility ──────────────────────────────────────────────────
 
 	/**
-	 * The plugin's admin menu items that can be shown/hidden, in menu order.
+	 * List every top-level admin menu currently registered (core + plugins).
 	 *
-	 * @return array<string,array{label:string,slug:string}>
+	 * Reads the global $menu, so it reflects whatever is installed. Separators
+	 * are skipped. Returns slug => label (label stripped of any count bubbles).
+	 *
+	 * @return array<string,string>
 	 */
-	public static function menu_items(): array {
-		return array(
-			'jobs'     => array(
-				'label' => __( 'משרות', 'kivun' ),
-				'slug'  => 'edit.php?post_type=kivun_job',
-			),
-			'courses'  => array(
-				'label' => __( 'קורסים', 'kivun' ),
-				'slug'  => 'edit.php?post_type=kivun_course',
-			),
-			'landing'  => array(
-				'label' => __( 'דפי נחיתה', 'kivun' ),
-				'slug'  => 'edit.php?post_type=kivun_workshop',
-			),
-			'sessions' => array(
-				'label' => __( 'סדנאות', 'kivun' ),
-				'slug'  => 'edit.php?post_type=kivun_session',
-			),
-			'content'  => array(
-				'label' => __( 'פרסום תוכן', 'kivun' ),
-				'slug'  => 'kivun-create-content',
-			),
-			'leads'    => array(
-				'label' => __( 'לידים והרשמות', 'kivun' ),
-				'slug'  => 'edit.php?post_type=kivun_course&page=kivun-registrations',
-			),
-			'settings' => array(
-				'label' => __( 'הגדרות (Kivun Center)', 'kivun' ),
-				'slug'  => 'kivun-settings',
-			),
-		);
+	public static function all_admin_menus(): array {
+		global $menu;
+		$items = array();
+		if ( ! is_array( $menu ) ) {
+			return $items;
+		}
+		foreach ( $menu as $item ) {
+			if ( ! is_array( $item ) || empty( $item[0] ) ) {
+				continue;
+			}
+			$slug = isset( $item[2] ) ? (string) $item[2] : '';
+			if ( '' === $slug || 0 === strpos( $slug, 'separator' ) ) {
+				continue;
+			}
+			$label = trim( wp_strip_all_tags( (string) $item[0] ) );
+			// Drop a trailing update/comment count number for a cleaner label.
+			$label          = trim( (string) preg_replace( '/\s*\d+\s*$/', '', $label ) );
+			$items[ $slug ] = '' !== $label ? $label : $slug;
+		}
+		return $items;
 	}
 
 	/**
-	 * Remove the admin menu items the operator chose to hide.
+	 * Remove every admin menu the operator chose to hide (core, plugins, or this
+	 * plugin's own). Runs late so all menus are registered first.
 	 *
-	 * Hidden pages stay reachable by direct URL (and Settings via the Plugins
-	 * page), so this only cleans up the visible menu — it is not an access control.
+	 * Hidden pages stay reachable by direct URL (and Kivun settings via the
+	 * Plugins page), so this only cleans up the visible menu — it is not access
+	 * control. Skipped on the Kivun settings screen so the operator always sees
+	 * the full list to toggle items back on.
 	 *
 	 * @return void
 	 */
 	public static function hide_menus(): void {
-		$hidden = self::get( 'menu_hidden', array() );
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Reading the current screen slug only.
+		if ( isset( $_GET['page'] ) && 'kivun-settings' === sanitize_key( wp_unslash( $_GET['page'] ) ) ) {
+			return;
+		}
+
+		$hidden = self::get( 'admin_menu_hidden', array() );
 		if ( ! is_array( $hidden ) || ! $hidden ) {
 			return;
 		}
-		$items = self::menu_items();
-		foreach ( $hidden as $key ) {
-			if ( isset( $items[ $key ] ) ) {
-				remove_menu_page( $items[ $key ]['slug'] );
-			}
+		foreach ( $hidden as $slug ) {
+			remove_menu_page( (string) $slug );
 		}
 	}
 
@@ -184,15 +181,25 @@ class Kivun_Admin_Settings {
 			wp_die( 'Unauthorized' );
 		}
 
-		// Menu visibility: hidden = every item NOT ticked as shown.
-		$menu_all    = array_keys( self::menu_items() );
-		$menu_shown  = isset( $_POST['menu_show'] ) ? array_map( 'sanitize_key', (array) wp_unslash( $_POST['menu_show'] ) ) : array();
-		$menu_hidden = array_values( array_diff( $menu_all, $menu_shown ) );
+		// Menu visibility. Hidden = items shown in the form but unticked, PLUS any
+		// previously-hidden menu not currently present (e.g. a deactivated plugin),
+		// so its state is preserved.
+		$menu_all    = isset( $_POST['menu_all'] ) ? array_map( 'sanitize_text_field', (array) wp_unslash( $_POST['menu_all'] ) ) : array();
+		$menu_shown  = isset( $_POST['menu_show'] ) ? array_map( 'sanitize_text_field', (array) wp_unslash( $_POST['menu_show'] ) ) : array();
+		$menu_prev   = (array) self::get( 'admin_menu_hidden', array() );
+		$menu_hidden = array_values(
+			array_unique(
+				array_merge(
+					array_diff( $menu_all, $menu_shown ),
+					array_diff( $menu_prev, $menu_all )
+				)
+			)
+		);
 
 		update_option(
 			self::$option_key,
 			array(
-				'menu_hidden'            => $menu_hidden,
+				'admin_menu_hidden'      => $menu_hidden,
 				'admin_email'            => sanitize_email( wp_unslash( $_POST['admin_email'] ?? '' ) ),
 				'jobs_per_page'          => absint( $_POST['jobs_per_page'] ?? 10 ),
 				'cookie_banner_enabled'  => ! empty( $_POST['cookie_banner_enabled'] ),
@@ -325,21 +332,25 @@ class Kivun_Admin_Settings {
 			<table class="form-table">
 				<tr>
 					<th colspan="2" style="padding-top:8px"><h2 style="margin:0"><?php esc_html_e( 'לשוניות בלוח הבקרה', 'kivun' ); ?></h2>
-					<p class="description" style="font-weight:400"><?php esc_html_e( 'בחרו אילו תפריטים של התוסף יופיעו בסרגל הניהול — כדי לתת ללקוח לוח בקרה נקי. פריט שהוסתר עדיין נגיש בכתובת ישירה, וההגדרות תמיד זמינות מעמוד התוספים.', 'kivun' ); ?></p></th>
+					<p class="description" style="font-weight:400"><?php esc_html_e( 'בחרו אילו תפריטים יופיעו בסרגל הניהול — כל התפריטים באתר (וורדפרס ותוספים אחרים) — כדי לתת ללקוח לוח בקרה נקי. פריט שהוסתר עדיין נגיש בכתובת ישירה, וההגדרות של Kivun תמיד זמינות מעמוד התוספים.', 'kivun' ); ?></p></th>
 				</tr>
 				<tr>
 					<th scope="row"><?php esc_html_e( 'הצגת תפריטים', 'kivun' ); ?></th>
 					<td>
-						<?php $kivun_menu_hidden = (array) $o( 'menu_hidden', array() ); ?>
-						<fieldset>
-							<?php foreach ( self::menu_items() as $kivun_mk => $kivun_mi ) : ?>
-								<label style="display:inline-flex;align-items:center;gap:6px;margin:0 0 8px 18px">
-									<input type="checkbox" name="menu_show[]" value="<?php echo esc_attr( $kivun_mk ); ?>" <?php checked( ! in_array( $kivun_mk, $kivun_menu_hidden, true ) ); ?>>
-									<?php echo esc_html( $kivun_mi['label'] ); ?>
+						<?php
+						$kivun_menu_hidden = (array) $o( 'admin_menu_hidden', array() );
+						$kivun_all_menus   = self::all_admin_menus();
+						?>
+						<fieldset style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:4px 20px;max-width:820px;max-height:340px;overflow:auto;padding:10px 12px;border:1px solid #dcdcde;border-radius:8px;background:#fff">
+							<?php foreach ( $kivun_all_menus as $kivun_slug => $kivun_label ) : ?>
+								<label style="display:flex;align-items:center;gap:7px;margin:0">
+									<input type="checkbox" name="menu_show[]" value="<?php echo esc_attr( $kivun_slug ); ?>" <?php checked( ! in_array( $kivun_slug, $kivun_menu_hidden, true ) ); ?>>
+									<input type="hidden" name="menu_all[]" value="<?php echo esc_attr( $kivun_slug ); ?>">
+									<span><?php echo esc_html( $kivun_label ); ?></span>
 								</label>
 							<?php endforeach; ?>
 						</fieldset>
-						<p class="description"><?php esc_html_e( 'מסומן = מוצג בתפריט. הסירו סימון כדי להסתיר.', 'kivun' ); ?></p>
+						<p class="description"><?php esc_html_e( 'מסומן = מוצג בתפריט. הסירו סימון כדי להסתיר. ברירת מחדל: הכל מוצג.', 'kivun' ); ?></p>
 					</td>
 				</tr>
 				<tr>
