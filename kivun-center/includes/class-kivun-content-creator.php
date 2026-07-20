@@ -944,18 +944,43 @@ class Kivun_Content_Creator {
 	}
 
 	/**
-	 * A styled "please log in" notice with a login link back to this page.
+	 * A styled inline login box for the content-creator page. Reuses the
+	 * `.kivun-employer-login` structure so Nextend Social Login injects its
+	 * "Continue with Google" button and the shared script/styles apply (button
+	 * moved above the fields, centered).
 	 *
 	 * @return string
 	 */
 	private static function front_login_notice(): string {
-		$here  = (string) get_permalink();
-		$here  = $here ? $here : home_url();
-		$login = wp_login_url( $here );
-		return '<div class="kivun-cc-front"><div class="kivun-cc-note">'
-			. esc_html__( 'כדי להזין תוכן יש להתחבר תחילה.', 'kivun' )
-			. ' <a class="kivun-cc-btn kivun-cc-btn--sm" href="' . esc_url( $login ) . '">' . esc_html__( 'התחברות', 'kivun' ) . '</a>'
-			. '</div></div>';
+		$here = (string) get_permalink();
+		$here = $here ? $here : home_url();
+
+		Kivun_Core::enqueue_frontend_assets();
+
+		ob_start();
+		?>
+		<div class="kivun-cc-front">
+			<div class="kivun-employer-login kivun-cc-login" dir="rtl">
+				<h2 class="kivun-employer-login__title"><?php esc_html_e( 'התחברות', 'kivun' ); ?></h2>
+				<p class="kivun-notice"><?php esc_html_e( 'יש להתחבר כדי להזין תוכן.', 'kivun' ); ?></p>
+				<?php
+				wp_login_form(
+					array(
+						'redirect'       => $here,
+						'label_username' => __( 'אימייל / שם משתמש', 'kivun' ),
+						'label_password' => __( 'סיסמה', 'kivun' ),
+						'label_remember' => __( 'זכור אותי', 'kivun' ),
+						'label_log_in'   => __( 'התחברות', 'kivun' ),
+					)
+				);
+				?>
+				<p class="kivun-employer-login__links">
+					<a href="<?php echo esc_url( wp_lostpassword_url( $here ) ); ?>"><?php esc_html_e( 'שכחתי סיסמה', 'kivun' ); ?></a>
+				</p>
+			</div>
+		</div>
+		<?php
+		return (string) ob_get_clean();
 	}
 
 	/**
