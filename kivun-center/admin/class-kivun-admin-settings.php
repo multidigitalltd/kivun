@@ -20,6 +20,14 @@ class Kivun_Admin_Settings {
 	private static string $option_key = 'kivun_settings';
 
 	/**
+	 * Snapshot of the full admin menu (slug => label), taken before any items
+	 * are hidden, so the settings screen can still list everything to toggle.
+	 *
+	 * @var array<string,string>
+	 */
+	private static array $menu_snapshot = array();
+
+	/**
 	 * Register the admin hooks for the settings screen.
 	 *
 	 * @return void
@@ -101,14 +109,12 @@ class Kivun_Admin_Settings {
 	// ── Admin menu visibility ──────────────────────────────────────────────────
 
 	/**
-	 * List every top-level admin menu currently registered (core + plugins).
-	 *
-	 * Reads the global $menu, so it reflects whatever is installed. Separators
-	 * are skipped. Returns slug => label (label stripped of any count bubbles).
+	 * Read the current global $menu into a slug => label map (separators skipped,
+	 * count bubbles stripped from labels).
 	 *
 	 * @return array<string,string>
 	 */
-	public static function all_admin_menus(): array {
+	private static function read_menu(): array {
 		global $menu;
 		$items = array();
 		if ( ! is_array( $menu ) ) {
@@ -131,21 +137,27 @@ class Kivun_Admin_Settings {
 	}
 
 	/**
+	 * Every top-level admin menu (core + plugins) for the settings checklist —
+	 * from the snapshot taken before hiding, so hidden items still appear here.
+	 *
+	 * @return array<string,string>
+	 */
+	public static function all_admin_menus(): array {
+		return self::$menu_snapshot ? self::$menu_snapshot : self::read_menu();
+	}
+
+	/**
 	 * Remove every admin menu the operator chose to hide (core, plugins, or this
 	 * plugin's own). Runs late so all menus are registered first.
 	 *
-	 * Hidden pages stay reachable by direct URL (and Kivun settings via the
-	 * Plugins page), so this only cleans up the visible menu — it is not access
-	 * control. Skipped on the Kivun settings screen so the operator always sees
-	 * the full list to toggle items back on.
+	 * The full menu is snapshotted first so the settings checklist can still show
+	 * every item. Hidden pages stay reachable by direct URL (and Kivun settings
+	 * via the Plugins page) — this only cleans up the visible menu.
 	 *
 	 * @return void
 	 */
 	public static function hide_menus(): void {
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Reading the current screen slug only.
-		if ( isset( $_GET['page'] ) && 'kivun-settings' === sanitize_key( wp_unslash( $_GET['page'] ) ) ) {
-			return;
-		}
+		self::$menu_snapshot = self::read_menu();
 
 		$hidden = self::get( 'admin_menu_hidden', array() );
 		if ( ! is_array( $hidden ) || ! $hidden ) {
