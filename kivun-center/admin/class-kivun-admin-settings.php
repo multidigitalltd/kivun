@@ -29,6 +29,14 @@ class Kivun_Admin_Settings {
 		add_action( 'admin_post_kivun_save_settings', array( __CLASS__, 'save' ) );
 		add_action( 'admin_post_kivun_test_router_email', array( __CLASS__, 'send_test_email' ) );
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue' ) );
+
+		// Hide the admin menu items the operator chose to hide (runs last so all
+		// Kivun menus are already registered).
+		add_action( 'admin_menu', array( __CLASS__, 'hide_menus' ), 9999 );
+
+		// Always keep a Settings link on the Plugins page — a safety net in case
+		// the Settings menu itself was hidden.
+		add_filter( 'plugin_action_links_' . plugin_basename( KIVUN_FILE ), array( __CLASS__, 'action_links' ) );
 	}
 
 	// ── Menu ──────────────────────────────────────────────────────────────────
@@ -90,6 +98,79 @@ class Kivun_Admin_Settings {
 		}
 	}
 
+	// ── Admin menu visibility ──────────────────────────────────────────────────
+
+	/**
+	 * The plugin's admin menu items that can be shown/hidden, in menu order.
+	 *
+	 * @return array<string,array{label:string,slug:string}>
+	 */
+	public static function menu_items(): array {
+		return array(
+			'jobs'     => array(
+				'label' => __( 'משרות', 'kivun' ),
+				'slug'  => 'edit.php?post_type=kivun_job',
+			),
+			'courses'  => array(
+				'label' => __( 'קורסים', 'kivun' ),
+				'slug'  => 'edit.php?post_type=kivun_course',
+			),
+			'landing'  => array(
+				'label' => __( 'דפי נחיתה', 'kivun' ),
+				'slug'  => 'edit.php?post_type=kivun_workshop',
+			),
+			'sessions' => array(
+				'label' => __( 'סדנאות', 'kivun' ),
+				'slug'  => 'edit.php?post_type=kivun_session',
+			),
+			'content'  => array(
+				'label' => __( 'פרסום תוכן', 'kivun' ),
+				'slug'  => 'kivun-create-content',
+			),
+			'leads'    => array(
+				'label' => __( 'לידים והרשמות', 'kivun' ),
+				'slug'  => 'edit.php?post_type=kivun_course&page=kivun-registrations',
+			),
+			'settings' => array(
+				'label' => __( 'הגדרות (Kivun Center)', 'kivun' ),
+				'slug'  => 'kivun-settings',
+			),
+		);
+	}
+
+	/**
+	 * Remove the admin menu items the operator chose to hide.
+	 *
+	 * Hidden pages stay reachable by direct URL (and Settings via the Plugins
+	 * page), so this only cleans up the visible menu — it is not an access control.
+	 *
+	 * @return void
+	 */
+	public static function hide_menus(): void {
+		$hidden = self::get( 'menu_hidden', array() );
+		if ( ! is_array( $hidden ) || ! $hidden ) {
+			return;
+		}
+		$items = self::menu_items();
+		foreach ( $hidden as $key ) {
+			if ( isset( $items[ $key ] ) ) {
+				remove_menu_page( $items[ $key ]['slug'] );
+			}
+		}
+	}
+
+	/**
+	 * Add a "Settings" link to the plugin's row on the Plugins page.
+	 *
+	 * @param array $links Existing action links.
+	 * @return array
+	 */
+	public static function action_links( $links ): array {
+		$settings = '<a href="' . esc_url( admin_url( 'admin.php?page=kivun-settings' ) ) . '">' . esc_html__( 'הגדרות', 'kivun' ) . '</a>';
+		array_unshift( $links, $settings );
+		return $links;
+	}
+
 	// ── Save ──────────────────────────────────────────────────────────────────
 
 	/**
@@ -103,9 +184,15 @@ class Kivun_Admin_Settings {
 			wp_die( 'Unauthorized' );
 		}
 
+		// Menu visibility: hidden = every item NOT ticked as shown.
+		$menu_all    = array_keys( self::menu_items() );
+		$menu_shown  = isset( $_POST['menu_show'] ) ? array_map( 'sanitize_key', (array) wp_unslash( $_POST['menu_show'] ) ) : array();
+		$menu_hidden = array_values( array_diff( $menu_all, $menu_shown ) );
+
 		update_option(
 			self::$option_key,
 			array(
+				'menu_hidden'            => $menu_hidden,
 				'admin_email'            => sanitize_email( wp_unslash( $_POST['admin_email'] ?? '' ) ),
 				'jobs_per_page'          => absint( $_POST['jobs_per_page'] ?? 10 ),
 				'cookie_banner_enabled'  => ! empty( $_POST['cookie_banner_enabled'] ),
@@ -236,6 +323,25 @@ class Kivun_Admin_Settings {
 			<input type="hidden" name="action" value="kivun_save_settings">
 
 			<table class="form-table">
+				<tr>
+					<th colspan="2" style="padding-top:8px"><h2 style="margin:0"><?php esc_html_e( 'לשוניות בלוח הבקרה', 'kivun' ); ?></h2>
+					<p class="description" style="font-weight:400"><?php esc_html_e( 'בחרו אילו תפריטים של התוסף יופיעו בסרגל הניהול — כדי לתת ללקוח לוח בקרה נקי. פריט שהוסתר עדיין נגיש בכתובת ישירה, וההגדרות תמיד זמינות מעמוד התוספים.', 'kivun' ); ?></p></th>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'הצגת תפריטים', 'kivun' ); ?></th>
+					<td>
+						<?php $kivun_menu_hidden = (array) $o( 'menu_hidden', array() ); ?>
+						<fieldset>
+							<?php foreach ( self::menu_items() as $kivun_mk => $kivun_mi ) : ?>
+								<label style="display:inline-flex;align-items:center;gap:6px;margin:0 0 8px 18px">
+									<input type="checkbox" name="menu_show[]" value="<?php echo esc_attr( $kivun_mk ); ?>" <?php checked( ! in_array( $kivun_mk, $kivun_menu_hidden, true ) ); ?>>
+									<?php echo esc_html( $kivun_mi['label'] ); ?>
+								</label>
+							<?php endforeach; ?>
+						</fieldset>
+						<p class="description"><?php esc_html_e( 'מסומן = מוצג בתפריט. הסירו סימון כדי להסתיר.', 'kivun' ); ?></p>
+					</td>
+				</tr>
 				<tr>
 					<th scope="row"><?php esc_html_e( 'אימייל לקבלת התראות', 'kivun' ); ?></th>
 					<td>
