@@ -47,13 +47,15 @@
 	box-sizing: border-box;
 }
 .kivun-a11y {
-	font-family: system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+	/* Pull the site's font (Ploni via Elementor global) with safe fallbacks. */
+	font-family: var(--e-global-typography-text-font-family, 'ploni'), 'Ploni ML v2 AAA', 'Heebo', 'Assistant', system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+	--kivun-a11y-accent: var(--e-global-color-primary, #de2952);
 }
 .kivun-a11y button {
 	appearance: none;
 	-webkit-appearance: none;
 	margin: 0;
-	font-family: inherit;
+	font-family: inherit !important;
 	line-height: normal;
 	text-transform: none;
 	box-shadow: none;
@@ -222,10 +224,11 @@
 	line-height: 1.2;
 	text-align: center;
 	overflow-wrap: anywhere;
-	color: #3a414e;
-	background: #fff;
-	border: 1px solid #e9ebf1;
-	border-radius: 11px;
+	color: #4b5563 !important;
+	background: #fbfbfc !important;
+	border: 1px solid #ececf1 !important;
+	border-radius: 14px !important;
+	box-shadow: none !important;
 	cursor: pointer;
 	transition: background .15s ease, border-color .15s ease, color .15s ease, box-shadow .15s ease, transform .12s ease;
 }
@@ -243,19 +246,21 @@
 .kivun-a11y-btn__label { display: block; }
 
 .kivun-a11y-btn:hover {
-	background: #f7f8fa;
-	border-color: #cfd6e4;
+	background: #f4f5f8 !important;
+	border-color: #dcdfe8 !important;
+	color: #2b3240 !important;
 	transform: translateY(-1px);
-	box-shadow: 0 4px 12px rgba(20, 82, 216, .08);
+	box-shadow: 0 3px 10px rgba(35, 35, 35, .06) !important;
 }
 
 .kivun-a11y-btn[aria-pressed="true"] {
-	color: #fff;
-	background: #1452d8;
-	border-color: #1452d8;
-	box-shadow: 0 4px 12px rgba(20, 82, 216, .28);
+	color: var(--kivun-a11y-accent, #de2952) !important;
+	background: #fdeef2 !important;
+	border-color: var(--kivun-a11y-accent, #de2952) !important;
+	box-shadow: none !important;
 }
-.kivun-a11y-btn[aria-pressed="true"] .kivun-a11y-btn__icon { color: #fff; }
+.kivun-a11y-btn[aria-pressed="true"] .kivun-a11y-btn__icon,
+.kivun-a11y-btn[aria-pressed="true"] .kivun-a11y-glyph { color: var(--kivun-a11y-accent, #de2952) !important; }
 
 .kivun-a11y-panel__foot {
 	margin: 0;
