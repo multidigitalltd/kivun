@@ -42,7 +42,7 @@ $user_id = get_current_user_id();
 $jobs    = get_posts(
 	array(
 		'post_type'      => 'kivun_job',
-		'author'         => current_user_can( 'manage_options' ) ? 0 : $user_id,
+		'author'         => Kivun_Employer::can_manage_all() ? 0 : $user_id,
 		'post_status'    => array( 'publish', 'draft', 'pending' ),
 		'posts_per_page' => 100,
 		'orderby'        => 'date',

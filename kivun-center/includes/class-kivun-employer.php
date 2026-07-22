@@ -46,6 +46,18 @@ class Kivun_Employer {
 		);
 	}
 
+	/**
+	 * Whether the current user may manage the WHOLE jobs board — every employer's
+	 * jobs and applications. True for site admins and the "jobs board manager"
+	 * role (kivun_manage_jobs capability).
+	 *
+	 * @return bool
+	 */
+	public static function can_manage_all(): bool {
+		// phpcs:ignore WordPress.WP.Capabilities.Unknown -- Custom plugin capability.
+		return current_user_can( 'manage_options' ) || current_user_can( 'kivun_manage_jobs' );
+	}
+
 	// ── Post new job ──────────────────────────────────────────────────────────.
 
 	/**
@@ -323,7 +335,7 @@ class Kivun_Employer {
 	public static function get_applications( int $user_id ): array {
 		global $wpdb;
 
-		if ( current_user_can( 'manage_options' ) ) {
+		if ( self::can_manage_all() ) {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			return $wpdb->get_results(
 				"SELECT a.*, p.post_title AS job_title, p.post_author AS job_author
@@ -357,7 +369,7 @@ class Kivun_Employer {
 		global $wpdb;
 
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$rows = current_user_can( 'manage_options' )
+		$rows = self::can_manage_all()
 			? $wpdb->get_results(
 				"SELECT a.job_id,
 						COUNT(*) AS total,
@@ -416,7 +428,7 @@ class Kivun_Employer {
 		if (
 			! $post ||
 			'kivun_job' !== $post->post_type ||
-			( get_current_user_id() !== (int) $post->post_author && ! current_user_can( 'manage_options' ) )
+			( get_current_user_id() !== (int) $post->post_author && ! self::can_manage_all() )
 		) {
 			wp_send_json_error( array( 'message' => __( 'אין לך הרשאה לנהל משרה זו.', 'kivun' ) ) );
 		}
@@ -451,7 +463,7 @@ class Kivun_Employer {
 		if (
 			! $post ||
 			'kivun_job' !== $post->post_type ||
-			( get_current_user_id() !== (int) $post->post_author && ! current_user_can( 'manage_options' ) )
+			( get_current_user_id() !== (int) $post->post_author && ! self::can_manage_all() )
 		) {
 			wp_send_json_error( array( 'message' => __( 'אין לך הרשאה לנהל הגשה זו.', 'kivun' ) ) );
 		}

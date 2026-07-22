@@ -49,6 +49,7 @@ class Kivun_Installer {
 		if ( get_option( 'kivun_db_version' ) !== KIVUN_VERSION ) {
 			self::create_tables();
 			self::ensure_columns();
+			self::add_roles();
 			// Rewrite slugs may change between versions (e.g. landing pages) —
 			// flush once after the post types register on `init`.
 			add_action( 'init', 'flush_rewrite_rules', 99 );
@@ -166,15 +167,33 @@ class Kivun_Installer {
 	}
 
 	/**
-	 * Registers the custom employer role.
+	 * Register the plugin's custom roles.
+	 *
+	 * - kivun_employer:      a business — posts and manages its OWN jobs.
+	 * - kivun_jobs_manager:  manages ALL jobs and applications on the board, but
+	 *                        has no access to any other part of the site.
 	 *
 	 * @return void
 	 */
-	private static function add_roles(): void {
+	public static function add_roles(): void {
+		if ( ! get_role( 'kivun_employer' ) ) {
+			add_role(
+				'kivun_employer',
+				__( 'מעסיק', 'kivun' ),
+				array( 'read' => true )
+			);
+		}
+
+		// Re-create so capability changes propagate on upgrade.
+		remove_role( 'kivun_jobs_manager' );
 		add_role(
-			'kivun_employer',
-			__( 'Employer', 'kivun' ),
-			array( 'read' => true )
+			'kivun_jobs_manager',
+			__( 'מנהל לוח משרות', 'kivun' ),
+			array(
+				'read'              => true,
+				'kivun_employer'    => true,
+				'kivun_manage_jobs' => true,
+			)
 		);
 	}
 
