@@ -499,6 +499,85 @@
 		return true;
 	}
 
+	// ── Content creator (front-end shortcode): toggles, image preview, delete, AI ──
+	if (document.querySelector('.kivun-cc-front')) {
+		document.querySelectorAll('.kivun-cc-toggle').forEach(function (cb) {
+			cb.addEventListener('change', function () {
+				var sec = document.querySelector('.kivun-cc-section[data-type="' + cb.dataset.type + '"]');
+				if (sec) { sec.hidden = !cb.checked; }
+			});
+		});
+
+		var ccFile = document.querySelector('.kivun-cc-file');
+		if (ccFile) {
+			ccFile.addEventListener('change', function () {
+				var box = document.querySelector('.kivun-cc-media__preview'),
+					img = box ? box.querySelector('img') : null;
+				if (ccFile.files && ccFile.files[0] && img && window.FileReader) {
+					var reader = new FileReader();
+					reader.onload = function (e) { img.src = e.target.result; box.style.display = ''; };
+					reader.readAsDataURL(ccFile.files[0]);
+				}
+			});
+		}
+
+		var ccConfirm = 'למחוק את כל התוכן המקושר? הפעולה תעביר לפח את דף הנחיתה, הקורס והסדנה.';
+		document.querySelectorAll('.kivun-cc-delete-form').forEach(function (f) {
+			f.addEventListener('submit', function (e) {
+				if (!window.confirm(ccConfirm)) { e.preventDefault(); }
+			});
+		});
+
+		var ccAi = document.querySelector('.kivun-cc-ai-btn');
+		if (ccAi) {
+			ccAi.addEventListener('click', function () {
+				var titleEl = document.querySelector('.kivun-cc-front [name="title"]'),
+					title = titleEl ? titleEl.value.trim() : '',
+					ccStatus = document.querySelector('.kivun-cc-ai-status'),
+					styleEl = document.querySelector('.kivun-cc-ai-style'),
+					promptEl = document.querySelector('.kivun-cc-ai-prompt'),
+					custom = promptEl ? promptEl.value.trim() : '';
+				if (!title && !custom) {
+					if (ccStatus) { ccStatus.textContent = 'מלאו כותרת או תיאור חופשי.'; }
+					return;
+				}
+				var shortEl = document.querySelector('.kivun-cc-front [name="short"]'),
+					typeEl = document.querySelector('.kivun-cc-toggle:checked'),
+					fd = new FormData();
+				fd.append('action', 'kivun_generate_ai_image');
+				fd.append('nonce', ccAi.dataset.nonce);
+				fd.append('title', title);
+				fd.append('desc', shortEl ? shortEl.value : '');
+				fd.append('type', typeEl ? typeEl.dataset.type : '');
+				fd.append('style', styleEl ? styleEl.value : 'photo');
+				fd.append('prompt', custom);
+
+				ccAi.disabled = true;
+				if (ccStatus) { ccStatus.textContent = 'יוצר תמונה… זה עשוי לקחת עד דקה'; }
+
+				fetch(ccAi.dataset.ajax || kivun.ajax_url, { method: 'POST', body: fd, credentials: 'same-origin' })
+					.then(function (r) { return r.json(); })
+					.then(function (res) {
+						ccAi.disabled = false;
+						if (res && res.success && res.data) {
+							var idEl = document.querySelector('.kivun-cc-front [name="thumbnail_id"]'),
+								box = document.querySelector('.kivun-cc-media__preview'),
+								img = box ? box.querySelector('img') : null;
+							if (idEl) { idEl.value = res.data.id; }
+							if (img) { img.src = res.data.url; box.style.display = ''; }
+							if (ccStatus) { ccStatus.textContent = '✓ נוצרה תמונה'; }
+						} else if (ccStatus) {
+							ccStatus.textContent = (res && res.data && res.data.message) ? res.data.message : 'יצירת התמונה נכשלה';
+						}
+					})
+					.catch(function () {
+						ccAi.disabled = false;
+						if (ccStatus) { ccStatus.textContent = 'שגיאת רשת'; }
+					});
+			});
+		}
+	}
+
 	if (document.querySelector('.kivun-employer-login')) {
 		if (!placeSocialLogin()) {
 			var tries = 0;

@@ -99,7 +99,7 @@ class Kivun_Courses {
 				'phone'      => $phone,
 				'city'       => $city,
 				'message'    => $message,
-				'source'     => (string) get_the_title( $course_id ),
+				'source'     => Kivun_Utm::append_source( (string) get_the_title( $course_id ) ),
 				'status'     => 'pending',
 				'created_at' => current_time( 'mysql' ),
 			),

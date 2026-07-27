@@ -89,7 +89,7 @@ class Kivun_Lead_Capture {
 				'gender'            => $data['gender'],
 				'marketing_consent' => $data['consent'],
 				'message'           => $data['message'],
-				'source'            => self::source_label( $form_name, $post_id, $page_url ),
+				'source'            => Kivun_Utm::append_source( self::source_label( $form_name, $post_id, $page_url ) ),
 				'status'            => 'new_lead',
 				'type'              => 'form',
 				'created_at'        => current_time( 'mysql' ),

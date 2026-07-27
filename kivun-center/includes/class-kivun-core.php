@@ -43,6 +43,8 @@ class Kivun_Core {
 		Kivun_CTA::init();
 		Kivun_Forms_Router::init();
 		Kivun_Lead_Capture::init();
+		Kivun_Utm::init();
+		Kivun_Duplicate::init();
 		Kivun_Content_Creator::init();
 		Kivun_Unified_Meta::init();
 		Kivun_AI_Image::init();
@@ -99,6 +101,8 @@ class Kivun_Core {
 			'class-kivun-cta',
 			'class-kivun-forms-router',
 			'class-kivun-lead-capture',
+			'class-kivun-utm',
+			'class-kivun-duplicate',
 			'class-kivun-content-creator',
 			'class-kivun-unified-meta',
 			'class-kivun-ai-image',

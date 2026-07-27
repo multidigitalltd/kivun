@@ -140,7 +140,7 @@ class Kivun_Workshops {
 				'gender'            => $gender,
 				'marketing_consent' => $consent,
 				'message'           => $message,
-				'source'            => (string) get_the_title( $post_id ),
+				'source'            => Kivun_Utm::append_source( (string) get_the_title( $post_id ) ),
 				'status'            => $status,
 				'type'              => $type,
 				'created_at'        => current_time( 'mysql' ),
