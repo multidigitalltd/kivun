@@ -42,6 +42,7 @@ class Kivun_Content_Creator {
 		add_shortcode( 'kivun_content_creator', array( __CLASS__, 'shortcode' ) );
 		add_action( 'admin_post_kivun_create_content_front', array( __CLASS__, 'handle_front_save' ) );
 		add_action( 'admin_post_kivun_delete_content_front', array( __CLASS__, 'handle_front_delete' ) );
+		add_action( 'admin_post_kivun_cc_duplicate_front', array( __CLASS__, 'handle_front_duplicate' ) );
 	}
 
 	/**
@@ -833,6 +834,9 @@ class Kivun_Content_Creator {
 		}
 		if ( $thumb_id ) {
 			set_post_thumbnail( $post_id, $thumb_id );
+			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified by the caller before run_save().
+		} elseif ( ! empty( $_POST['remove_thumbnail'] ) ) {
+			delete_post_thumbnail( $post_id );
 		}
 
 		return $post_id;
@@ -992,6 +996,139 @@ class Kivun_Content_Creator {
 	}
 
 	/**
+	 * Build a small stand-alone "duplicate group" form.
+	 *
+	 * @param string $group     The content group id.
+	 * @param string $page_url  Redirect target after duplication.
+	 * @param string $btn_class Button CSS classes.
+	 * @return string Escaped HTML.
+	 */
+	private static function duplicate_form( string $group, string $page_url, string $btn_class ): string {
+		return '<form class="kivun-cc-dup-form" method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">'
+			. '<input type="hidden" name="action" value="kivun_cc_duplicate_front">'
+			. '<input type="hidden" name="group" value="' . esc_attr( $group ) . '">'
+			. '<input type="hidden" name="redirect" value="' . esc_url( $page_url ) . '">'
+			. '<input type="hidden" name="kivun_cc_dup_nonce" value="' . esc_attr( wp_create_nonce( 'kivun_cc_duplicate_front' ) ) . '">'
+			. '<button type="submit" class="' . esc_attr( $btn_class ) . '">' . esc_html__( 'שכפל', 'kivun' ) . '</button>'
+			. '</form>';
+	}
+
+	/**
+	 * Handle a front-end "duplicate whole content group" submission.
+	 *
+	 * @return void
+	 */
+	public static function handle_front_duplicate(): void {
+		if ( ! is_user_logged_in() || ! current_user_can( 'edit_posts' ) ) {
+			wp_die( esc_html__( 'אין לך הרשאה.', 'kivun' ) );
+		}
+		if ( ! isset( $_POST['kivun_cc_dup_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['kivun_cc_dup_nonce'] ) ), 'kivun_cc_duplicate_front' ) ) {
+			wp_die( esc_html__( 'בקשה לא תקפה.', 'kivun' ) );
+		}
+
+		$group    = isset( $_POST['group'] ) ? sanitize_text_field( wp_unslash( $_POST['group'] ) ) : '';
+		$redirect = isset( $_POST['redirect'] ) ? esc_url_raw( wp_unslash( $_POST['redirect'] ) ) : '';
+		if ( '' === $redirect ) {
+			$redirect = home_url();
+		}
+		$redirect = remove_query_arg( array( 'kivun_group', 'kivun_saved', 'kivun_cc_error', 'kivun_deleted' ), $redirect );
+
+		$new_group = self::duplicate_group( $group );
+		if ( '' !== $new_group ) {
+			$redirect = add_query_arg(
+				array(
+					'kivun_group'      => rawurlencode( $new_group ),
+					'kivun_duplicated' => 1,
+				),
+				$redirect
+			);
+		} else {
+			$redirect = add_query_arg( 'kivun_cc_error', 1, $redirect );
+		}
+
+		wp_safe_redirect( $redirect );
+		exit;
+	}
+
+	/**
+	 * Clone every post in a content group into a brand-new group (drafts).
+	 *
+	 * @param string $group The source content group id.
+	 * @return string The new group id, or '' on failure.
+	 */
+	private static function duplicate_group( string $group ): string {
+		$posts = self::group_posts( $group );
+		if ( ! $posts ) {
+			return '';
+		}
+
+		$new_group = wp_generate_uuid4();
+		$cloned    = 0;
+		foreach ( $posts as $post_id ) {
+			if ( self::clone_post( (int) $post_id, $new_group ) ) {
+				++$cloned;
+			}
+		}
+		return $cloned ? $new_group : '';
+	}
+
+	/**
+	 * Clone a single post (content, meta, taxonomies, thumbnail) as a draft,
+	 * linked to the given content group.
+	 *
+	 * @param int    $post_id   The source post ID.
+	 * @param string $new_group The target content group id.
+	 * @return bool
+	 */
+	private static function clone_post( int $post_id, string $new_group ): bool {
+		$post = get_post( $post_id );
+		if ( ! $post ) {
+			return false;
+		}
+
+		$new_id = wp_insert_post(
+			array(
+				'post_type'    => $post->post_type,
+				/* translators: %s: original title. */
+				'post_title'   => sprintf( __( '%s (עותק)', 'kivun' ), $post->post_title ),
+				'post_content' => $post->post_content,
+				'post_excerpt' => $post->post_excerpt,
+				'post_status'  => 'draft',
+				'post_author'  => get_current_user_id(),
+			),
+			true
+		);
+		if ( is_wp_error( $new_id ) || ! $new_id ) {
+			return false;
+		}
+
+		$skip = array( '_edit_lock', '_edit_last', self::GROUP_META );
+		foreach ( get_post_meta( $post_id ) as $key => $values ) {
+			if ( in_array( $key, $skip, true ) ) {
+				continue;
+			}
+			foreach ( $values as $value ) {
+				add_post_meta( $new_id, $key, maybe_unserialize( wp_slash( $value ) ) );
+			}
+		}
+
+		foreach ( get_object_taxonomies( $post->post_type ) as $taxonomy ) {
+			$terms = wp_get_object_terms( $post_id, $taxonomy, array( 'fields' => 'ids' ) );
+			if ( ! is_wp_error( $terms ) ) {
+				wp_set_object_terms( $new_id, $terms, $taxonomy );
+			}
+		}
+
+		$thumb = get_post_thumbnail_id( $post_id );
+		if ( $thumb ) {
+			set_post_thumbnail( $new_id, (int) $thumb );
+		}
+
+		update_post_meta( $new_id, self::GROUP_META, $new_group );
+		return true;
+	}
+
+	/**
 	 * A styled inline login box for the content-creator page. Reuses the
 	 * `.kivun-employer-login` structure so Nextend Social Login injects its
 	 * "Continue with Google" button and the shared script/styles apply (button
@@ -1049,6 +1186,8 @@ class Kivun_Content_Creator {
 		$error = ! empty( $_GET['kivun_cc_error'] );
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only status flag.
 		$deleted = ! empty( $_GET['kivun_deleted'] );
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only status flag.
+		$duplicated = ! empty( $_GET['kivun_duplicated'] );
 
 		$page_url      = (string) get_permalink();
 		$page_url      = $page_url ? $page_url : home_url();
@@ -1102,6 +1241,9 @@ class Kivun_Content_Creator {
 			<?php if ( $deleted ) : ?>
 				<div class="kivun-cc-note kivun-cc-note--success"><?php esc_html_e( 'התוכן נמחק (הועבר לפח).', 'kivun' ); ?></div>
 			<?php endif; ?>
+			<?php if ( $duplicated ) : ?>
+				<div class="kivun-cc-note kivun-cc-note--success"><?php esc_html_e( 'התוכן שוכפל — לפניך העותק (טיוטה). ערכו ושמרו.', 'kivun' ); ?></div>
+			<?php endif; ?>
 
 			<form class="kivun-cc-form" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" enctype="multipart/form-data">
 				<input type="hidden" name="action" value="kivun_create_content_front">
@@ -1122,11 +1264,34 @@ class Kivun_Content_Creator {
 						</div>
 
 						<div class="kivun-cc-card">
-							<label class="kivun-cc-label" for="kivun-ccf-short"><?php esc_html_e( 'תיאור קצר', 'kivun' ); ?></label>
-							<textarea id="kivun-ccf-short" name="short" class="kivun-cc-input kivun-cc-textarea" rows="3"><?php echo esc_textarea( $v['short'] ); ?></textarea>
+							<label class="kivun-cc-label"><?php esc_html_e( 'תיאור קצר', 'kivun' ); ?></label>
+							<?php
+							wp_editor(
+								(string) $v['short'],
+								'kivun_ccf_short',
+								array(
+									'textarea_name' => 'short',
+									'media_buttons' => false,
+									'teeny'         => true,
+									'quicktags'     => false,
+									'textarea_rows' => 4,
+								)
+							);
+							?>
 
-							<label class="kivun-cc-label" for="kivun-ccf-long" style="margin-top:1rem"><?php esc_html_e( 'תיאור מלא', 'kivun' ); ?></label>
-							<textarea id="kivun-ccf-long" name="long" class="kivun-cc-input kivun-cc-textarea" rows="9"><?php echo esc_textarea( $v['long'] ); ?></textarea>
+							<label class="kivun-cc-label" style="margin-top:1rem"><?php esc_html_e( 'תיאור מלא', 'kivun' ); ?></label>
+							<?php
+							wp_editor(
+								(string) $v['long'],
+								'kivun_ccf_long',
+								array(
+									'textarea_name' => 'long',
+									'media_buttons' => false,
+									'teeny'         => false,
+									'textarea_rows' => 10,
+								)
+							);
+							?>
 						</div>
 
 						<div class="kivun-cc-card">
@@ -1211,8 +1376,10 @@ class Kivun_Content_Creator {
 							<div class="kivun-cc-media">
 								<div class="kivun-cc-media__preview" <?php echo $thumb_url ? '' : 'style="display:none"'; ?>><img src="<?php echo esc_url( $thumb_url ); ?>" alt=""></div>
 								<input type="hidden" name="thumbnail_id" value="<?php echo esc_attr( $v['thumb_id'] ); ?>">
+								<input type="hidden" name="remove_thumbnail" value="0" class="kivun-cc-remove-flag">
 								<?php if ( $can_upload ) : ?>
 									<input type="file" name="thumbnail_file" accept="image/*" class="kivun-cc-file">
+									<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost kivun-cc-media__remove"<?php echo $thumb_url ? '' : ' hidden'; ?>><?php esc_html_e( 'הסרת התמונה', 'kivun' ); ?></button>
 								<?php else : ?>
 									<p class="kivun-cc-hint"><?php esc_html_e( 'אין לך הרשאה להעלות קבצים — התמונה תיקבע ע"י מנהל.', 'kivun' ); ?></p>
 								<?php endif; ?>
@@ -1326,6 +1493,7 @@ class Kivun_Content_Creator {
 								<a class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost" href="<?php echo esc_url( $group_view_url ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'צפייה ↗', 'kivun' ); ?></a>
 							<?php endif; ?>
 							<a class="kivun-cc-btn kivun-cc-btn--sm" href="<?php echo esc_url( add_query_arg( 'kivun_group', rawurlencode( $gid ), remove_query_arg( array( 'kivun_saved', 'kivun_cc_error', 'kivun_deleted' ), $page_url ) ) ); ?>"><?php esc_html_e( 'עריכה', 'kivun' ); ?></a>
+							<?php echo self::duplicate_form( (string) $gid, $page_url, 'kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built from escaped parts in duplicate_form(). ?>
 							<?php if ( $can_delete ) : ?>
 								<?php echo self::delete_form( (string) $gid, $page_url, __( 'מחיקה', 'kivun' ), 'kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--danger' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built from escaped parts in delete_form(). ?>
 							<?php endif; ?>

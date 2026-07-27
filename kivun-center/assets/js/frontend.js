@@ -512,12 +512,31 @@
 		if (ccFile) {
 			ccFile.addEventListener('change', function () {
 				var box = document.querySelector('.kivun-cc-media__preview'),
-					img = box ? box.querySelector('img') : null;
+					img = box ? box.querySelector('img') : null,
+					flag = document.querySelector('.kivun-cc-remove-flag'),
+					rm = document.querySelector('.kivun-cc-media__remove');
+				if (flag) { flag.value = '0'; }
+				if (rm) { rm.hidden = false; }
 				if (ccFile.files && ccFile.files[0] && img && window.FileReader) {
 					var reader = new FileReader();
 					reader.onload = function (e) { img.src = e.target.result; box.style.display = ''; };
 					reader.readAsDataURL(ccFile.files[0]);
 				}
+			});
+		}
+
+		var ccRemove = document.querySelector('.kivun-cc-media__remove');
+		if (ccRemove) {
+			ccRemove.addEventListener('click', function () {
+				var idEl = document.querySelector('.kivun-cc-front [name="thumbnail_id"]'),
+					flag = document.querySelector('.kivun-cc-remove-flag'),
+					box = document.querySelector('.kivun-cc-media__preview'),
+					fileEl = document.querySelector('.kivun-cc-file');
+				if (idEl) { idEl.value = ''; }
+				if (flag) { flag.value = '1'; }
+				if (fileEl) { fileEl.value = ''; }
+				if (box) { box.style.display = 'none'; }
+				ccRemove.hidden = true;
 			});
 		}
 
@@ -541,13 +560,15 @@
 					if (ccStatus) { ccStatus.textContent = 'מלאו כותרת או תיאור חופשי.'; }
 					return;
 				}
-				var shortEl = document.querySelector('.kivun-cc-front [name="short"]'),
+				var shortVal = (window.tinymce && tinymce.get('kivun_ccf_short'))
+						? tinymce.get('kivun_ccf_short').getContent({ format: 'text' })
+						: ((document.querySelector('.kivun-cc-front [name="short"]') || {}).value || ''),
 					typeEl = document.querySelector('.kivun-cc-toggle:checked'),
 					fd = new FormData();
 				fd.append('action', 'kivun_generate_ai_image');
 				fd.append('nonce', ccAi.dataset.nonce);
 				fd.append('title', title);
-				fd.append('desc', shortEl ? shortEl.value : '');
+				fd.append('desc', shortVal);
 				fd.append('type', typeEl ? typeEl.dataset.type : '');
 				fd.append('style', styleEl ? styleEl.value : 'photo');
 				fd.append('prompt', custom);
@@ -565,6 +586,10 @@
 								img = box ? box.querySelector('img') : null;
 							if (idEl) { idEl.value = res.data.id; }
 							if (img) { img.src = res.data.url; box.style.display = ''; }
+							var rmFlag = document.querySelector('.kivun-cc-remove-flag'),
+								rmBtn = document.querySelector('.kivun-cc-media__remove');
+							if (rmFlag) { rmFlag.value = '0'; }
+							if (rmBtn) { rmBtn.hidden = false; }
 							if (ccStatus) { ccStatus.textContent = '✓ נוצרה תמונה'; }
 						} else if (ccStatus) {
 							ccStatus.textContent = (res && res.data && res.data.message) ? res.data.message : 'יצירת התמונה נכשלה';
