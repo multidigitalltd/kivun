@@ -974,3 +974,41 @@
 	font-size: .72rem; text-align: center; font-weight: 700;
 }
 .kivun-employer-dashboard .kivun-tab.is-active .kivun-tab-badge { background: #fff; color: var(--kc-accent); }
+
+/* Content creator (front) — readable classic-editor toolbar (theme-proof). */
+.kivun-cc-front .wp-editor-wrap .mce-btn,
+.kivun-cc-front .wp-editor-wrap .mce-btn button,
+.kivun-cc-front .quicktags-toolbar input.button {
+	background: transparent !important;
+	border: 0 !important;
+	border-radius: 4px !important;
+	box-shadow: none !important;
+	color: #1e1e1e !important;
+	min-height: 0 !important;
+	height: auto !important;
+	width: auto !important;
+	padding: 3px 5px !important;
+}
+.kivun-cc-front .wp-editor-wrap .mce-ico { color: #50575e !important; }
+.kivun-cc-front .wp-editor-wrap .mce-btn:hover,
+.kivun-cc-front .wp-editor-wrap .mce-btn.mce-active,
+.kivun-cc-front .wp-editor-wrap .mce-btn button:hover { background: #e9edf2 !important; }
+.kivun-cc-front .wp-editor-wrap .mce-toolbar-grp,
+.kivun-cc-front .wp-editor-wrap .mce-toolbar .mce-container-body { background: #f5f6f8 !important; }
+.kivun-cc-front .wp-editor-wrap .mce-panel { border-color: #dcdfe4 !important; }
+
+/* Remove-image control — plain text link (no box). */
+.kivun-cc-media__remove {
+	display: inline-block;
+	background: transparent !important;
+	border: 0 !important;
+	box-shadow: none !important;
+	padding: 4px 0 !important;
+	margin-top: 6px;
+	color: #b91c1c !important;
+	font: inherit;
+	font-size: .85rem;
+	text-decoration: underline;
+	cursor: pointer;
+}
+.kivun-cc-media__remove:hover { color: #8a1414 !important; }
