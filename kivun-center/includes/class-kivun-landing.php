@@ -61,10 +61,10 @@ class Kivun_Landing {
 	private static function meta_fields(): array {
 		return array(
 			'_kivun_lp_short'      => 'wp_kses_post',
-			'_kivun_ws_audience'   => 'sanitize_textarea_field',
-			'_kivun_ws_duration'   => 'sanitize_text_field',
-			'_kivun_lp_cost'       => 'sanitize_text_field',
-			'_kivun_ws_date'       => 'sanitize_text_field',
+			'_kivun_ws_audience'   => 'wp_kses_post',
+			'_kivun_ws_duration'   => 'wp_kses_post',
+			'_kivun_lp_cost'       => 'wp_kses_post',
+			'_kivun_ws_date'       => 'wp_kses_post',
 			'_kivun_contact_email' => 'sanitize_email',
 			'_kivun_cta_title'     => 'sanitize_text_field',
 			'_kivun_cta_content'   => 'sanitize_textarea_field',
@@ -357,16 +357,64 @@ class Kivun_Landing {
 							<label class="kivun-lp-label"><?php esc_html_e( 'פרטי הדף', 'kivun' ); ?></label>
 
 							<label class="kivun-lp-sub" for="kivun-lp-audience"><?php esc_html_e( 'קהל יעד', 'kivun' ); ?></label>
-							<input type="text" id="kivun-lp-audience" name="audience" class="kivun-lp-input" value="<?php echo esc_attr( $audience ); ?>" placeholder="<?php esc_attr_e( 'למשל: מחפשי עבודה, הורים צעירים', 'kivun' ); ?>">
+							<?php
+							wp_editor(
+								(string) $audience,
+								'kivun_lp_audience',
+								array(
+									'textarea_name' => 'audience',
+									'media_buttons' => false,
+									'teeny'         => true,
+									'quicktags'     => false,
+									'textarea_rows' => 3,
+								)
+							);
+							?>
 
 							<label class="kivun-lp-sub" for="kivun-lp-duration"><?php esc_html_e( 'משך', 'kivun' ); ?></label>
-							<input type="text" id="kivun-lp-duration" name="duration" class="kivun-lp-input" value="<?php echo esc_attr( $duration ); ?>" placeholder="<?php esc_attr_e( 'למשל: 3 שעות / 4 מפגשים', 'kivun' ); ?>">
+							<?php
+							wp_editor(
+								(string) $duration,
+								'kivun_lp_duration',
+								array(
+									'textarea_name' => 'duration',
+									'media_buttons' => false,
+									'teeny'         => true,
+									'quicktags'     => false,
+									'textarea_rows' => 3,
+								)
+							);
+							?>
 
 							<label class="kivun-lp-sub" for="kivun-lp-cost"><?php esc_html_e( 'עלות', 'kivun' ); ?></label>
-							<input type="text" id="kivun-lp-cost" name="cost" class="kivun-lp-input" value="<?php echo esc_attr( $cost ); ?>" placeholder="<?php esc_attr_e( 'למשל: חינם / 120 ₪', 'kivun' ); ?>">
+							<?php
+							wp_editor(
+								(string) $cost,
+								'kivun_lp_cost_ed',
+								array(
+									'textarea_name' => 'cost',
+									'media_buttons' => false,
+									'teeny'         => true,
+									'quicktags'     => false,
+									'textarea_rows' => 3,
+								)
+							);
+							?>
 
 							<label class="kivun-lp-sub" for="kivun-lp-date"><?php esc_html_e( 'תאריך פתיחה', 'kivun' ); ?></label>
-							<input type="text" id="kivun-lp-date" name="date" class="kivun-lp-input" value="<?php echo esc_attr( $date ); ?>" placeholder="<?php esc_attr_e( 'למשל: 15.9.2025 בשעה 18:00', 'kivun' ); ?>">
+							<?php
+							wp_editor(
+								(string) $date,
+								'kivun_lp_date',
+								array(
+									'textarea_name' => 'date',
+									'media_buttons' => false,
+									'teeny'         => true,
+									'quicktags'     => false,
+									'textarea_rows' => 3,
+								)
+							);
+							?>
 						</div>
 
 						<div class="kivun-lp-card">

@@ -304,13 +304,61 @@ class Kivun_Content_Creator {
 						<div class="kivun-lp-card">
 							<label class="kivun-lp-label"><?php esc_html_e( 'פרטים', 'kivun' ); ?></label>
 							<label class="kivun-lp-sub"><?php esc_html_e( 'קהל יעד', 'kivun' ); ?></label>
-							<input type="text" name="audience" class="kivun-lp-input" value="<?php echo esc_attr( $v['audience'] ); ?>">
+							<?php
+								wp_editor(
+									(string) $v['audience'],
+									'kivun_cc_audience',
+									array(
+										'textarea_name' => 'audience',
+										'media_buttons' => false,
+										'teeny'         => true,
+										'quicktags'     => false,
+										'textarea_rows' => 3,
+									)
+								);
+							?>
 							<label class="kivun-lp-sub"><?php esc_html_e( 'משך', 'kivun' ); ?></label>
-							<input type="text" name="duration" class="kivun-lp-input" value="<?php echo esc_attr( $v['duration'] ); ?>">
+							<?php
+								wp_editor(
+									(string) $v['duration'],
+									'kivun_cc_duration',
+									array(
+										'textarea_name' => 'duration',
+										'media_buttons' => false,
+										'teeny'         => true,
+										'quicktags'     => false,
+										'textarea_rows' => 3,
+									)
+								);
+							?>
 							<label class="kivun-lp-sub"><?php esc_html_e( 'עלות', 'kivun' ); ?></label>
-							<input type="text" name="cost" class="kivun-lp-input" value="<?php echo esc_attr( $v['cost'] ); ?>" placeholder="<?php esc_attr_e( 'חינם / 120 ₪', 'kivun' ); ?>">
+							<?php
+								wp_editor(
+									(string) $v['cost'],
+									'kivun_cc_cost',
+									array(
+										'textarea_name' => 'cost',
+										'media_buttons' => false,
+										'teeny'         => true,
+										'quicktags'     => false,
+										'textarea_rows' => 3,
+									)
+								);
+							?>
 							<label class="kivun-lp-sub"><?php esc_html_e( 'תאריך / מועד', 'kivun' ); ?></label>
-							<input type="text" name="date" class="kivun-lp-input" value="<?php echo esc_attr( $v['date'] ); ?>" placeholder="<?php esc_attr_e( '15.9.2025 בשעה 18:00', 'kivun' ); ?>">
+							<?php
+								wp_editor(
+									(string) $v['date'],
+									'kivun_cc_date',
+									array(
+										'textarea_name' => 'date',
+										'media_buttons' => false,
+										'teeny'         => true,
+										'quicktags'     => false,
+										'textarea_rows' => 3,
+									)
+								);
+							?>
 							<label class="kivun-lp-sub"><?php esc_html_e( 'אימייל לקבלת לידים/הרשמות', 'kivun' ); ?></label>
 							<input type="email" name="email" class="kivun-lp-input" value="<?php echo esc_attr( $v['email'] ); ?>">
 						</div>
@@ -635,10 +683,10 @@ class Kivun_Content_Creator {
 			'slug'     => isset( $_POST['slug'] ) ? sanitize_title( wp_unslash( $_POST['slug'] ) ) : '',
 			'long'     => isset( $_POST['long'] ) ? wp_kses_post( wp_unslash( $_POST['long'] ) ) : '',
 			'short'    => isset( $_POST['short'] ) ? wp_kses_post( wp_unslash( $_POST['short'] ) ) : '',
-			'audience' => isset( $_POST['audience'] ) ? sanitize_text_field( wp_unslash( $_POST['audience'] ) ) : '',
-			'duration' => isset( $_POST['duration'] ) ? sanitize_text_field( wp_unslash( $_POST['duration'] ) ) : '',
-			'cost'     => isset( $_POST['cost'] ) ? sanitize_text_field( wp_unslash( $_POST['cost'] ) ) : '',
-			'date'     => isset( $_POST['date'] ) ? sanitize_text_field( wp_unslash( $_POST['date'] ) ) : '',
+			'audience' => isset( $_POST['audience'] ) ? wp_kses_post( wp_unslash( $_POST['audience'] ) ) : '',
+			'duration' => isset( $_POST['duration'] ) ? wp_kses_post( wp_unslash( $_POST['duration'] ) ) : '',
+			'cost'     => isset( $_POST['cost'] ) ? wp_kses_post( wp_unslash( $_POST['cost'] ) ) : '',
+			'date'     => isset( $_POST['date'] ) ? wp_kses_post( wp_unslash( $_POST['date'] ) ) : '',
 			'email'    => isset( $_POST['email'] ) ? sanitize_email( wp_unslash( $_POST['email'] ) ) : '',
 			'cta_t'    => isset( $_POST['cta_title'] ) ? sanitize_text_field( wp_unslash( $_POST['cta_title'] ) ) : '',
 			'cta_c'    => isset( $_POST['cta_content'] ) ? sanitize_textarea_field( wp_unslash( $_POST['cta_content'] ) ) : '',
@@ -1086,21 +1134,21 @@ class Kivun_Content_Creator {
 							<div class="kivun-cc-row">
 								<div>
 									<label class="kivun-cc-sub"><?php esc_html_e( 'קהל יעד', 'kivun' ); ?></label>
-									<input type="text" name="audience" class="kivun-cc-input" value="<?php echo esc_attr( $v['audience'] ); ?>">
+									<textarea name="audience" class="kivun-cc-input kivun-cc-textarea" rows="2"><?php echo esc_textarea( $v['audience'] ); ?></textarea>
 								</div>
 								<div>
 									<label class="kivun-cc-sub"><?php esc_html_e( 'משך', 'kivun' ); ?></label>
-									<input type="text" name="duration" class="kivun-cc-input" value="<?php echo esc_attr( $v['duration'] ); ?>">
+									<textarea name="duration" class="kivun-cc-input kivun-cc-textarea" rows="2"><?php echo esc_textarea( $v['duration'] ); ?></textarea>
 								</div>
 							</div>
 							<div class="kivun-cc-row">
 								<div>
 									<label class="kivun-cc-sub"><?php esc_html_e( 'עלות', 'kivun' ); ?></label>
-									<input type="text" name="cost" class="kivun-cc-input" value="<?php echo esc_attr( $v['cost'] ); ?>" placeholder="<?php esc_attr_e( 'חינם / 120 ₪', 'kivun' ); ?>">
+									<textarea name="cost" class="kivun-cc-input kivun-cc-textarea" rows="2" placeholder="<?php esc_attr_e( 'חינם / 120 ₪', 'kivun' ); ?>"><?php echo esc_textarea( $v['cost'] ); ?></textarea>
 								</div>
 								<div>
 									<label class="kivun-cc-sub"><?php esc_html_e( 'תאריך / מועד', 'kivun' ); ?></label>
-									<input type="text" name="date" class="kivun-cc-input" value="<?php echo esc_attr( $v['date'] ); ?>" placeholder="<?php esc_attr_e( '15.9.2025 בשעה 18:00', 'kivun' ); ?>">
+									<textarea name="date" class="kivun-cc-input kivun-cc-textarea" rows="2" placeholder="<?php esc_attr_e( '15.9.2025 בשעה 18:00', 'kivun' ); ?>"><?php echo esc_textarea( $v['date'] ); ?></textarea>
 								</div>
 							</div>
 							<label class="kivun-cc-sub"><?php esc_html_e( 'אימייל לקבלת לידים/הרשמות', 'kivun' ); ?></label>

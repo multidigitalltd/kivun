@@ -47,6 +47,6 @@ class Kivun_Tag_Course_Audience extends Kivun_Course_Tag_Base {
 	 * @return void
 	 */
 	public function render(): void {
-		echo esc_html( get_post_meta( get_the_ID(), '_kivun_target_audience', true ) );
+		echo wp_kses_post( get_post_meta( get_the_ID(), '_kivun_target_audience', true ) );
 	}
 }

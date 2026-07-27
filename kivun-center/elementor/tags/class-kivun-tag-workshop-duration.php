@@ -36,6 +36,6 @@ class Kivun_Tag_Workshop_Duration extends Kivun_Workshop_Tag_Base {
 	 * @return void
 	 */
 	public function render(): void {
-		echo esc_html( get_post_meta( get_the_ID(), '_kivun_ws_duration', true ) );
+		echo wp_kses_post( get_post_meta( get_the_ID(), '_kivun_ws_duration', true ) );
 	}
 }

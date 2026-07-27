@@ -36,6 +36,6 @@ class Kivun_Tag_Landing_Cost extends Kivun_Workshop_Tag_Base {
 	 * @return void
 	 */
 	public function render(): void {
-		echo esc_html( (string) get_post_meta( get_the_ID(), '_kivun_lp_cost', true ) );
+		echo wp_kses_post( (string) get_post_meta( get_the_ID(), '_kivun_lp_cost', true ) );
 	}
 }
