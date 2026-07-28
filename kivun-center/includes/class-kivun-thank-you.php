@@ -24,8 +24,10 @@ class Kivun_Thank_You {
 	 */
 	public static function init(): void {
 		add_shortcode( 'kivun_thank_you', array( __CLASS__, 'shortcode' ) );
-		// Priority 5 — before form actions run, so a form's own redirect wins.
-		add_action( 'elementor_pro/forms/new_record', array( __CLASS__, 'redirect_elementor' ), 5, 2 );
+		// Client-side fallback: redirect to the thank-you page ONLY when the form's
+		// server response set no redirect of its own (so a paid course → checkout,
+		// or a form's own "Redirect" action, always wins).
+		add_action( 'wp_footer', array( __CLASS__, 'redirect_script' ) );
 		add_action( 'admin_post_kivun_create_thankyou', array( __CLASS__, 'create_page' ) );
 	}
 
@@ -40,24 +42,39 @@ class Kivun_Thank_You {
 	}
 
 	/**
-	 * Globally redirect an Elementor form submission to the thank-you page.
+	 * Output a small script that redirects every Elementor form submission to the
+	 * thank-you page — but only when the server response carried no redirect_url,
+	 * so paid-course checkout and any form's own "Redirect" action are respected.
 	 *
-	 * @param mixed $record  The Form_Record (unused).
-	 * @param mixed $handler The Ajax_Handler.
 	 * @return void
 	 */
-	public static function redirect_elementor( $record, $handler ): void {
-		unset( $record );
-		if ( ! (bool) Kivun_Admin_Settings::get( 'thankyou_elementor', false ) ) {
+	public static function redirect_script(): void {
+		if ( is_admin() || ! (bool) Kivun_Admin_Settings::get( 'thankyou_elementor', false ) ) {
 			return;
 		}
 		$url = self::url();
 		if ( '' === $url ) {
 			return;
 		}
-		if ( is_object( $handler ) && method_exists( $handler, 'add_response_data' ) ) {
-			$handler->add_response_data( 'redirect_url', $url );
-		}
+		?>
+		<script>
+		( function () {
+			if ( ! window.jQuery ) { return; }
+			var kivunThankYou = <?php echo wp_json_encode( $url ); ?>;
+			jQuery( document ).ajaxComplete( function ( event, xhr, settings ) {
+				try {
+					if ( ! settings || ! settings.data || String( settings.data ).indexOf( 'action=elementor_pro_forms_send_form' ) === -1 ) { return; }
+					var res = xhr.responseJSON || JSON.parse( xhr.responseText );
+					if ( res && res.success ) {
+						var d = res.data || {};
+						var redirect = d.redirect_url || ( d.data && d.data.redirect_url );
+						if ( ! redirect ) { window.location.href = kivunThankYou; }
+					}
+				} catch ( e ) {}
+			} );
+		} () );
+		</script>
+		<?php
 	}
 
 	/**
