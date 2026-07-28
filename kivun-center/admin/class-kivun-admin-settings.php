@@ -230,6 +230,10 @@ class Kivun_Admin_Settings {
 				'ai_image_quality'       => sanitize_key( wp_unslash( $_POST['ai_image_quality'] ?? 'medium' ) ),
 				'turnstile_site_key'     => sanitize_text_field( wp_unslash( $_POST['turnstile_site_key'] ?? '' ) ),
 				'turnstile_secret_key'   => sanitize_text_field( wp_unslash( $_POST['turnstile_secret_key'] ?? '' ) ),
+				'thankyou_page_id'       => absint( $_POST['thankyou_page_id'] ?? 0 ),
+				'thankyou_elementor'     => ! empty( $_POST['thankyou_elementor'] ),
+				'thankyou_title'         => sanitize_text_field( wp_unslash( $_POST['thankyou_title'] ?? '' ) ),
+				'thankyou_message'       => sanitize_textarea_field( wp_unslash( $_POST['thankyou_message'] ?? '' ) ),
 			)
 		);
 
@@ -318,6 +322,11 @@ class Kivun_Admin_Settings {
 				<div class="notice notice-error is-dismissible"><p><?php esc_html_e( 'שליחת מייל הבדיקה נכשלה — wp_mail החזיר שגיאה. השרת אינו שולח דואר. התקינו תוסף SMTP (למשל WP Mail SMTP).', 'kivun' ); ?></p></div>
 			<?php elseif ( 'empty' === $router_test ) : ?>
 				<div class="notice notice-warning is-dismissible"><p><?php esc_html_e( 'לא הוגדרה כתובת "אימייל מרכזי לכל הטפסים". הזינו כתובת ושמרו לפני הבדיקה.', 'kivun' ); ?></p></div>
+			<?php endif; ?>
+
+			<?php // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only display. ?>
+			<?php if ( ! empty( $_GET['thankyou_created'] ) ) : ?>
+				<div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'דף התודה נוצר ונבחר, וההפניה הופעלה. אפשר לעצב אותו ב-Elementor.', 'kivun' ); ?></p></div>
 			<?php endif; ?>
 
 			<div class="kivun-tab-content kivun-tab-content--single">
@@ -488,6 +497,49 @@ class Kivun_Admin_Settings {
 					<td>
 						<input type="text" name="whatsapp_message" value="<?php echo esc_attr( $o( 'whatsapp_message' ) ); ?>" class="large-text" placeholder="<?php esc_attr_e( 'היי, הגעתי מהאתר ואשמח לקבל פרטים', 'kivun' ); ?>">
 						<p class="description"><?php esc_html_e( 'טקסט שיופיע כבר מוכן בשיחה כשהגולש לוחץ. השאר ריק לשיחה ריקה.', 'kivun' ); ?></p>
+					</td>
+				</tr>
+				<tr>
+					<th colspan="2" style="padding-top:20px"><h2 style="margin:0"><?php esc_html_e( 'דף תודה לאחר שליחת טופס', 'kivun' ); ?></h2>
+					<p class="description" style="font-weight:400"><?php esc_html_e( 'הפניה אוטומטית לדף תודה מעוצב אחרי כל טופס — כולל כל טפסי Elementor — מהגדרה אחת, בלי לערוך כל טופס בנפרד.', 'kivun' ); ?></p></th>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'דף התודה', 'kivun' ); ?></th>
+					<td>
+						<?php
+						wp_dropdown_pages(
+							array(
+								'name'              => 'thankyou_page_id',
+								'selected'          => (int) $o( 'thankyou_page_id', 0 ),
+								'show_option_none'  => esc_html__( '— בחרו עמוד —', 'kivun' ),
+								'option_none_value' => 0,
+							)
+						);
+						?>
+						<a class="button" style="margin-inline-start:6px" href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=kivun_create_thankyou' ), 'kivun_create_thankyou' ) ); ?>"><?php esc_html_e( 'צור דף תודה מעוצב', 'kivun' ); ?></a>
+						<p class="description"><?php esc_html_e( 'בחרו עמוד קיים (שמכיל את השורטקוד [kivun_thank_you]) או לחצו "צור דף תודה" ליצירה אוטומטית.', 'kivun' ); ?></p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'הפניית טפסי Elementor', 'kivun' ); ?></th>
+					<td>
+						<label>
+							<input type="checkbox" name="thankyou_elementor" value="1" <?php checked( (bool) $o( 'thankyou_elementor', false ) ); ?>>
+							<?php esc_html_e( 'הפנה כל טופס Elementor באתר לדף התודה אחרי שליחה.', 'kivun' ); ?>
+						</label>
+						<p class="description"><?php esc_html_e( 'טופס עם הפניה משלו (למשל קורס בתשלום → תשלום) ישמור עליה — דף התודה חל רק כשאין הפניה אחרת.', 'kivun' ); ?></p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'כותרת דף התודה', 'kivun' ); ?></th>
+					<td>
+						<input type="text" name="thankyou_title" value="<?php echo esc_attr( $o( 'thankyou_title' ) ); ?>" class="regular-text" placeholder="<?php esc_attr_e( 'תודה רבה!', 'kivun' ); ?>">
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'תוכן דף התודה', 'kivun' ); ?></th>
+					<td>
+						<textarea name="thankyou_message" rows="2" class="large-text" placeholder="<?php esc_attr_e( 'פנייתך התקבלה בהצלחה. ניצור איתך קשר בהקדם.', 'kivun' ); ?>"><?php echo esc_textarea( $o( 'thankyou_message' ) ); ?></textarea>
 					</td>
 				</tr>
 				<tr>

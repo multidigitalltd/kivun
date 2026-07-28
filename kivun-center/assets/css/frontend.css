@@ -1012,3 +1012,13 @@
 	cursor: pointer;
 }
 .kivun-cc-media__remove:hover { color: #8a1414 !important; }
+
+/* Thank-you page (shortcode: kivun_thank_you). */
+.kivun-thankyou { max-width: 620px; margin: 3rem auto; padding: 2.5rem 1.75rem; text-align: center; font-family: var(--kivun-font); color: var(--kivun-dark); }
+.kivun-thankyou__icon { display: inline-flex; align-items: center; justify-content: center; width: 84px; height: 84px; border-radius: 50%; background: #ecfdf3; color: #12b76a; margin-bottom: 1.25rem; }
+.kivun-thankyou__title { font-size: 2rem; font-weight: 800; margin: 0 0 .6rem; color: var(--kivun-accent); letter-spacing: -.01em; }
+.kivun-thankyou__msg { font-size: 1.1rem; color: #4b5563; line-height: 1.6; margin: 0 0 1.75rem; }
+.kivun-thankyou__msg p { margin: 0 0 .5rem; }
+.kivun-thankyou__btn { display: inline-flex; align-items: center; justify-content: center; background: var(--kivun-accent); color: #fff; border-radius: 999px; padding: .75rem 1.75rem; font-weight: 700; font-size: 1rem; text-decoration: none; transition: filter .15s, transform .1s; }
+.kivun-thankyou__btn:hover { color: #fff; filter: brightness(.93); }
+.kivun-thankyou__btn:active { transform: translateY(1px); }
