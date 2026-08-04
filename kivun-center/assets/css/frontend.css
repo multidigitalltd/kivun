@@ -1022,3 +1022,9 @@
 .kivun-thankyou__btn { display: inline-flex; align-items: center; justify-content: center; background: var(--kivun-accent); color: #fff; border-radius: 999px; padding: .75rem 1.75rem; font-weight: 700; font-size: 1rem; text-decoration: none; transition: filter .15s, transform .1s; }
 .kivun-thankyou__btn:hover { color: #fff; filter: brightness(.93); }
 .kivun-thankyou__btn:active { transform: translateY(1px); }
+
+/* Event registration — external button. */
+.kivun-event-register { margin: 1.25rem 0; }
+.kivun-event-register__btn { display: inline-flex; align-items: center; justify-content: center; background: var(--kivun-accent); color: #fff; border-radius: 999px; padding: .8rem 2rem; font-weight: 700; font-size: 1.05rem; text-decoration: none; transition: filter .15s, transform .1s; }
+.kivun-event-register__btn:hover { color: #fff; filter: brightness(.93); }
+.kivun-event-register__btn:active { transform: translateY(1px); }

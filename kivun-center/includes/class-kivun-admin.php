@@ -55,12 +55,14 @@ class Kivun_Admin {
 		add_meta_box( 'kivun_course_details', 'פרטי קורס', array( __CLASS__, 'course_meta_box' ), 'kivun_course', 'normal', 'high' );
 		add_meta_box( 'kivun_workshop_details', 'פרטי סדנה', array( __CLASS__, 'workshop_meta_box' ), 'kivun_workshop', 'normal', 'high' );
 		add_meta_box( 'kivun_session_details', 'פרטי סדנה', array( __CLASS__, 'session_meta_box' ), 'kivun_session', 'normal', 'high' );
+		add_meta_box( 'kivun_event_details', 'פרטי אירוע', array( __CLASS__, 'event_meta_box' ), 'kivun_event', 'normal', 'high' );
 		add_meta_box( 'kivun_job_details', 'פרטי משרה', array( __CLASS__, 'job_meta_box' ), 'kivun_job', 'normal', 'high' );
 
 		// CRM metaboxes.
 		add_meta_box( 'kivun_course_leads', 'הרשמות ולידים', array( __CLASS__, 'registrations_metabox' ), 'kivun_course', 'normal', 'default' );
 		add_meta_box( 'kivun_workshop_leads', 'הרשמות לסדנה', array( __CLASS__, 'registrations_metabox' ), 'kivun_workshop', 'normal', 'default' );
 		add_meta_box( 'kivun_session_leads', 'הרשמות לסדנה', array( __CLASS__, 'registrations_metabox' ), 'kivun_session', 'normal', 'default' );
+		add_meta_box( 'kivun_event_leads', 'הרשמות לאירוע', array( __CLASS__, 'registrations_metabox' ), 'kivun_event', 'normal', 'default' );
 		add_meta_box( 'kivun_job_apps', 'מועמדויות וקו"ח', array( __CLASS__, 'applications_metabox' ), 'kivun_job', 'normal', 'default' );
 	}
 
@@ -121,6 +123,87 @@ class Kivun_Admin {
 						?>
 					</p>
 				</td>
+			</tr>
+		</table>
+		<?php
+	}
+
+	/**
+	 * Render the event details metabox.
+	 *
+	 * @param \WP_Post $post The event post being edited.
+	 * @return void
+	 */
+	public static function event_meta_box( \WP_Post $post ): void {
+		wp_nonce_field( 'kivun_save_event', 'kivun_event_nonce' );
+		$f    = fn( $key ) => get_post_meta( $post->ID, $key, true );
+		$open = kivun_event_registration_open( $post->ID );
+		$mode = kivun_event_mode( $post->ID );
+		?>
+		<table class="kivun-meta-table">
+			<tr>
+				<th><?php esc_html_e( 'תיאור קצר', 'kivun' ); ?></th>
+				<td><textarea name="_kivun_event_short" rows="2"><?php echo esc_textarea( $f( '_kivun_event_short' ) ); ?></textarea></td>
+			</tr>
+			<tr>
+				<th><?php esc_html_e( 'קהל יעד', 'kivun' ); ?></th>
+				<td><input type="text" name="_kivun_event_audience" value="<?php echo esc_attr( $f( '_kivun_event_audience' ) ); ?>"></td>
+			</tr>
+			<tr>
+				<th><?php esc_html_e( 'תאריך האירוע', 'kivun' ); ?></th>
+				<td>
+					<input type="date" name="_kivun_event_date" value="<?php echo esc_attr( $f( '_kivun_event_date' ) ); ?>">
+					<p class="description">
+						<?php
+						echo $open
+							? '<span style="color:#1a7a40;font-weight:600">' . esc_html__( 'ההרשמה פתוחה.', 'kivun' ) . '</span> '
+							: '<span style="color:#b32d2e;font-weight:600">' . esc_html__( 'ההרשמה סגורה — האירוע כבר התקיים.', 'kivun' ) . '</span> ';
+						esc_html_e( 'לאחר תאריך האירוע ההרשמה נסגרת לצמיתות. ריק = תמיד פתוח.', 'kivun' );
+						?>
+					</p>
+				</td>
+			</tr>
+			<tr>
+				<th><?php esc_html_e( 'שעה / מועד מלא', 'kivun' ); ?></th>
+				<td><input type="text" name="_kivun_event_time" value="<?php echo esc_attr( $f( '_kivun_event_time' ) ); ?>" placeholder="18:00 | אולם הכינוסים"></td>
+			</tr>
+			<tr>
+				<th><?php esc_html_e( 'משך', 'kivun' ); ?></th>
+				<td><input type="text" name="_kivun_event_duration" value="<?php echo esc_attr( $f( '_kivun_event_duration' ) ); ?>"></td>
+			</tr>
+			<tr>
+				<th><?php esc_html_e( 'עלות', 'kivun' ); ?></th>
+				<td><input type="text" name="_kivun_event_cost" value="<?php echo esc_attr( $f( '_kivun_event_cost' ) ); ?>" placeholder="חינם / 120 ₪"></td>
+			</tr>
+			<tr>
+				<th><?php esc_html_e( 'מיקום', 'kivun' ); ?></th>
+				<td><input type="text" name="_kivun_event_location" value="<?php echo esc_attr( $f( '_kivun_event_location' ) ); ?>"></td>
+			</tr>
+			<tr>
+				<th><?php esc_html_e( 'מקסימום משתתפים', 'kivun' ); ?></th>
+				<td><input type="number" name="_kivun_capacity" value="<?php echo esc_attr( $f( '_kivun_capacity' ) ); ?>" min="1"></td>
+			</tr>
+			<tr>
+				<th><?php esc_html_e( 'אימייל לקבלת הרשמות', 'kivun' ); ?></th>
+				<td><input type="email" name="_kivun_contact_email" value="<?php echo esc_attr( $f( '_kivun_contact_email' ) ); ?>"></td>
+			</tr>
+			<tr>
+				<th><?php esc_html_e( 'אופן ההרשמה', 'kivun' ); ?></th>
+				<td>
+					<select name="_kivun_event_mode">
+						<option value="form" <?php selected( $mode, 'form' ); ?>><?php esc_html_e( 'טופס באתר (נשמר בטבלת הלידים)', 'kivun' ); ?></option>
+						<option value="external" <?php selected( $mode, 'external' ); ?>><?php esc_html_e( 'כפתור לקישור חיצוני', 'kivun' ); ?></option>
+					</select>
+					<p class="description"><?php esc_html_e( 'עם השורטקוד [kivun_event_register] בעמוד: "טופס" מציג טופס הרשמה שנשמר במערכת; "חיצוני" מציג כפתור לקישור שתזינו למטה.', 'kivun' ); ?></p>
+				</td>
+			</tr>
+			<tr>
+				<th><?php esc_html_e( 'קישור הרשמה חיצוני', 'kivun' ); ?></th>
+				<td><input type="url" name="_kivun_event_external_url" value="<?php echo esc_attr( $f( '_kivun_event_external_url' ) ); ?>" class="regular-text" placeholder="https://..."></td>
+			</tr>
+			<tr>
+				<th><?php esc_html_e( 'טקסט כפתור ההרשמה', 'kivun' ); ?></th>
+				<td><input type="text" name="_kivun_event_button" value="<?php echo esc_attr( $f( '_kivun_event_button' ) ); ?>" placeholder="<?php esc_attr_e( 'להרשמה לאירוע', 'kivun' ); ?>"></td>
 			</tr>
 		</table>
 		<?php
@@ -298,6 +381,7 @@ class Kivun_Admin {
 			'lead'         => 'מתעניין',
 			'workshop'     => 'דף נחיתה',
 			'session'      => 'סדנה',
+			'event'        => 'אירוע',
 			'form'         => 'טופס',
 		);
 
@@ -695,6 +779,32 @@ class Kivun_Admin {
 			}
 		}
 
+		if ( 'kivun_event' === $post->post_type ) {
+			if ( ! isset( $_POST['kivun_event_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['kivun_event_nonce'] ) ), 'kivun_save_event' ) ) {
+				return;
+			}
+			if ( ! current_user_can( 'edit_post', $post_id ) ) {
+				return;
+			}
+
+			foreach ( array(
+				'_kivun_event_short'        => 'textarea',
+				'_kivun_event_audience'     => 'text',
+				'_kivun_event_date'         => 'text',
+				'_kivun_event_time'         => 'text',
+				'_kivun_event_duration'     => 'text',
+				'_kivun_event_cost'         => 'text',
+				'_kivun_event_location'     => 'text',
+				'_kivun_capacity'           => 'absint',
+				'_kivun_contact_email'      => 'email',
+				'_kivun_event_mode'         => 'text',
+				'_kivun_event_external_url' => 'url',
+				'_kivun_event_button'       => 'text',
+			) as $key => $type ) {
+				self::save_field( $post_id, $key, $type );
+			}
+		}
+
 		if ( 'kivun_job' === $post->post_type ) {
 			if ( ! isset( $_POST['kivun_job_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['kivun_job_nonce'] ) ), 'kivun_save_job' ) ) {
 				return;
@@ -738,6 +848,9 @@ class Kivun_Admin {
 				break;
 			case 'kses':
 				$value = wp_kses_post( $raw );
+				break;
+			case 'url':
+				$value = esc_url_raw( $raw );
 				break;
 			default:
 				$value = sanitize_text_field( $raw );
@@ -1087,6 +1200,7 @@ class Kivun_Admin {
 			'lead'         => 'מתעניין',
 			'workshop'     => 'דף נחיתה',
 			'session'      => 'סדנה',
+			'event'        => 'אירוע',
 			'form'         => 'טופס',
 		);
 
@@ -1131,7 +1245,7 @@ class Kivun_Admin {
 
 		$courses = get_posts(
 			array(
-				'post_type'              => array( 'kivun_course', 'kivun_workshop', 'kivun_session' ),
+				'post_type'              => array( 'kivun_course', 'kivun_workshop', 'kivun_session', 'kivun_event' ),
 				'post_status'            => array( 'publish', 'draft', 'pending' ),
 				'posts_per_page'         => -1,
 				'orderby'                => 'title',

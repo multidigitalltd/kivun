@@ -159,7 +159,7 @@ class Kivun_Forms_Router {
 	 * @return string The destination email (may be empty).
 	 */
 	private static function email_for_post( int $post_id ): string {
-		if ( $post_id && in_array( get_post_type( $post_id ), array( 'kivun_course', 'kivun_workshop', 'kivun_session' ), true ) ) {
+		if ( $post_id && in_array( get_post_type( $post_id ), array( 'kivun_course', 'kivun_workshop', 'kivun_session', 'kivun_event' ), true ) ) {
 			$specific = (string) get_post_meta( $post_id, '_kivun_contact_email', true );
 			if ( '' !== trim( $specific ) && is_email( $specific ) ) {
 				return $specific;

@@ -196,7 +196,7 @@ class Kivun_Core {
 	 * @return bool
 	 */
 	private static function needs_frontend_assets(): bool {
-		$cpts       = array( 'kivun_job', 'kivun_course', 'kivun_workshop', 'kivun_session' );
+		$cpts       = array( 'kivun_job', 'kivun_course', 'kivun_workshop', 'kivun_session', 'kivun_event' );
 		$taxonomies = array(
 			'kivun_job_scope',
 			'kivun_job_region',

@@ -91,6 +91,7 @@ class Kivun_Export {
 			'lead'         => 'מתעניין',
 			'workshop'     => 'דף נחיתה',
 			'session'      => 'סדנה',
+			'event'        => 'אירוע',
 			'form'         => 'טופס',
 		);
 

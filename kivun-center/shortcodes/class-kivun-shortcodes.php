@@ -25,6 +25,7 @@ class Kivun_Shortcodes {
 			'kivun_course_id'          => 'render_course_id',
 			'kivun_post_id'            => 'render_post_id',
 			'kivun_session_status'     => 'render_session_status',
+			'kivun_event_register'     => 'render_event_register',
 			'kivun_course_interest'    => 'render_course_interest',
 			'kivun_workshops'          => 'render_workshops',
 			'kivun_workshop_single'    => 'render_workshop_single',
@@ -398,14 +399,14 @@ class Kivun_Shortcodes {
 	public static function render_post_id(): string {
 		$id = (int) get_the_ID();
 
-		if ( ! in_array( get_post_type( $id ), array( 'kivun_course', 'kivun_workshop', 'kivun_session' ), true ) ) {
+		if ( ! in_array( get_post_type( $id ), array( 'kivun_course', 'kivun_workshop', 'kivun_session', 'kivun_event' ), true ) ) {
 			$queried = get_queried_object_id();
-			if ( $queried && in_array( get_post_type( $queried ), array( 'kivun_course', 'kivun_workshop', 'kivun_session' ), true ) ) {
+			if ( $queried && in_array( get_post_type( $queried ), array( 'kivun_course', 'kivun_workshop', 'kivun_session', 'kivun_event' ), true ) ) {
 				$id = (int) $queried;
 			}
 		}
 
-		return in_array( get_post_type( $id ), array( 'kivun_course', 'kivun_workshop', 'kivun_session' ), true ) ? (string) $id : '';
+		return in_array( get_post_type( $id ), array( 'kivun_course', 'kivun_workshop', 'kivun_session', 'kivun_event' ), true ) ? (string) $id : '';
 	}
 
 	/**
@@ -460,6 +461,63 @@ class Kivun_Shortcodes {
 			. $icon
 			. '<span>' . esc_html( $atts['closed'] ) . '</span>'
 			. '</div>';
+	}
+
+	/**
+	 * Render the event registration area: a closed notice after the event, a
+	 * button to an external system, or a built-in form (saved to the leads table
+	 * with source/UTM) — per the event's "אופן ההרשמה" setting.
+	 *
+	 * @param mixed $atts Shortcode attributes (id).
+	 * @return string
+	 */
+	public static function render_event_register( $atts ): string {
+		$atts = shortcode_atts( array( 'id' => 0 ), $atts, 'kivun_event_register' );
+
+		$id = absint( $atts['id'] );
+		if ( ! $id ) {
+			$id = (int) get_the_ID();
+			if ( 'kivun_event' !== get_post_type( $id ) ) {
+				$queried = get_queried_object_id();
+				if ( $queried && 'kivun_event' === get_post_type( $queried ) ) {
+					$id = (int) $queried;
+				}
+			}
+		}
+		if ( 'kivun_event' !== get_post_type( $id ) ) {
+			return '';
+		}
+
+		$icon = '<svg class="kivun-session-status__icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path fill="currentColor" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm0 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16Zm1-13h-2v6l5 3 1-1.7-4-2.3V7Z"/></svg>';
+
+		if ( ! kivun_event_registration_open( $id ) ) {
+			return '<div class="kivun-session-status kivun-session-status--closed" role="status">' . $icon . '<span>' . esc_html__( 'ההרשמה לאירוע נסגרה — האירוע כבר התקיים.', 'kivun' ) . '</span></div>';
+		}
+		if ( kivun_is_full( $id ) ) {
+			return '<div class="kivun-session-status kivun-session-status--closed" role="status">' . $icon . '<span>' . esc_html__( 'ההרשמה לאירוע מלאה.', 'kivun' ) . '</span></div>';
+		}
+
+		if ( 'external' === kivun_event_mode( $id ) ) {
+			$url = (string) get_post_meta( $id, '_kivun_event_external_url', true );
+			if ( '' === trim( $url ) ) {
+				return '';
+			}
+			$label = (string) get_post_meta( $id, '_kivun_event_button', true );
+			if ( '' === trim( $label ) ) {
+				$label = __( 'להרשמה לאירוע', 'kivun' );
+			}
+			return '<div class="kivun-event-register"><a class="kivun-event-register__btn" href="' . esc_url( $url ) . '" target="_blank" rel="noopener">' . esc_html( $label ) . '</a></div>';
+		}
+
+		ob_start();
+		kivun_get_template(
+			'courses/interest-form.php',
+			array(
+				'post_id'   => $id,
+				'post_type' => 'kivun_event',
+			)
+		);
+		return (string) ob_get_clean();
 	}
 
 	// ── My applications (personal area) ──────────────────────────────────────

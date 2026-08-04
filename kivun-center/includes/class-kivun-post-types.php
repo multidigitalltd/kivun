@@ -81,6 +81,24 @@ class Kivun_Post_Types {
 			)
 		);
 
+		// ── Events (registration closes permanently after the event date) ─────
+		register_post_type(
+			'kivun_event',
+			array(
+				'labels'        => self::labels( 'אירוע', 'אירועים' ),
+				'public'        => true,
+				'has_archive'   => true,
+				'menu_icon'     => 'dashicons-calendar-alt',
+				'menu_position' => 8,
+				'supports'      => array( 'title', 'editor', 'thumbnail', 'excerpt' ),
+				'rewrite'       => array(
+					'slug'       => 'events',
+					'with_front' => false,
+				),
+				'show_in_rest'  => true,
+			)
+		);
+
 		// ── Jobs ─────────────────────────────────────────────────────────────
 		register_post_type(
 			'kivun_job',

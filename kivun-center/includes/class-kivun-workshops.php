@@ -55,7 +55,7 @@ class Kivun_Workshops {
 		$post_type = get_post_type( $post_id );
 		if ( 'kivun_session' === $post_type && ! kivun_session_registration_open( $post_id ) ) {
 			$msg = __( 'המחזור הנוכחי סגור — נרשמת לרשימה למחזור הבא. נעדכן אותך כשייפתח!', 'kivun' );
-		} elseif ( in_array( $post_type, array( 'kivun_workshop', 'kivun_session' ), true ) ) {
+		} elseif ( in_array( $post_type, array( 'kivun_workshop', 'kivun_session', 'kivun_event' ), true ) ) {
 			$msg = __( 'ההרשמה התקבלה! נציג יצור איתך קשר בהקדם.', 'kivun' );
 		} else {
 			$msg = __( 'פנייתך התקבלה! נציג יצור איתך קשר בהקדם לפרטים נוספים.', 'kivun' );
@@ -89,8 +89,13 @@ class Kivun_Workshops {
 		}
 
 		$post_type = get_post_type( $post_id );
-		if ( ! $post_id || ! in_array( $post_type, array( 'kivun_course', 'kivun_workshop', 'kivun_session' ), true ) ) {
+		if ( ! $post_id || ! in_array( $post_type, array( 'kivun_course', 'kivun_workshop', 'kivun_session', 'kivun_event' ), true ) ) {
 			return new \WP_Error( 'kivun_no_post', __( 'לא נמצא הדף לשיוך הפנייה. בדקו את הגדרת "מקור הדף" או את השדה הנסתר.', 'kivun' ) );
+		}
+
+		// Event registration closes permanently once the event date has passed.
+		if ( 'kivun_event' === $post_type && ! kivun_event_registration_open( $post_id ) ) {
+			return new \WP_Error( 'kivun_event_closed', __( 'ההרשמה לאירוע נסגרה — האירוע כבר התקיים.', 'kivun' ) );
 		}
 
 		// Session validity: once the deadline passes the CURRENT cycle closes, but
@@ -100,7 +105,7 @@ class Kivun_Workshops {
 
 		// Capacity applies to the currently-open cycle only. Next-cycle sign-ups are
 		// a waiting list and are never blocked by the current cycle being full.
-		if ( in_array( $post_type, array( 'kivun_workshop', 'kivun_session' ), true ) && ! $is_next_cycle && kivun_is_full( $post_id ) ) {
+		if ( in_array( $post_type, array( 'kivun_workshop', 'kivun_session', 'kivun_event' ), true ) && ! $is_next_cycle && kivun_is_full( $post_id ) ) {
 			return new \WP_Error( 'kivun_full', __( 'מצטערים, ההרשמה מלאה כרגע. השאירו פרטים ונעדכן אם ייפתח מקום.', 'kivun' ) );
 		}
 
@@ -109,6 +114,8 @@ class Kivun_Workshops {
 			$type = 'workshop';
 		} elseif ( 'kivun_session' === $post_type ) {
 			$type = 'session';
+		} elseif ( 'kivun_event' === $post_type ) {
+			$type = 'event';
 		}
 
 		// Mark next-cycle sign-ups so staff can tell them apart in the CRM.

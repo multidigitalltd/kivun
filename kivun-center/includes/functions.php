@@ -67,6 +67,35 @@ function kivun_session_registration_open( int $post_id ): bool {
 }
 
 /**
+ * Whether an event is still open for registration.
+ *
+ * Registration closes permanently once the event date (_kivun_event_date) has
+ * passed — unlike sessions, an event does not reopen. No date = always open.
+ *
+ * @param int $post_id The event (kivun_event) post ID.
+ * @return bool True when registration is open.
+ */
+function kivun_event_registration_open( int $post_id ): bool {
+	$event_date = (string) get_post_meta( $post_id, '_kivun_event_date', true );
+	if ( '' === trim( $event_date ) ) {
+		return true;
+	}
+	// The date field stores Y-m-d; the event day itself is still open.
+	return current_time( 'Y-m-d' ) <= $event_date;
+}
+
+/**
+ * Event registration mode: 'form' (on-site form) or 'external' (button/link).
+ *
+ * @param int $post_id The event post ID.
+ * @return string
+ */
+function kivun_event_mode( int $post_id ): string {
+	$mode = (string) get_post_meta( $post_id, '_kivun_event_mode', true );
+	return 'external' === $mode ? 'external' : 'form';
+}
+
+/**
  * Per-type storage map for the shared content fields.
  *
  * Each content type stores the same logical field under a different key; this
