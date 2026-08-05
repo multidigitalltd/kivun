@@ -203,7 +203,6 @@ class Kivun_Core {
 	public static function enqueue_frontend_assets(): void {
 		wp_enqueue_style( 'kivun-frontend' );
 		wp_enqueue_script( 'kivun-frontend' );
-		wp_enqueue_script( 'kivun-voice' );
 	}
 
 	/**

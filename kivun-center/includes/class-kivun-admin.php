@@ -166,7 +166,7 @@ class Kivun_Admin {
 			<tr>
 				<th><?php esc_html_e( 'מועד מלא', 'kivun' ); ?></th>
 				<td>
-					<input type="text" name="_kivun_event_time" value="<?php echo esc_attr( $f( '_kivun_event_time' ) ); ?>" class="regular-text" placeholder="<?php esc_attr_e( 'יום ג׳, 15.9.2025, 18:00–20:00', 'kivun' ); ?>">
+					<input type="text" name="_kivun_event_time" value="<?php echo esc_attr( $f( '_kivun_event_time' ) ); ?>" placeholder="<?php esc_attr_e( 'יום ג׳, 15.9.2025, 18:00–20:00', 'kivun' ); ?>">
 					<p class="description"><?php esc_html_e( 'טקסט חופשי לתצוגה: שעה, משך ופרטי מועד. (תאריך האירוע למעלה קובע את סגירת ההרשמה.)', 'kivun' ); ?></p>
 				</td>
 			</tr>
@@ -198,7 +198,7 @@ class Kivun_Admin {
 			</tr>
 			<tr>
 				<th><?php esc_html_e( 'קישור הרשמה חיצוני', 'kivun' ); ?></th>
-				<td><input type="url" name="_kivun_event_external_url" value="<?php echo esc_attr( $f( '_kivun_event_external_url' ) ); ?>" class="regular-text" placeholder="https://..."></td>
+				<td><input type="url" name="_kivun_event_external_url" value="<?php echo esc_attr( $f( '_kivun_event_external_url' ) ); ?>" placeholder="https://..."></td>
 			</tr>
 			<tr>
 				<th><?php esc_html_e( 'טקסט כפתור ההרשמה', 'kivun' ); ?></th>

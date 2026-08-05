@@ -102,8 +102,9 @@
 		else { wrapEl.insertBefore(btn, wrapEl.firstChild); }
 	}
 
-	var SCOPES = '.kivun-cc-front, .kivun-lp-form, .kivun-lp-admin, .kivun-lead-form, '
-		+ '.kivun-ef, .kivun-meta-table, .kivun-apply-form, .kivun-employer-form, [data-kivun-voice]';
+	// Authoring contexts only — the content creator (front shortcode + admin
+	// page) and the Kivun post-editing meta boxes. Never regular visitor forms.
+	var SCOPES = '.kivun-cc-front, .kivun-lp-admin, .kivun-meta-table, [data-kivun-voice]';
 	var FIELDS = 'input[type=text], input[type=email], input[type=search], input[type=tel], '
 		+ 'input[type=url], input:not([type]), textarea';
 

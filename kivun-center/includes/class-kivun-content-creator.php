@@ -1128,6 +1128,9 @@ class Kivun_Content_Creator {
 		}
 
 		Kivun_Core::enqueue_frontend_assets();
+		// Voice dictation is for content authors only — load it here (the content
+		// creator page), never on the public lead/registration forms.
+		wp_enqueue_script( 'kivun-voice' );
 
 		ob_start();
 		self::front_form();

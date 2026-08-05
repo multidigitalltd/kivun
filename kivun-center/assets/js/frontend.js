@@ -672,34 +672,4 @@
 		}
 	}
 
-	// ── Event popup (site-wide, once per session per event) ──────────────────────
-	(function () {
-		var pop = document.getElementById('kivun-epop');
-		if (!pop) { return; }
-		var key = 'kivunEpop_' + (pop.dataset.event || '');
-		try { if (window.sessionStorage && sessionStorage.getItem(key)) { return; } } catch (e) {}
-
-		function close() {
-			pop.hidden = true;
-			pop.classList.remove('is-open');
-			try { if (window.sessionStorage) { sessionStorage.setItem(key, '1'); } } catch (e) {}
-		}
-		function open() {
-			pop.hidden = false;
-			// Force reflow so the transition runs.
-			void pop.offsetWidth;
-			pop.classList.add('is-open');
-			try { if (window.sessionStorage) { sessionStorage.setItem(key, '1'); } } catch (e) {}
-		}
-
-		pop.querySelectorAll('[data-epop-close]').forEach(function (el) {
-			el.addEventListener('click', function (e) { e.preventDefault(); close(); });
-		});
-		document.addEventListener('keydown', function (e) {
-			if (e.key === 'Escape' && pop.classList.contains('is-open')) { close(); }
-		});
-
-		window.setTimeout(open, 900);
-	}());
-
 }());

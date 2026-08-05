@@ -8,8 +8,16 @@
 .kivun-meta-table input[type=email],
 .kivun-meta-table input[type=number],
 .kivun-meta-table input[type=date],
-.kivun-meta-table textarea { width: 100%; max-width: 500px; }
+.kivun-meta-table input[type=url],
+.kivun-meta-table select,
+.kivun-meta-table textarea { width: 100%; max-width: 500px; box-sizing: border-box; }
+.kivun-meta-table input[type=date] { max-width: 220px; }
 .kivun-meta-table small { display: block; color: #6b7280; margin-top: 3px; font-size: 12px; }
+.kivun-meta-table .description { margin: 4px 0 0; color: #6b7280; font-size: 12px; }
+.kivun-meta-table tr { border-bottom: 1px solid #f0f0f1; }
+.kivun-meta-table tr:last-child { border-bottom: 0; }
+.kivun-meta-table .kivun-ev-media__preview img { border: 1px solid #dcdcde; border-radius: 6px; }
+.kivun-meta-table .kivun-ev-media .button { margin-inline-end: 6px; }
 
 /* ── CRM inner tables ─────────────────────────────────────────────────────── */
 .kivun-inner-table { font-size: 13px; }
