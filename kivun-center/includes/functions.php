@@ -123,6 +123,14 @@ function kivun_content_field_map( string $post_type ): array {
 				'cost'     => '_kivun_session_cost',
 				'date'     => '_kivun_session_date',
 			);
+		case 'kivun_event':
+			return array(
+				'short'    => '_kivun_event_short',
+				'audience' => '_kivun_event_audience',
+				'duration' => '_kivun_event_duration',
+				'cost'     => '_kivun_event_cost',
+				'date'     => '_kivun_event_date',
+			);
 		case 'kivun_workshop':
 			return array(
 				'short'    => '_kivun_lp_short',

@@ -67,6 +67,7 @@ class Kivun_Core {
 		add_action( 'elementor_pro/forms/actions/register', array( 'Kivun_Elementor', 'register_form_actions' ) );
 		add_action( 'elementor_pro/init', array( 'Kivun_Elementor', 'register_form_actions_legacy' ), 99 );
 
+		add_filter( 'body_class', array( __CLASS__, 'body_classes' ) );
 		add_action( 'wp_enqueue_scripts', array( __CLASS__, 'enqueue_frontend' ) );
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_admin' ) );
 		add_action( 'plugins_loaded', array( __CLASS__, 'load_textdomain' ) );
@@ -113,6 +114,24 @@ class Kivun_Core {
 		}
 		require_once KIVUN_DIR . 'admin/class-kivun-admin-settings.php';
 		require_once KIVUN_DIR . 'shortcodes/class-kivun-shortcodes.php';
+	}
+
+	/**
+	 * Add state classes to the <body> on a single event, so an Elementor (or
+	 * theme) template can show/hide the registration form via CSS:
+	 *  - kivun-event-open / kivun-event-closed
+	 *  - kivun-event-mode-form / kivun-event-mode-external
+	 *
+	 * @param array $classes Existing body classes.
+	 * @return array
+	 */
+	public static function body_classes( $classes ): array {
+		if ( is_singular( 'kivun_event' ) ) {
+			$id        = (int) get_queried_object_id();
+			$classes[] = kivun_event_registration_open( $id ) ? 'kivun-event-open' : 'kivun-event-closed';
+			$classes[] = 'kivun-event-mode-' . kivun_event_mode( $id );
+		}
+		return $classes;
 	}
 
 	/**
