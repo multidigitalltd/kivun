@@ -46,13 +46,16 @@
 		try { rec.start(); } catch (err) { stop(); }
 	}
 
+	var MIC_SVG = '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">'
+		+ '<path fill="currentColor" d="M12 15a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V22h2v-3.08A7 7 0 0 0 19 12h-2Z"/></svg>';
+
 	function micButton(onFinal) {
 		var b = document.createElement('button');
 		b.type = 'button';
 		b.className = 'kivun-mic';
 		b.setAttribute('aria-label', 'הקלטה קולית');
 		b.title = 'הקלטה קולית (עברית)';
-		b.innerHTML = '<span aria-hidden="true">🎤</span>';
+		b.innerHTML = MIC_SVG;
 		b.addEventListener('click', function (e) {
 			e.preventDefault();
 			start(b, onFinal);
