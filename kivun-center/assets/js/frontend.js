@@ -607,6 +607,7 @@
 			ccGen.addEventListener('click', function () {
 				var topicEl = document.querySelector('.kivun-cc-gen-topic'),
 					topic = topicEl ? topicEl.value.trim() : '',
+					toneEl = document.querySelector('.kivun-cc-gen-tone'),
 					gStat = document.querySelector('.kivun-cc-gen-status'),
 					typeEl = document.querySelector('.kivun-cc-toggle:checked'),
 					fd = new FormData();
@@ -617,6 +618,7 @@
 				fd.append('action', 'kivun_generate_ai_content');
 				fd.append('nonce', ccGen.dataset.nonce);
 				fd.append('topic', topic);
+				fd.append('tone', toneEl ? toneEl.value : 'marketing');
 				fd.append('type', typeEl ? typeEl.dataset.type : '');
 				ccGen.disabled = true;
 				if (gStat) { gStat.textContent = 'יוצר תוכן… זה עשוי לקחת מספר שניות'; }

@@ -310,6 +310,13 @@ class Kivun_Content_Creator {
 								</p>
 							<?php endif; ?>
 							<p class="kivun-lp-hint"><?php esc_html_e( 'תארו את הנושא וה-AI ימלא כותרת, תיאורים ופרטים — תוכלו לערוך אחר כך.', 'kivun' ); ?></p>
+							<label class="kivun-lp-sub"><?php esc_html_e( 'סגנון כתיבה', 'kivun' ); ?></label>
+							<select class="kivun-lp-input kivun-cc-gen-tone">
+								<?php foreach ( Kivun_AI_Content::tones() as $tkey => $tlabel ) : ?>
+									<option value="<?php echo esc_attr( $tkey ); ?>"><?php echo esc_html( $tlabel ); ?></option>
+								<?php endforeach; ?>
+							</select>
+							<label class="kivun-lp-sub"><?php esc_html_e( 'נושא התוכן', 'kivun' ); ?></label>
 							<textarea class="kivun-lp-input kivun-cc-gen-topic" rows="2" placeholder="<?php esc_attr_e( 'למשל: סדנת הורים-מתבגרים בת 4 מפגשים בערבים', 'kivun' ); ?>"></textarea>
 							<p style="margin:.5rem 0 0">
 								<button type="button" class="button kivun-cc-gen-btn" data-ajax="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>" data-nonce="<?php echo esc_attr( wp_create_nonce( 'kivun_ai_content' ) ); ?>">
@@ -698,6 +705,7 @@ class Kivun_Content_Creator {
 				genBtn.addEventListener( 'click', function () {
 					var topicEl = document.querySelector( '.kivun-cc-gen-topic' ),
 						topic   = topicEl ? topicEl.value.trim() : '',
+						toneEl  = document.querySelector( '.kivun-cc-gen-tone' ),
 						gstat   = document.querySelector( '.kivun-cc-gen-status' ),
 						typeEl  = document.querySelector( '.kivun-cc-toggle:checked' ),
 						fd      = new FormData();
@@ -712,6 +720,7 @@ class Kivun_Content_Creator {
 					fd.append( 'action', 'kivun_generate_ai_content' );
 					fd.append( 'nonce', genBtn.dataset.nonce );
 					fd.append( 'topic', topic );
+					fd.append( 'tone', toneEl ? toneEl.value : 'marketing' );
 					fd.append( 'type', typeEl ? typeEl.dataset.type : '' );
 					genBtn.disabled = true;
 					if ( gstat ) { gstat.textContent = '<?php echo esc_js( __( 'יוצר תוכן… זה עשוי לקחת מספר שניות', 'kivun' ) ); ?>'; }
@@ -1470,6 +1479,13 @@ class Kivun_Content_Creator {
 								<p class="kivun-cc-ai-warn"><?php esc_html_e( '⚠️ היצירה האוטומטית אינה פעילה כרגע (לא הוגדר מפתח API / נגמרו הקרדיטים). פנו למנהל האתר.', 'kivun' ); ?></p>
 							<?php endif; ?>
 							<p class="kivun-cc-hint"><?php esc_html_e( 'תארו את הנושא וה-AI ימלא כותרת, תיאורים ופרטים — תוכלו לערוך אחר כך.', 'kivun' ); ?></p>
+							<label class="kivun-cc-sub"><?php esc_html_e( 'סגנון כתיבה', 'kivun' ); ?></label>
+							<select class="kivun-cc-input kivun-cc-gen-tone">
+								<?php foreach ( Kivun_AI_Content::tones() as $tkey => $tlabel ) : ?>
+									<option value="<?php echo esc_attr( $tkey ); ?>"><?php echo esc_html( $tlabel ); ?></option>
+								<?php endforeach; ?>
+							</select>
+							<label class="kivun-cc-sub"><?php esc_html_e( 'נושא התוכן', 'kivun' ); ?></label>
 							<textarea class="kivun-cc-input kivun-cc-textarea kivun-cc-gen-topic" rows="2" placeholder="<?php esc_attr_e( 'למשל: סדנת הורים-מתבגרים בת 4 מפגשים בערבים', 'kivun' ); ?>"></textarea>
 							<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost kivun-cc-gen-btn" data-ajax="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>" data-nonce="<?php echo esc_attr( wp_create_nonce( 'kivun_ai_content' ) ); ?>">
 								<?php esc_html_e( '✨ צור תוכן', 'kivun' ); ?>

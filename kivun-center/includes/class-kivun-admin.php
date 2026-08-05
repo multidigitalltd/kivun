@@ -238,9 +238,10 @@ class Kivun_Admin {
 				idEl = document.querySelector( '.kivun-ev-media__id' ),
 				pr  = document.querySelector( '.kivun-ev-media__preview' ),
 				img = pr ? pr.querySelector( 'img' ) : null;
-			if ( sel && window.wp && wp.media ) {
+			if ( sel ) {
 				sel.addEventListener( 'click', function ( e ) {
 					e.preventDefault();
+					if ( ! window.wp || ! wp.media ) { return; }
 					if ( frame ) { frame.open(); return; }
 					frame = wp.media( { multiple: false } );
 					frame.on( 'select', function () {

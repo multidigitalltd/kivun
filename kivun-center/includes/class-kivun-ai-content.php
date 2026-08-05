@@ -32,6 +32,36 @@ class Kivun_AI_Content {
 	}
 
 	/**
+	 * Selectable writing tones: key => Hebrew label (shown in the form dropdown).
+	 *
+	 * @return array<string,string>
+	 */
+	public static function tones(): array {
+		return array(
+			'marketing' => __( 'שיווקי-חם', 'kivun' ),
+			'formal'    => __( 'רשמי ומקצועי', 'kivun' ),
+			'friendly'  => __( 'ידידותי ואישי', 'kivun' ),
+			'concise'   => __( 'קצר ותכליתי', 'kivun' ),
+		);
+	}
+
+	/**
+	 * Map a tone key to its Hebrew instruction fragment.
+	 *
+	 * @param string $tone The tone key.
+	 * @return string
+	 */
+	private static function tone_fragment( string $tone ): string {
+		$map = array(
+			'marketing' => 'טון שיווקי, חם ומזמין',
+			'formal'    => 'טון רשמי, מקצועי ומכובד',
+			'friendly'  => 'טון ידידותי, אישי וקליל',
+			'concise'   => 'טון קצר, תכליתי וברור, ללא מליצות מיותרות',
+		);
+		return $map[ $tone ] ?? $map['marketing'];
+	}
+
+	/**
 	 * AJAX: draft content fields from a short topic.
 	 *
 	 * @return void
@@ -45,12 +75,13 @@ class Kivun_AI_Content {
 
 		$topic = isset( $_POST['topic'] ) ? sanitize_textarea_field( wp_unslash( $_POST['topic'] ) ) : '';
 		$type  = isset( $_POST['type'] ) ? sanitize_key( wp_unslash( $_POST['type'] ) ) : '';
+		$tone  = isset( $_POST['tone'] ) ? sanitize_key( wp_unslash( $_POST['tone'] ) ) : 'marketing';
 
 		if ( '' === trim( $topic ) ) {
 			wp_send_json_error( array( 'message' => __( 'מלאו נושא ליצירת התוכן.', 'kivun' ) ) );
 		}
 
-		$result = self::generate( $topic, $type );
+		$result = self::generate( $topic, $type, $tone );
 		if ( is_wp_error( $result ) ) {
 			wp_send_json_error( array( 'message' => $result->get_error_message() ) );
 		}
@@ -63,9 +94,10 @@ class Kivun_AI_Content {
 	 *
 	 * @param string $topic The subject to write about.
 	 * @param string $type  Content type key (landing/course/session/event).
+	 * @param string $tone  Writing tone key (see tones()).
 	 * @return array<string,string>|\WP_Error
 	 */
-	public static function generate( string $topic, string $type = '' ) {
+	public static function generate( string $topic, string $type = '', string $tone = 'marketing' ) {
 		$key = trim( (string) Kivun_Admin_Settings::get( 'openai_api_key', '' ) );
 		if ( '' === $key ) {
 			return new \WP_Error( 'kivun_ai_no_key', __( 'לא הוגדר מפתח API. הזינו אותו בהגדרות → Kivun Center.', 'kivun' ) );
@@ -82,7 +114,7 @@ class Kivun_AI_Content {
 		);
 		$type_label = $labels[ $type ] ?? 'עמוד תוכן';
 
-		$system = 'אתה קופירייטר שיווקי למרכז קהילתי בישראל (מרכז כיוון). כתוב עברית תקנית, חמה ומזמינה. '
+		$system = 'אתה קופירייטר תוכן למרכז קהילתי בישראל (מרכז כיוון). כתוב עברית תקנית ב' . self::tone_fragment( $tone ) . '. '
 			. 'החזר אך ורק אובייקט JSON תקין, ללא טקסט נוסף.';
 
 		$user = sprintf(
