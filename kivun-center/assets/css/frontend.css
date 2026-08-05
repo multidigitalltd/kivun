@@ -1028,3 +1028,29 @@
 .kivun-event-register__btn { display: inline-flex; align-items: center; justify-content: center; background: var(--kivun-accent); color: #fff; border-radius: 999px; padding: .8rem 2rem; font-weight: 700; font-size: 1.05rem; text-decoration: none; transition: filter .15s, transform .1s; }
 .kivun-event-register__btn:hover { color: #fff; filter: brightness(.93); }
 .kivun-event-register__btn:active { transform: translateY(1px); }
+
+/* Event registration form — clean 2-column, underline inputs. */
+.kivun-ef { max-width: 680px; font-family: var(--kivun-font); }
+.kivun-ef__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.4rem 2rem; }
+@media (max-width: 600px) { .kivun-ef__grid { grid-template-columns: 1fr; } }
+.kivun-ef__field { display: flex; flex-direction: column; gap: .45rem; }
+.kivun-ef__field label { font-weight: 600; font-size: .95rem; color: var(--kivun-dark); }
+.kivun-ef__field input {
+	border: 0; border-bottom: 1px solid #c9ccd4; background: transparent;
+	padding: .5rem .1rem; font: inherit; font-size: 1rem; color: var(--kivun-dark);
+	border-radius: 0; box-shadow: none;
+}
+.kivun-ef__field input:focus { outline: none; border-bottom-color: var(--kivun-accent); box-shadow: 0 1px 0 0 var(--kivun-accent); }
+.kivun-ef__consent { display: flex; align-items: flex-start; gap: .5rem; margin: 1.6rem 0 0; font-size: .9rem; color: #555; line-height: 1.5; }
+.kivun-ef__consent input { margin-top: .2rem; accent-color: var(--kivun-accent); width: auto; }
+.kivun-ef__consent a { color: var(--kivun-accent); text-decoration: underline; }
+.kivun-ef__submit {
+	display: inline-flex; align-items: center; gap: .5rem; margin-top: 1.6rem;
+	background: var(--kivun-dark) !important; color: #fff !important; border: 0 !important;
+	border-radius: 999px !important; padding: .85rem 2.1rem !important; font: inherit;
+	font-weight: 700 !important; font-size: 1rem !important; cursor: pointer;
+	box-shadow: none !important; transition: filter .15s, transform .1s;
+}
+.kivun-ef__submit:hover { filter: brightness(1.12); color: #fff !important; }
+.kivun-ef__submit:active { transform: translateY(1px); }
+.kivun-ef__submit[disabled] { opacity: .6; cursor: progress; }

@@ -511,7 +511,7 @@ class Kivun_Shortcodes {
 
 		ob_start();
 		kivun_get_template(
-			'courses/interest-form.php',
+			'events/register-form.php',
 			array(
 				'post_id'   => $id,
 				'post_type' => 'kivun_event',
