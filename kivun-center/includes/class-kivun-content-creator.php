@@ -137,6 +137,7 @@ class Kivun_Content_Creator {
 			'session_capacity' => '',
 			'session_valid'    => '',
 			'event_date'       => '',
+			'event_time'       => '',
 			'event_location'   => '',
 			'event_capacity'   => '',
 			'event_mode'       => 'form',
@@ -185,6 +186,7 @@ class Kivun_Content_Creator {
 		if ( isset( $group_posts['event'] ) ) {
 			$eid                 = (int) $group_posts['event'];
 			$v['event_date']     = (string) get_post_meta( $eid, '_kivun_event_date', true );
+			$v['event_time']     = (string) get_post_meta( $eid, '_kivun_event_time', true );
 			$v['event_location'] = (string) get_post_meta( $eid, '_kivun_event_location', true );
 			$v['event_capacity'] = (string) get_post_meta( $eid, '_kivun_capacity', true );
 			$v['event_mode']     = kivun_event_mode( $eid );
@@ -225,12 +227,13 @@ class Kivun_Content_Creator {
 			);
 		}
 		if ( 'event' === $type_key ) {
-			// Events store the free-text schedule under _kivun_event_time (shown as
-			// "מועד מלא"); the strict Y-m-d event date lives in the event section.
+			// Events share only the neutral fields here. Their unique fields — the
+			// full schedule (_kivun_event_time), the strict closing date, mode,
+			// popup, image — all live in the dedicated "event" section instead, so
+			// the generic "משך"/"תאריך" editors are never used for an event.
 			return array(
 				'short'    => '_kivun_event_short',
 				'audience' => '_kivun_event_audience',
-				'duration' => '_kivun_event_time',
 				'cost'     => '_kivun_event_cost',
 				'email'    => '_kivun_contact_email',
 			);
@@ -258,6 +261,7 @@ class Kivun_Content_Creator {
 
 		wp_enqueue_media();
 		wp_enqueue_style( 'kivun-admin', KIVUN_URL . 'assets/css/' . Kivun_Core::asset( 'admin', 'css' ), array(), KIVUN_VERSION );
+		wp_enqueue_script( 'kivun-voice', KIVUN_URL . 'assets/js/' . Kivun_Core::asset( 'voice', 'js' ), array(), KIVUN_VERSION, true );
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only; loads a record to edit.
 		$group       = isset( $_GET['group'] ) ? sanitize_text_field( wp_unslash( $_GET['group'] ) ) : '';
@@ -318,6 +322,8 @@ class Kivun_Content_Creator {
 							</select>
 							<label class="kivun-lp-sub"><?php esc_html_e( 'נושא התוכן', 'kivun' ); ?></label>
 							<textarea class="kivun-lp-input kivun-cc-gen-topic" rows="2" placeholder="<?php esc_attr_e( 'למשל: סדנת הורים-מתבגרים בת 4 מפגשים בערבים', 'kivun' ); ?>"></textarea>
+							<label class="kivun-lp-sub" style="margin-top:.6rem"><?php esc_html_e( 'או העלו מודעה מעוצבת — וה-AI יחלץ ממנה את הפרטים (אופציונלי)', 'kivun' ); ?></label>
+							<input type="file" class="kivun-lp-input kivun-cc-gen-image" accept="image/*">
 							<p style="margin:.5rem 0 0">
 								<button type="button" class="button kivun-cc-gen-btn" data-ajax="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>" data-nonce="<?php echo esc_attr( wp_create_nonce( 'kivun_ai_content' ) ); ?>">
 									<?php esc_html_e( '✨ צור תוכן', 'kivun' ); ?>
@@ -464,9 +470,12 @@ class Kivun_Content_Creator {
 						<!-- Event-only extras -->
 						<div class="kivun-lp-card kivun-cc-section" data-type="event" <?php echo isset( $group_posts['event'] ) ? '' : 'hidden'; ?>>
 							<h3><?php esc_html_e( 'אירוע — פרטים נוספים', 'kivun' ); ?></h3>
-							<label class="kivun-lp-sub"><?php esc_html_e( 'תאריך האירוע', 'kivun' ); ?></label>
+							<p class="kivun-lp-hint"><?php esc_html_e( 'לאירוע יש שדות ייחודיים משלו כאן. המועד ותאריך האירוע נלקחים מהשדות שבבלוק זה — לא מהשדות "משך" / "תאריך" הכלליים שמעלה.', 'kivun' ); ?></p>
+							<label class="kivun-lp-sub"><?php esc_html_e( 'תאריך האירוע (סוגר את ההרשמה)', 'kivun' ); ?></label>
 							<input type="date" name="event_date" class="kivun-lp-input" dir="ltr" value="<?php echo esc_attr( $v['event_date'] ); ?>">
-							<p class="kivun-lp-hint"><?php esc_html_e( 'לאחר תאריך זה ההרשמה נסגרת לצמיתות. השדה "משך" משמש לתצוגת המועד המלא (שעה/משך).', 'kivun' ); ?></p>
+							<p class="kivun-lp-hint"><?php esc_html_e( 'לאחר תאריך זה ההרשמה נסגרת לצמיתות. ריק = תמיד פתוח.', 'kivun' ); ?></p>
+							<label class="kivun-lp-sub"><?php esc_html_e( 'מועד מלא (שעה / משך — לתצוגה)', 'kivun' ); ?></label>
+							<input type="text" name="event_time" class="kivun-lp-input" value="<?php echo esc_attr( $v['event_time'] ); ?>" placeholder="<?php esc_attr_e( 'יום ג׳, 15.9.2025, 18:00–20:00', 'kivun' ); ?>">
 							<label class="kivun-lp-sub"><?php esc_html_e( 'מיקום', 'kivun' ); ?></label>
 							<input type="text" name="event_location" class="kivun-lp-input" value="<?php echo esc_attr( $v['event_location'] ); ?>">
 							<label class="kivun-lp-sub"><?php esc_html_e( 'מקסימום משתתפים', 'kivun' ); ?></label>
@@ -706,13 +715,16 @@ class Kivun_Content_Creator {
 					var topicEl = document.querySelector( '.kivun-cc-gen-topic' ),
 						topic   = topicEl ? topicEl.value.trim() : '',
 						toneEl  = document.querySelector( '.kivun-cc-gen-tone' ),
+						imgEl   = document.querySelector( '.kivun-cc-gen-image' ),
+						imgFile = ( imgEl && imgEl.files && imgEl.files[0] ) ? imgEl.files[0] : null,
 						gstat   = document.querySelector( '.kivun-cc-gen-status' ),
 						typeEl  = document.querySelector( '.kivun-cc-toggle:checked' ),
 						fd      = new FormData();
-					if ( ! topic ) {
-						if ( gstat ) { gstat.textContent = '<?php echo esc_js( __( 'מלאו נושא ליצירה.', 'kivun' ) ); ?>'; }
+					if ( ! topic && ! imgFile ) {
+						if ( gstat ) { gstat.textContent = '<?php echo esc_js( __( 'מלאו נושא או העלו מודעה.', 'kivun' ) ); ?>'; }
 						return;
 					}
+					if ( imgFile ) { fd.append( 'image', imgFile ); }
 					function setF( id, val ) {
 						if ( window.tinymce && tinymce.get( id ) ) { tinymce.get( id ).setContent( val || '' ); }
 						else { var el = document.getElementById( id ); if ( el ) { el.value = val || ''; } }
@@ -975,7 +987,7 @@ class Kivun_Content_Creator {
 					array(
 						'_kivun_event_short'        => $s['short'],
 						'_kivun_event_audience'     => $s['audience'],
-						'_kivun_event_time'         => $s['duration'],
+						'_kivun_event_time'         => sanitize_text_field( wp_unslash( $_POST['event_time'] ?? '' ) ),
 						'_kivun_event_cost'         => $s['cost'],
 						'_kivun_event_date'         => sanitize_text_field( wp_unslash( $_POST['event_date'] ?? '' ) ),
 						'_kivun_event_location'     => sanitize_text_field( wp_unslash( $_POST['event_location'] ?? '' ) ),
@@ -1487,6 +1499,10 @@ class Kivun_Content_Creator {
 							</select>
 							<label class="kivun-cc-sub"><?php esc_html_e( 'נושא התוכן', 'kivun' ); ?></label>
 							<textarea class="kivun-cc-input kivun-cc-textarea kivun-cc-gen-topic" rows="2" placeholder="<?php esc_attr_e( 'למשל: סדנת הורים-מתבגרים בת 4 מפגשים בערבים', 'kivun' ); ?>"></textarea>
+							<?php if ( $can_upload ) : ?>
+								<label class="kivun-cc-sub" style="margin-top:.6rem"><?php esc_html_e( 'או העלו מודעה מעוצבת — וה-AI יחלץ ממנה את הפרטים (אופציונלי)', 'kivun' ); ?></label>
+								<input type="file" class="kivun-cc-input kivun-cc-gen-image" accept="image/*">
+							<?php endif; ?>
 							<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost kivun-cc-gen-btn" data-ajax="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>" data-nonce="<?php echo esc_attr( wp_create_nonce( 'kivun_ai_content' ) ); ?>">
 								<?php esc_html_e( '✨ צור תוכן', 'kivun' ); ?>
 							</button>
@@ -1592,9 +1608,12 @@ class Kivun_Content_Creator {
 
 						<div class="kivun-cc-card kivun-cc-section" data-type="event" <?php echo isset( $group_posts['event'] ) ? '' : 'hidden'; ?>>
 							<h3 class="kivun-cc-h3"><?php esc_html_e( 'אירוע — פרטים נוספים', 'kivun' ); ?></h3>
-							<label class="kivun-cc-sub"><?php esc_html_e( 'תאריך האירוע', 'kivun' ); ?></label>
+							<p class="kivun-cc-hint"><?php esc_html_e( 'לאירוע יש שדות ייחודיים משלו כאן. המועד ותאריך האירוע נלקחים מהשדות שבבלוק זה — לא מהשדות "משך" / "תאריך" הכלליים שמעלה.', 'kivun' ); ?></p>
+							<label class="kivun-cc-sub"><?php esc_html_e( 'תאריך האירוע (סוגר את ההרשמה)', 'kivun' ); ?></label>
 							<input type="date" name="event_date" class="kivun-cc-input" dir="ltr" value="<?php echo esc_attr( $v['event_date'] ); ?>">
-							<p class="kivun-cc-hint"><?php esc_html_e( 'לאחר תאריך זה ההרשמה נסגרת לצמיתות. השדה "משך" משמש להצגת המועד המלא (שעה/משך).', 'kivun' ); ?></p>
+							<p class="kivun-cc-hint"><?php esc_html_e( 'לאחר תאריך זה ההרשמה נסגרת לצמיתות. ריק = תמיד פתוח.', 'kivun' ); ?></p>
+							<label class="kivun-cc-sub"><?php esc_html_e( 'מועד מלא (שעה / משך — לתצוגה)', 'kivun' ); ?></label>
+							<input type="text" name="event_time" class="kivun-cc-input" value="<?php echo esc_attr( $v['event_time'] ); ?>" placeholder="<?php esc_attr_e( 'יום ג׳, 15.9.2025, 18:00–20:00', 'kivun' ); ?>">
 							<label class="kivun-cc-sub"><?php esc_html_e( 'מיקום', 'kivun' ); ?></label>
 							<input type="text" name="event_location" class="kivun-cc-input" value="<?php echo esc_attr( $v['event_location'] ); ?>">
 							<label class="kivun-cc-sub"><?php esc_html_e( 'מקסימום משתתפים', 'kivun' ); ?></label>

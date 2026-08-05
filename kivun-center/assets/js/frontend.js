@@ -608,13 +608,16 @@
 				var topicEl = document.querySelector('.kivun-cc-gen-topic'),
 					topic = topicEl ? topicEl.value.trim() : '',
 					toneEl = document.querySelector('.kivun-cc-gen-tone'),
+					imgEl = document.querySelector('.kivun-cc-gen-image'),
+					imgFile = (imgEl && imgEl.files && imgEl.files[0]) ? imgEl.files[0] : null,
 					gStat = document.querySelector('.kivun-cc-gen-status'),
 					typeEl = document.querySelector('.kivun-cc-toggle:checked'),
 					fd = new FormData();
-				if (!topic) {
-					if (gStat) { gStat.textContent = 'מלאו נושא ליצירה.'; }
+				if (!topic && !imgFile) {
+					if (gStat) { gStat.textContent = 'מלאו נושא או העלו מודעה.'; }
 					return;
 				}
+				if (imgFile) { fd.append('image', imgFile); }
 				fd.append('action', 'kivun_generate_ai_content');
 				fd.append('nonce', ccGen.dataset.nonce);
 				fd.append('topic', topic);

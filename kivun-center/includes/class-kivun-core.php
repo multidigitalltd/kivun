@@ -163,6 +163,15 @@ class Kivun_Core {
 		);
 		wp_script_add_data( 'kivun-frontend', 'defer', true );
 
+		wp_register_script(
+			'kivun-voice',
+			KIVUN_URL . 'assets/js/' . self::asset( 'voice', 'js' ),
+			array(),
+			KIVUN_VERSION,
+			true
+		);
+		wp_script_add_data( 'kivun-voice', 'defer', true );
+
 		wp_localize_script(
 			'kivun-frontend',
 			'kivun',
@@ -194,6 +203,7 @@ class Kivun_Core {
 	public static function enqueue_frontend_assets(): void {
 		wp_enqueue_style( 'kivun-frontend' );
 		wp_enqueue_script( 'kivun-frontend' );
+		wp_enqueue_script( 'kivun-voice' );
 	}
 
 	/**
@@ -313,6 +323,14 @@ class Kivun_Core {
 		}
 
 		wp_enqueue_style( 'kivun-admin', KIVUN_URL . 'assets/css/' . self::asset( 'admin', 'css' ), array(), KIVUN_VERSION );
+
+		wp_enqueue_script(
+			'kivun-voice',
+			KIVUN_URL . 'assets/js/' . self::asset( 'voice', 'js' ),
+			array(),
+			KIVUN_VERSION,
+			true
+		);
 
 		wp_enqueue_script(
 			'kivun-admin-crm',

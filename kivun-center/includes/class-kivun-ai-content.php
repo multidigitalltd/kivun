@@ -77,11 +77,17 @@ class Kivun_AI_Content {
 		$type  = isset( $_POST['type'] ) ? sanitize_key( wp_unslash( $_POST['type'] ) ) : '';
 		$tone  = isset( $_POST['tone'] ) ? sanitize_key( wp_unslash( $_POST['tone'] ) ) : 'marketing';
 
-		if ( '' === trim( $topic ) ) {
-			wp_send_json_error( array( 'message' => __( 'מלאו נושא ליצירת התוכן.', 'kivun' ) ) );
+		// Optional: a designed flyer/ad image to read the content from (vision).
+		$image_uri = self::read_uploaded_image();
+		if ( is_wp_error( $image_uri ) ) {
+			wp_send_json_error( array( 'message' => $image_uri->get_error_message() ) );
 		}
 
-		$result = self::generate( $topic, $type, $tone );
+		if ( '' === trim( $topic ) && '' === $image_uri ) {
+			wp_send_json_error( array( 'message' => __( 'מלאו נושא ליצירת התוכן, או העלו מודעה מעוצבת.', 'kivun' ) ) );
+		}
+
+		$result = self::generate( $topic, $type, $tone, $image_uri );
 		if ( is_wp_error( $result ) ) {
 			wp_send_json_error( array( 'message' => $result->get_error_message() ) );
 		}
@@ -92,12 +98,13 @@ class Kivun_AI_Content {
 	/**
 	 * Call the API and return the drafted, sanitised content fields.
 	 *
-	 * @param string $topic The subject to write about.
-	 * @param string $type  Content type key (landing/course/session/event).
-	 * @param string $tone  Writing tone key (see tones()).
+	 * @param string $topic     The subject to write about.
+	 * @param string $type      Content type key (landing/course/session/event).
+	 * @param string $tone      Writing tone key (see tones()).
+	 * @param string $image_uri Optional data: URI of a flyer image to read.
 	 * @return array<string,string>|\WP_Error
 	 */
-	public static function generate( string $topic, string $type = '', string $tone = 'marketing' ) {
+	public static function generate( string $topic, string $type = '', string $tone = 'marketing', string $image_uri = '' ) {
 		$key = trim( (string) Kivun_Admin_Settings::get( 'openai_api_key', '' ) );
 		if ( '' === $key ) {
 			return new \WP_Error( 'kivun_ai_no_key', __( 'לא הוגדר מפתח API. הזינו אותו בהגדרות → Kivun Center.', 'kivun' ) );
@@ -117,18 +124,43 @@ class Kivun_AI_Content {
 		$system = 'אתה קופירייטר תוכן למרכז קהילתי בישראל (מרכז כיוון). כתוב עברית תקנית ב' . self::tone_fragment( $tone ) . '. '
 			. 'החזר אך ורק אובייקט JSON תקין, ללא טקסט נוסף.';
 
-		$user = sprintf(
-			'צור תוכן שיווקי עבור %1$s בנושא: "%2$s". החזר JSON עם המפתחות הבאים בלבד: '
+		$keys_spec = 'החזר JSON עם המפתחות הבאים בלבד: '
 			. '"title" (כותרת קצרה וקולעת), '
 			. '"short" (תקציר של משפט–שניים, מותר HTML בסיסי), '
 			. '"long" (תיאור מלא של 2–4 פסקאות בתגיות <p>), '
 			. '"audience" (קהל היעד, משפט קצר), '
 			. '"duration" (משך/מבנה, למשל מספר מפגשים ושעות), '
 			. '"cost" (הצעת מחיר או "לפרטים"), '
-			. '"date" (הצעת מועד או ריק). כל הערכים בעברית.',
-			$type_label,
-			$topic
-		);
+			. '"date" (הצעת מועד או ריק). כל הערכים בעברית.';
+
+		if ( '' !== $image_uri ) {
+			// Vision: read the details from the supplied flyer/ad image.
+			$has_topic    = '' !== trim( $topic );
+			$hint         = $has_topic ? 'התייחס גם להנחיה: "' . $topic . '".' : '';
+			$instruction  = sprintf(
+				'צורפה מודעה/פלייר מעוצב עבור %1$s. חלץ מהתמונה את כל הפרטים (כותרת, תיאור, קהל יעד, מועד, מחיר, מיקום) ונסח מהם תוכן שיווקי. %2$s %3$s',
+				$type_label,
+				$hint,
+				$keys_spec
+			);
+			$user_content = array(
+				array(
+					'type' => 'text',
+					'text' => $instruction,
+				),
+				array(
+					'type'      => 'image_url',
+					'image_url' => array( 'url' => $image_uri ),
+				),
+			);
+		} else {
+			$user_content = sprintf(
+				'צור תוכן שיווקי עבור %1$s בנושא: "%2$s". %3$s',
+				$type_label,
+				$topic,
+				$keys_spec
+			);
+		}
 
 		$body = array(
 			'model'           => $model,
@@ -139,7 +171,7 @@ class Kivun_AI_Content {
 				),
 				array(
 					'role'    => 'user',
-					'content' => $user,
+					'content' => $user_content,
 				),
 			),
 			'response_format' => array( 'type' => 'json_object' ),
@@ -149,7 +181,7 @@ class Kivun_AI_Content {
 		$response = wp_remote_post(
 			self::ENDPOINT,
 			array(
-				'timeout' => 45,
+				'timeout' => 60,
 				'headers' => array(
 					'Authorization' => 'Bearer ' . $key,
 					'Content-Type'  => 'application/json',
@@ -190,6 +222,47 @@ class Kivun_AI_Content {
 			'cost'     => $plain( $fields['cost'] ?? '' ),
 			'date'     => $plain( $fields['date'] ?? '' ),
 		);
+	}
+
+	/**
+	 * Read an optional uploaded flyer image and return it as a data: URI for the
+	 * vision request. Returns '' when no file was sent, or a WP_Error on problems.
+	 *
+	 * @return string|\WP_Error
+	 */
+	private static function read_uploaded_image() {
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in ajax_generate().
+		if ( empty( $_FILES['image']['tmp_name'] ) ) {
+			return '';
+		}
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized, WordPress.Security.ValidatedSanitizedInput.MissingUnslash, WordPress.Security.NonceVerification.Missing -- Nonce verified in ajax_generate(); path validated with is_uploaded_file() below.
+		$tmp = $_FILES['image']['tmp_name'];
+		if ( ! is_string( $tmp ) || ! is_uploaded_file( $tmp ) ) {
+			return '';
+		}
+
+		$size = (int) filesize( $tmp );
+		if ( $size <= 0 || $size > 12 * 1024 * 1024 ) {
+			return new \WP_Error( 'kivun_ai_img_size', __( 'התמונה גדולה מדי (עד 12MB).', 'kivun' ) );
+		}
+
+		$info = getimagesize( $tmp );
+		if ( false === $info || empty( $info['mime'] ) ) {
+			return new \WP_Error( 'kivun_ai_img_type', __( 'הקובץ אינו תמונה תקינה.', 'kivun' ) );
+		}
+		$mime = (string) $info['mime'];
+		if ( ! in_array( $mime, array( 'image/jpeg', 'image/png', 'image/webp', 'image/gif' ), true ) ) {
+			return new \WP_Error( 'kivun_ai_img_type', __( 'סוג התמונה אינו נתמך (JPG/PNG/WEBP).', 'kivun' ) );
+		}
+
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading a just-uploaded temp file to forward to the vision API.
+		$bytes = file_get_contents( $tmp );
+		if ( false === $bytes || '' === $bytes ) {
+			return new \WP_Error( 'kivun_ai_img_read', __( 'שגיאה בקריאת התמונה.', 'kivun' ) );
+		}
+
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- Encoding image bytes as a data: URI for the API.
+		return 'data:' . $mime . ';base64,' . base64_encode( $bytes );
 	}
 
 	/**
