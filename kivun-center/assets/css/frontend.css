@@ -1054,3 +1054,10 @@
 .kivun-ef__submit:hover { filter: brightness(1.12); color: #fff !important; }
 .kivun-ef__submit:active { transform: translateY(1px); }
 .kivun-ef__submit[disabled] { opacity: .6; cursor: progress; }
+
+/* Event form — label alignment + pill button with circular arrow badge. */
+.kivun-ef__field label { text-align: right; }
+.kivun-ef__submit { flex-direction: row; gap: .6rem !important; }
+.kivun-ef__submit-label { line-height: 1; }
+.kivun-ef__submit-icon { display: inline-flex; align-items: center; justify-content: center; width: 27px; height: 27px; border-radius: 50%; background: #fff; color: var(--kivun-dark); flex: 0 0 auto; }
+.kivun-ef__submit-icon svg { display: block; }

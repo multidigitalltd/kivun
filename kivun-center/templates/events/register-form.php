@@ -40,36 +40,40 @@ $kivun_policy = (string) Kivun_Admin_Settings::get( 'cookie_policy_url', '' );
 			</div>
 		</div>
 
+		<?php
+		$kivun_privacy = '' !== $kivun_policy ? $kivun_policy : (string) get_privacy_policy_url();
+		/**
+		 * The URL for the "terms of use" consent link (defaults to the privacy URL).
+		 *
+		 * @param string $url The terms URL.
+		 */
+		$kivun_terms = (string) apply_filters( 'kivun_terms_url', $kivun_privacy );
+		?>
 		<label class="kivun-ef__consent">
 			<input type="checkbox" name="marketing_consent" value="1">
 			<span>
-				<?php
-				if ( '' !== $kivun_policy ) {
-					printf(
-						wp_kses(
-							/* translators: %s: privacy policy URL. */
-							__( 'אני מאשר/ת שקראתי ומסכים/ה ל<a href="%s" target="_blank" rel="noopener">מדיניות הפרטיות ותנאי השימוש</a>', 'kivun' ),
-							array(
-								'a' => array(
-									'href'   => array(),
-									'target' => array(),
-									'rel'    => array(),
-								),
-							)
-						),
-						esc_url( $kivun_policy )
-					);
-				} else {
-					esc_html_e( 'אני מאשר/ת שקראתי ומסכים/ה למדיניות הפרטיות ותנאי השימוש', 'kivun' );
-				}
-				?>
+				<?php echo esc_html__( 'אני מאשר/ת שקראתי ואני מסכים/ה ל', 'kivun' ); ?>
+				<?php if ( '' !== $kivun_privacy ) : ?>
+					<a href="<?php echo esc_url( $kivun_privacy ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'מדיניות הפרטיות', 'kivun' ); ?></a>
+				<?php else : ?>
+					<?php esc_html_e( 'מדיניות הפרטיות', 'kivun' ); ?>
+				<?php endif; ?>
+				<?php echo esc_html__( 'ול', 'kivun' ); ?>
+				<?php if ( '' !== $kivun_terms ) : ?>
+					<a href="<?php echo esc_url( $kivun_terms ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'תנאי השימוש', 'kivun' ); ?></a>
+				<?php else : ?>
+					<?php esc_html_e( 'תנאי השימוש', 'kivun' ); ?>
+				<?php endif; ?>
 			</span>
 		</label>
 
 		<p class="kivun-error" style="display:none;color:var(--kivun-error)"></p>
 
 		<button type="submit" class="kivun-ef__submit">
-			<?php esc_html_e( 'לפרטים והרשמה', 'kivun' ); ?>
+			<span class="kivun-ef__submit-label"><?php esc_html_e( 'לפרטים והרשמה', 'kivun' ); ?></span>
+			<span class="kivun-ef__submit-icon" aria-hidden="true">
+				<svg viewBox="0 0 24 24" width="14" height="14" focusable="false"><path fill="currentColor" d="M7 7h9v9h-2V10.4L6.7 17.7 5.3 16.3 12.6 9H7V7Z"/></svg>
+			</span>
 		</button>
 	</form>
 </div>
