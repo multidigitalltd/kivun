@@ -164,12 +164,11 @@ class Kivun_Admin {
 				</td>
 			</tr>
 			<tr>
-				<th><?php esc_html_e( 'שעה / מועד מלא', 'kivun' ); ?></th>
-				<td><input type="text" name="_kivun_event_time" value="<?php echo esc_attr( $f( '_kivun_event_time' ) ); ?>" placeholder="18:00 | אולם הכינוסים"></td>
-			</tr>
-			<tr>
-				<th><?php esc_html_e( 'משך', 'kivun' ); ?></th>
-				<td><input type="text" name="_kivun_event_duration" value="<?php echo esc_attr( $f( '_kivun_event_duration' ) ); ?>"></td>
+				<th><?php esc_html_e( 'מועד מלא', 'kivun' ); ?></th>
+				<td>
+					<input type="text" name="_kivun_event_time" value="<?php echo esc_attr( $f( '_kivun_event_time' ) ); ?>" class="regular-text" placeholder="<?php esc_attr_e( 'יום ג׳, 15.9.2025, 18:00–20:00', 'kivun' ); ?>">
+					<p class="description"><?php esc_html_e( 'טקסט חופשי לתצוגה: שעה, משך ופרטי מועד. (תאריך האירוע למעלה קובע את סגירת ההרשמה.)', 'kivun' ); ?></p>
+				</td>
 			</tr>
 			<tr>
 				<th><?php esc_html_e( 'עלות', 'kivun' ); ?></th>
@@ -792,7 +791,6 @@ class Kivun_Admin {
 				'_kivun_event_audience'     => 'text',
 				'_kivun_event_date'         => 'text',
 				'_kivun_event_time'         => 'text',
-				'_kivun_event_duration'     => 'text',
 				'_kivun_event_cost'         => 'text',
 				'_kivun_event_location'     => 'text',
 				'_kivun_capacity'           => 'absint',

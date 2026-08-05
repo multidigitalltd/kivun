@@ -127,7 +127,7 @@ function kivun_content_field_map( string $post_type ): array {
 			return array(
 				'short'    => '_kivun_event_short',
 				'audience' => '_kivun_event_audience',
-				'duration' => '_kivun_event_duration',
+				'duration' => '_kivun_event_time',
 				'cost'     => '_kivun_event_cost',
 				'date'     => '_kivun_event_date',
 			);
