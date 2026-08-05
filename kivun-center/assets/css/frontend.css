@@ -1061,3 +1061,9 @@
 .kivun-ef__submit-label { line-height: 1; }
 .kivun-ef__submit-icon { display: inline-flex; align-items: center; justify-content: center; width: 27px; height: 27px; border-radius: 50%; background: #fff; color: var(--kivun-dark); flex: 0 0 auto; }
 .kivun-ef__submit-icon svg { display: block; }
+
+/* Event form — button bottom-left, softer field labels to match the reference. */
+.kivun-ef__actions { text-align: left; margin-top: 1.6rem; }
+.kivun-ef__submit { margin-top: 0 !important; }
+.kivun-ef__field label { color: #3a3f4a; font-weight: 600; }
+.kivun-ef__field input { border-bottom-color: #cfd2da; }
