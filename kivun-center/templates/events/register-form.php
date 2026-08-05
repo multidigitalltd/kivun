@@ -73,7 +73,7 @@ $kivun_policy = (string) Kivun_Admin_Settings::get( 'cookie_policy_url', '' );
 			<button type="submit" class="kivun-ef__submit">
 				<span class="kivun-ef__submit-label"><?php esc_html_e( 'לפרטים והרשמה', 'kivun' ); ?></span>
 				<span class="kivun-ef__submit-icon" aria-hidden="true">
-					<svg viewBox="0 0 24 24" width="14" height="14" focusable="false"><path fill="currentColor" d="M7 7h9v9h-2V10.4L6.7 17.7 5.3 16.3 12.6 9H7V7Z"/></svg>
+					<svg viewBox="0 0 24 24" width="14" height="14" focusable="false"><path fill="currentColor" d="M12 21l-8-8h5V3h6v10h5l-8 8z"/></svg>
 				</span>
 			</button>
 		</div>

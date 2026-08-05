@@ -1067,3 +1067,27 @@
 .kivun-ef__submit { margin-top: 0 !important; }
 .kivun-ef__field label { color: #3a3f4a; font-weight: 600; }
 .kivun-ef__field input { border-bottom-color: #cfd2da; }
+
+/* Event form — bottom-line-only inputs (theme-proof) + larger type. */
+.kivun-ef__field input[type="text"],
+.kivun-ef__field input[type="tel"],
+.kivun-ef__field input[type="email"] {
+	border: 0 !important;
+	border-bottom: 1px solid #cfd2da !important;
+	border-radius: 0 !important;
+	background: transparent !important;
+	box-shadow: none !important;
+	padding: .55rem .1rem !important;
+	font-size: 1.12rem !important;
+}
+.kivun-ef__field input[type="text"]:focus,
+.kivun-ef__field input[type="tel"]:focus,
+.kivun-ef__field input[type="email"]:focus {
+	border: 0 !important;
+	border-bottom: 2px solid var(--kivun-accent) !important;
+	outline: none !important;
+	box-shadow: none !important;
+}
+.kivun-ef__field label { font-size: 1.05rem; }
+.kivun-ef__consent { font-size: .98rem; }
+.kivun-ef__submit { font-size: 1.05rem !important; }

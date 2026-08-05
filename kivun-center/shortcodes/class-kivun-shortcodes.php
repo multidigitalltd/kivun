@@ -427,39 +427,52 @@ class Kivun_Shortcodes {
 		$atts = shortcode_atts(
 			array(
 				'id'     => 0,
-				'closed' => __( 'המחזור הנוכחי נסגר — הרשמו עכשיו ונעדכן אתכם כשייפתח המחזור הבא.', 'kivun' ),
+				'closed' => '',
 				'open'   => '',
 			),
 			$atts,
 			'kivun_session_status'
 		);
 
+		$types = array( 'kivun_session', 'kivun_event' );
+
 		$id = absint( $atts['id'] );
 		if ( ! $id ) {
 			$id = (int) get_the_ID();
-			if ( 'kivun_session' !== get_post_type( $id ) ) {
+			if ( ! in_array( get_post_type( $id ), $types, true ) ) {
 				$queried = get_queried_object_id();
-				if ( $queried && 'kivun_session' === get_post_type( $queried ) ) {
+				if ( $queried && in_array( get_post_type( $queried ), $types, true ) ) {
 					$id = (int) $queried;
 				}
 			}
 		}
 
-		if ( 'kivun_session' !== get_post_type( $id ) ) {
+		$post_type = get_post_type( $id );
+		if ( ! in_array( $post_type, $types, true ) ) {
 			return '';
 		}
 
-		if ( kivun_session_registration_open( $id ) ) {
+		$is_event = ( 'kivun_event' === $post_type );
+		$is_open  = $is_event ? kivun_event_registration_open( $id ) : kivun_session_registration_open( $id );
+
+		if ( $is_open ) {
 			return '' !== trim( (string) $atts['open'] )
 				? '<div class="kivun-session-status kivun-session-status--open" role="status">' . esc_html( $atts['open'] ) . '</div>'
 				: '';
+		}
+
+		$closed = trim( (string) $atts['closed'] );
+		if ( '' === $closed ) {
+			$closed = $is_event
+				? __( 'ההרשמה לאירוע נסגרה — האירוע כבר התקיים.', 'kivun' )
+				: __( 'המחזור הנוכחי נסגר — הרשמו עכשיו ונעדכן אתכם כשייפתח המחזור הבא.', 'kivun' );
 		}
 
 		$icon = '<svg class="kivun-session-status__icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path fill="currentColor" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm0 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16Zm1-13h-2v6l5 3 1-1.7-4-2.3V7Z"/></svg>';
 
 		return '<div class="kivun-session-status kivun-session-status--closed" role="status">'
 			. $icon
-			. '<span>' . esc_html( $atts['closed'] ) . '</span>'
+			. '<span>' . esc_html( $closed ) . '</span>'
 			. '</div>';
 	}
 
