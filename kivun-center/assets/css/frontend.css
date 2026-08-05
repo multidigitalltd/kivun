@@ -1091,3 +1091,30 @@
 .kivun-ef__field label { font-size: 1.05rem; }
 .kivun-ef__consent { font-size: .98rem; }
 .kivun-ef__submit { font-size: 1.05rem !important; }
+
+/* ── Event popup (site-wide) ───────────────────────────────────────────────── */
+.kivun-epop { position: fixed; inset: 0; z-index: 99999; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.kivun-epop[hidden] { display: none; }
+.kivun-epop__overlay { position: absolute; inset: 0; background: rgba(15, 18, 26, .68); opacity: 0; transition: opacity .25s ease; }
+.kivun-epop.is-open .kivun-epop__overlay { opacity: 1; }
+.kivun-epop__box {
+	position: relative; z-index: 1; width: 100%; max-width: 360px; max-height: 90vh; overflow: auto;
+	background: #fff; border-radius: 16px; box-shadow: 0 24px 60px rgba(0, 0, 0, .35);
+	transform: translateY(16px) scale(.98); opacity: 0; transition: transform .28s ease, opacity .28s ease;
+}
+.kivun-epop.is-open .kivun-epop__box { transform: translateY(0) scale(1); opacity: 1; }
+.kivun-epop__x {
+	position: absolute; inset-inline-end: 8px; inset-block-start: 8px; z-index: 2;
+	width: 34px; height: 34px; border: none; border-radius: 50%; cursor: pointer;
+	background: rgba(0, 0, 0, .5); color: #fff; font-size: 22px; line-height: 1; display: flex; align-items: center; justify-content: center;
+}
+.kivun-epop__x:hover { background: rgba(0, 0, 0, .72); }
+.kivun-epop__media { display: block; }
+.kivun-epop__media img { display: block; width: 100%; height: auto; border-radius: 16px 16px 0 0; }
+.kivun-epop__cta { padding: 14px 16px 18px; text-align: center; }
+.kivun-epop__btn {
+	display: inline-flex; align-items: center; justify-content: center; width: 100%;
+	background: var(--kivun-accent); color: #fff; text-decoration: none; font-weight: 700;
+	padding: .8rem 1.2rem; border-radius: 999px; font-size: 1.02rem;
+}
+.kivun-epop__btn:hover { filter: brightness(.94); color: #fff; }

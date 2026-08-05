@@ -49,6 +49,8 @@ class Kivun_Core {
 		Kivun_Content_Creator::init();
 		Kivun_Unified_Meta::init();
 		Kivun_AI_Image::init();
+		Kivun_AI_Content::init();
+		Kivun_Event_Popup::init();
 
 		// Elementor — only when Elementor Pro is active.
 		add_action(
@@ -109,6 +111,8 @@ class Kivun_Core {
 			'class-kivun-content-creator',
 			'class-kivun-unified-meta',
 			'class-kivun-ai-image',
+			'class-kivun-ai-content',
+			'class-kivun-event-popup',
 		) as $file ) {
 			require_once $dir . $file . '.php';
 		}
@@ -298,9 +302,14 @@ class Kivun_Core {
 			return;
 		}
 		$screen      = get_current_screen();
-		$kivun_types = array( 'kivun_course', 'kivun_workshop', 'kivun_job' );
+		$kivun_types = array( 'kivun_course', 'kivun_workshop', 'kivun_job', 'kivun_event' );
 		if ( ! $screen || ! in_array( $screen->post_type, $kivun_types, true ) ) {
 			return;
+		}
+
+		// The event editor has a media-library image picker for the popup image.
+		if ( 'kivun_event' === $screen->post_type ) {
+			wp_enqueue_media();
 		}
 
 		wp_enqueue_style( 'kivun-admin', KIVUN_URL . 'assets/css/' . self::asset( 'admin', 'css' ), array(), KIVUN_VERSION );

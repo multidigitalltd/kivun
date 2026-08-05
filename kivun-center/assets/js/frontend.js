@@ -601,6 +601,53 @@
 					});
 			});
 		}
+
+		var ccGen = document.querySelector('.kivun-cc-gen-btn');
+		if (ccGen) {
+			ccGen.addEventListener('click', function () {
+				var topicEl = document.querySelector('.kivun-cc-gen-topic'),
+					topic = topicEl ? topicEl.value.trim() : '',
+					gStat = document.querySelector('.kivun-cc-gen-status'),
+					typeEl = document.querySelector('.kivun-cc-toggle:checked'),
+					fd = new FormData();
+				if (!topic) {
+					if (gStat) { gStat.textContent = 'מלאו נושא ליצירה.'; }
+					return;
+				}
+				fd.append('action', 'kivun_generate_ai_content');
+				fd.append('nonce', ccGen.dataset.nonce);
+				fd.append('topic', topic);
+				fd.append('type', typeEl ? typeEl.dataset.type : '');
+				ccGen.disabled = true;
+				if (gStat) { gStat.textContent = 'יוצר תוכן… זה עשוי לקחת מספר שניות'; }
+				function setByName(name, val) {
+					var el = document.querySelector('.kivun-cc-front [name="' + name + '"]');
+					if (el) { el.value = val || ''; }
+				}
+				fetch(ccGen.dataset.ajax || kivun.ajax_url, { method: 'POST', body: fd, credentials: 'same-origin' })
+					.then(function (r) { return r.json(); })
+					.then(function (res) {
+						ccGen.disabled = false;
+						if (res && res.success && res.data) {
+							var d = res.data, t = document.getElementById('kivun-ccf-title');
+							if (t && d.title) { t.value = d.title; }
+							kivunSetEditor('kivun_ccf_short', d.short);
+							kivunSetEditor('kivun_ccf_long', d.long);
+							setByName('audience', d.audience);
+							setByName('duration', d.duration);
+							setByName('cost', d.cost);
+							setByName('date', d.date);
+							if (gStat) { gStat.textContent = '✓ נוצר תוכן — ערכו ושמרו'; }
+						} else if (gStat) {
+							gStat.textContent = (res && res.data && res.data.message) ? res.data.message : 'יצירת התוכן נכשלה';
+						}
+					})
+					.catch(function () {
+						ccGen.disabled = false;
+						if (gStat) { gStat.textContent = 'שגיאת רשת'; }
+					});
+			});
+		}
 	}
 
 	if (document.querySelector('.kivun-employer-login')) {
@@ -619,5 +666,35 @@
 			}
 		}
 	}
+
+	// ── Event popup (site-wide, once per session per event) ──────────────────────
+	(function () {
+		var pop = document.getElementById('kivun-epop');
+		if (!pop) { return; }
+		var key = 'kivunEpop_' + (pop.dataset.event || '');
+		try { if (window.sessionStorage && sessionStorage.getItem(key)) { return; } } catch (e) {}
+
+		function close() {
+			pop.hidden = true;
+			pop.classList.remove('is-open');
+			try { if (window.sessionStorage) { sessionStorage.setItem(key, '1'); } } catch (e) {}
+		}
+		function open() {
+			pop.hidden = false;
+			// Force reflow so the transition runs.
+			void pop.offsetWidth;
+			pop.classList.add('is-open');
+			try { if (window.sessionStorage) { sessionStorage.setItem(key, '1'); } } catch (e) {}
+		}
+
+		pop.querySelectorAll('[data-epop-close]').forEach(function (el) {
+			el.addEventListener('click', function (e) { e.preventDefault(); close(); });
+		});
+		document.addEventListener('keydown', function (e) {
+			if (e.key === 'Escape' && pop.classList.contains('is-open')) { close(); }
+		});
+
+		window.setTimeout(open, 900);
+	}());
 
 }());

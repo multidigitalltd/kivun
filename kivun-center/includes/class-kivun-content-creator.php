@@ -55,6 +55,7 @@ class Kivun_Content_Creator {
 			'landing' => 'kivun_workshop',
 			'course'  => 'kivun_course',
 			'session' => 'kivun_session',
+			'event'   => 'kivun_event',
 		);
 	}
 
@@ -135,6 +136,14 @@ class Kivun_Content_Creator {
 			'session_location' => '',
 			'session_capacity' => '',
 			'session_valid'    => '',
+			'event_date'       => '',
+			'event_location'   => '',
+			'event_capacity'   => '',
+			'event_mode'       => 'form',
+			'event_url'        => '',
+			'event_button'     => '',
+			'event_popup'      => '',
+			'event_image_id'   => '0',
 		);
 
 		if ( ! $group_posts ) {
@@ -173,6 +182,17 @@ class Kivun_Content_Creator {
 			$v['session_capacity'] = (string) get_post_meta( $group_posts['session'], '_kivun_capacity', true );
 			$v['session_valid']    = (string) get_post_meta( $group_posts['session'], '_kivun_session_valid_until', true );
 		}
+		if ( isset( $group_posts['event'] ) ) {
+			$eid                 = (int) $group_posts['event'];
+			$v['event_date']     = (string) get_post_meta( $eid, '_kivun_event_date', true );
+			$v['event_location'] = (string) get_post_meta( $eid, '_kivun_event_location', true );
+			$v['event_capacity'] = (string) get_post_meta( $eid, '_kivun_capacity', true );
+			$v['event_mode']     = kivun_event_mode( $eid );
+			$v['event_url']      = (string) get_post_meta( $eid, '_kivun_event_external_url', true );
+			$v['event_button']   = (string) get_post_meta( $eid, '_kivun_event_button', true );
+			$v['event_popup']    = (string) get_post_meta( $eid, '_kivun_event_popup', true );
+			$v['event_image_id'] = (string) (int) get_post_meta( $eid, '_kivun_event_image', true );
+		}
 
 		return $v;
 	}
@@ -201,6 +221,17 @@ class Kivun_Content_Creator {
 				'duration' => '_kivun_session_duration',
 				'cost'     => '_kivun_session_cost',
 				'date'     => '_kivun_session_date',
+				'email'    => '_kivun_contact_email',
+			);
+		}
+		if ( 'event' === $type_key ) {
+			// Events store the free-text schedule under _kivun_event_time (shown as
+			// "מועד מלא"); the strict Y-m-d event date lives in the event section.
+			return array(
+				'short'    => '_kivun_event_short',
+				'audience' => '_kivun_event_audience',
+				'duration' => '_kivun_event_time',
+				'cost'     => '_kivun_event_cost',
 				'email'    => '_kivun_contact_email',
 			);
 		}
@@ -240,8 +271,10 @@ class Kivun_Content_Creator {
 			'landing' => __( 'דף נחיתה', 'kivun' ),
 			'course'  => __( 'קורס', 'kivun' ),
 			'session' => __( 'סדנה', 'kivun' ),
+			'event'   => __( 'אירוע', 'kivun' ),
 		);
 		$thumb_url     = (int) $v['thumb_id'] ? (string) wp_get_attachment_image_url( (int) $v['thumb_id'], 'medium' ) : '';
+		$ev_img_url    = (int) $v['event_image_id'] ? (string) wp_get_attachment_image_url( (int) $v['event_image_id'], 'medium' ) : '';
 		$ai_show       = current_user_can( 'upload_files' );
 		$ai_configured = Kivun_AI_Image::is_configured();
 		?>
@@ -260,6 +293,31 @@ class Kivun_Content_Creator {
 
 				<div class="kivun-lp-grid">
 					<div class="kivun-lp-main">
+
+						<div class="kivun-lp-card kivun-cc-genai">
+							<label class="kivun-lp-label"><?php esc_html_e( '✨ יצירת תוכן אוטומטית (AI)', 'kivun' ); ?></label>
+							<?php if ( ! $ai_configured ) : ?>
+								<p class="kivun-cc-ai-warn">
+									<?php
+									echo wp_kses_post(
+										sprintf(
+											/* translators: %s: link to the settings page. */
+											__( '⚠️ היצירה כבויה — לא הוגדר מפתח API. <a href="%s">להגדרות</a>.', 'kivun' ),
+											esc_url( admin_url( 'admin.php?page=kivun-settings' ) )
+										)
+									);
+									?>
+								</p>
+							<?php endif; ?>
+							<p class="kivun-lp-hint"><?php esc_html_e( 'תארו את הנושא וה-AI ימלא כותרת, תיאורים ופרטים — תוכלו לערוך אחר כך.', 'kivun' ); ?></p>
+							<textarea class="kivun-lp-input kivun-cc-gen-topic" rows="2" placeholder="<?php esc_attr_e( 'למשל: סדנת הורים-מתבגרים בת 4 מפגשים בערבים', 'kivun' ); ?>"></textarea>
+							<p style="margin:.5rem 0 0">
+								<button type="button" class="button kivun-cc-gen-btn" data-ajax="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>" data-nonce="<?php echo esc_attr( wp_create_nonce( 'kivun_ai_content' ) ); ?>">
+									<?php esc_html_e( '✨ צור תוכן', 'kivun' ); ?>
+								</button>
+								<span class="kivun-cc-gen-status" style="font-size:12px;color:#555;margin-inline-start:.5rem"></span>
+							</p>
+						</div>
 
 						<div class="kivun-lp-card">
 							<label class="kivun-lp-label" for="kivun-cc-title"><?php esc_html_e( 'כותרת', 'kivun' ); ?> <span class="kivun-lp-req">*</span></label>
@@ -394,6 +452,42 @@ class Kivun_Content_Creator {
 							<label class="kivun-lp-sub"><?php esc_html_e( 'תוקף ההרשמה (עד תאריך)', 'kivun' ); ?></label>
 							<input type="date" name="session_valid_until" class="kivun-lp-input" dir="ltr" value="<?php echo esc_attr( $v['session_valid'] ); ?>">
 							<p class="kivun-lp-hint"><?php esc_html_e( 'אחרי תאריך זה ההרשמה נסגרת. לפתיחת מחזור חדש — עדכנו את התאריך.', 'kivun' ); ?></p>
+						</div>
+
+						<!-- Event-only extras -->
+						<div class="kivun-lp-card kivun-cc-section" data-type="event" <?php echo isset( $group_posts['event'] ) ? '' : 'hidden'; ?>>
+							<h3><?php esc_html_e( 'אירוע — פרטים נוספים', 'kivun' ); ?></h3>
+							<label class="kivun-lp-sub"><?php esc_html_e( 'תאריך האירוע', 'kivun' ); ?></label>
+							<input type="date" name="event_date" class="kivun-lp-input" dir="ltr" value="<?php echo esc_attr( $v['event_date'] ); ?>">
+							<p class="kivun-lp-hint"><?php esc_html_e( 'לאחר תאריך זה ההרשמה נסגרת לצמיתות. השדה "משך" משמש לתצוגת המועד המלא (שעה/משך).', 'kivun' ); ?></p>
+							<label class="kivun-lp-sub"><?php esc_html_e( 'מיקום', 'kivun' ); ?></label>
+							<input type="text" name="event_location" class="kivun-lp-input" value="<?php echo esc_attr( $v['event_location'] ); ?>">
+							<label class="kivun-lp-sub"><?php esc_html_e( 'מקסימום משתתפים', 'kivun' ); ?></label>
+							<input type="number" name="event_capacity" class="kivun-lp-input" min="0" value="<?php echo esc_attr( $v['event_capacity'] ); ?>">
+							<label class="kivun-lp-sub"><?php esc_html_e( 'אופן ההרשמה', 'kivun' ); ?></label>
+							<select name="event_mode" class="kivun-lp-input">
+								<option value="form" <?php selected( $v['event_mode'], 'form' ); ?>><?php esc_html_e( 'טופס באתר (נשמר בטבלת הלידים)', 'kivun' ); ?></option>
+								<option value="external" <?php selected( $v['event_mode'], 'external' ); ?>><?php esc_html_e( 'כפתור לקישור חיצוני', 'kivun' ); ?></option>
+							</select>
+							<label class="kivun-lp-sub"><?php esc_html_e( 'קישור הרשמה חיצוני', 'kivun' ); ?></label>
+							<input type="url" name="event_url" class="kivun-lp-input" dir="ltr" value="<?php echo esc_attr( $v['event_url'] ); ?>" placeholder="https://...">
+							<label class="kivun-lp-sub"><?php esc_html_e( 'טקסט כפתור ההרשמה', 'kivun' ); ?></label>
+							<input type="text" name="event_button" class="kivun-lp-input" value="<?php echo esc_attr( $v['event_button'] ); ?>" placeholder="<?php esc_attr_e( 'להרשמה לאירוע', 'kivun' ); ?>">
+
+							<label class="kivun-lp-sub" style="margin-top:.9rem"><?php esc_html_e( 'תמונת האירוע (מלבנית צרה/גבוהה — לפופאפ)', 'kivun' ); ?></label>
+							<div class="kivun-ev-media">
+								<div class="kivun-ev-media__preview" <?php echo $ev_img_url ? '' : 'style="display:none"'; ?>><img src="<?php echo esc_url( $ev_img_url ); ?>" alt="" style="max-width:160px;height:auto"></div>
+								<input type="hidden" name="event_image_id" class="kivun-ev-media__id" value="<?php echo esc_attr( $v['event_image_id'] ); ?>">
+								<button type="button" class="button kivun-ev-media__select"><?php esc_html_e( 'בחירת תמונה', 'kivun' ); ?></button>
+								<button type="button" class="button-link kivun-ev-media__remove" <?php echo $ev_img_url ? '' : 'style="display:none"'; ?>><?php esc_html_e( 'הסרה', 'kivun' ); ?></button>
+								<p class="kivun-lp-hint"><?php esc_html_e( 'או העלאת קובץ:', 'kivun' ); ?></p>
+								<input type="file" name="event_image_file" accept="image/*">
+							</div>
+
+							<label class="kivun-cc-check" style="margin-top:.9rem">
+								<input type="checkbox" name="event_popup" value="1" <?php checked( '1', $v['event_popup'] ); ?>>
+								<?php esc_html_e( 'הצגת פופאפ באתר עד מועד האירוע (עם תמונת האירוע וכפתור לעמוד)', 'kivun' ); ?>
+							</label>
 						</div>
 
 					</div>
@@ -564,6 +658,87 @@ class Kivun_Content_Creator {
 						} );
 				} );
 			}
+
+			// Event portrait / popup image picker.
+			( function () {
+				var evFrame,
+					evSel = document.querySelector( '.kivun-ev-media__select' ),
+					evRm  = document.querySelector( '.kivun-ev-media__remove' ),
+					evId  = document.querySelector( '.kivun-ev-media__id' ),
+					evPr  = document.querySelector( '.kivun-ev-media__preview' ),
+					evImg = evPr ? evPr.querySelector( 'img' ) : null;
+				if ( evSel ) {
+					evSel.addEventListener( 'click', function ( e ) {
+						e.preventDefault();
+						if ( evFrame ) { evFrame.open(); return; }
+						evFrame = wp.media( { multiple: false } );
+						evFrame.on( 'select', function () {
+							var a = evFrame.state().get( 'selection' ).first().toJSON();
+							if ( evId ) { evId.value = a.id; }
+							if ( evImg ) { evImg.src = ( a.sizes && a.sizes.medium ? a.sizes.medium.url : a.url ); }
+							if ( evPr ) { evPr.style.display = ''; }
+							if ( evRm ) { evRm.style.display = ''; }
+						} );
+						evFrame.open();
+					} );
+				}
+				if ( evRm ) {
+					evRm.addEventListener( 'click', function ( e ) {
+						e.preventDefault();
+						if ( evId ) { evId.value = ''; }
+						if ( evPr ) { evPr.style.display = 'none'; }
+						evRm.style.display = 'none';
+					} );
+				}
+			} () );
+
+			// AI content generation — fills the fields from a short topic.
+			var genBtn = document.querySelector( '.kivun-cc-gen-btn' );
+			if ( genBtn ) {
+				genBtn.addEventListener( 'click', function () {
+					var topicEl = document.querySelector( '.kivun-cc-gen-topic' ),
+						topic   = topicEl ? topicEl.value.trim() : '',
+						gstat   = document.querySelector( '.kivun-cc-gen-status' ),
+						typeEl  = document.querySelector( '.kivun-cc-toggle:checked' ),
+						fd      = new FormData();
+					if ( ! topic ) {
+						if ( gstat ) { gstat.textContent = '<?php echo esc_js( __( 'מלאו נושא ליצירה.', 'kivun' ) ); ?>'; }
+						return;
+					}
+					function setF( id, val ) {
+						if ( window.tinymce && tinymce.get( id ) ) { tinymce.get( id ).setContent( val || '' ); }
+						else { var el = document.getElementById( id ); if ( el ) { el.value = val || ''; } }
+					}
+					fd.append( 'action', 'kivun_generate_ai_content' );
+					fd.append( 'nonce', genBtn.dataset.nonce );
+					fd.append( 'topic', topic );
+					fd.append( 'type', typeEl ? typeEl.dataset.type : '' );
+					genBtn.disabled = true;
+					if ( gstat ) { gstat.textContent = '<?php echo esc_js( __( 'יוצר תוכן… זה עשוי לקחת מספר שניות', 'kivun' ) ); ?>'; }
+					fetch( genBtn.dataset.ajax, { method: 'POST', body: fd, credentials: 'same-origin' } )
+						.then( function ( r ) { return r.json(); } )
+						.then( function ( res ) {
+							genBtn.disabled = false;
+							if ( res && res.success && res.data ) {
+								var d = res.data, t = document.getElementById( 'kivun-cc-title' );
+								if ( t && d.title ) { t.value = d.title; }
+								setF( 'kivun_cc_short', d.short );
+								setF( 'kivun_cc_long', d.long );
+								setF( 'kivun_cc_audience', d.audience );
+								setF( 'kivun_cc_duration', d.duration );
+								setF( 'kivun_cc_cost', d.cost );
+								setF( 'kivun_cc_date', d.date );
+								if ( gstat ) { gstat.textContent = '<?php echo esc_js( __( '✓ נוצר תוכן — ערכו ושמרו', 'kivun' ) ); ?>'; }
+							} else {
+								if ( gstat ) { gstat.textContent = ( res && res.data && res.data.message ) ? res.data.message : '<?php echo esc_js( __( 'יצירת התוכן נכשלה', 'kivun' ) ); ?>'; }
+							}
+						} )
+						.catch( function () {
+							genBtn.disabled = false;
+							if ( gstat ) { gstat.textContent = '<?php echo esc_js( __( 'שגיאת רשת', 'kivun' ) ); ?>'; }
+						} );
+				} );
+			}
 		} () );
 		</script>
 		<?php
@@ -595,6 +770,7 @@ class Kivun_Content_Creator {
 			'kivun_workshop' => __( 'דף נחיתה', 'kivun' ),
 			'kivun_course'   => __( 'קורס', 'kivun' ),
 			'kivun_session'  => __( 'סדנה', 'kivun' ),
+			'kivun_event'    => __( 'אירוע', 'kivun' ),
 		);
 		$groups = array();
 		foreach ( $posts as $p ) {
@@ -777,6 +953,36 @@ class Kivun_Content_Creator {
 			);
 		}
 
+		if ( in_array( 'event', $publish, true ) ) {
+			$event_image = self::resolve_image( 'event_image_file', 'event_image_id' );
+			$event_mode  = ( isset( $_POST['event_mode'] ) && 'external' === $_POST['event_mode'] ) ? 'external' : 'form';
+			self::upsert(
+				$group,
+				'kivun_event',
+				$s,
+				$s['short'],
+				$event_image ? $event_image : $thumb_id,
+				array_merge(
+					array(
+						'_kivun_event_short'        => $s['short'],
+						'_kivun_event_audience'     => $s['audience'],
+						'_kivun_event_time'         => $s['duration'],
+						'_kivun_event_cost'         => $s['cost'],
+						'_kivun_event_date'         => sanitize_text_field( wp_unslash( $_POST['event_date'] ?? '' ) ),
+						'_kivun_event_location'     => sanitize_text_field( wp_unslash( $_POST['event_location'] ?? '' ) ),
+						'_kivun_capacity'           => absint( $_POST['event_capacity'] ?? 0 ),
+						'_kivun_event_mode'         => $event_mode,
+						'_kivun_event_external_url' => esc_url_raw( wp_unslash( $_POST['event_url'] ?? '' ) ),
+						'_kivun_event_button'       => sanitize_text_field( wp_unslash( $_POST['event_button'] ?? '' ) ),
+						'_kivun_event_popup'        => empty( $_POST['event_popup'] ) ? '' : '1',
+						'_kivun_event_image'        => $event_image,
+						'_kivun_contact_email'      => $s['email'],
+					),
+					$cta
+				)
+			);
+		}
+
 		return $group;
 		// phpcs:enable WordPress.Security.NonceVerification.Missing
 	}
@@ -848,20 +1054,35 @@ class Kivun_Content_Creator {
 	 * @return int Attachment ID, or 0.
 	 */
 	private static function resolve_thumbnail(): int {
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in handle_save().
-		if ( ! empty( $_FILES['thumbnail_file']['name'] ) ) {
+		return self::resolve_image( 'thumbnail_file', 'thumbnail_id' );
+	}
+
+	/**
+	 * Resolve an image field: a freshly uploaded file (preferred) or an
+	 * already-selected attachment ID. Shared by the featured image and the
+	 * event's portrait/popup image.
+	 *
+	 * The caller MUST verify the nonce before invoking this.
+	 *
+	 * @param string $file_field The $_FILES key for an uploaded file.
+	 * @param string $id_field   The $_POST key holding a chosen attachment ID.
+	 * @return int Attachment ID, or 0.
+	 */
+	private static function resolve_image( string $file_field, string $id_field ): int {
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified by the caller.
+		if ( ! empty( $_FILES[ $file_field ]['name'] ) ) {
 			require_once ABSPATH . 'wp-admin/includes/image.php';
 			require_once ABSPATH . 'wp-admin/includes/file.php';
 			require_once ABSPATH . 'wp-admin/includes/media.php';
 
-			$attachment_id = media_handle_upload( 'thumbnail_file', 0 );
+			$attachment_id = media_handle_upload( $file_field, 0 );
 			if ( ! is_wp_error( $attachment_id ) ) {
 				return (int) $attachment_id;
 			}
 		}
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified by the caller.
-		return isset( $_POST['thumbnail_id'] ) ? absint( wp_unslash( $_POST['thumbnail_id'] ) ) : 0;
+		return isset( $_POST[ $id_field ] ) ? absint( wp_unslash( $_POST[ $id_field ] ) ) : 0;
 	}
 
 	// ── Front-end shortcode ───────────────────────────────────────────────────
@@ -1181,10 +1402,12 @@ class Kivun_Content_Creator {
 		$can_delete    = current_user_can( 'delete_posts' );
 		$ai_configured = Kivun_AI_Image::is_configured();
 		$thumb_url     = (int) $v['thumb_id'] ? (string) wp_get_attachment_image_url( (int) $v['thumb_id'], 'medium' ) : '';
+		$ev_img_url    = (int) $v['event_image_id'] ? (string) wp_get_attachment_image_url( (int) $v['event_image_id'], 'medium' ) : '';
 		$sections      = array(
 			'landing' => __( 'דף נחיתה', 'kivun' ),
 			'course'  => __( 'קורס', 'kivun' ),
 			'session' => __( 'סדנה', 'kivun' ),
+			'event'   => __( 'אירוע', 'kivun' ),
 		);
 		?>
 		<div class="kivun-cc-front">
@@ -1203,6 +1426,7 @@ class Kivun_Content_Creator {
 								'landing' => __( 'דף הנחיתה', 'kivun' ),
 								'course'  => __( 'הקורס', 'kivun' ),
 								'session' => __( 'הסדנה', 'kivun' ),
+								'event'   => __( 'האירוע', 'kivun' ),
 							);
 							foreach ( $group_posts as $tkey => $pid ) :
 								$view_url = (string) get_permalink( (int) $pid );
@@ -1239,6 +1463,19 @@ class Kivun_Content_Creator {
 
 				<div class="kivun-cc-grid">
 					<div class="kivun-cc-main">
+
+						<div class="kivun-cc-card kivun-cc-genai">
+							<label class="kivun-cc-label"><?php esc_html_e( '✨ יצירת תוכן אוטומטית (AI)', 'kivun' ); ?></label>
+							<?php if ( ! $ai_configured ) : ?>
+								<p class="kivun-cc-ai-warn"><?php esc_html_e( '⚠️ היצירה האוטומטית אינה פעילה כרגע (לא הוגדר מפתח API / נגמרו הקרדיטים). פנו למנהל האתר.', 'kivun' ); ?></p>
+							<?php endif; ?>
+							<p class="kivun-cc-hint"><?php esc_html_e( 'תארו את הנושא וה-AI ימלא כותרת, תיאורים ופרטים — תוכלו לערוך אחר כך.', 'kivun' ); ?></p>
+							<textarea class="kivun-cc-input kivun-cc-textarea kivun-cc-gen-topic" rows="2" placeholder="<?php esc_attr_e( 'למשל: סדנת הורים-מתבגרים בת 4 מפגשים בערבים', 'kivun' ); ?>"></textarea>
+							<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost kivun-cc-gen-btn" data-ajax="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>" data-nonce="<?php echo esc_attr( wp_create_nonce( 'kivun_ai_content' ) ); ?>">
+								<?php esc_html_e( '✨ צור תוכן', 'kivun' ); ?>
+							</button>
+							<span class="kivun-cc-gen-status" role="status" aria-live="polite"></span>
+						</div>
 
 						<div class="kivun-cc-card">
 							<label class="kivun-cc-label" for="kivun-ccf-title"><?php esc_html_e( 'כותרת', 'kivun' ); ?> <span class="kivun-cc-req">*</span></label>
@@ -1335,6 +1572,42 @@ class Kivun_Content_Creator {
 							<label class="kivun-cc-sub"><?php esc_html_e( 'תוקף ההרשמה (עד תאריך)', 'kivun' ); ?></label>
 							<input type="date" name="session_valid_until" class="kivun-cc-input" dir="ltr" value="<?php echo esc_attr( $v['session_valid'] ); ?>">
 							<p class="kivun-cc-hint"><?php esc_html_e( 'אחרי תאריך זה המחזור הנוכחי נסגר; ההרשמה נשמרת למחזור הבא. עדכון תאריך פותח מחזור חדש.', 'kivun' ); ?></p>
+						</div>
+
+						<div class="kivun-cc-card kivun-cc-section" data-type="event" <?php echo isset( $group_posts['event'] ) ? '' : 'hidden'; ?>>
+							<h3 class="kivun-cc-h3"><?php esc_html_e( 'אירוע — פרטים נוספים', 'kivun' ); ?></h3>
+							<label class="kivun-cc-sub"><?php esc_html_e( 'תאריך האירוע', 'kivun' ); ?></label>
+							<input type="date" name="event_date" class="kivun-cc-input" dir="ltr" value="<?php echo esc_attr( $v['event_date'] ); ?>">
+							<p class="kivun-cc-hint"><?php esc_html_e( 'לאחר תאריך זה ההרשמה נסגרת לצמיתות. השדה "משך" משמש להצגת המועד המלא (שעה/משך).', 'kivun' ); ?></p>
+							<label class="kivun-cc-sub"><?php esc_html_e( 'מיקום', 'kivun' ); ?></label>
+							<input type="text" name="event_location" class="kivun-cc-input" value="<?php echo esc_attr( $v['event_location'] ); ?>">
+							<label class="kivun-cc-sub"><?php esc_html_e( 'מקסימום משתתפים', 'kivun' ); ?></label>
+							<input type="number" name="event_capacity" class="kivun-cc-input" min="0" value="<?php echo esc_attr( $v['event_capacity'] ); ?>">
+							<label class="kivun-cc-sub"><?php esc_html_e( 'אופן ההרשמה', 'kivun' ); ?></label>
+							<select name="event_mode" class="kivun-cc-input">
+								<option value="form" <?php selected( $v['event_mode'], 'form' ); ?>><?php esc_html_e( 'טופס באתר (נשמר בטבלת הלידים)', 'kivun' ); ?></option>
+								<option value="external" <?php selected( $v['event_mode'], 'external' ); ?>><?php esc_html_e( 'כפתור לקישור חיצוני', 'kivun' ); ?></option>
+							</select>
+							<label class="kivun-cc-sub"><?php esc_html_e( 'קישור הרשמה חיצוני', 'kivun' ); ?></label>
+							<input type="url" name="event_url" class="kivun-cc-input" dir="ltr" value="<?php echo esc_attr( $v['event_url'] ); ?>" placeholder="https://...">
+							<label class="kivun-cc-sub"><?php esc_html_e( 'טקסט כפתור ההרשמה', 'kivun' ); ?></label>
+							<input type="text" name="event_button" class="kivun-cc-input" value="<?php echo esc_attr( $v['event_button'] ); ?>" placeholder="<?php esc_attr_e( 'להרשמה לאירוע', 'kivun' ); ?>">
+
+							<label class="kivun-cc-sub" style="margin-top:.9rem"><?php esc_html_e( 'תמונת האירוע (מלבנית צרה/גבוהה — לפופאפ)', 'kivun' ); ?></label>
+							<?php if ( (int) $v['event_image_id'] && $ev_img_url ) : ?>
+								<div class="kivun-cc-media__preview" style="margin-bottom:.5rem"><img src="<?php echo esc_url( $ev_img_url ); ?>" alt="" style="max-width:140px;height:auto"></div>
+							<?php endif; ?>
+							<input type="hidden" name="event_image_id" value="<?php echo esc_attr( $v['event_image_id'] ); ?>">
+							<?php if ( $can_upload ) : ?>
+								<input type="file" name="event_image_file" accept="image/*" class="kivun-cc-input">
+							<?php else : ?>
+								<p class="kivun-cc-hint"><?php esc_html_e( 'אין לך הרשאה להעלות קבצים — התמונה תיקבע ע"י מנהל.', 'kivun' ); ?></p>
+							<?php endif; ?>
+
+							<label class="kivun-cc-check" style="margin-top:.9rem">
+								<input type="checkbox" name="event_popup" value="1" <?php checked( '1', $v['event_popup'] ); ?>>
+								<span><?php esc_html_e( 'הצגת פופאפ באתר עד מועד האירוע', 'kivun' ); ?></span>
+							</label>
 						</div>
 
 					</div>
@@ -1447,6 +1720,7 @@ class Kivun_Content_Creator {
 			'kivun_workshop' => __( 'דף נחיתה', 'kivun' ),
 			'kivun_course'   => __( 'קורס', 'kivun' ),
 			'kivun_session'  => __( 'סדנה', 'kivun' ),
+			'kivun_event'    => __( 'אירוע', 'kivun' ),
 		);
 		$groups = array();
 		foreach ( $posts as $p ) {

@@ -204,7 +204,65 @@ class Kivun_Admin {
 				<th><?php esc_html_e( 'טקסט כפתור ההרשמה', 'kivun' ); ?></th>
 				<td><input type="text" name="_kivun_event_button" value="<?php echo esc_attr( $f( '_kivun_event_button' ) ); ?>" placeholder="<?php esc_attr_e( 'להרשמה לאירוע', 'kivun' ); ?>"></td>
 			</tr>
+			<?php
+			$ev_img     = (int) $f( '_kivun_event_image' );
+			$ev_img_url = $ev_img ? (string) wp_get_attachment_image_url( $ev_img, 'medium' ) : '';
+			?>
+			<tr>
+				<th><?php esc_html_e( 'תמונת האירוע (לפופאפ)', 'kivun' ); ?></th>
+				<td>
+					<div class="kivun-ev-media">
+						<div class="kivun-ev-media__preview" <?php echo $ev_img_url ? '' : 'style="display:none"'; ?>><img src="<?php echo esc_url( $ev_img_url ); ?>" alt="" style="max-width:160px;height:auto;display:block;margin-bottom:.4rem"></div>
+						<input type="hidden" name="_kivun_event_image" class="kivun-ev-media__id" value="<?php echo esc_attr( (string) $ev_img ); ?>">
+						<button type="button" class="button kivun-ev-media__select"><?php esc_html_e( 'בחירת תמונה', 'kivun' ); ?></button>
+						<button type="button" class="button-link kivun-ev-media__remove" <?php echo $ev_img_url ? '' : 'style="display:none"'; ?>><?php esc_html_e( 'הסרה', 'kivun' ); ?></button>
+					</div>
+					<p class="description"><?php esc_html_e( 'מומלץ עיצוב מלבני צר וגבוה. משמש לפופאפ באתר ולתמונה הראשית.', 'kivun' ); ?></p>
+				</td>
+			</tr>
+			<tr>
+				<th><?php esc_html_e( 'פופאפ באתר', 'kivun' ); ?></th>
+				<td>
+					<label>
+						<input type="checkbox" name="_kivun_event_popup" value="1" <?php checked( '1', (string) $f( '_kivun_event_popup' ) ); ?>>
+						<?php esc_html_e( 'הצג פופאפ עם תמונת האירוע בכל האתר עד מועד האירוע', 'kivun' ); ?>
+					</label>
+				</td>
+			</tr>
 		</table>
+		<script>
+		( function () {
+			var frame,
+				sel = document.querySelector( '.kivun-ev-media__select' ),
+				rm  = document.querySelector( '.kivun-ev-media__remove' ),
+				idEl = document.querySelector( '.kivun-ev-media__id' ),
+				pr  = document.querySelector( '.kivun-ev-media__preview' ),
+				img = pr ? pr.querySelector( 'img' ) : null;
+			if ( sel && window.wp && wp.media ) {
+				sel.addEventListener( 'click', function ( e ) {
+					e.preventDefault();
+					if ( frame ) { frame.open(); return; }
+					frame = wp.media( { multiple: false } );
+					frame.on( 'select', function () {
+						var a = frame.state().get( 'selection' ).first().toJSON();
+						if ( idEl ) { idEl.value = a.id; }
+						if ( img ) { img.src = ( a.sizes && a.sizes.medium ? a.sizes.medium.url : a.url ); }
+						if ( pr ) { pr.style.display = ''; }
+						if ( rm ) { rm.style.display = ''; }
+					} );
+					frame.open();
+				} );
+			}
+			if ( rm ) {
+				rm.addEventListener( 'click', function ( e ) {
+					e.preventDefault();
+					if ( idEl ) { idEl.value = ''; }
+					if ( pr ) { pr.style.display = 'none'; }
+					rm.style.display = 'none';
+				} );
+			}
+		} () );
+		</script>
 		<?php
 	}
 
@@ -798,6 +856,8 @@ class Kivun_Admin {
 				'_kivun_event_mode'         => 'text',
 				'_kivun_event_external_url' => 'url',
 				'_kivun_event_button'       => 'text',
+				'_kivun_event_image'        => 'absint',
+				'_kivun_event_popup'        => 'text',
 			) as $key => $type ) {
 				self::save_field( $post_id, $key, $type );
 			}
