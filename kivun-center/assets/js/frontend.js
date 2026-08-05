@@ -501,12 +501,20 @@
 
 	// ── Content creator (front-end shortcode): toggles, image preview, delete, AI ──
 	if (document.querySelector('.kivun-cc-front')) {
+		function kivunUpdateNonEvent() {
+			var ev = document.querySelector('.kivun-cc-toggle[data-type="event"]:checked'),
+				other = document.querySelector('.kivun-cc-toggle[data-type="landing"]:checked, .kivun-cc-toggle[data-type="course"]:checked, .kivun-cc-toggle[data-type="session"]:checked'),
+				hide = ev && !other;
+			document.querySelectorAll('.kivun-cc-nonevent').forEach(function (el) { el.style.display = hide ? 'none' : ''; });
+		}
 		document.querySelectorAll('.kivun-cc-toggle').forEach(function (cb) {
 			cb.addEventListener('change', function () {
 				var sec = document.querySelector('.kivun-cc-section[data-type="' + cb.dataset.type + '"]');
 				if (sec) { sec.hidden = !cb.checked; }
+				kivunUpdateNonEvent();
 			});
 		});
+		kivunUpdateNonEvent();
 
 		var ccFile = document.querySelector('.kivun-cc-file');
 		if (ccFile) {

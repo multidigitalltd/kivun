@@ -389,20 +389,22 @@ class Kivun_Content_Creator {
 									)
 								);
 							?>
-							<label class="kivun-lp-sub"><?php esc_html_e( 'משך', 'kivun' ); ?></label>
-							<?php
-								wp_editor(
-									(string) $v['duration'],
-									'kivun_cc_duration',
-									array(
-										'textarea_name' => 'duration',
-										'media_buttons' => false,
-										'teeny'         => true,
-										'quicktags'     => false,
-										'textarea_rows' => 3,
-									)
-								);
-							?>
+							<div class="kivun-cc-nonevent">
+								<label class="kivun-lp-sub"><?php esc_html_e( 'משך', 'kivun' ); ?></label>
+								<?php
+									wp_editor(
+										(string) $v['duration'],
+										'kivun_cc_duration',
+										array(
+											'textarea_name' => 'duration',
+											'media_buttons' => false,
+											'teeny'     => true,
+											'quicktags' => false,
+											'textarea_rows' => 3,
+										)
+									);
+								?>
+							</div>
 							<label class="kivun-lp-sub"><?php esc_html_e( 'עלות', 'kivun' ); ?></label>
 							<?php
 								wp_editor(
@@ -417,20 +419,22 @@ class Kivun_Content_Creator {
 									)
 								);
 							?>
-							<label class="kivun-lp-sub"><?php esc_html_e( 'תאריך / מועד', 'kivun' ); ?></label>
-							<?php
-								wp_editor(
-									(string) $v['date'],
-									'kivun_cc_date',
-									array(
-										'textarea_name' => 'date',
-										'media_buttons' => false,
-										'teeny'         => true,
-										'quicktags'     => false,
-										'textarea_rows' => 3,
-									)
-								);
-							?>
+							<div class="kivun-cc-nonevent">
+								<label class="kivun-lp-sub"><?php esc_html_e( 'תאריך / מועד', 'kivun' ); ?></label>
+								<?php
+									wp_editor(
+										(string) $v['date'],
+										'kivun_cc_date',
+										array(
+											'textarea_name' => 'date',
+											'media_buttons' => false,
+											'teeny'     => true,
+											'quicktags' => false,
+											'textarea_rows' => 3,
+										)
+									);
+								?>
+							</div>
 							<label class="kivun-lp-sub"><?php esc_html_e( 'אימייל לקבלת לידים/הרשמות', 'kivun' ); ?></label>
 							<input type="email" name="email" class="kivun-lp-input" value="<?php echo esc_attr( $v['email'] ); ?>">
 						</div>
@@ -589,12 +593,20 @@ class Kivun_Content_Creator {
 
 		<script>
 		( function () {
+			function kivunUpdateNonEvent() {
+				var ev    = document.querySelector( '.kivun-cc-toggle[data-type="event"]:checked' ),
+					other = document.querySelector( '.kivun-cc-toggle[data-type="landing"]:checked, .kivun-cc-toggle[data-type="course"]:checked, .kivun-cc-toggle[data-type="session"]:checked' ),
+					hide  = ev && ! other;
+				document.querySelectorAll( '.kivun-cc-nonevent' ).forEach( function ( el ) { el.style.display = hide ? 'none' : ''; } );
+			}
 			document.querySelectorAll( '.kivun-cc-toggle' ).forEach( function ( cb ) {
 				cb.addEventListener( 'change', function () {
 					var sec = document.querySelector( '.kivun-cc-section[data-type="' + cb.dataset.type + '"]' );
 					if ( sec ) { sec.hidden = ! cb.checked; }
+					kivunUpdateNonEvent();
 				} );
 			} );
+			kivunUpdateNonEvent();
 			var frame,
 				selectBtn = document.querySelector( '.kivun-lp-media__select' ),
 				removeBtn = document.querySelector( '.kivun-lp-media__remove' ),
@@ -1560,7 +1572,7 @@ class Kivun_Content_Creator {
 									<label class="kivun-cc-sub"><?php esc_html_e( 'קהל יעד', 'kivun' ); ?></label>
 									<textarea name="audience" class="kivun-cc-input kivun-cc-textarea" rows="2"><?php echo esc_textarea( $v['audience'] ); ?></textarea>
 								</div>
-								<div>
+								<div class="kivun-cc-nonevent">
 									<label class="kivun-cc-sub"><?php esc_html_e( 'משך', 'kivun' ); ?></label>
 									<textarea name="duration" class="kivun-cc-input kivun-cc-textarea" rows="2"><?php echo esc_textarea( $v['duration'] ); ?></textarea>
 								</div>
@@ -1570,7 +1582,7 @@ class Kivun_Content_Creator {
 									<label class="kivun-cc-sub"><?php esc_html_e( 'עלות', 'kivun' ); ?></label>
 									<textarea name="cost" class="kivun-cc-input kivun-cc-textarea" rows="2" placeholder="<?php esc_attr_e( 'חינם / 120 ₪', 'kivun' ); ?>"><?php echo esc_textarea( $v['cost'] ); ?></textarea>
 								</div>
-								<div>
+								<div class="kivun-cc-nonevent">
 									<label class="kivun-cc-sub"><?php esc_html_e( 'תאריך / מועד', 'kivun' ); ?></label>
 									<textarea name="date" class="kivun-cc-input kivun-cc-textarea" rows="2" placeholder="<?php esc_attr_e( '15.9.2025 בשעה 18:00', 'kivun' ); ?>"><?php echo esc_textarea( $v['date'] ); ?></textarea>
 								</div>
