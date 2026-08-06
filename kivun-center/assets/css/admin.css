@@ -45,6 +45,9 @@
 .kivun-lp-grid { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 20px; align-items: start; }
 @media (max-width: 960px) { .kivun-lp-grid { grid-template-columns: 1fr; } }
 .kivun-lp-card { background: #fff; border: 1px solid #e2e4e7; border-radius: 12px; padding: 18px 20px; margin-bottom: 18px; box-shadow: 0 1px 3px rgba(0,0,0,.04); }
+.kivun-lp-card.kivun-cc-section[data-type="event"] { border: 2px solid #2563eb; background: #eff4ff; box-shadow: 0 2px 12px rgba(37,99,235,.14); }
+.kivun-lp-card.kivun-cc-section[data-type="event"] h3 { margin-top: 0; color: #1d4ed8; display: flex; align-items: center; gap: 6px; }
+.kivun-lp-card.kivun-cc-section[data-type="event"] h3::before { content: "📅"; }
 .kivun-lp-label { display: block; font-size: 14px; font-weight: 700; color: #1d2327; margin-bottom: 6px; }
 .kivun-lp-sub { display: block; font-size: 13px; font-weight: 600; color: #3c434a; margin: 12px 0 4px; }
 .kivun-lp-req { color: #d63638; }

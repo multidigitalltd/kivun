@@ -794,6 +794,9 @@
 @media (max-width: 860px) { .kivun-cc-grid { grid-template-columns: 1fr; } .kivun-cc-side { position: static; } }
 
 .kivun-cc-card { background: #fff; border: 1px solid var(--kivun-border); border-radius: 16px; padding: 1.25rem 1.35rem; box-shadow: 0 2px 10px rgba(0,0,0,.05); }
+.kivun-cc-card.kivun-cc-section[data-type="event"] { border: 2px solid var(--kivun-primary); background: #eff4ff; box-shadow: 0 2px 14px rgba(37,99,235,.14); }
+.kivun-cc-card.kivun-cc-section[data-type="event"] .kivun-cc-h3 { color: var(--kivun-primary); display: flex; align-items: center; gap: .4rem; }
+.kivun-cc-card.kivun-cc-section[data-type="event"] .kivun-cc-h3::before { content: "📅"; }
 .kivun-cc-h3 { margin: 0 0 .85rem; font-size: 1.05rem; font-weight: 700; color: var(--kivun-accent); }
 .kivun-cc-label { display: block; font-weight: 700; font-size: 1rem; margin-bottom: .5rem; color: var(--kivun-text); }
 .kivun-cc-sub { display: block; font-weight: 600; font-size: .85rem; margin: .75rem 0 .3rem; color: #444; }
