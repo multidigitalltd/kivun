@@ -85,6 +85,12 @@ class Kivun_Employer {
 			)
 		);
 
+		// Privileged accounts that happen to also hold the publisher role are
+		// not administered from this dashboard — see is_manageable_publisher().
+		$employers = array_values(
+			array_filter( $employers, static fn( $user ) => self::is_manageable_publisher( $user ) )
+		);
+
 		if ( $include_disabled ) {
 			return $employers;
 		}
@@ -305,6 +311,18 @@ class Kivun_Employer {
 
 		$date = DateTimeImmutable::createFromFormat( '!Y-m-d', $raw );
 		return ( $date && $date->format( 'Y-m-d' ) === $raw ) ? $raw : '';
+	}
+
+	/**
+	 * Validate and persist a job's closing date. Shared entry point so every
+	 * edit surface (dashboard and wp-admin metabox) stores it identically.
+	 *
+	 * @param int    $job_id The job post ID.
+	 * @param string $raw    The raw date value, validated as Y-m-d.
+	 * @return void
+	 */
+	public static function set_job_deadline( int $job_id, string $raw ): void {
+		self::save_deadline( $job_id, self::sanitize_deadline( $raw ) );
 	}
 
 	/**
@@ -618,6 +636,9 @@ class Kivun_Employer {
 
 		if ( $disable ) {
 			update_user_meta( $employer->ID, '_kivun_disabled', '1' );
+			// Blocking future logins is not enough — an already-issued auth
+			// cookie would keep working for days. Kick them out now.
+			WP_Session_Tokens::get_instance( $employer->ID )->destroy_all();
 		} else {
 			delete_user_meta( $employer->ID, '_kivun_disabled' );
 		}
@@ -639,7 +660,11 @@ class Kivun_Employer {
 	 * @return mixed WP_User, WP_Error, or null.
 	 */
 	public static function block_disabled_login( $user ) {
-		if ( $user instanceof WP_User && get_user_meta( $user->ID, '_kivun_disabled', true ) ) {
+		if (
+			$user instanceof WP_User &&
+			self::is_manageable_publisher( $user ) &&
+			get_user_meta( $user->ID, '_kivun_disabled', true )
+		) {
 			return new WP_Error(
 				'kivun_employer_disabled',
 				__( 'החשבון הושבת. יש לפנות למנהל לוח המשרות.', 'kivun' )
@@ -649,8 +674,30 @@ class Kivun_Employer {
 	}
 
 	/**
+	 * Whether a user is a publisher a manager is allowed to administer.
+	 *
+	 * Holding the publisher role is not enough: WordPress users may carry
+	 * several roles, so an administrator given a publisher profile would
+	 * otherwise be disable-able — and, via an email change plus a password
+	 * link, take-over-able — by any jobs-board manager. Privileged accounts
+	 * are therefore never manageable through this dashboard.
+	 *
+	 * @param WP_User $user The user to test.
+	 * @return bool
+	 */
+	private static function is_manageable_publisher( WP_User $user ): bool {
+		if ( ! in_array( 'kivun_employer', (array) $user->roles, true ) ) {
+			return false;
+		}
+
+		// phpcs:ignore WordPress.WP.Capabilities.Unknown -- Custom plugin capability.
+		return ! user_can( $user, 'manage_options' ) && ! user_can( $user, 'kivun_manage_jobs' );
+	}
+
+	/**
 	 * Read and validate the `employer_id` of the publisher an action targets.
-	 * Dies via wp_send_json_error() when it is missing or not a publisher.
+	 * Dies via wp_send_json_error() when it is missing, not a publisher, or is
+	 * a privileged account that must not be managed from here.
 	 *
 	 * @return WP_User
 	 */
@@ -658,7 +705,7 @@ class Kivun_Employer {
 		$employer_id = absint( wp_unslash( $_POST['employer_id'] ?? 0 ) ); // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified by the calling AJAX handler.
 		$employer    = $employer_id ? get_userdata( $employer_id ) : false;
 
-		if ( ! $employer || ! in_array( 'kivun_employer', (array) $employer->roles, true ) ) {
+		if ( ! $employer || ! self::is_manageable_publisher( $employer ) ) {
 			wp_send_json_error( array( 'message' => __( 'המפרסם לא נמצא.', 'kivun' ) ) );
 		}
 
@@ -893,6 +940,12 @@ class Kivun_Employer {
 	private static function require_employer(): void {
 		if ( ! is_user_logged_in() || ( ! current_user_can( 'kivun_employer' ) && ! current_user_can( 'manage_options' ) ) ) { // phpcs:ignore WordPress.WP.Capabilities.Unknown -- Custom plugin capability.
 			wp_send_json_error( array( 'message' => __( 'אין לך הרשאה לפעולה זו.', 'kivun' ) ) );
+		}
+
+		// A publisher disabled mid-session must lose access immediately, even
+		// though their auth cookie is still technically valid.
+		if ( ! self::can_manage_all() && get_user_meta( get_current_user_id(), '_kivun_disabled', true ) ) {
+			wp_send_json_error( array( 'message' => __( 'החשבון הושבת. יש לפנות למנהל לוח המשרות.', 'kivun' ) ) );
 		}
 	}
 

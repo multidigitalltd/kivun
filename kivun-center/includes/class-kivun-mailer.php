@@ -126,28 +126,37 @@ class Kivun_Mailer {
 	 * @param string $applicant_name  The applicant's name.
 	 * @param string $job_title       The job title applied for.
 	 * @param string $company         Optional company name.
+	 * @param bool   $employer_mailed Whether the publisher was actually notified.
+	 *                                When false the application is still saved
+	 *                                and visible in the dashboard, so the wording
+	 *                                must not claim it was forwarded.
 	 * @return void
 	 */
-	public static function send_application_confirmation( string $applicant_email, string $applicant_name, string $job_title, string $company = '' ): void {
+	public static function send_application_confirmation( string $applicant_email, string $applicant_name, string $job_title, string $company = '', bool $employer_mailed = true ): void {
 		if ( ! is_email( $applicant_email ) ) {
 			return;
 		}
 
 		$site = get_bloginfo( 'name' );
 
+		$received = $employer_mailed
+			? __( 'התקבלו בהצלחה ונשלחו למפרסם המשרה.', 'kivun' )
+			: __( 'התקבלו בהצלחה ונשמרו במערכת.', 'kivun' );
+
 		wp_mail(
 			$applicant_email,
 			/* translators: %s: job title. */
 			sprintf( __( 'אישור הגשת מועמדות — %s', 'kivun' ), $job_title ),
 			sprintf(
-				/* translators: 1: applicant name, 2: job title, 3: company line, 4: site name. */
+				/* translators: 1: applicant name, 2: job title, 3: company line, 4: received sentence, 5: site name. */
 				'<p>שלום %1$s,</p>
-				<p>קורות החיים שלך למשרה <strong>%2$s</strong>%3$s התקבלו בהצלחה ונשלחו למפרסם המשרה.</p>
+				<p>קורות החיים שלך למשרה <strong>%2$s</strong>%3$s %4$s</p>
 				<p>המפרסם יפנה אליך ישירות אם המועמדות תימצא מתאימה. שימו לב שלא כל פנייה מקבלת מענה.</p>
-				<p>בהצלחה!<br>צוות %4$s</p>',
+				<p>בהצלחה!<br>צוות %5$s</p>',
 				esc_html( $applicant_name ),
 				esc_html( $job_title ),
 				$company ? ' ב<strong>' . esc_html( $company ) . '</strong>' : '',
+				esc_html( $received ),
 				esc_html( $site )
 			),
 			self::headers()

@@ -394,12 +394,15 @@ class Kivun_Jobs {
 			);
 		}
 
-		// Reassure the applicant that their CV arrived.
+		// Reassure the applicant that their CV arrived. The application is saved
+		// either way, so this is sent even when the job has no employer address
+		// on file — with wording that matches what actually happened.
 		Kivun_Mailer::send_application_confirmation(
 			$email,
 			$name,
 			get_the_title( $job_id ),
-			(string) get_post_meta( $job_id, '_kivun_company', true )
+			(string) get_post_meta( $job_id, '_kivun_company', true ),
+			(bool) $employer_email
 		);
 		do_action( 'kivun_after_application', $job_id, compact( 'name', 'email', 'phone', 'message' ) + array( 'cv_path' => $cv_path ) );
 

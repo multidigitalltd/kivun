@@ -885,9 +885,18 @@ class Kivun_Admin {
 				'_kivun_description'    => 'kses',
 				'_kivun_salary'         => 'text',
 				'_kivun_requirements'   => 'kses',
-				'_kivun_deadline'       => 'text',
 			) as $key => $type ) {
 				self::save_field( $post_id, $key, $type );
+			}
+
+			// The closing date drives auto-expiry, so it goes through the same
+			// validation and expired-flag clearing as the front-end dashboard
+			// instead of being stored as free text.
+			if ( isset( $_POST['_kivun_deadline'] ) ) {
+				Kivun_Employer::set_job_deadline(
+					$post_id,
+					sanitize_text_field( wp_unslash( $_POST['_kivun_deadline'] ) )
+				);
 			}
 		}
 	}

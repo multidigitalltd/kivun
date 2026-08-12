@@ -38,6 +38,12 @@ if ( ! current_user_can( 'kivun_employer' ) && ! current_user_can( 'manage_optio
 	return;
 }
 
+// A publisher disabled while logged in loses access to the dashboard too.
+if ( ! Kivun_Employer::can_manage_all() && get_user_meta( get_current_user_id(), '_kivun_disabled', true ) ) {
+	echo '<p class="kivun-notice">' . esc_html__( 'החשבון הושבת. יש לפנות למנהל לוח המשרות.', 'kivun' ) . '</p>';
+	return;
+}
+
 $user_id    = get_current_user_id();
 $is_manager = Kivun_Employer::can_manage_all();
 
