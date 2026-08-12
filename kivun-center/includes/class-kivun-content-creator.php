@@ -1199,27 +1199,103 @@ class Kivun_Content_Creator {
 			$tab = 'form';
 		}
 		$show_leads = self::can_manage_leads();
-		if ( ! in_array( $tab, array( 'form', 'library', 'leads' ), true ) || ( 'leads' === $tab && ! $show_leads ) ) {
+		// The jobs board is a separate system with its own data (jobs and CV
+		// applications) — it gets its own tab rather than being mixed into the
+		// content leads table.
+		$show_jobs = Kivun_Employer::can_manage_all();
+
+		if (
+			! in_array( $tab, array( 'form', 'library', 'leads', 'jobs' ), true ) ||
+			( 'leads' === $tab && ! $show_leads ) ||
+			( 'jobs' === $tab && ! $show_jobs )
+		) {
 			$tab = 'form';
 		}
 
 		$page_url   = (string) get_permalink();
 		$page_url   = $page_url ? $page_url : home_url();
 		$can_delete = current_user_can( 'delete_posts' );
-		$lead_count = $show_leads ? self::leads_count() : 0;
+		$stats      = self::console_stats( $show_leads, $show_jobs );
+		$user       = wp_get_current_user();
+
+		$console_tabs = array(
+			'form'    => array(
+				'label' => __( 'פרסום תוכן', 'kivun' ),
+				'icon'  => '✎',
+				'count' => null,
+			),
+			'library' => array(
+				'label' => __( 'התכנים שלי', 'kivun' ),
+				'icon'  => '▦',
+				'count' => $stats['content'],
+			),
+		);
+		if ( $show_leads ) {
+			$console_tabs['leads'] = array(
+				'label' => __( 'לידים והרשמות', 'kivun' ),
+				'icon'  => '👥',
+				'count' => $stats['leads'],
+			);
+		}
+		if ( $show_jobs ) {
+			$console_tabs['jobs'] = array(
+				'label' => __( 'לוח משרות', 'kivun' ),
+				'icon'  => '💼',
+				'count' => $stats['jobs'],
+			);
+		}
 		?>
 		<div class="kivun-cc-console" dir="rtl">
 
+			<header class="kivun-cc-topbar">
+				<div class="kivun-cc-topbar__brand">
+					<span class="kivun-cc-topbar__mark" aria-hidden="true">⌂</span>
+					<div>
+						<h2 class="kivun-cc-topbar__title"><?php esc_html_e( 'מערכת ניהול תוכן', 'kivun' ); ?></h2>
+						<p class="kivun-cc-topbar__sub"><?php esc_html_e( 'תכנים, פניות ולוח משרות — במקום אחד', 'kivun' ); ?></p>
+					</div>
+				</div>
+				<div class="kivun-cc-topbar__user">
+					<span class="kivun-cc-topbar__hello">
+						<?php
+						/* translators: %s: display name of the logged-in manager. */
+						echo esc_html( sprintf( __( 'שלום, %s', 'kivun' ), $user->display_name ) );
+						?>
+					</span>
+					<a class="kivun-cc-topbar__logout" href="<?php echo esc_url( wp_logout_url( $page_url ) ); ?>"><?php esc_html_e( 'יציאה', 'kivun' ); ?></a>
+				</div>
+			</header>
+
+			<div class="kivun-cc-stats">
+				<div class="kivun-cc-stat">
+					<span class="kivun-cc-stat__num"><?php echo esc_html( number_format_i18n( $stats['content'] ) ); ?></span>
+					<span class="kivun-cc-stat__label"><?php esc_html_e( 'תכנים', 'kivun' ); ?></span>
+				</div>
+				<div class="kivun-cc-stat">
+					<span class="kivun-cc-stat__num"><?php echo esc_html( number_format_i18n( $stats['published'] ) ); ?></span>
+					<span class="kivun-cc-stat__label"><?php esc_html_e( 'פורסמו', 'kivun' ); ?></span>
+				</div>
+				<?php if ( $show_leads ) : ?>
+					<div class="kivun-cc-stat">
+						<span class="kivun-cc-stat__num"><?php echo esc_html( number_format_i18n( $stats['leads'] ) ); ?></span>
+						<span class="kivun-cc-stat__label"><?php esc_html_e( 'פניות לתכנים', 'kivun' ); ?></span>
+					</div>
+					<div class="kivun-cc-stat kivun-cc-stat--alert">
+						<span class="kivun-cc-stat__num"><?php echo esc_html( number_format_i18n( $stats['leads_new'] ) ); ?></span>
+						<span class="kivun-cc-stat__label"><?php esc_html_e( 'ממתינות לטיפול', 'kivun' ); ?></span>
+					</div>
+				<?php endif; ?>
+				<?php if ( $show_jobs ) : ?>
+					<div class="kivun-cc-stat">
+						<span class="kivun-cc-stat__num"><?php echo esc_html( number_format_i18n( $stats['jobs'] ) ); ?></span>
+						<span class="kivun-cc-stat__label"><?php esc_html_e( 'משרות', 'kivun' ); ?></span>
+					</div>
+				<?php endif; ?>
+			</div>
+
 			<div class="kivun-tabs kivun-cc-tabs" role="tablist" aria-label="<?php esc_attr_e( 'ניהול תוכן', 'kivun' ); ?>">
 				<?php
-				$console_tabs = array(
-					'form'    => __( 'פרסום תוכן', 'kivun' ),
-					'library' => __( 'התכנים שלי', 'kivun' ),
-				);
-				if ( $show_leads ) {
-					$console_tabs['leads'] = __( 'לידים והרשמות', 'kivun' );
-				}
-				foreach ( $console_tabs as $tab_key => $tab_label ) :
+				foreach ( $console_tabs as $tab_key => $tab_meta ) :
 					$is_active = ( $tab === $tab_key );
 					?>
 					<button
@@ -1232,9 +1308,10 @@ class Kivun_Content_Creator {
 						aria-selected="<?php echo $is_active ? 'true' : 'false'; ?>"
 						<?php echo $is_active ? '' : 'tabindex="-1"'; ?>
 					>
-						<?php echo esc_html( $tab_label ); ?>
-						<?php if ( 'leads' === $tab_key && $lead_count ) : ?>
-							<span class="kivun-tab-badge kivun-tab-badge--soft"><?php echo esc_html( number_format_i18n( $lead_count ) ); ?></span>
+						<span class="kivun-cc-tabicon" aria-hidden="true"><?php echo esc_html( $tab_meta['icon'] ); ?></span>
+						<?php echo esc_html( $tab_meta['label'] ); ?>
+						<?php if ( $tab_meta['count'] ) : ?>
+							<span class="kivun-tab-badge kivun-tab-badge--soft"><?php echo esc_html( number_format_i18n( $tab_meta['count'] ) ); ?></span>
 						<?php endif; ?>
 					</button>
 				<?php endforeach; ?>
@@ -1254,8 +1331,91 @@ class Kivun_Content_Creator {
 				</section>
 			<?php endif; ?>
 
+			<?php if ( $show_jobs ) : ?>
+				<section class="kivun-tab-panel <?php echo 'jobs' === $tab ? 'is-active' : ''; ?>" data-panel="jobs" id="kivun-ccpanel-jobs" role="tabpanel" aria-labelledby="kivun-cctab-jobs" tabindex="0" <?php echo 'jobs' === $tab ? '' : 'hidden'; ?>>
+					<div class="kivun-cc-front">
+						<div class="kivun-cc-head">
+							<h2 class="kivun-cc-title"><?php esc_html_e( 'לוח המשרות', 'kivun' ); ?></h2>
+							<p class="kivun-cc-lead"><?php esc_html_e( 'מערכת נפרדת: משרות, מפרסמים והגשות מועמדות עם קורות חיים — לא מעורבב עם פניות התכנים.', 'kivun' ); ?></p>
+						</div>
+					</div>
+					<?php kivun_get_template( 'employer/dashboard.php' ); ?>
+				</section>
+			<?php endif; ?>
+
 		</div>
 		<?php
+	}
+
+	/**
+	 * Headline counts for the console's stat cards.
+	 *
+	 * @param bool $with_leads Whether to count content enquiries.
+	 * @param bool $with_jobs  Whether to count jobs.
+	 * @return array<string,int>
+	 */
+	private static function console_stats( bool $with_leads, bool $with_jobs ): array {
+		global $wpdb;
+
+		$stats = array(
+			'content'   => 0,
+			'published' => 0,
+			'leads'     => 0,
+			'leads_new' => 0,
+			'jobs'      => 0,
+		);
+
+		$posts = get_posts(
+			array(
+				'post_type'              => array_values( self::type_map() ),
+				'post_status'            => array( 'publish', 'draft', 'pending' ),
+				'posts_per_page'         => -1,
+				'meta_key'               => self::GROUP_META, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+				'no_found_rows'          => true,
+				'update_post_meta_cache' => false,
+				'update_post_term_cache' => false,
+			)
+		);
+
+		// Count distinct content groups, not individual linked posts.
+		$groups    = array();
+		$published = array();
+		foreach ( $posts as $p ) {
+			$g = (string) get_post_meta( $p->ID, self::GROUP_META, true );
+			if ( '' === $g ) {
+				continue;
+			}
+			$groups[ $g ] = true;
+			if ( 'publish' === $p->post_status ) {
+				$published[ $g ] = true;
+			}
+		}
+		$stats['content']   = count( $groups );
+		$stats['published'] = count( $published );
+
+		if ( $with_leads ) {
+			// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$stats['leads']     = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}kivun_registrations" );
+			$stats['leads_new'] = (int) $wpdb->get_var(
+				"SELECT COUNT(*) FROM {$wpdb->prefix}kivun_registrations WHERE status IN ( 'new', 'new_lead' )"
+			);
+			// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		}
+
+		if ( $with_jobs ) {
+			$job_ids       = get_posts(
+				array(
+					'post_type'      => 'kivun_job',
+					'post_status'    => array( 'publish', 'draft', 'pending' ),
+					'posts_per_page' => -1,
+					'fields'         => 'ids',
+					'no_found_rows'  => true,
+				)
+			);
+			$stats['jobs'] = count( $job_ids );
+		}
+
+		return $stats;
 	}
 
 	/**
@@ -2129,7 +2289,12 @@ class Kivun_Content_Creator {
 		<div class="kivun-cc-front">
 			<div class="kivun-cc-head">
 				<h2 class="kivun-cc-title"><?php esc_html_e( 'לידים והרשמות', 'kivun' ); ?></h2>
-				<p class="kivun-cc-lead"><?php esc_html_e( 'כל הפניות שהתקבלו מהתכנים — עדכון סטטוס והערות נשמרים אוטומטית.', 'kivun' ); ?></p>
+				<p class="kivun-cc-lead">
+					<?php esc_html_e( 'פניות שהתקבלו מהתכנים בלבד — קורסים, סדנאות, דפי נחיתה ואירועים. עדכון סטטוס והערות נשמרים אוטומטית.', 'kivun' ); ?>
+					<?php if ( Kivun_Employer::can_manage_all() ) : ?>
+						<br><span class="kivun-cc-sep-note"><?php esc_html_e( 'הגשות מועמדות למשרות (עם קורות חיים) נמצאות בלשונית "לוח משרות" — הן מערכת נפרדת.', 'kivun' ); ?></span>
+					<?php endif; ?>
+				</p>
 			</div>
 
 			<div class="kivun-cc-leadbar">

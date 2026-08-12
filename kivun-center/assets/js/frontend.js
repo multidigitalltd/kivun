@@ -497,13 +497,24 @@
 		return el.closest('.kivun-employer-dashboard, .kivun-cc-console');
 	}
 
+	// Elements belonging to THIS tab set only. The employer dashboard can be
+	// nested inside the content console, and both use the same class names —
+	// without this, switching a console tab would also toggle the dashboard's
+	// inner panels.
+	function ownedBy(dash, selector) {
+		return Array.prototype.filter.call(
+			dash.querySelectorAll(selector),
+			function (el) { return tabScope(el) === dash; }
+		);
+	}
+
 	function activateTab(tab, focusIt) {
 		if (!tab) { return; }
 		var dash = tabScope(tab);
 		if (!dash) { return; }
 		var name = tab.dataset.tab;
 
-		dash.querySelectorAll('.kivun-tab').forEach(function (t) {
+		ownedBy(dash, '.kivun-tab').forEach(function (t) {
 			t.classList.remove('is-active');
 			t.setAttribute('aria-selected', 'false');
 			t.setAttribute('tabindex', '-1');
@@ -512,7 +523,7 @@
 		tab.setAttribute('aria-selected', 'true');
 		tab.setAttribute('tabindex', '0');
 
-		dash.querySelectorAll('.kivun-tab-panel').forEach(function (panel) {
+		ownedBy(dash, '.kivun-tab-panel').forEach(function (panel) {
 			var match = panel.dataset.panel === name;
 			panel.classList.toggle('is-active', match);
 			panel.hidden = !match;

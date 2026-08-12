@@ -913,19 +913,162 @@
 .kivun-cc-groups__item .kivun-cc-btn { margin-inline-start: auto; }
 
 /* ── Content management console (tabs, library, leads CRM) ───────────────── */
-.kivun-cc-console { max-width: 1240px; margin: 0 auto; font-family: var(--kivun-font); color: var(--kivun-text); direction: rtl; }
+.kivun-cc-console {
+	--cc-surface: #fff;
+	--cc-canvas: #f1f5f9;
+	--cc-ink: #0f172a;
+	--cc-line: #e2e8f0;
+	--cc-brand: #2563eb;
+	max-width: 1320px;
+	margin: 0 auto;
+	padding: 1.1rem;
+	font-family: var(--kivun-font);
+	color: var(--cc-ink);
+	direction: rtl;
+	background: var(--cc-canvas);
+	border-radius: 20px;
+}
 .kivun-cc-console .kivun-cc-front { max-width: none; }
-.kivun-cc-tabs { margin-bottom: 1.4rem; }
+.kivun-cc-console .kivun-cc-head { margin-bottom: 1.1rem; }
+.kivun-cc-console .kivun-cc-title { font-size: 1.3rem; font-weight: 800; margin: 0 0 .2rem; }
+.kivun-cc-console .kivun-cc-lead { font-size: .88rem; color: var(--kivun-muted); margin: 0; line-height: 1.6; }
+.kivun-cc-sep-note { display: inline-block; margin-top: .35rem; font-size: .82rem; color: var(--cc-brand); font-weight: 600; }
 
-.kivun-cc-tablewrap { overflow-x: auto; border: 1px solid var(--kivun-border); border-radius: 14px; background: #fff; }
-.kivun-cc-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+/* Top bar — makes the console read as an application, not a page section. */
+.kivun-cc-topbar {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	padding: 1rem 1.25rem;
+	margin-bottom: 1rem;
+	background: linear-gradient(135deg, #1e3a8a, #2563eb);
+	border-radius: 16px;
+	color: #fff;
+	box-shadow: 0 6px 20px rgba(30,58,138,.22);
+}
+.kivun-cc-topbar__brand { display: flex; align-items: center; gap: .85rem; }
+.kivun-cc-topbar__mark {
+	display: grid;
+	place-items: center;
+	width: 42px;
+	height: 42px;
+	font-size: 1.35rem;
+	background: rgba(255,255,255,.18);
+	border-radius: 12px;
+	flex: 0 0 auto;
+}
+.kivun-cc-topbar__title { margin: 0; font-size: 1.15rem; font-weight: 800; color: #fff; line-height: 1.25; }
+.kivun-cc-topbar__sub { margin: .1rem 0 0; font-size: .82rem; color: rgba(255,255,255,.82); }
+.kivun-cc-topbar__user { display: flex; align-items: center; gap: .8rem; font-size: .86rem; }
+.kivun-cc-topbar__hello { color: rgba(255,255,255,.92); font-weight: 600; }
+.kivun-cc-topbar__logout {
+	color: #fff;
+	text-decoration: none;
+	font-weight: 700;
+	padding: .35rem .8rem;
+	border: 1px solid rgba(255,255,255,.35);
+	border-radius: 999px;
+	transition: background .15s;
+}
+.kivun-cc-topbar__logout:hover { background: rgba(255,255,255,.16); color: #fff; }
+
+/* Stat cards */
+.kivun-cc-stats {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+	gap: .7rem;
+	margin-bottom: 1rem;
+}
+.kivun-cc-stat {
+	display: flex;
+	flex-direction: column;
+	gap: .15rem;
+	padding: .85rem 1rem;
+	background: var(--cc-surface);
+	border: 1px solid var(--cc-line);
+	border-radius: 14px;
+}
+.kivun-cc-stat__num { font-size: 1.5rem; font-weight: 800; line-height: 1.1; color: var(--cc-ink); }
+.kivun-cc-stat__label { font-size: .78rem; color: var(--kivun-muted); font-weight: 600; }
+.kivun-cc-stat--alert { border-color: #fdba74; background: #fff7ed; }
+.kivun-cc-stat--alert .kivun-cc-stat__num { color: #c2410c; }
+
+/* Nav tabs — restyled inside the console only. */
+.kivun-cc-console .kivun-cc-tabs {
+	display: flex;
+	flex-wrap: wrap;
+	gap: .35rem;
+	margin-bottom: 1.1rem;
+	padding: .35rem;
+	background: var(--cc-surface);
+	border: 1px solid var(--cc-line);
+	border-radius: 14px;
+}
+.kivun-cc-console .kivun-cc-tabs .kivun-tab {
+	display: inline-flex;
+	align-items: center;
+	gap: .4rem;
+	padding: .6rem 1.05rem;
+	border: none;
+	border-radius: 10px;
+	background: transparent;
+	font: inherit;
+	font-size: .9rem;
+	font-weight: 700;
+	color: var(--kivun-muted);
+	cursor: pointer;
+	box-shadow: none;
+	transition: background .15s, color .15s;
+}
+.kivun-cc-console .kivun-cc-tabs .kivun-tab:hover { background: #f1f5f9; color: var(--cc-ink); }
+.kivun-cc-console .kivun-cc-tabs .kivun-tab.is-active {
+	background: var(--cc-brand);
+	color: #fff;
+	box-shadow: 0 2px 8px rgba(37,99,235,.28);
+}
+.kivun-cc-console .kivun-cc-tabs .kivun-tab.is-active .kivun-tab-badge { background: rgba(255,255,255,.24); color: #fff; }
+.kivun-cc-tabicon { font-size: 1rem; line-height: 1; }
+
+/* Panels sit on cards so each section reads as its own workspace. */
+.kivun-cc-console > .kivun-tab-panel.is-active {
+	background: var(--cc-surface);
+	border: 1px solid var(--cc-line);
+	border-radius: 16px;
+	padding: 1.35rem;
+}
+
+.kivun-cc-tablewrap {
+	overflow-x: auto;
+	border: 1px solid var(--kivun-border);
+	border-radius: 14px;
+	background: #fff;
+	box-shadow: 0 1px 3px rgba(15,23,42,.05);
+}
+.kivun-cc-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: .88rem; }
 .kivun-cc-table th,
-.kivun-cc-table td { padding: .7rem .8rem; text-align: start; border-bottom: 1px solid var(--kivun-border); vertical-align: top; }
-.kivun-cc-table thead th { background: #f8fafc; font-size: .8rem; font-weight: 700; color: var(--kivun-muted); white-space: nowrap; position: sticky; top: 0; }
+.kivun-cc-table td { padding: .75rem .85rem; text-align: start; border-bottom: 1px solid var(--kivun-border); vertical-align: middle; }
+.kivun-cc-table thead th {
+	background: #f8fafc;
+	font-size: .74rem;
+	font-weight: 800;
+	letter-spacing: .02em;
+	text-transform: uppercase;
+	color: #64748b;
+	white-space: nowrap;
+	position: sticky;
+	top: 0;
+	z-index: 2;
+	border-bottom: 2px solid var(--kivun-border);
+}
 .kivun-cc-table tbody tr:last-child td { border-bottom: none; }
-.kivun-cc-table tbody tr:hover { background: #fbfdff; }
-.kivun-cc-table a { color: var(--kivun-primary); text-decoration: none; }
+.kivun-cc-table tbody tr { transition: background .12s; }
+.kivun-cc-table tbody tr:nth-child(even) { background: #fcfdfe; }
+.kivun-cc-table tbody tr:hover { background: #eff6ff; }
+.kivun-cc-table a { color: var(--kivun-primary); text-decoration: none; font-weight: 600; }
 .kivun-cc-table a:hover { text-decoration: underline; }
+.kivun-cc-table td strong { font-weight: 700; color: var(--cc-ink, #0f172a); }
 
 .kivun-cc-badge {
 	display: inline-block;
@@ -945,6 +1088,12 @@
 .kivun-cc-date { white-space: nowrap; font-size: .8rem; color: var(--kivun-muted); }
 
 .kivun-cc-leadbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem; margin-bottom: .9rem; }
+.kivun-cc-leadbar .kivun-stat {
+	padding: .4rem .9rem;
+	background: #f1f5f9;
+	border-radius: 999px;
+	font-size: .85rem;
+}
 .kivun-cc-leadfilters {
 	display: flex;
 	flex-wrap: wrap;
@@ -988,6 +1137,64 @@
 }
 .kivun-cc-pager { display: flex; align-items: center; justify-content: center; gap: .75rem; margin-top: 1rem; }
 .kivun-cc-pager__state { font-size: .85rem; color: var(--kivun-muted); }
+
+/* Console palette: the CRM reads as a tool, so actions are blue/neutral/red
+   rather than the site's marketing accent. Scoped to the console only. */
+.kivun-cc-console .kivun-cc-title { color: var(--cc-ink); }
+.kivun-cc-console .kivun-cc-btn {
+	background: var(--cc-brand);
+	border-radius: 9px;
+	padding: .55rem 1.05rem;
+	font-size: .88rem;
+	font-weight: 700;
+}
+.kivun-cc-console .kivun-cc-btn { color: #fff; }
+.kivun-cc-console .kivun-cc-btn:hover { background: #1d4ed8; filter: none; color: #fff; }
+.kivun-cc-console .kivun-cc-btn--sm { padding: .4rem .8rem; font-size: .82rem; }
+/* Buttons rendered as links inside a table would otherwise pick up the
+   table's link colour and vanish against their own background. */
+.kivun-cc-console .kivun-cc-table a.kivun-cc-btn { color: #fff; text-decoration: none; }
+.kivun-cc-console .kivun-cc-table a.kivun-cc-btn--ghost { color: #334155; }
+.kivun-cc-console .kivun-cc-table a.kivun-cc-btn--ghost:hover { color: var(--cc-ink); }
+.kivun-cc-console .kivun-cc-table a.kivun-cc-btn--danger { color: #dc2626; }
+.kivun-cc-console .kivun-cc-table a.kivun-cc-btn--danger:hover { color: #fff; }
+.kivun-cc-console .kivun-cc-btn--ghost {
+	background: #fff;
+	color: #334155;
+	border: 1px solid var(--cc-line);
+}
+.kivun-cc-console .kivun-cc-btn--ghost:hover { background: #f1f5f9; color: var(--cc-ink); border-color: #cbd5e1; }
+.kivun-cc-console .kivun-cc-btn--danger { background: #fff; color: #dc2626; border: 1px solid #fecaca; }
+.kivun-cc-console .kivun-cc-btn--danger:hover { background: #dc2626; color: #fff; border-color: #dc2626; }
+
+/* The count chip above the leads table is a chip, not a dashboard stat. */
+.kivun-cc-leadbar .kivun-stat { display: inline-flex; align-items: baseline; gap: .35rem; flex: 0 0 auto; }
+.kivun-cc-leadbar .kivun-stat strong { display: inline; font-size: 1rem; margin: 0; color: var(--cc-ink); }
+
+/* Status pills inside the console tables. */
+.kivun-cc-table .kivun-status {
+	display: inline-block;
+	padding: .18rem .6rem;
+	font-size: .75rem;
+	font-weight: 700;
+	border-radius: 999px;
+	white-space: nowrap;
+}
+.kivun-cc-table .kivun-status--publish { background: #dcfce7; color: #15803d; }
+.kivun-cc-table .kivun-status--draft,
+.kivun-cc-table .kivun-status--pending { background: #fef3c7; color: #a16207; }
+
+/* The jobs board is embedded inside the console — strip its outer chrome so
+   it reads as one more workspace rather than a page-within-a-page. */
+.kivun-cc-console .kivun-employer-dashboard { margin: 0; }
+.kivun-cc-console .kivun-employer-dashboard .kivun-tabs {
+	background: #f8fafc;
+	border: 1px solid var(--cc-line);
+	border-radius: 12px;
+	padding: .3rem;
+	margin-bottom: 1.1rem;
+}
+.kivun-cc-console .kivun-employer-dashboard .kivun-tab { font-size: .87rem; }
 
 @media (max-width: 782px) {
 	.kivun-cc-table { font-size: .82rem; }
