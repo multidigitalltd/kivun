@@ -611,8 +611,11 @@
 			if (res.success) {
 				// Tabs are switched in JS and never touch the URL, so a plain
 				// reload would land back on the default tab and the freshly
-				// saved campaign would look like it was never stored. Reload
-				// onto the campaigns tab explicitly so the new row is visible.
+				// saved campaign would look like it was never stored. Ask for
+				// the campaigns tab both ways: the query arg, plus a one-shot
+				// flag for the case where the arg does not survive the trip
+				// (page caching, a redirect that drops the query string).
+				try { window.sessionStorage.setItem('kivunConsoleTab', 'campaigns'); } catch (err) { /* private mode */ }
 				var next = new URL(window.location.href);
 				next.searchParams.set('kivun_tab', 'campaigns');
 				window.location.assign(next.toString());
@@ -832,6 +835,21 @@
 		var tab = e.target.closest('.kivun-tab');
 		if (tab) { activateTab(tab, false); }
 	});
+
+	// A reload that was asked to land on a specific console tab (see the
+	// campaign save) restores it here, in case the query arg did not survive.
+	(function () {
+		var pending;
+		try {
+			pending = window.sessionStorage.getItem('kivunConsoleTab');
+			window.sessionStorage.removeItem('kivunConsoleTab');
+		} catch (err) { return; }
+		if (!pending) { return; }
+
+		var console_ = document.querySelector('.kivun-cc-console');
+		var target = console_ && console_.querySelector('.kivun-tab[data-tab="' + pending + '"]');
+		if (target && !target.classList.contains('is-active')) { activateTab(target, false); }
+	}());
 
 	document.addEventListener('keydown', function (e) {
 		var tab = e.target.closest('.kivun-tab');

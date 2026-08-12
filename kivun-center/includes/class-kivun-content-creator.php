@@ -2299,8 +2299,8 @@ class Kivun_Content_Creator {
 
 						<div class="kivun-form-row">
 							<label for="kivun-camp-name"><?php esc_html_e( 'שם הקמפיין *', 'kivun' ); ?></label>
-							<input type="text" id="kivun-camp-name" class="kivun-cc-input kivun-camp-campaign" placeholder="<?php esc_attr_e( 'למשל: סדנת קיץ 2026', 'kivun' ); ?>">
-							<p class="kivun-field-hint"><code>utm_campaign</code> — <?php esc_html_e( 'שם הקמפיין שלפיו תזוהה הפנייה. יומר לאותיות קטנות עם מקפים.', 'kivun' ); ?></p>
+							<input type="text" id="kivun-camp-name" class="kivun-cc-input kivun-camp-campaign" placeholder="<?php esc_attr_e( 'למשל: summer-2026', 'kivun' ); ?>">
+							<p class="kivun-field-hint"><code>utm_campaign</code> — <?php esc_html_e( 'שם הקמפיין שלפיו תזוהה הפנייה. עדיף באנגלית ובאותיות קטנות. רווחים יומרו למקפים.', 'kivun' ); ?></p>
 						</div>
 
 						<div class="kivun-form-row">
@@ -2311,7 +2311,7 @@ class Kivun_Content_Creator {
 									<option value="<?php echo esc_attr( $sv ); ?>"><?php echo esc_html( $sl ); ?></option>
 								<?php endforeach; ?>
 							</datalist>
-							<p class="kivun-field-hint"><code>utm_source</code> — <?php esc_html_e( 'מאיפה הגיעו: facebook, instagram, google, whatsapp, newsletter…', 'kivun' ); ?></p>
+							<p class="kivun-field-hint"><code>utm_source</code> — <?php esc_html_e( 'מאיפה הגיעו. עדיף באנגלית ובאותיות קטנות: facebook, instagram, google, whatsapp, newsletter…', 'kivun' ); ?></p>
 						</div>
 
 						<div class="kivun-form-row">
@@ -2322,7 +2322,7 @@ class Kivun_Content_Creator {
 									<option value="<?php echo esc_attr( $mv ); ?>"><?php echo esc_html( $ml ); ?></option>
 								<?php endforeach; ?>
 							</datalist>
-							<p class="kivun-field-hint"><code>utm_medium</code> — <?php esc_html_e( 'סוג הפרסום: cpc (ממומן), organic, email, social, banner…', 'kivun' ); ?></p>
+							<p class="kivun-field-hint"><code>utm_medium</code> — <?php esc_html_e( 'סוג הפרסום. עדיף באנגלית ובאותיות קטנות: cpc (ממומן), organic, email, social, banner…', 'kivun' ); ?></p>
 						</div>
 					</div>
 
