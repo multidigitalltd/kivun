@@ -221,6 +221,15 @@
 			return;
 		}
 
+		// Manager — update an existing publisher's details.
+		if (form.matches('.kivun-update-employer-form')) {
+			e.preventDefault();
+			handleFormSubmit(form, 'kivun_update_employer', function () {
+				window.location.reload();
+			});
+			return;
+		}
+
 		// Employer dashboard — post/update job.
 		if (form.matches('.kivun-employer-form')) {
 			e.preventDefault();
@@ -244,28 +253,135 @@
 		window.location.href = url.toString();
 	});
 
+	function kivunCloseForm(id) {
+		var wrap = document.getElementById(id);
+		if (!wrap) { return; }
+		wrap.hidden = true;
+		var frm = wrap.querySelector('form');
+		if (frm) {
+			frm.reset();
+			var frmErr = frm.querySelector('.kivun-error');
+			if (frmErr) { frmErr.style.display = 'none'; }
+		}
+	}
+
+	function kivunOpenForm(id) {
+		var wrap = document.getElementById(id);
+		if (!wrap) { return null; }
+		wrap.hidden = false;
+		wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+		return wrap;
+	}
+
 	document.addEventListener('click', function (e) {
-		if (e.target.closest('#kivun-add-employer')) {
-			var openF = document.getElementById('kivun-add-employer-form');
+		// Open the "add publisher" form (button exists in two places).
+		if (e.target.closest('#kivun-add-employer, #kivun-add-employer-2')) {
+			var openF = kivunOpenForm('kivun-add-employer-form');
 			if (openF) {
-				openF.hidden = false;
 				var firstField = openF.querySelector('input[name="display_name"]');
 				if (firstField) { firstField.focus(); }
-				openF.scrollIntoView({ behavior: 'smooth', block: 'start' });
 			}
 		}
 		if (e.target.closest('#kivun-cancel-add-employer')) {
-			var closeF = document.getElementById('kivun-add-employer-form');
-			if (closeF) {
-				closeF.hidden = true;
-				var frm = closeF.querySelector('form');
-				if (frm) {
-					frm.reset();
-					var frmErr = frm.querySelector('.kivun-error');
-					if (frmErr) { frmErr.style.display = 'none'; }
-				}
+			kivunCloseForm('kivun-add-employer-form');
+		}
+		if (e.target.closest('#kivun-cancel-edit-employer')) {
+			kivunCloseForm('kivun-edit-employer-form');
+		}
+
+		// Edit an existing publisher — populate and open the inline form.
+		var empEdit = e.target.closest('.kivun-edit-employer');
+		if (empEdit) {
+			var empRow2 = document.querySelector('[data-employer-row="' + empEdit.dataset.id + '"]');
+			var empWrap = kivunOpenForm('kivun-edit-employer-form');
+			if (empRow2 && empWrap) {
+				var empForm = empWrap.querySelector('form');
+				var setEmp = function (name, value) {
+					var el = empForm.querySelector('[name="' + name + '"]');
+					if (el) { el.value = value || ''; }
+				};
+				setEmp('employer_id', empEdit.dataset.id);
+				setEmp('display_name', empRow2.dataset.name);
+				setEmp('company', empRow2.dataset.company);
+				setEmp('email', empRow2.dataset.email);
+				setEmp('phone', empRow2.dataset.phone);
+				var focusEmp = empForm.querySelector('input[name="company"]');
+				if (focusEmp) { focusEmp.focus(); }
 			}
 		}
+	});
+
+	// ── Manager — send a set-password link to a publisher ────────────────────────
+	document.addEventListener('click', function (e) {
+		var sendBtn = e.target.closest('.kivun-send-login');
+		if (!sendBtn) { return; }
+		if (!window.confirm(kivun.i18n.confirm_send_login)) { return; }
+
+		var note = sendBtn.parentNode.querySelector('.kivun-saved-indicator');
+		sendBtn.disabled = true;
+		post(params({
+			action: 'kivun_send_employer_login',
+			nonce: kivun.nonce,
+			employer_id: sendBtn.dataset.id
+		})).then(function (res) {
+			sendBtn.disabled = false;
+			if (note) {
+				note.textContent = res.success ? res.data.message : res.data.message;
+				note.style.display = 'inline';
+				setTimeout(function () { note.style.display = 'none'; }, 4000);
+			}
+		}).catch(function () { sendBtn.disabled = false; });
+	});
+
+	// ── Manager — disable / re-enable a publisher ────────────────────────────────
+	document.addEventListener('click', function (e) {
+		var togBtn = e.target.closest('.kivun-toggle-employer');
+		if (!togBtn) { return; }
+		var willDisable = togBtn.dataset.disable === '1';
+		if (willDisable && !window.confirm(kivun.i18n.confirm_disable_employer)) { return; }
+
+		togBtn.disabled = true;
+		post(params({
+			action: 'kivun_toggle_employer',
+			nonce: kivun.nonce,
+			employer_id: togBtn.dataset.id,
+			disable: willDisable ? '1' : '0'
+		})).then(function (res) {
+			if (res.success) {
+				window.location.reload();
+			} else {
+				togBtn.disabled = false;
+				window.alert(res.data.message);
+			}
+		}).catch(function () { togBtn.disabled = false; });
+	});
+
+	// ── Employer dashboard — renew an expired job ────────────────────────────────
+	document.addEventListener('click', function (e) {
+		var renewBtn = e.target.closest('.kivun-renew-job');
+		if (!renewBtn) { return; }
+
+		var today = new Date();
+		today.setDate(today.getDate() + 30);
+		var suggested = today.toISOString().slice(0, 10);
+
+		var newDate = window.prompt(kivun.i18n.renew_prompt, suggested);
+		if (!newDate) { return; }
+
+		renewBtn.disabled = true;
+		post(params({
+			action: 'kivun_renew_job',
+			nonce: kivun.nonce,
+			job_id: renewBtn.dataset.id,
+			deadline: newDate
+		})).then(function (res) {
+			if (res.success) {
+				window.location.reload();
+			} else {
+				renewBtn.disabled = false;
+				window.alert(res.data.message);
+			}
+		}).catch(function () { renewBtn.disabled = false; });
 	});
 
 	// ── Employer dashboard — add / edit job form ─────────────────────────────────
@@ -343,6 +459,7 @@
 				setField('region', row.dataset.region);
 				setField('field', row.dataset.field);
 				setField('employer_id', row.dataset.employer);
+				setField('deadline', row.dataset.deadline);
 				kivunSetEditor('kivunjobdesc', row.dataset.description);
 				kivunSetEditor('kivunjobreq', row.dataset.requirements);
 

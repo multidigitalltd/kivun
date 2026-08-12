@@ -748,6 +748,13 @@ class Kivun_Admin {
 				<th><?php esc_html_e( 'דרישות', 'kivun' ); ?></th>
 				<td><textarea name="_kivun_requirements" rows="4"><?php echo esc_textarea( $f( '_kivun_requirements' ) ); ?></textarea></td>
 			</tr>
+			<tr>
+				<th><?php esc_html_e( 'תאריך סגירה', 'kivun' ); ?></th>
+				<td>
+					<input type="date" name="_kivun_deadline" value="<?php echo esc_attr( $f( '_kivun_deadline' ) ); ?>">
+					<small><?php esc_html_e( 'לאחר תאריך זה המשרה תרד מהאתר אוטומטית. ריק = ללא הגבלה.', 'kivun' ); ?></small>
+				</td>
+			</tr>
 		</table>
 		<?php
 	}
@@ -878,6 +885,7 @@ class Kivun_Admin {
 				'_kivun_description'    => 'kses',
 				'_kivun_salary'         => 'text',
 				'_kivun_requirements'   => 'kses',
+				'_kivun_deadline'       => 'text',
 			) as $key => $type ) {
 				self::save_field( $post_id, $key, $type );
 			}

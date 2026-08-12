@@ -119,6 +119,42 @@ class Kivun_Mailer {
 	}
 
 	/**
+	 * Confirm to the applicant that their application was received.
+	 * Sent in addition to the employer notification, never instead of it.
+	 *
+	 * @param string $applicant_email The applicant's email address.
+	 * @param string $applicant_name  The applicant's name.
+	 * @param string $job_title       The job title applied for.
+	 * @param string $company         Optional company name.
+	 * @return void
+	 */
+	public static function send_application_confirmation( string $applicant_email, string $applicant_name, string $job_title, string $company = '' ): void {
+		if ( ! is_email( $applicant_email ) ) {
+			return;
+		}
+
+		$site = get_bloginfo( 'name' );
+
+		wp_mail(
+			$applicant_email,
+			/* translators: %s: job title. */
+			sprintf( __( 'אישור הגשת מועמדות — %s', 'kivun' ), $job_title ),
+			sprintf(
+				/* translators: 1: applicant name, 2: job title, 3: company line, 4: site name. */
+				'<p>שלום %1$s,</p>
+				<p>קורות החיים שלך למשרה <strong>%2$s</strong>%3$s התקבלו בהצלחה ונשלחו למפרסם המשרה.</p>
+				<p>המפרסם יפנה אליך ישירות אם המועמדות תימצא מתאימה. שימו לב שלא כל פנייה מקבלת מענה.</p>
+				<p>בהצלחה!<br>צוות %4$s</p>',
+				esc_html( $applicant_name ),
+				esc_html( $job_title ),
+				$company ? ' ב<strong>' . esc_html( $company ) . '</strong>' : '',
+				esc_html( $site )
+			),
+			self::headers()
+		);
+	}
+
+	/**
 	 * Build the default email headers.
 	 *
 	 * @return array

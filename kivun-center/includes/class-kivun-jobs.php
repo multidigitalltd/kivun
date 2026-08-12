@@ -393,6 +393,14 @@ class Kivun_Jobs {
 				compact( 'name', 'email', 'phone', 'message' ) + array( 'cv_path' => $cv_path )
 			);
 		}
+
+		// Reassure the applicant that their CV arrived.
+		Kivun_Mailer::send_application_confirmation(
+			$email,
+			$name,
+			get_the_title( $job_id ),
+			(string) get_post_meta( $job_id, '_kivun_company', true )
+		);
 		do_action( 'kivun_after_application', $job_id, compact( 'name', 'email', 'phone', 'message' ) + array( 'cv_path' => $cv_path ) );
 
 		wp_send_json_success(

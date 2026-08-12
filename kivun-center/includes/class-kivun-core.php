@@ -179,12 +179,15 @@ class Kivun_Core {
 				'ajax_url' => admin_url( 'admin-ajax.php' ),
 				'nonce'    => wp_create_nonce( 'kivun_nonce' ),
 				'i18n'     => array(
-					'sending'        => __( 'שולח...', 'kivun' ),
-					'submit'         => __( 'שלח', 'kivun' ),
-					'confirm_delete' => __( 'האם למחוק משרה זו?', 'kivun' ),
-					'error_generic'  => __( 'אירעה שגיאה, נסה שוב.', 'kivun' ),
-					'saved'          => __( '✓ נשמר', 'kivun' ),
-					'save_error'     => __( 'שגיאה', 'kivun' ),
+					'sending'                  => __( 'שולח...', 'kivun' ),
+					'submit'                   => __( 'שלח', 'kivun' ),
+					'confirm_delete'           => __( 'האם למחוק משרה זו?', 'kivun' ),
+					'error_generic'            => __( 'אירעה שגיאה, נסה שוב.', 'kivun' ),
+					'saved'                    => __( '✓ נשמר', 'kivun' ),
+					'save_error'               => __( 'שגיאה', 'kivun' ),
+					'confirm_send_login'       => __( 'לשלוח למפרסם מייל עם קישור להגדרת סיסמה?', 'kivun' ),
+					'confirm_disable_employer' => __( 'להשבית את המפרסם? הוא לא יוכל להתחבר ולא יופיע ברשימת הפרסום. המשרות וההגשות שלו יישמרו.', 'kivun' ),
+					'renew_prompt'             => __( 'תאריך סגירה חדש למשרה (YYYY-MM-DD):', 'kivun' ),
 				),
 			)
 		);

@@ -223,6 +223,24 @@
 .kivun-field-hint { margin: .35rem 0 0; font-size: .78rem; color: var(--kivun-muted); }
 .kivun-mgr-only select { border-color: var(--kivun-primary); background: #f7faff; }
 .kivun-row-owner { display: block; font-size: .78rem; color: var(--kivun-muted); margin-top: .15rem; }
+
+/* Publishers table + job expiry */
+.kivun-emp-actions { display: flex; flex-wrap: wrap; gap: .35rem; align-items: center; }
+.kivun-row-disabled { opacity: .62; }
+.kivun-row-disabled td strong { text-decoration: line-through; }
+.kivun-tab-badge--soft { background: var(--kivun-border); color: var(--kivun-text); }
+.kivun-app-owner { font-size: .85rem; color: var(--kivun-muted); }
+.kivun-deadline-past { color: var(--kivun-error); font-weight: 600; }
+.kivun-expired-tag {
+	display: inline-block;
+	margin-inline-start: .35rem;
+	padding: .1rem .45rem;
+	font-size: .72rem;
+	font-weight: 700;
+	color: #fff;
+	background: var(--kivun-error);
+	border-radius: 999px;
+}
 /* Keep the publish-job form labels glued above their fields (theme-proof).
    Plain block layout — no flex/gap/order tricks that themes can hijack. */
 .kivun-new-job-form .kivun-form-row {
