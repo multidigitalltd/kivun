@@ -119,7 +119,59 @@ foreach ( $jobs as $j ) {
 	}
 }
 ?>
-<div class="kivun-employer-dashboard" dir="rtl"<?php echo $is_manager ? ' data-manager="1"' : ''; ?>>
+<?php
+// When the dashboard is embedded in the content console it already sits inside
+// that shell, so the header and stat cards would be a second, duplicate chrome.
+$kivun_embedded = did_action( 'kivun_console_rendering' ) > 0;
+$kivun_user     = wp_get_current_user();
+?>
+<div class="kivun-employer-dashboard <?php echo $kivun_embedded ? 'is-embedded' : 'kivun-cc-console'; ?>" dir="rtl"<?php echo $is_manager ? ' data-manager="1"' : ''; ?>>
+
+	<?php if ( ! $kivun_embedded ) : ?>
+		<header class="kivun-cc-topbar">
+			<div class="kivun-cc-topbar__brand">
+				<span class="kivun-cc-topbar__mark" aria-hidden="true"><?php echo kivun_icon( 'jobs' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?></span>
+				<div>
+					<h2 class="kivun-cc-topbar__title"><?php esc_html_e( 'ניהול לוח המשרות', 'kivun' ); ?></h2>
+					<p class="kivun-cc-topbar__sub"><?php esc_html_e( 'משרות, מפרסמים והגשות מועמדות', 'kivun' ); ?></p>
+				</div>
+			</div>
+			<div class="kivun-cc-topbar__user">
+				<span class="kivun-cc-topbar__hello">
+					<?php
+					/* translators: %s: display name of the logged-in user. */
+					echo esc_html( sprintf( __( 'שלום, %s', 'kivun' ), $kivun_user->display_name ) );
+					?>
+				</span>
+				<a class="kivun-cc-topbar__logout" href="<?php echo esc_url( wp_logout_url( get_permalink() ) ); ?>"><?php esc_html_e( 'יציאה', 'kivun' ); ?></a>
+			</div>
+		</header>
+
+		<div class="kivun-cc-stats">
+			<div class="kivun-cc-stat">
+				<span class="kivun-cc-stat__num"><?php echo esc_html( number_format_i18n( count( $jobs ) ) ); ?></span>
+				<span class="kivun-cc-stat__label"><?php esc_html_e( 'משרות', 'kivun' ); ?></span>
+			</div>
+			<div class="kivun-cc-stat">
+				<span class="kivun-cc-stat__num"><?php echo esc_html( number_format_i18n( $published_jobs ) ); ?></span>
+				<span class="kivun-cc-stat__label"><?php esc_html_e( 'פעילות', 'kivun' ); ?></span>
+			</div>
+			<div class="kivun-cc-stat">
+				<span class="kivun-cc-stat__num"><?php echo esc_html( number_format_i18n( $total_apps ) ); ?></span>
+				<span class="kivun-cc-stat__label"><?php esc_html_e( 'הגשות', 'kivun' ); ?></span>
+			</div>
+			<div class="kivun-cc-stat kivun-cc-stat--alert">
+				<span class="kivun-cc-stat__num"><?php echo esc_html( number_format_i18n( $new_apps ) ); ?></span>
+				<span class="kivun-cc-stat__label"><?php esc_html_e( 'ממתינות לטיפול', 'kivun' ); ?></span>
+			</div>
+			<?php if ( $is_manager ) : ?>
+				<div class="kivun-cc-stat">
+					<span class="kivun-cc-stat__num"><?php echo esc_html( number_format_i18n( count( $employers ) ) ); ?></span>
+					<span class="kivun-cc-stat__label"><?php esc_html_e( 'מפרסמים', 'kivun' ); ?></span>
+				</div>
+			<?php endif; ?>
+		</div>
+	<?php endif; ?>
 
 	<?php if ( $is_manager ) : ?>
 		<div class="kivun-mgr-bar">
@@ -137,7 +189,7 @@ foreach ( $jobs as $j ) {
 				</select>
 			</div>
 			<button type="button" class="kivun-btn kivun-btn--outline kivun-btn--sm" id="kivun-add-employer">
-				+ <?php esc_html_e( 'מפרסם חדש', 'kivun' ); ?>
+				<?php echo kivun_icon( 'plus' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?><?php esc_html_e( 'מפרסם חדש', 'kivun' ); ?>
 			</button>
 		</div>
 
@@ -184,7 +236,7 @@ foreach ( $jobs as $j ) {
 		</div>
 	<?php endif; ?>
 
-	<div class="kivun-tabs" role="tablist" aria-label="<?php esc_attr_e( 'ניהול אזור מעסיק', 'kivun' ); ?>">
+	<div class="kivun-tabs kivun-cc-tabs" role="tablist" aria-label="<?php esc_attr_e( 'ניהול אזור מעסיק', 'kivun' ); ?>">
 		<button type="button" class="kivun-tab is-active" data-tab="jobs" role="tab" id="kivun-tab-jobs" aria-controls="kivun-panel-jobs" aria-selected="true">
 			<?php esc_html_e( 'המשרות שלי', 'kivun' ); ?>
 		</button>
@@ -208,7 +260,7 @@ foreach ( $jobs as $j ) {
 		<div class="kivun-dashboard-header">
 			<h2><?php esc_html_e( 'המשרות שלי', 'kivun' ); ?></h2>
 			<button type="button" class="kivun-btn kivun-btn--primary" id="kivun-toggle-new-job">
-				+ <?php esc_html_e( 'פרסם משרה חדשה', 'kivun' ); ?>
+				<?php echo kivun_icon( 'plus' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?><?php esc_html_e( 'פרסם משרה חדשה', 'kivun' ); ?>
 			</button>
 		</div>
 
@@ -499,7 +551,7 @@ foreach ( $jobs as $j ) {
 			<h2><?php esc_html_e( 'הגשות מועמדות', 'kivun' ); ?></h2>
 			<?php if ( $total_apps ) : ?>
 				<a class="kivun-btn kivun-btn--outline kivun-btn--sm" href="<?php echo esc_url( Kivun_Export::url( 'applications', 0, $acting_as ) ); ?>">
-					⬇ <?php esc_html_e( 'ייצוא CSV', 'kivun' ); ?>
+					<?php echo kivun_icon( 'download' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?><?php esc_html_e( 'ייצוא CSV', 'kivun' ); ?>
 				</a>
 			<?php endif; ?>
 		</div>
@@ -612,7 +664,7 @@ foreach ( $jobs as $j ) {
 						<td>
 							<?php if ( $cv_url ) : ?>
 								<a class="kivun-btn kivun-btn--sm kivun-btn--outline" href="<?php echo esc_url( $cv_url ); ?>" target="_blank" rel="noopener">
-									<span aria-hidden="true">⬇</span>
+									<?php echo kivun_icon( 'download' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?>
 									<?php
 									/* translators: %s: applicant name. */
 									echo esc_html( sprintf( __( 'הורדת קו"ח של %s', 'kivun' ), $app->applicant_name ) );
@@ -670,7 +722,7 @@ foreach ( $jobs as $j ) {
 			<div class="kivun-dashboard-header">
 				<h2><?php esc_html_e( 'מפרסמים', 'kivun' ); ?></h2>
 				<button type="button" class="kivun-btn kivun-btn--primary kivun-btn--sm" id="kivun-add-employer-2">
-					+ <?php esc_html_e( 'מפרסם חדש', 'kivun' ); ?>
+					<?php echo kivun_icon( 'plus' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?><?php esc_html_e( 'מפרסם חדש', 'kivun' ); ?>
 				</button>
 			</div>
 

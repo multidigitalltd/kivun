@@ -875,7 +875,6 @@
 .kivun-cc-card { background: #fff; border: 1px solid var(--kivun-border); border-radius: 16px; padding: 1.25rem 1.35rem; box-shadow: 0 2px 10px rgba(0,0,0,.05); }
 .kivun-cc-card.kivun-cc-section[data-type="event"] { border: 2px solid var(--kivun-accent); background: #fbf7f8; box-shadow: 0 2px 14px rgba(0,0,0,.10); }
 .kivun-cc-card.kivun-cc-section[data-type="event"] .kivun-cc-h3 { color: var(--kivun-accent); display: flex; align-items: center; gap: .4rem; }
-.kivun-cc-card.kivun-cc-section[data-type="event"] .kivun-cc-h3::before { content: "📅"; }
 .kivun-cc-h3 { margin: 0 0 .85rem; font-size: 1.05rem; font-weight: 700; color: var(--kivun-accent); }
 .kivun-cc-label { display: block; font-weight: 700; font-size: 1rem; margin-bottom: .5rem; color: var(--kivun-text); }
 .kivun-cc-sub { display: block; font-weight: 600; font-size: .85rem; margin: .75rem 0 .3rem; color: #444; }
@@ -930,7 +929,14 @@
 	direction: rtl;
 	background: var(--cc-canvas);
 	border-radius: 20px;
+	box-sizing: border-box;
+	max-width: 100%;
+	overflow: hidden;
+	clear: both;
 }
+/* The sticky sidebar can ride over whatever follows the shortcode (typically
+   the theme footer) when the form column is taller than the viewport. */
+.kivun-cc-console .kivun-cc-side { position: static; top: auto; }
 .kivun-cc-console .kivun-cc-front { max-width: none; }
 .kivun-cc-console .kivun-cc-head { margin-bottom: 1.1rem; }
 .kivun-cc-console .kivun-cc-title { font-size: 1.3rem; font-weight: 800; margin: 0 0 .2rem; }
@@ -1063,9 +1069,6 @@
 	text-transform: uppercase;
 	color: #64748b;
 	white-space: nowrap;
-	position: sticky;
-	top: 0;
-	z-index: 2;
 	border-bottom: 2px solid var(--kivun-border);
 }
 .kivun-cc-table tbody tr:last-child td { border-bottom: none; }
@@ -1183,6 +1186,46 @@
 .kivun-cc-leadbar .kivun-stat { display: inline-flex; align-items: baseline; gap: .35rem; flex: 0 0 auto; }
 .kivun-cc-leadbar .kivun-stat strong { display: inline; font-size: 1rem; margin: 0; color: var(--cc-ink); }
 
+/* Icons — stroke SVGs that inherit the surrounding colour. */
+.kivun-icon { width: 1.05em; height: 1.05em; flex: 0 0 auto; vertical-align: -.15em; }
+.kivun-cc-tabicon { width: 1.15em; height: 1.15em; }
+.kivun-cc-topbar__mark .kivun-icon { width: 22px; height: 22px; }
+.kivun-cc-console .kivun-cc-btn,
+.kivun-employer-dashboard .kivun-btn { display: inline-flex; align-items: center; gap: .4rem; }
+.kivun-cc-h3 .kivun-icon,
+.kivun-cc-section h3 .kivun-icon { margin-inline-end: .35rem; }
+
+/* Compact icon-only action button (row-level destructive actions). */
+.kivun-cc-iconbtn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 32px;
+	height: 32px;
+	padding: 0;
+	border: 1px solid var(--cc-line, #e5e7eb);
+	border-radius: 8px;
+	background: #fff;
+	color: var(--kivun-muted);
+	cursor: pointer;
+	transition: background .15s, color .15s, border-color .15s;
+}
+.kivun-cc-iconbtn:hover { background: #f3f4f6; color: var(--cc-ink, #232323); }
+.kivun-cc-iconbtn .kivun-icon { width: 17px; height: 17px; }
+.kivun-cc-iconbtn--danger:hover { background: #dc2626; border-color: #dc2626; color: #fff; }
+
+/* Date range filter */
+.kivun-cc-daterange { display: inline-flex; align-items: center; gap: .35rem; }
+.kivun-cc-daterange label { font-size: .8rem; color: var(--kivun-muted); font-weight: 600; }
+.kivun-cc-daterange input[type="date"] {
+	padding: .45rem .55rem;
+	border: 1px solid var(--kivun-border);
+	border-radius: 9px;
+	background: #fff;
+	font: inherit;
+	font-size: .82rem;
+}
+
 /* Status pills inside the console tables. */
 .kivun-cc-table .kivun-status {
 	display: inline-block;
@@ -1196,9 +1239,39 @@
 .kivun-cc-table .kivun-status--draft,
 .kivun-cc-table .kivun-status--pending { background: #fef3c7; color: #a16207; }
 
-/* The jobs board is embedded inside the console — strip its outer chrome so
-   it reads as one more workspace rather than a page-within-a-page. */
-.kivun-cc-console .kivun-employer-dashboard { margin: 0; }
+/* The jobs board shares the console's visual language, both standalone (it
+   carries .kivun-cc-console itself) and embedded inside the content console. */
+.kivun-employer-dashboard.kivun-cc-console .kivun-jobs-table-wrap,
+.kivun-employer-dashboard.kivun-cc-console .kivun-apps-table-wrap,
+.kivun-cc-console .kivun-jobs-table-wrap,
+.kivun-cc-console .kivun-apps-table-wrap {
+	border: 1px solid var(--cc-line);
+	border-radius: 14px;
+	background: #fff;
+	box-shadow: 0 1px 3px rgba(15,23,42,.05);
+}
+.kivun-cc-console .kivun-jobs-table thead th,
+.kivun-cc-console .kivun-apps-table thead th {
+	background: #f8fafc;
+	font-size: .74rem;
+	font-weight: 800;
+	letter-spacing: .02em;
+	color: #64748b;
+	border-bottom: 2px solid var(--cc-line);
+}
+.kivun-cc-console .kivun-jobs-table tbody tr:nth-child(even),
+.kivun-cc-console .kivun-apps-table tbody tr:nth-child(even) { background: #fcfcfd; }
+.kivun-cc-console .kivun-dashboard-header h2 { font-size: 1.3rem; font-weight: 800; color: var(--cc-ink); }
+.kivun-cc-console .kivun-apps-stats { gap: .7rem; }
+.kivun-cc-console .kivun-apps-stats .kivun-stat {
+	background: #fff;
+	border: 1px solid var(--cc-line);
+	border-radius: 14px;
+	padding: .8rem 1rem;
+}
+
+/* Embedded copy sits inside the console shell already — no second chrome. */
+.kivun-cc-console .kivun-employer-dashboard.is-embedded { margin: 0; padding: 0; background: none; border: none; }
 .kivun-cc-console .kivun-employer-dashboard .kivun-tabs {
 	background: #f8fafc;
 	border: 1px solid var(--cc-line);

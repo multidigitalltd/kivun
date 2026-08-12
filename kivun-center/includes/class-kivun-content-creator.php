@@ -299,7 +299,7 @@ class Kivun_Content_Creator {
 					<div class="kivun-lp-main">
 
 						<div class="kivun-lp-card kivun-cc-genai">
-							<label class="kivun-lp-label"><?php esc_html_e( '✨ יצירת תוכן אוטומטית (AI)', 'kivun' ); ?></label>
+							<label class="kivun-lp-label"><?php esc_html_e( 'יצירת תוכן אוטומטית (AI)', 'kivun' ); ?></label>
 							<?php if ( ! $ai_configured ) : ?>
 								<p class="kivun-cc-ai-warn">
 									<?php
@@ -326,7 +326,7 @@ class Kivun_Content_Creator {
 							<input type="file" class="kivun-lp-input kivun-cc-gen-image" accept="image/*">
 							<p style="margin:.5rem 0 0">
 								<button type="button" class="button kivun-cc-gen-btn" data-ajax="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>" data-nonce="<?php echo esc_attr( wp_create_nonce( 'kivun_ai_content' ) ); ?>">
-									<?php esc_html_e( '✨ צור תוכן', 'kivun' ); ?>
+									<?php echo kivun_icon( 'sparkle' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?><?php esc_html_e( 'צור תוכן', 'kivun' ); ?>
 								</button>
 								<span class="kivun-cc-gen-status" style="font-size:12px;color:#555;margin-inline-start:.5rem"></span>
 							</p>
@@ -473,7 +473,7 @@ class Kivun_Content_Creator {
 
 						<!-- Event-only extras -->
 						<div class="kivun-lp-card kivun-cc-section" data-type="event" <?php echo isset( $group_posts['event'] ) ? '' : 'hidden'; ?>>
-							<h3><?php esc_html_e( 'אירוע — פרטים נוספים', 'kivun' ); ?></h3>
+							<h3><?php echo kivun_icon( 'calendar' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?><?php esc_html_e( 'אירוע — פרטים נוספים', 'kivun' ); ?></h3>
 							<p class="kivun-lp-hint"><?php esc_html_e( 'לאירוע יש שדות ייחודיים משלו כאן. המועד ותאריך האירוע נלקחים מהשדות שבבלוק זה — לא מהשדות "משך" / "תאריך" הכלליים שמעלה.', 'kivun' ); ?></p>
 							<label class="kivun-lp-sub"><?php esc_html_e( 'תאריך האירוע (סוגר את ההרשמה)', 'kivun' ); ?></label>
 							<input type="date" name="event_date" class="kivun-lp-input" dir="ltr" value="<?php echo esc_attr( $v['event_date'] ); ?>">
@@ -566,7 +566,7 @@ class Kivun_Content_Creator {
 									<textarea class="kivun-lp-input kivun-cc-ai-prompt" rows="2" placeholder="<?php esc_attr_e( 'אם ריק — ייווצר מהכותרת והתיאור הקצר', 'kivun' ); ?>"></textarea>
 									<p style="margin:.5rem 0 .35rem">
 										<button type="button" class="button kivun-cc-ai-btn" data-ajax="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>" data-nonce="<?php echo esc_attr( wp_create_nonce( 'kivun_ai_image' ) ); ?>">
-											<?php esc_html_e( '✨ צור תמונה עם AI', 'kivun' ); ?>
+											<?php echo kivun_icon( 'sparkle' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?><?php esc_html_e( 'צור תמונה עם AI', 'kivun' ); ?>
 										</button>
 									</p>
 									<span class="kivun-cc-ai-status" style="font-size:12px;color:#555"></span>
@@ -1221,26 +1221,26 @@ class Kivun_Content_Creator {
 		$console_tabs = array(
 			'form'    => array(
 				'label' => __( 'פרסום תוכן', 'kivun' ),
-				'icon'  => '✎',
+				'icon'  => 'publish',
 				'count' => null,
 			),
 			'library' => array(
 				'label' => __( 'התכנים שלי', 'kivun' ),
-				'icon'  => '▦',
+				'icon'  => 'library',
 				'count' => $stats['content'],
 			),
 		);
 		if ( $show_leads ) {
 			$console_tabs['leads'] = array(
 				'label' => __( 'לידים והרשמות', 'kivun' ),
-				'icon'  => '👥',
+				'icon'  => 'leads',
 				'count' => $stats['leads'],
 			);
 		}
 		if ( $show_jobs ) {
 			$console_tabs['jobs'] = array(
 				'label' => __( 'לוח משרות', 'kivun' ),
-				'icon'  => '💼',
+				'icon'  => 'jobs',
 				'count' => $stats['jobs'],
 			);
 		}
@@ -1249,7 +1249,7 @@ class Kivun_Content_Creator {
 
 			<header class="kivun-cc-topbar">
 				<div class="kivun-cc-topbar__brand">
-					<span class="kivun-cc-topbar__mark" aria-hidden="true">⌂</span>
+					<span class="kivun-cc-topbar__mark" aria-hidden="true"><?php echo kivun_icon( 'home' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?></span>
 					<div>
 						<h2 class="kivun-cc-topbar__title"><?php esc_html_e( 'מערכת ניהול תוכן', 'kivun' ); ?></h2>
 						<p class="kivun-cc-topbar__sub"><?php esc_html_e( 'תכנים, פניות ולוח משרות — במקום אחד', 'kivun' ); ?></p>
@@ -1308,7 +1308,7 @@ class Kivun_Content_Creator {
 						aria-selected="<?php echo $is_active ? 'true' : 'false'; ?>"
 						<?php echo $is_active ? '' : 'tabindex="-1"'; ?>
 					>
-						<span class="kivun-cc-tabicon" aria-hidden="true"><?php echo esc_html( $tab_meta['icon'] ); ?></span>
+						<?php echo kivun_icon( $tab_meta['icon'], 'kivun-cc-tabicon' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?>
 						<?php echo esc_html( $tab_meta['label'] ); ?>
 						<?php if ( $tab_meta['count'] ) : ?>
 							<span class="kivun-tab-badge kivun-tab-badge--soft"><?php echo esc_html( number_format_i18n( $tab_meta['count'] ) ); ?></span>
@@ -1339,7 +1339,14 @@ class Kivun_Content_Creator {
 							<p class="kivun-cc-lead"><?php esc_html_e( 'מערכת נפרדת: משרות, מפרסמים והגשות מועמדות עם קורות חיים — לא מעורבב עם פניות התכנים.', 'kivun' ); ?></p>
 						</div>
 					</div>
-					<?php kivun_get_template( 'employer/dashboard.php' ); ?>
+					<?php
+					/**
+					 * Signals that the jobs dashboard is rendering inside the
+					 * content console, so it skips its own header/stat chrome.
+					 */
+					do_action( 'kivun_console_rendering' );
+					kivun_get_template( 'employer/dashboard.php' );
+					?>
 				</section>
 			<?php endif; ?>
 
@@ -1781,7 +1788,7 @@ class Kivun_Content_Creator {
 					<div class="kivun-cc-main">
 
 						<div class="kivun-cc-card kivun-cc-genai">
-							<label class="kivun-cc-label"><?php esc_html_e( '✨ יצירת תוכן אוטומטית (AI)', 'kivun' ); ?></label>
+							<label class="kivun-cc-label"><?php esc_html_e( 'יצירת תוכן אוטומטית (AI)', 'kivun' ); ?></label>
 							<?php if ( ! $ai_configured ) : ?>
 								<p class="kivun-cc-ai-warn"><?php esc_html_e( '⚠️ היצירה האוטומטית אינה פעילה כרגע (לא הוגדר מפתח API / נגמרו הקרדיטים). פנו למנהל האתר.', 'kivun' ); ?></p>
 							<?php endif; ?>
@@ -1799,7 +1806,7 @@ class Kivun_Content_Creator {
 								<input type="file" class="kivun-cc-input kivun-cc-gen-image" accept="image/*">
 							<?php endif; ?>
 							<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost kivun-cc-gen-btn" data-ajax="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>" data-nonce="<?php echo esc_attr( wp_create_nonce( 'kivun_ai_content' ) ); ?>">
-								<?php esc_html_e( '✨ צור תוכן', 'kivun' ); ?>
+								<?php echo kivun_icon( 'sparkle' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?><?php esc_html_e( 'צור תוכן', 'kivun' ); ?>
 							</button>
 							<span class="kivun-cc-gen-status" role="status" aria-live="polite"></span>
 						</div>
@@ -1902,7 +1909,7 @@ class Kivun_Content_Creator {
 						</div>
 
 						<div class="kivun-cc-card kivun-cc-section" data-type="event" <?php echo isset( $group_posts['event'] ) ? '' : 'hidden'; ?>>
-							<h3 class="kivun-cc-h3"><?php esc_html_e( 'אירוע — פרטים נוספים', 'kivun' ); ?></h3>
+							<h3 class="kivun-cc-h3"><?php echo kivun_icon( 'calendar' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?><?php esc_html_e( 'אירוע — פרטים נוספים', 'kivun' ); ?></h3>
 							<p class="kivun-cc-hint"><?php esc_html_e( 'לאירוע יש שדות ייחודיים משלו כאן. המועד ותאריך האירוע נלקחים מהשדות שבבלוק זה — לא מהשדות "משך" / "תאריך" הכלליים שמעלה.', 'kivun' ); ?></p>
 							<label class="kivun-cc-sub"><?php esc_html_e( 'תאריך האירוע (סוגר את ההרשמה)', 'kivun' ); ?></label>
 							<input type="date" name="event_date" class="kivun-cc-input" dir="ltr" value="<?php echo esc_attr( $v['event_date'] ); ?>">
@@ -1987,7 +1994,7 @@ class Kivun_Content_Creator {
 										<label class="kivun-cc-sub"><?php esc_html_e( 'תיאור חופשי לתמונה (אופציונלי)', 'kivun' ); ?></label>
 										<textarea class="kivun-cc-input kivun-cc-textarea kivun-cc-ai-prompt" rows="2" placeholder="<?php esc_attr_e( 'אם ריק — התמונה תיווצר מהכותרת והתיאור הקצר של העמוד', 'kivun' ); ?>"></textarea>
 										<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost kivun-cc-ai-btn" data-ajax="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>" data-nonce="<?php echo esc_attr( wp_create_nonce( 'kivun_ai_image' ) ); ?>">
-											<?php esc_html_e( '✨ צור תמונה עם AI', 'kivun' ); ?>
+											<?php echo kivun_icon( 'sparkle' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?><?php esc_html_e( 'צור תמונה עם AI', 'kivun' ); ?>
 										</button>
 										<span class="kivun-cc-ai-status" role="status" aria-live="polite"></span>
 									</div>
@@ -2150,7 +2157,7 @@ class Kivun_Content_Creator {
 							<td><?php echo esc_html( $g['date'] ); ?></td>
 							<td class="kivun-cc-rowactions">
 								<?php if ( '' !== $view_url ) : ?>
-									<a class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost" href="<?php echo esc_url( $view_url ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'צפייה ↗', 'kivun' ); ?></a>
+									<a class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost" href="<?php echo esc_url( $view_url ); ?>" target="_blank" rel="noopener"><?php echo kivun_icon( 'external' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?><?php esc_html_e( 'צפייה', 'kivun' ); ?></a>
 								<?php endif; ?>
 								<a class="kivun-cc-btn kivun-cc-btn--sm" href="<?php echo esc_url( $edit_url ); ?>"><?php esc_html_e( 'עריכה', 'kivun' ); ?></a>
 								<?php echo self::duplicate_form( (int) ( $g['view_id'] ?? 0 ), $page_url, 'kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built from escaped parts in duplicate_form(). ?>
@@ -2166,6 +2173,20 @@ class Kivun_Content_Creator {
 			<?php endif; ?>
 		</div>
 		<?php
+	}
+
+	/**
+	 * Accept a Y-m-d date from a date input, or '' when it is not a real date.
+	 *
+	 * @param string $raw Raw value.
+	 * @return string
+	 */
+	private static function valid_date( string $raw ): string {
+		if ( '' === $raw ) {
+			return '';
+		}
+		$d = DateTimeImmutable::createFromFormat( '!Y-m-d', $raw );
+		return ( $d && $d->format( 'Y-m-d' ) === $raw ) ? $raw : '';
 	}
 
 	/**
@@ -2212,7 +2233,17 @@ class Kivun_Content_Creator {
 		$search         = isset( $_GET['kivun_ls'] ) ? sanitize_text_field( wp_unslash( $_GET['kivun_ls'] ) ) : '';
 		$per_page       = isset( $_GET['kivun_lpp'] ) ? absint( wp_unslash( $_GET['kivun_lpp'] ) ) : 25;
 		$paged          = isset( $_GET['kivun_lpaged'] ) ? max( 1, absint( wp_unslash( $_GET['kivun_lpaged'] ) ) ) : 1;
+		$date_from      = isset( $_GET['kivun_lfrom'] ) ? sanitize_text_field( wp_unslash( $_GET['kivun_lfrom'] ) ) : '';
+		$date_to        = isset( $_GET['kivun_lto'] ) ? sanitize_text_field( wp_unslash( $_GET['kivun_lto'] ) ) : '';
 		// phpcs:enable WordPress.Security.NonceVerification.Recommended
+
+		$date_from = self::valid_date( $date_from );
+		$date_to   = self::valid_date( $date_to );
+
+		// A backwards range returns nothing at all, which reads as a bug — swap.
+		if ( '' !== $date_from && '' !== $date_to && $date_from > $date_to ) {
+			list( $date_from, $date_to ) = array( $date_to, $date_from );
+		}
 
 		if ( ! in_array( $per_page, array( 25, 50, 100, 200 ), true ) ) {
 			$per_page = 25;
@@ -2231,6 +2262,13 @@ class Kivun_Content_Creator {
 		if ( '' !== $search ) {
 			$like    = '%' . $wpdb->esc_like( $search ) . '%';
 			$conds[] = $wpdb->prepare( '(r.name LIKE %s OR r.email LIKE %s OR r.phone LIKE %s)', $like, $like, $like );
+		}
+		// Inclusive range: "to" covers the whole of that day.
+		if ( '' !== $date_from ) {
+			$conds[] = $wpdb->prepare( 'r.created_at >= %s', $date_from . ' 00:00:00' );
+		}
+		if ( '' !== $date_to ) {
+			$conds[] = $wpdb->prepare( 'r.created_at <= %s', $date_to . ' 23:59:59' );
 		}
 		$where = $conds ? 'WHERE ' . implode( ' AND ', $conds ) : '';
 
@@ -2280,6 +2318,12 @@ class Kivun_Content_Creator {
 		if ( '' !== $search ) {
 			$base_args['kivun_ls'] = $search;
 		}
+		if ( '' !== $date_from ) {
+			$base_args['kivun_lfrom'] = $date_from;
+		}
+		if ( '' !== $date_to ) {
+			$base_args['kivun_lto'] = $date_to;
+		}
 		$base_args['kivun_lpp'] = $per_page;
 
 		$page_link = static function ( int $p ) use ( $base_args, $page_url ): string {
@@ -2300,7 +2344,7 @@ class Kivun_Content_Creator {
 			<div class="kivun-cc-leadbar">
 				<span class="kivun-stat"><strong><?php echo esc_html( number_format_i18n( $found ) ); ?></strong> <?php esc_html_e( 'רשומות בתצוגה', 'kivun' ); ?></span>
 				<a class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost" href="<?php echo esc_url( Kivun_Export::url( 'registrations', $content_filter ) ); ?>">
-					⬇ <?php esc_html_e( 'ייצוא CSV', 'kivun' ); ?>
+					<?php echo kivun_icon( 'download' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?><?php esc_html_e( 'ייצוא CSV', 'kivun' ); ?>
 				</a>
 			</div>
 
@@ -2334,6 +2378,13 @@ class Kivun_Content_Creator {
 				<label class="kivun-sr-only" for="kivun-lf-search"><?php esc_html_e( 'חיפוש', 'kivun' ); ?></label>
 				<input type="search" id="kivun-lf-search" name="kivun_ls" value="<?php echo esc_attr( $search ); ?>" placeholder="<?php esc_attr_e( 'שם, אימייל או טלפון…', 'kivun' ); ?>">
 
+				<span class="kivun-cc-daterange">
+					<label for="kivun-lf-from"><?php esc_html_e( 'מתאריך', 'kivun' ); ?></label>
+					<input type="date" id="kivun-lf-from" name="kivun_lfrom" dir="ltr" value="<?php echo esc_attr( $date_from ); ?>">
+					<label for="kivun-lf-to"><?php esc_html_e( 'עד', 'kivun' ); ?></label>
+					<input type="date" id="kivun-lf-to" name="kivun_lto" dir="ltr" value="<?php echo esc_attr( $date_to ); ?>">
+				</span>
+
 				<label class="kivun-sr-only" for="kivun-lf-pp"><?php esc_html_e( 'רשומות בעמוד', 'kivun' ); ?></label>
 				<select id="kivun-lf-pp" name="kivun_lpp">
 					<?php foreach ( array( 25, 50, 100, 200 ) as $pp ) : ?>
@@ -2346,8 +2397,8 @@ class Kivun_Content_Creator {
 					<?php endforeach; ?>
 				</select>
 
-				<button type="submit" class="kivun-cc-btn kivun-cc-btn--sm"><?php esc_html_e( 'סינון', 'kivun' ); ?></button>
-				<?php if ( $content_filter || '' !== $type_filter || '' !== $status_filter || '' !== $search ) : ?>
+				<button type="submit" class="kivun-cc-btn kivun-cc-btn--sm"><?php echo kivun_icon( 'filter' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?><?php esc_html_e( 'סינון', 'kivun' ); ?></button>
+				<?php if ( $content_filter || '' !== $type_filter || '' !== $status_filter || '' !== $search || '' !== $date_from || '' !== $date_to ) : ?>
 					<a class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost" href="<?php echo esc_url( add_query_arg( 'kivun_tab', 'leads', $page_url ) ); ?>"><?php esc_html_e( 'ניקוי', 'kivun' ); ?></a>
 				<?php endif; ?>
 			</form>
@@ -2417,8 +2468,15 @@ class Kivun_Content_Creator {
 							</td>
 							<?php if ( $can_delete_rows ) : ?>
 								<td>
-									<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--danger kivun-delete-row" data-table="registrations" data-id="<?php echo esc_attr( $r->id ); ?>">
-										<?php esc_html_e( 'מחיקה', 'kivun' ); ?>
+									<button
+										type="button"
+										class="kivun-cc-iconbtn kivun-cc-iconbtn--danger kivun-delete-row"
+										data-table="registrations"
+										data-id="<?php echo esc_attr( $r->id ); ?>"
+										title="<?php esc_attr_e( 'מחיקת הרשומה', 'kivun' ); ?>"
+									>
+										<?php echo kivun_icon( 'trash' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?>
+										<span class="kivun-sr-only"><?php esc_html_e( 'מחיקת הרשומה', 'kivun' ); ?></span>
 									</button>
 								</td>
 							<?php endif; ?>
