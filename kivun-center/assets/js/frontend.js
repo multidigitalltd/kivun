@@ -589,6 +589,15 @@
 		}
 		if (err) { err.style.display = 'none'; }
 
+		// Lock the button: the reload below is not instant, and a second click
+		// would store the same campaign twice.
+		var submitBtn = form.querySelector('button[type="submit"]');
+		if (submitBtn) {
+			if (submitBtn.disabled) { return; }
+			submitBtn.disabled = true;
+		}
+		var unlock = function () { if (submitBtn) { submitBtn.disabled = false; } };
+
 		var nameEl = form.querySelector('.kivun-camp-campaign');
 		post(params({
 			action: 'kivun_save_campaign',
@@ -600,11 +609,19 @@
 			utm_campaign: built.parts.utm_campaign
 		})).then(function (res) {
 			if (res.success) {
-				window.location.reload();
+				// Tabs are switched in JS and never touch the URL, so a plain
+				// reload would land back on the default tab and the freshly
+				// saved campaign would look like it was never stored. Reload
+				// onto the campaigns tab explicitly so the new row is visible.
+				var next = new URL(window.location.href);
+				next.searchParams.set('kivun_tab', 'campaigns');
+				window.location.assign(next.toString());
 			} else {
-				showError(err, res.data.message);
+				unlock();
+				showError(err, (res.data && res.data.message) || kivun.i18n.error_generic);
 			}
 		}).catch(function () {
+			unlock();
 			showError(err, kivun.i18n.error_generic);
 		});
 	});
@@ -796,6 +813,17 @@
 			panel.classList.toggle('is-active', match);
 			panel.hidden = !match;
 		});
+
+		// Keep the console tab in the URL. Server-side links already use
+		// ?kivun_tab=..., so without this a reload (or anything that reloads on
+		// your behalf) silently throws you back to the default tab.
+		if (dash.classList.contains('kivun-cc-console') && window.history && history.replaceState) {
+			try {
+				var url = new URL(window.location.href);
+				url.searchParams.set('kivun_tab', name);
+				history.replaceState(null, '', url.toString());
+			} catch (err) { /* URL unsupported — the tab still switches. */ }
+		}
 
 		if (focusIt) { tab.focus(); }
 	}
