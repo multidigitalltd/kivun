@@ -144,8 +144,17 @@ class Kivun_Campaigns {
 			'content'  => self::clean_value( sanitize_text_field( wp_unslash( $_POST['utm_content'] ?? '' ) ) ),
 		);
 
-		if ( ! $target || ! wp_http_validate_url( $target ) ) {
-			wp_send_json_error( array( 'message' => __( 'יש לבחור יעד תקין לקישור.', 'kivun' ) ) );
+		// wp_http_validate_url() is meant for outbound requests: it rejects
+		// private hosts and non-standard ports, which are perfectly valid
+		// destinations for a marketing link (staging sites, local domains).
+		// A stored link only needs a real scheme and host.
+		$parsed = wp_parse_url( $target );
+		if (
+			! $target ||
+			empty( $parsed['host'] ) ||
+			! in_array( strtolower( $parsed['scheme'] ?? '' ), array( 'http', 'https' ), true )
+		) {
+			wp_send_json_error( array( 'message' => __( 'יש לבחור יעד תקין לקישור (כתובת מלאה שמתחילה ב-http/https).', 'kivun' ) ) );
 		}
 		if ( '' === $utm['source'] || '' === $utm['campaign'] ) {
 			wp_send_json_error( array( 'message' => __( 'מקור ושם קמפיין הם שדות חובה.', 'kivun' ) ) );

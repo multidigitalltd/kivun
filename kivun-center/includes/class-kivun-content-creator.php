@@ -1278,19 +1278,19 @@ class Kivun_Content_Creator {
 
 			<div class="kivun-cc-stats">
 				<div class="kivun-cc-stat">
-					<span class="kivun-cc-stat__num"><?php echo esc_html( number_format_i18n( $stats['content'] ) ); ?></span>
-					<span class="kivun-cc-stat__label"><?php esc_html_e( 'תכנים', 'kivun' ); ?></span>
+					<span class="kivun-cc-stat__num"><?php echo esc_html( number_format_i18n( $stats['published'] ) ); ?></span>
+					<span class="kivun-cc-stat__label"><?php esc_html_e( 'פרסומים', 'kivun' ); ?></span>
 				</div>
 				<div class="kivun-cc-stat">
-					<span class="kivun-cc-stat__num"><?php echo esc_html( number_format_i18n( $stats['published'] ) ); ?></span>
-					<span class="kivun-cc-stat__label"><?php esc_html_e( 'פורסמו', 'kivun' ); ?></span>
+					<span class="kivun-cc-stat__num"><?php echo esc_html( number_format_i18n( $stats['pending'] ) ); ?></span>
+					<span class="kivun-cc-stat__label"><?php esc_html_e( 'ממתינים לפרסום', 'kivun' ); ?></span>
 				</div>
 				<?php if ( $show_leads ) : ?>
 					<div class="kivun-cc-stat">
 						<span class="kivun-cc-stat__num"><?php echo esc_html( number_format_i18n( $stats['leads'] ) ); ?></span>
-						<span class="kivun-cc-stat__label"><?php esc_html_e( 'פניות לתכנים', 'kivun' ); ?></span>
+						<span class="kivun-cc-stat__label"><?php esc_html_e( 'פניות', 'kivun' ); ?></span>
 					</div>
-					<div class="kivun-cc-stat kivun-cc-stat--alert">
+					<div class="kivun-cc-stat">
 						<span class="kivun-cc-stat__num"><?php echo esc_html( number_format_i18n( $stats['leads_new'] ) ); ?></span>
 						<span class="kivun-cc-stat__label"><?php esc_html_e( 'ממתינות לטיפול', 'kivun' ); ?></span>
 					</div>
@@ -1383,6 +1383,7 @@ class Kivun_Content_Creator {
 		$stats = array(
 			'content'   => 0,
 			'published' => 0,
+			'pending'   => 0,
 			'leads'     => 0,
 			'leads_new' => 0,
 			'jobs'      => 0,
@@ -1415,6 +1416,8 @@ class Kivun_Content_Creator {
 		}
 		$stats['content']   = count( $groups );
 		$stats['published'] = count( $published );
+		// Anything with no live post yet is still waiting to go out.
+		$stats['pending'] = max( 0, $stats['content'] - $stats['published'] );
 
 		if ( $with_leads ) {
 			// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
@@ -2297,31 +2300,29 @@ class Kivun_Content_Creator {
 						<div class="kivun-form-row">
 							<label for="kivun-camp-name"><?php esc_html_e( 'שם הקמפיין *', 'kivun' ); ?></label>
 							<input type="text" id="kivun-camp-name" class="kivun-cc-input kivun-camp-campaign" placeholder="<?php esc_attr_e( 'למשל: סדנת קיץ 2026', 'kivun' ); ?>">
-							<p class="kivun-field-hint"><?php esc_html_e( 'יומר אוטומטית לאותיות קטנות עם מקפים.', 'kivun' ); ?></p>
+							<p class="kivun-field-hint"><code>utm_campaign</code> — <?php esc_html_e( 'שם הקמפיין שלפיו תזוהה הפנייה. יומר לאותיות קטנות עם מקפים.', 'kivun' ); ?></p>
 						</div>
 
 						<div class="kivun-form-row">
 							<label for="kivun-camp-source"><?php esc_html_e( 'מקור *', 'kivun' ); ?></label>
-							<select id="kivun-camp-source" class="kivun-cc-input kivun-camp-source">
-								<option value=""><?php esc_html_e( '— בחר/י —', 'kivun' ); ?></option>
+							<input type="text" id="kivun-camp-source" class="kivun-cc-input kivun-camp-source" list="kivun-camp-sources" placeholder="<?php esc_attr_e( 'למשל: facebook', 'kivun' ); ?>">
+							<datalist id="kivun-camp-sources">
 								<?php foreach ( Kivun_Campaigns::sources() as $sv => $sl ) : ?>
 									<option value="<?php echo esc_attr( $sv ); ?>"><?php echo esc_html( $sl ); ?></option>
 								<?php endforeach; ?>
-								<option value="__custom__"><?php esc_html_e( 'אחר…', 'kivun' ); ?></option>
-							</select>
-							<input type="text" class="kivun-cc-input kivun-camp-source-custom" dir="ltr" placeholder="<?php esc_attr_e( 'מקור אחר', 'kivun' ); ?>" hidden>
+							</datalist>
+							<p class="kivun-field-hint"><code>utm_source</code> — <?php esc_html_e( 'מאיפה הגיעו: facebook, instagram, google, whatsapp, newsletter…', 'kivun' ); ?></p>
 						</div>
 
 						<div class="kivun-form-row">
 							<label for="kivun-camp-medium"><?php esc_html_e( 'מדיום', 'kivun' ); ?></label>
-							<select id="kivun-camp-medium" class="kivun-cc-input kivun-camp-medium">
-								<option value=""><?php esc_html_e( '— ללא —', 'kivun' ); ?></option>
+							<input type="text" id="kivun-camp-medium" class="kivun-cc-input kivun-camp-medium" list="kivun-camp-mediums" placeholder="<?php esc_attr_e( 'למשל: cpc', 'kivun' ); ?>">
+							<datalist id="kivun-camp-mediums">
 								<?php foreach ( Kivun_Campaigns::mediums() as $mv => $ml ) : ?>
 									<option value="<?php echo esc_attr( $mv ); ?>"><?php echo esc_html( $ml ); ?></option>
 								<?php endforeach; ?>
-								<option value="__custom__"><?php esc_html_e( 'אחר…', 'kivun' ); ?></option>
-							</select>
-							<input type="text" class="kivun-cc-input kivun-camp-medium-custom" dir="ltr" placeholder="<?php esc_attr_e( 'מדיום אחר', 'kivun' ); ?>" hidden>
+							</datalist>
+							<p class="kivun-field-hint"><code>utm_medium</code> — <?php esc_html_e( 'סוג הפרסום: cpc (ממומן), organic, email, social, banner…', 'kivun' ); ?></p>
 						</div>
 					</div>
 

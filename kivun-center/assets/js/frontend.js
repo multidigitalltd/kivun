@@ -499,14 +499,9 @@
 
 	// Mirrors the PHP builder so the preview matches exactly what gets saved.
 	function kivunCampBuild(form) {
-		var pick = function (selectClass, customClass) {
-			var sel = form.querySelector('.' + selectClass);
-			if (!sel) { return ''; }
-			if (sel.value === '__custom__') {
-				var custom = form.querySelector('.' + customClass);
-				return custom ? kivunCampClean(custom.value) : '';
-			}
-			return kivunCampClean(sel.value);
+		var read = function (cls) {
+			var el = form.querySelector('.' + cls);
+			return el ? kivunCampClean(el.value) : '';
 		};
 
 		var targetSel = form.querySelector('.kivun-camp-target');
@@ -516,17 +511,18 @@
 			target = custom ? custom.value.trim() : '';
 		}
 
-		var campaignEl = form.querySelector('.kivun-camp-campaign');
 		var parts = {
-			utm_source: pick('kivun-camp-source', 'kivun-camp-source-custom'),
-			utm_medium: pick('kivun-camp-medium', 'kivun-camp-medium-custom'),
-			utm_campaign: campaignEl ? kivunCampClean(campaignEl.value) : ''
+			utm_source: read('kivun-camp-source'),
+			utm_medium: read('kivun-camp-medium'),
+			utm_campaign: read('kivun-camp-campaign')
 		};
 
 		if (!target || !parts.utm_source || !parts.utm_campaign) { return { url: '', parts: parts, target: target }; }
 
 		var url;
-		try { url = new URL(target); } catch (err) { return { url: '', parts: parts, target: target }; }
+		// location.href is always a parseable base; location.origin is the string
+		// "null" in some contexts, which makes the URL constructor throw.
+		try { url = new URL(target, window.location.href); } catch (err) { return { url: '', parts: parts, target: target }; }
 		Object.keys(parts).forEach(function (k) {
 			url.searchParams.delete(k);
 			if (parts[k]) { url.searchParams.set(k, parts[k]); }
@@ -539,31 +535,23 @@
 		if (out) { out.value = kivunCampBuild(form).url; }
 	}
 
-	// Reveal the free-text input when "other" is chosen.
+	// Choosing "other" as the target reveals the free URL field.
 	document.addEventListener('change', function (e) {
-		var sel = e.target.closest('.kivun-camp-target, .kivun-camp-source, .kivun-camp-medium');
+		var sel = e.target.closest('.kivun-camp-target');
 		if (!sel) { return; }
 		var form = sel.closest('.kivun-campaign-form');
 		if (!form) { return; }
 
-		var map = {
-			'kivun-camp-target': 'kivun-camp-custom',
-			'kivun-camp-source': 'kivun-camp-source-custom',
-			'kivun-camp-medium': 'kivun-camp-medium-custom'
-		};
-		Object.keys(map).forEach(function (cls) {
-			if (!sel.classList.contains(cls)) { return; }
-			var custom = form.querySelector('.' + map[cls]);
-			if (custom) {
-				custom.hidden = sel.value !== '__custom__';
-				if (!custom.hidden) { custom.focus(); }
-			}
-		});
+		var custom = form.querySelector('.kivun-camp-custom');
+		if (custom) {
+			custom.hidden = sel.value !== '__custom__';
+			if (!custom.hidden) { custom.focus(); }
+		}
 		kivunCampRefresh(form);
 	});
 
 	document.addEventListener('input', function (e) {
-		var field = e.target.closest('.kivun-campaign-form input');
+		var field = e.target.closest('.kivun-campaign-form input, .kivun-campaign-form select');
 		if (!field || field.classList.contains('kivun-camp-result')) { return; }
 		kivunCampRefresh(field.closest('.kivun-campaign-form'));
 	});
