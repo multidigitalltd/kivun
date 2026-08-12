@@ -2028,6 +2028,8 @@ class Kivun_Content_Creator {
 					</div>
 				</div>
 
+				<p class="kivun-wiz-error" role="alert" hidden></p>
+
 				<div class="kivun-wiz-nav">
 					<button type="button" class="kivun-cc-btn kivun-cc-btn--ghost kivun-wiz-prev" hidden>
 						<?php esc_html_e( 'חזרה', 'kivun' ); ?>

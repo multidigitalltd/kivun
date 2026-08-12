@@ -525,9 +525,30 @@
 		form.scrollIntoView({ behavior: 'smooth', block: 'start' });
 	}
 
+	function kivunWizError(form, message) {
+		var box = form.querySelector('.kivun-wiz-error');
+		if (!box) { return; }
+		box.textContent = message || '';
+		box.hidden = !message;
+	}
+
 	// Only block on fields that are actually visible in the current step.
 	function kivunWizValid(form, step) {
 		var ok = true;
+		kivunWizError(form, '');
+
+		// Step 1 decides what gets created — without a type there is nothing
+		// to publish, and the later steps would ask about nothing.
+		if (step === 1) {
+			var chosen = form.querySelectorAll('.kivun-cc-toggle:checked').length;
+			if (!chosen) {
+				kivunWizError(form, 'יש לבחור לפחות סוג תוכן אחד לפרסום.');
+				var firstToggle = form.querySelector('.kivun-cc-toggle');
+				if (firstToggle) { firstToggle.focus(); }
+				return false;
+			}
+		}
+
 		kivunWizCards(form).forEach(function (card) {
 			if (card.dataset.step !== String(step) || card.hidden) { return; }
 			card.querySelectorAll('[required]').forEach(function (field) {
@@ -540,6 +561,7 @@
 				}
 			});
 		});
+		if (!ok) { kivunWizError(form, 'יש למלא את שדות החובה המסומנים.'); }
 		return ok;
 	}
 
@@ -574,6 +596,16 @@
 				kivunWizShow(form, s);
 				return;
 			}
+		}
+	});
+
+	// Picking a type clears the "choose a type" warning immediately.
+	document.addEventListener('change', function (e) {
+		var toggle = e.target.closest('.kivun-cc-toggle');
+		if (!toggle) { return; }
+		var form = toggle.closest('.kivun-cc-wizard');
+		if (form && form.querySelectorAll('.kivun-cc-toggle:checked').length) {
+			kivunWizError(form, '');
 		}
 	});
 
