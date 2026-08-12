@@ -89,9 +89,10 @@ class Kivun_Jobs {
 	}
 
 	/**
-	 * Stream a CV file to authorised users only: a site admin, the employer
-	 * who owns the job, or the applicant who submitted it. Prevents the PII in
-	 * CVs from being fetched by guessing the upload URL (IDOR).
+	 * Stream a CV file to authorised users only: someone who manages the whole
+	 * board (site admin or jobs-board manager), the employer who owns the job,
+	 * or the applicant who submitted it. Prevents the PII in CVs from being
+	 * fetched by guessing the upload URL (IDOR).
 	 *
 	 * @return void
 	 */
@@ -112,12 +113,17 @@ class Kivun_Jobs {
 			wp_die( esc_html__( 'הקובץ לא נמצא.', 'kivun' ), '', array( 'response' => 404 ) );
 		}
 
-		$user_id  = get_current_user_id();
-		$job      = get_post( $app->job_id );
-		$is_owner = $job && (int) $job->post_author === $user_id;
-		$is_self  = (int) $app->user_id === $user_id && $user_id > 0;
+		$user_id = get_current_user_id();
+		$job     = get_post( $app->job_id );
+		$is_self = (int) $app->user_id === $user_id && $user_id > 0;
 
-		if ( ! current_user_can( 'manage_options' ) && ! $is_owner && ! $is_self ) {
+		// A publisher disabled by the board manager keeps their jobs, but loses
+		// access to applicant PII along with the rest of their dashboard.
+		$is_owner = $job
+			&& (int) $job->post_author === $user_id
+			&& ! get_user_meta( $user_id, '_kivun_disabled', true );
+
+		if ( ! Kivun_Employer::can_manage_all() && ! $is_owner && ! $is_self ) {
 			wp_die( esc_html__( 'אין הרשאה לצפות בקובץ זה.', 'kivun' ), '', array( 'response' => 403 ) );
 		}
 
