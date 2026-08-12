@@ -32,8 +32,13 @@ class Kivun_Export {
 		$type    = sanitize_key( wp_unslash( $_GET['type'] ?? '' ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Nonce verified via check_admin_referer above.
 		$post_id = absint( wp_unslash( $_GET['post_id'] ?? 0 ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Nonce verified via check_admin_referer above.
 
-		// Employers may export applications, restricted to their own jobs.
-		if ( ! current_user_can( 'manage_options' ) ) {
+		// Board managers (site admins + the jobs-board manager role) may export
+		// applications for the whole board, or scoped to one publisher.
+		// phpcs:ignore WordPress.WP.Capabilities.Unknown -- Custom plugin capability.
+		$manages_board = current_user_can( 'manage_options' ) || current_user_can( 'kivun_manage_jobs' );
+
+		if ( ! $manages_board ) {
+			// Plain employer: applications for their own jobs only.
 			if ( 'applications' !== $type || ! current_user_can( 'kivun_employer' ) ) { // phpcs:ignore WordPress.WP.Capabilities.Unknown -- Custom plugin capability.
 				wp_die( 'Unauthorized' );
 			}
@@ -41,9 +46,17 @@ class Kivun_Export {
 			return;
 		}
 
+		// Registrations (courses/leads) remain admin-only.
+		if ( 'registrations' === $type && ! current_user_can( 'manage_options' ) ) {
+			wp_die( 'Unauthorized' );
+		}
+
+		// Optional publisher scope, used when a manager is "acting as" a publisher.
+		$employer_id = absint( wp_unslash( $_GET['employer'] ?? 0 ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Nonce verified via check_admin_referer above.
+
 		match ( $type ) {
 			'registrations' => self::export_registrations( $post_id ),
-			'applications'  => self::export_applications( $post_id ),
+			'applications'  => self::export_applications( $post_id, $employer_id ),
 			default         => wp_die( 'Invalid type' ),
 		};
 	}
@@ -227,20 +240,23 @@ class Kivun_Export {
 	/**
 	 * Build a nonced export URL for use in admin metaboxes.
 	 *
-	 * @param string $type    The export type ('registrations' or 'applications').
-	 * @param int    $post_id Optional post ID to scope the export.
+	 * @param string $type        The export type ('registrations' or 'applications').
+	 * @param int    $post_id     Optional post ID to scope the export.
+	 * @param int    $employer_id Optional publisher ID to scope applications to.
 	 * @return string
 	 */
-	public static function url( string $type, int $post_id = 0 ): string {
+	public static function url( string $type, int $post_id = 0, int $employer_id = 0 ): string {
+		$args = array(
+			'action'  => 'kivun_export_csv',
+			'type'    => $type,
+			'post_id' => $post_id,
+		);
+		if ( $employer_id ) {
+			$args['employer'] = $employer_id;
+		}
+
 		return wp_nonce_url(
-			add_query_arg(
-				array(
-					'action'  => 'kivun_export_csv',
-					'type'    => $type,
-					'post_id' => $post_id,
-				),
-				admin_url( 'admin-post.php' )
-			),
+			add_query_arg( $args, admin_url( 'admin-post.php' ) ),
 			'kivun_export'
 		);
 	}

@@ -38,11 +38,30 @@ if ( ! current_user_can( 'kivun_employer' ) && ! current_user_can( 'manage_optio
 	return;
 }
 
-$user_id = get_current_user_id();
-$jobs    = get_posts(
+$user_id    = get_current_user_id();
+$is_manager = Kivun_Employer::can_manage_all();
+
+// Which publisher the manager is currently acting on behalf of (0 = whole
+// board). Read-only view scoping — no state change, so no nonce needed.
+// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+$acting_as = ( $is_manager && isset( $_GET['kivun_as'] ) ) ? Kivun_Employer::acting_as( absint( wp_unslash( $_GET['kivun_as'] ) ) ) : 0;
+$employers = $is_manager ? Kivun_Employer::get_employers() : array();
+
+// Human label for the publisher the manager is acting as — used by the banner
+// and as the pre-selected value of the "post on behalf" selector.
+$acting_label = '';
+if ( $acting_as ) {
+	$acting_user  = get_userdata( $acting_as );
+	$acting_comp  = (string) get_user_meta( $acting_as, '_kivun_company', true );
+	$acting_label = $acting_user
+		? trim( ( $acting_comp ? $acting_comp . ' — ' : '' ) . $acting_user->display_name )
+		: '';
+}
+
+$jobs = get_posts(
 	array(
 		'post_type'      => 'kivun_job',
-		'author'         => Kivun_Employer::can_manage_all() ? 0 : $user_id,
+		'author'         => $is_manager ? $acting_as : $user_id,
 		'post_status'    => array( 'publish', 'draft', 'pending' ),
 		'posts_per_page' => 100,
 		'orderby'        => 'date',
@@ -70,9 +89,10 @@ $fields  = get_terms(
 	)
 );
 
-// Applications addressed to this employer's jobs.
-$applications = Kivun_Employer::get_applications( $user_id );
-$app_counts   = Kivun_Employer::application_counts( $user_id );
+// Applications addressed to this employer's jobs (scoped to the acting-as
+// publisher when a manager has selected one).
+$applications = Kivun_Employer::get_applications( $user_id, $acting_as );
+$app_counts   = Kivun_Employer::application_counts( $user_id, $acting_as );
 $app_statuses = Kivun_Employer::app_statuses();
 
 $total_apps = count( $applications );
@@ -90,7 +110,70 @@ foreach ( $jobs as $j ) {
 	}
 }
 ?>
-<div class="kivun-employer-dashboard" dir="rtl">
+<div class="kivun-employer-dashboard" dir="rtl"<?php echo $is_manager ? ' data-manager="1"' : ''; ?>>
+
+	<?php if ( $is_manager ) : ?>
+		<div class="kivun-mgr-bar">
+			<div class="kivun-mgr-as">
+				<label for="kivun-as-select"><?php esc_html_e( 'פעולה בשם מפרסם:', 'kivun' ); ?></label>
+				<select id="kivun-as-select">
+					<option value="0"><?php esc_html_e( 'כל המפרסמים (תצוגת מנהל)', 'kivun' ); ?></option>
+					<?php
+					foreach ( $employers as $emp ) :
+						$emp_comp  = (string) get_user_meta( $emp->ID, '_kivun_company', true );
+						$emp_label = trim( ( $emp_comp ? $emp_comp . ' — ' : '' ) . $emp->display_name );
+						?>
+						<option value="<?php echo esc_attr( $emp->ID ); ?>" <?php selected( $acting_as, $emp->ID ); ?>><?php echo esc_html( $emp_label ); ?></option>
+					<?php endforeach; ?>
+				</select>
+			</div>
+			<button type="button" class="kivun-btn kivun-btn--outline kivun-btn--sm" id="kivun-add-employer">
+				+ <?php esc_html_e( 'מפרסם חדש', 'kivun' ); ?>
+			</button>
+		</div>
+
+		<?php if ( $acting_as ) : ?>
+			<div class="kivun-acting-banner">
+				<span><?php esc_html_e( 'פועל/ת בשם:', 'kivun' ); ?> <strong><?php echo esc_html( $acting_label ); ?></strong></span>
+				<a class="kivun-acting-exit" href="<?php echo esc_url( remove_query_arg( 'kivun_as' ) ); ?>"><?php esc_html_e( 'יציאה ↩', 'kivun' ); ?></a>
+			</div>
+		<?php endif; ?>
+
+		<!-- Create-publisher form (managers only) -->
+		<div class="kivun-add-employer-form" id="kivun-add-employer-form" hidden>
+			<h3><?php esc_html_e( 'הוספת מפרסם חדש', 'kivun' ); ?></h3>
+			<form class="kivun-create-employer-form" novalidate>
+				<div class="kivun-form-grid">
+					<div class="kivun-form-row">
+						<label for="kivun-ce-name"><?php esc_html_e( 'שם איש קשר *', 'kivun' ); ?></label>
+						<input type="text" id="kivun-ce-name" name="display_name" required>
+					</div>
+					<div class="kivun-form-row">
+						<label for="kivun-ce-company"><?php esc_html_e( 'שם חברה / ארגון *', 'kivun' ); ?></label>
+						<input type="text" id="kivun-ce-company" name="company" required>
+					</div>
+					<div class="kivun-form-row">
+						<label for="kivun-ce-email"><?php esc_html_e( 'אימייל *', 'kivun' ); ?></label>
+						<input type="email" id="kivun-ce-email" name="email" dir="ltr" required>
+						<p class="kivun-field-hint"><?php esc_html_e( 'לכתובת זו יישלחו התראות על הגשות מועמדות חדשות.', 'kivun' ); ?></p>
+					</div>
+					<div class="kivun-form-row">
+						<label for="kivun-ce-phone"><?php esc_html_e( 'טלפון', 'kivun' ); ?></label>
+						<input type="tel" id="kivun-ce-phone" name="phone" dir="ltr">
+					</div>
+				</div>
+				<label class="kivun-check-inline">
+					<input type="checkbox" name="send_login" value="1">
+					<?php esc_html_e( 'שליחת מייל למפרסם להגדרת סיסמה (כדי שיוכל להתחבר ולנהל בעצמו). כברירת מחדל כבוי — הניהול נעשה על ידך.', 'kivun' ); ?>
+				</label>
+				<p class="kivun-error" style="display:none;color:var(--kivun-error)"></p>
+				<div class="kivun-form-actions">
+					<button type="submit" class="kivun-btn kivun-btn--primary"><?php esc_html_e( 'הוספת מפרסם', 'kivun' ); ?></button>
+					<button type="button" class="kivun-btn kivun-btn--outline" id="kivun-cancel-add-employer"><?php esc_html_e( 'ביטול', 'kivun' ); ?></button>
+				</div>
+			</form>
+		</div>
+	<?php endif; ?>
 
 	<div class="kivun-tabs" role="tablist" aria-label="<?php esc_attr_e( 'ניהול אזור מעסיק', 'kivun' ); ?>">
 		<button type="button" class="kivun-tab is-active" data-tab="jobs" role="tab" id="kivun-tab-jobs" aria-controls="kivun-panel-jobs" aria-selected="true">
@@ -131,6 +214,23 @@ foreach ( $jobs as $j ) {
 			><?php esc_html_e( 'משרה חדשה', 'kivun' ); ?></h3>
 			<form class="kivun-employer-form" data-action="kivun_post_job" novalidate>
 				<input type="hidden" name="job_id" value="">
+
+				<?php if ( $is_manager ) : ?>
+					<div class="kivun-form-row kivun-mgr-only" data-default-employer="<?php echo esc_attr( $acting_as ); ?>">
+						<label for="kivun-f-employer"><?php esc_html_e( 'פרסום בשם מפרסם *', 'kivun' ); ?></label>
+						<select id="kivun-f-employer" name="employer_id" required>
+							<option value=""><?php esc_html_e( '— בחר/י מפרסם —', 'kivun' ); ?></option>
+							<?php
+							foreach ( $employers as $emp ) :
+								$emp_comp  = (string) get_user_meta( $emp->ID, '_kivun_company', true );
+								$emp_label = trim( ( $emp_comp ? $emp_comp . ' — ' : '' ) . $emp->display_name );
+								?>
+								<option value="<?php echo esc_attr( $emp->ID ); ?>" <?php selected( $acting_as, $emp->ID ); ?>><?php echo esc_html( $emp_label ); ?></option>
+							<?php endforeach; ?>
+						</select>
+						<p class="kivun-field-hint"><?php esc_html_e( 'המשרה תשויך למפרסם זה, וההגשות יישלחו לכתובת המייל שלו.', 'kivun' ); ?></p>
+					</div>
+				<?php endif; ?>
 
 				<div class="kivun-form-row">
 					<label for="kivun-f-title"><?php esc_html_e( 'כותרת המשרה *', 'kivun' ); ?></label>
@@ -256,6 +356,7 @@ foreach ( $jobs as $j ) {
 					?>
 					<tr
 						data-job-row="<?php echo esc_attr( $job->ID ); ?>"
+						data-employer="<?php echo esc_attr( $job->post_author ); ?>"
 						data-title="<?php echo esc_attr( $job->post_title ); ?>"
 						data-company="<?php echo esc_attr( get_post_meta( $job->ID, '_kivun_company', true ) ); ?>"
 						data-salary="<?php echo esc_attr( get_post_meta( $job->ID, '_kivun_salary', true ) ); ?>"
@@ -266,7 +367,21 @@ foreach ( $jobs as $j ) {
 						data-requirements="<?php echo esc_attr( get_post_meta( $job->ID, '_kivun_requirements', true ) ); ?>"
 					>
 						<td><span class="kivun-job-id">#<?php echo esc_html( (string) $job->ID ); ?></span></td>
-						<td><?php echo esc_html( $job->post_title ); ?></td>
+						<td>
+							<?php echo esc_html( $job->post_title ); ?>
+							<?php
+							if ( $is_manager && ! $acting_as ) :
+								$owner_comp = (string) get_user_meta( $job->post_author, '_kivun_company', true );
+								$owner_name = get_the_author_meta( 'display_name', $job->post_author );
+								$owner_lbl  = trim( ( $owner_comp ? $owner_comp . ' — ' : '' ) . $owner_name );
+								if ( $owner_lbl ) :
+									?>
+									<span class="kivun-row-owner"><?php echo esc_html( $owner_lbl ); ?></span>
+									<?php
+								endif;
+							endif;
+							?>
+						</td>
 						<td>
 							<span class="kivun-status kivun-status--<?php echo esc_attr( $job->post_status ); ?>">
 								<?php
@@ -324,7 +439,7 @@ foreach ( $jobs as $j ) {
 		<div class="kivun-dashboard-header">
 			<h2><?php esc_html_e( 'הגשות מועמדות', 'kivun' ); ?></h2>
 			<?php if ( $total_apps ) : ?>
-				<a class="kivun-btn kivun-btn--outline kivun-btn--sm" href="<?php echo esc_url( Kivun_Export::url( 'applications', 0 ) ); ?>">
+				<a class="kivun-btn kivun-btn--outline kivun-btn--sm" href="<?php echo esc_url( Kivun_Export::url( 'applications', 0, $acting_as ) ); ?>">
 					⬇ <?php esc_html_e( 'ייצוא CSV', 'kivun' ); ?>
 				</a>
 			<?php endif; ?>

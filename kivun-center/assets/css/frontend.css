@@ -162,6 +162,67 @@
 .kivun-form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0 1.5rem; }
 @media (max-width: 600px) { .kivun-form-grid { grid-template-columns: 1fr; } }
 .kivun-form-actions { display: flex; gap: 1rem; margin-top: .5rem; }
+
+/* ── Jobs-board manager: act-as switcher, banner, add-publisher ──────────── */
+.kivun-mgr-bar {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	justify-content: space-between;
+	gap: 1rem;
+	padding: 1rem 1.15rem;
+	margin-bottom: 1.1rem;
+	background: #f8fafc;
+	border: 1px solid var(--kivun-border);
+	border-radius: 14px;
+}
+.kivun-mgr-as { display: flex; flex-direction: column; gap: .35rem; min-width: 260px; flex: 1 1 260px; }
+.kivun-mgr-as label { font-weight: 600; font-size: .85rem; color: var(--kivun-muted); }
+.kivun-mgr-as select {
+	padding: .65rem .8rem;
+	border: 1px solid var(--kivun-border);
+	border-radius: 10px;
+	background: #fff;
+	font: inherit;
+}
+.kivun-acting-banner {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: .75rem;
+	padding: .7rem 1.1rem;
+	margin-bottom: 1.1rem;
+	background: #eff4ff;
+	border: 1px solid var(--kivun-primary);
+	border-radius: 12px;
+	font-size: .95rem;
+}
+.kivun-acting-banner strong { color: var(--kivun-primary); }
+.kivun-acting-exit { font-weight: 600; color: var(--kivun-primary); text-decoration: none; white-space: nowrap; }
+.kivun-acting-exit:hover { text-decoration: underline; }
+.kivun-add-employer-form {
+	padding: 1.25rem 1.35rem;
+	margin-bottom: 1.35rem;
+	background: #fff;
+	border: 2px solid var(--kivun-primary);
+	border-radius: 16px;
+	box-shadow: 0 2px 14px rgba(37,99,235,.12);
+}
+.kivun-add-employer-form h3 { margin: 0 0 1rem; font-size: 1.05rem; font-weight: 700; color: var(--kivun-primary); }
+.kivun-check-inline {
+	display: flex;
+	align-items: flex-start;
+	gap: .5rem;
+	margin: .35rem 0 1rem;
+	font-size: .85rem;
+	color: var(--kivun-muted);
+	line-height: 1.5;
+}
+.kivun-check-inline input { margin-top: .2rem; flex: 0 0 auto; width: auto; }
+.kivun-field-hint { margin: .35rem 0 0; font-size: .78rem; color: var(--kivun-muted); }
+.kivun-mgr-only select { border-color: var(--kivun-primary); background: #f7faff; }
+.kivun-row-owner { display: block; font-size: .78rem; color: var(--kivun-muted); margin-top: .15rem; }
 /* Keep the publish-job form labels glued above their fields (theme-proof).
    Plain block layout — no flex/gap/order tricks that themes can hijack. */
 .kivun-new-job-form .kivun-form-row {

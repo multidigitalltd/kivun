@@ -212,6 +212,15 @@
 			return;
 		}
 
+		// Manager — create a publisher on the employer's behalf.
+		if (form.matches('.kivun-create-employer-form')) {
+			e.preventDefault();
+			handleFormSubmit(form, 'kivun_create_employer', function () {
+				window.location.reload();
+			});
+			return;
+		}
+
 		// Employer dashboard — post/update job.
 		if (form.matches('.kivun-employer-form')) {
 			e.preventDefault();
@@ -219,6 +228,43 @@
 				window.location.reload();
 			});
 			return;
+		}
+	});
+
+	// ── Manager dashboard — act-as switcher + add-publisher toggle ────────────────
+	document.addEventListener('change', function (e) {
+		var asSel = e.target.closest('#kivun-as-select');
+		if (!asSel) { return; }
+		var url = new URL(window.location.href);
+		if (asSel.value && asSel.value !== '0') {
+			url.searchParams.set('kivun_as', asSel.value);
+		} else {
+			url.searchParams.delete('kivun_as');
+		}
+		window.location.href = url.toString();
+	});
+
+	document.addEventListener('click', function (e) {
+		if (e.target.closest('#kivun-add-employer')) {
+			var openF = document.getElementById('kivun-add-employer-form');
+			if (openF) {
+				openF.hidden = false;
+				var firstField = openF.querySelector('input[name="display_name"]');
+				if (firstField) { firstField.focus(); }
+				openF.scrollIntoView({ behavior: 'smooth', block: 'start' });
+			}
+		}
+		if (e.target.closest('#kivun-cancel-add-employer')) {
+			var closeF = document.getElementById('kivun-add-employer-form');
+			if (closeF) {
+				closeF.hidden = true;
+				var frm = closeF.querySelector('form');
+				if (frm) {
+					frm.reset();
+					var frmErr = frm.querySelector('.kivun-error');
+					if (frmErr) { frmErr.style.display = 'none'; }
+				}
+			}
 		}
 	});
 
@@ -248,6 +294,10 @@
 		if (jobId) { jobId.value = ''; }
 		kivunSetEditor('kivunjobdesc', '');
 		kivunSetEditor('kivunjobreq', '');
+		// Manager selector: default to the publisher currently being acted-as.
+		var empRow = form.querySelector('.kivun-mgr-only');
+		var empSel = form.querySelector('[name="employer_id"]');
+		if (empRow && empSel) { empSel.value = empRow.dataset.defaultEmployer || ''; }
 		var err = form.querySelector('.kivun-error');
 		if (err) { err.style.display = 'none'; }
 		kivunFormMode(false);
@@ -292,6 +342,7 @@
 				setField('scope', row.dataset.scope);
 				setField('region', row.dataset.region);
 				setField('field', row.dataset.field);
+				setField('employer_id', row.dataset.employer);
 				kivunSetEditor('kivunjobdesc', row.dataset.description);
 				kivunSetEditor('kivunjobreq', row.dataset.requirements);
 
