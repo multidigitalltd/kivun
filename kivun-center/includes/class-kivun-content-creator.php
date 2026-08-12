@@ -1144,9 +1144,129 @@ class Kivun_Content_Creator {
 		// creator page), never on the public lead/registration forms.
 		wp_enqueue_script( 'kivun-voice' );
 
+		// The leads tab reuses the CRM's inline status/notes editing, so it needs
+		// the same script and nonce the wp-admin page uses.
+		wp_enqueue_script(
+			'kivun-admin-crm',
+			KIVUN_URL . 'assets/js/' . Kivun_Core::asset( 'admin-crm', 'js' ),
+			array(),
+			KIVUN_VERSION,
+			true
+		);
+		wp_localize_script(
+			'kivun-admin-crm',
+			'kivunCrm',
+			array(
+				'ajax_url' => admin_url( 'admin-ajax.php' ),
+				'nonce'    => wp_create_nonce( 'kivun_admin_nonce' ),
+			)
+		);
+
 		ob_start();
-		self::front_form();
+		self::front_console();
 		return (string) ob_get_clean();
+	}
+
+	/**
+	 * Whether the current user may see and manage the leads/registrations CRM.
+	 *
+	 * Publishing content only needs edit_posts, but the leads table exposes
+	 * every enquirer's name, email and phone — so it is limited to people who
+	 * manage other people's content (editors and administrators) rather than
+	 * every author who can create a landing page.
+	 *
+	 * @return bool
+	 */
+	public static function can_manage_leads(): bool {
+		return current_user_can( 'edit_others_posts' ) || current_user_can( 'manage_options' );
+	}
+
+	/**
+	 * Render the whole front-end management console: publishing form, content
+	 * library and the leads/registrations CRM, as tabs — so a manager never has
+	 * to open wp-admin to run the dynamic content.
+	 *
+	 * @return void
+	 */
+	private static function front_console(): void {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only tab state.
+		$group = isset( $_GET['kivun_group'] ) ? sanitize_text_field( wp_unslash( $_GET['kivun_group'] ) ) : '';
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only tab state.
+		$tab = isset( $_GET['kivun_tab'] ) ? sanitize_key( wp_unslash( $_GET['kivun_tab'] ) ) : '';
+
+		// Editing a specific group always lands on the form.
+		if ( '' !== $group ) {
+			$tab = 'form';
+		}
+		$show_leads = self::can_manage_leads();
+		if ( ! in_array( $tab, array( 'form', 'library', 'leads' ), true ) || ( 'leads' === $tab && ! $show_leads ) ) {
+			$tab = 'form';
+		}
+
+		$page_url   = (string) get_permalink();
+		$page_url   = $page_url ? $page_url : home_url();
+		$can_delete = current_user_can( 'delete_posts' );
+		$lead_count = $show_leads ? self::leads_count() : 0;
+		?>
+		<div class="kivun-cc-console" dir="rtl">
+
+			<div class="kivun-tabs kivun-cc-tabs" role="tablist" aria-label="<?php esc_attr_e( 'ניהול תוכן', 'kivun' ); ?>">
+				<?php
+				$console_tabs = array(
+					'form'    => __( 'פרסום תוכן', 'kivun' ),
+					'library' => __( 'התכנים שלי', 'kivun' ),
+				);
+				if ( $show_leads ) {
+					$console_tabs['leads'] = __( 'לידים והרשמות', 'kivun' );
+				}
+				foreach ( $console_tabs as $tab_key => $tab_label ) :
+					$is_active = ( $tab === $tab_key );
+					?>
+					<button
+						type="button"
+						class="kivun-tab <?php echo $is_active ? 'is-active' : ''; ?>"
+						data-tab="<?php echo esc_attr( $tab_key ); ?>"
+						role="tab"
+						id="kivun-cctab-<?php echo esc_attr( $tab_key ); ?>"
+						aria-controls="kivun-ccpanel-<?php echo esc_attr( $tab_key ); ?>"
+						aria-selected="<?php echo $is_active ? 'true' : 'false'; ?>"
+						<?php echo $is_active ? '' : 'tabindex="-1"'; ?>
+					>
+						<?php echo esc_html( $tab_label ); ?>
+						<?php if ( 'leads' === $tab_key && $lead_count ) : ?>
+							<span class="kivun-tab-badge kivun-tab-badge--soft"><?php echo esc_html( number_format_i18n( $lead_count ) ); ?></span>
+						<?php endif; ?>
+					</button>
+				<?php endforeach; ?>
+			</div>
+
+			<section class="kivun-tab-panel <?php echo 'form' === $tab ? 'is-active' : ''; ?>" data-panel="form" id="kivun-ccpanel-form" role="tabpanel" aria-labelledby="kivun-cctab-form" tabindex="0" <?php echo 'form' === $tab ? '' : 'hidden'; ?>>
+				<?php self::front_form(); ?>
+			</section>
+
+			<section class="kivun-tab-panel <?php echo 'library' === $tab ? 'is-active' : ''; ?>" data-panel="library" id="kivun-ccpanel-library" role="tabpanel" aria-labelledby="kivun-cctab-library" tabindex="0" <?php echo 'library' === $tab ? '' : 'hidden'; ?>>
+				<?php self::front_library( $page_url, $can_delete ); ?>
+			</section>
+
+			<?php if ( $show_leads ) : ?>
+				<section class="kivun-tab-panel <?php echo 'leads' === $tab ? 'is-active' : ''; ?>" data-panel="leads" id="kivun-ccpanel-leads" role="tabpanel" aria-labelledby="kivun-cctab-leads" tabindex="0" <?php echo 'leads' === $tab ? '' : 'hidden'; ?>>
+					<?php self::front_leads( $page_url ); ?>
+				</section>
+			<?php endif; ?>
+
+		</div>
+		<?php
+	}
+
+	/**
+	 * Total number of registration/lead rows, for the tab badge.
+	 *
+	 * @return int
+	 */
+	private static function leads_count(): int {
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		return (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}kivun_registrations" );
 	}
 
 	/**
@@ -1736,25 +1856,26 @@ class Kivun_Content_Creator {
 				</div>
 			<?php endif; ?>
 
-			<?php self::front_groups_list( $page_url, $can_delete ); ?>
 		</div>
 
 		<?php
 	}
 
+
 	/**
-	 * Render the "content groups" list with front-end edit (and delete) links.
+	 * Render the content library: every content group this console created,
+	 * with its status, live registration count and management actions.
 	 *
 	 * @param string $page_url   The current page URL (edit links point back here).
 	 * @param bool   $can_delete Whether the user may delete content groups.
 	 * @return void
 	 */
-	private static function front_groups_list( string $page_url, bool $can_delete = false ): void {
+	private static function front_library( string $page_url, bool $can_delete = false ): void {
 		$posts = get_posts(
 			array(
 				'post_type'              => array_values( self::type_map() ),
 				'post_status'            => array( 'publish', 'draft', 'pending' ),
-				'posts_per_page'         => 100, // phpcs:ignore WordPress.WP.PostsPerPage.posts_per_page_posts_per_page
+				'posts_per_page'         => 200, // phpcs:ignore WordPress.WP.PostsPerPage.posts_per_page_posts_per_page
 				'meta_key'               => self::GROUP_META, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
 				'orderby'                => 'date',
 				'order'                  => 'DESC',
@@ -1762,9 +1883,6 @@ class Kivun_Content_Creator {
 				'update_post_term_cache' => false,
 			)
 		);
-		if ( ! $posts ) {
-			return;
-		}
 
 		$labels = array(
 			'kivun_workshop' => __( 'דף נחיתה', 'kivun' ),
@@ -1772,6 +1890,7 @@ class Kivun_Content_Creator {
 			'kivun_session'  => __( 'סדנה', 'kivun' ),
 			'kivun_event'    => __( 'אירוע', 'kivun' ),
 		);
+
 		$groups = array();
 		foreach ( $posts as $p ) {
 			$g = (string) get_post_meta( $p->ID, self::GROUP_META, true );
@@ -1782,36 +1901,385 @@ class Kivun_Content_Creator {
 				$groups[ $g ] = array(
 					'title'   => get_the_title( $p->ID ),
 					'types'   => array(),
+					'ids'     => array(),
 					'view_id' => (int) $p->ID,
+					'status'  => $p->post_status,
+					'date'    => get_the_date( 'd/m/Y', $p->ID ),
 				);
 			}
 			$groups[ $g ]['types'][] = $labels[ $p->post_type ] ?? $p->post_type;
+			$groups[ $g ]['ids'][]   = (int) $p->ID;
+			// A group counts as published as soon as any of its posts is live.
+			if ( 'publish' === $p->post_status ) {
+				$groups[ $g ]['status'] = 'publish';
+			}
 		}
-		if ( ! $groups ) {
-			return;
-		}
+
+		$lead_counts = self::leads_per_content();
 		?>
-		<div class="kivun-cc-groups">
-			<h3 class="kivun-cc-h3"><?php esc_html_e( 'תכנים קיימים (עריכה)', 'kivun' ); ?></h3>
-			<ul class="kivun-cc-groups__list">
-				<?php foreach ( $groups as $gid => $g ) : ?>
-					<li class="kivun-cc-groups__item">
-						<span class="kivun-cc-groups__title"><?php echo esc_html( $g['title'] ); ?></span>
-						<span class="kivun-cc-groups__types"><?php echo esc_html( implode( ' · ', array_unique( $g['types'] ) ) ); ?></span>
-						<span class="kivun-cc-groups__actions">
-							<?php $group_view_url = isset( $g['view_id'] ) ? (string) get_permalink( (int) $g['view_id'] ) : ''; ?>
-							<?php if ( '' !== $group_view_url ) : ?>
-								<a class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost" href="<?php echo esc_url( $group_view_url ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'צפייה ↗', 'kivun' ); ?></a>
+		<div class="kivun-cc-front">
+			<div class="kivun-cc-head">
+				<h2 class="kivun-cc-title"><?php esc_html_e( 'התכנים שלי', 'kivun' ); ?></h2>
+				<p class="kivun-cc-lead"><?php esc_html_e( 'כל התכנים שנוצרו כאן — עריכה, שכפול, צפייה ומחיקה, ומספר הפניות שהתקבלו לכל תוכן.', 'kivun' ); ?></p>
+			</div>
+
+			<?php if ( ! $groups ) : ?>
+				<div class="kivun-cc-note"><?php esc_html_e( 'עדיין לא נוצרו תכנים. עברו ללשונית "פרסום תוכן" כדי להתחיל.', 'kivun' ); ?></div>
+			<?php else : ?>
+				<div class="kivun-cc-tablewrap">
+				<table class="kivun-cc-table">
+					<thead>
+						<tr>
+							<th scope="col"><?php esc_html_e( 'כותרת', 'kivun' ); ?></th>
+							<th scope="col"><?php esc_html_e( 'סוגים', 'kivun' ); ?></th>
+							<th scope="col"><?php esc_html_e( 'סטטוס', 'kivun' ); ?></th>
+							<th scope="col"><?php esc_html_e( 'פניות', 'kivun' ); ?></th>
+							<th scope="col"><?php esc_html_e( 'תאריך', 'kivun' ); ?></th>
+							<th scope="col"><?php esc_html_e( 'פעולות', 'kivun' ); ?></th>
+						</tr>
+					</thead>
+					<tbody>
+					<?php
+					foreach ( $groups as $gid => $g ) :
+						$view_url = (string) get_permalink( (int) $g['view_id'] );
+
+						$group_leads = 0;
+						foreach ( $g['ids'] as $gpid ) {
+							$group_leads += (int) ( $lead_counts[ $gpid ] ?? 0 );
+						}
+
+						$edit_url = add_query_arg(
+							'kivun_group',
+							rawurlencode( (string) $gid ),
+							remove_query_arg( array( 'kivun_saved', 'kivun_cc_error', 'kivun_deleted', 'kivun_duplicated' ), $page_url )
+						);
+						?>
+						<tr>
+							<td><strong><?php echo esc_html( $g['title'] ); ?></strong></td>
+							<td>
+								<?php foreach ( array_unique( $g['types'] ) as $type_label ) : ?>
+									<span class="kivun-cc-badge"><?php echo esc_html( $type_label ); ?></span>
+								<?php endforeach; ?>
+							</td>
+							<td>
+								<span class="kivun-status kivun-status--<?php echo esc_attr( $g['status'] ); ?>">
+									<?php echo esc_html( 'publish' === $g['status'] ? __( 'פורסם', 'kivun' ) : __( 'טיוטה', 'kivun' ) ); ?>
+								</span>
+							</td>
+							<td>
+								<?php if ( $group_leads ) : ?>
+									<a class="kivun-cc-leadlink" href="
+									<?php
+									echo esc_url(
+										add_query_arg(
+											array(
+												'kivun_tab' => 'leads',
+												'kivun_content' => (int) $g['view_id'],
+											),
+											$page_url
+										)
+									);
+									?>
+																		">
+										<?php echo esc_html( number_format_i18n( $group_leads ) ); ?>
+									</a>
+								<?php else : ?>
+									<span class="kivun-muted" aria-hidden="true">—</span>
+								<?php endif; ?>
+							</td>
+							<td><?php echo esc_html( $g['date'] ); ?></td>
+							<td class="kivun-cc-rowactions">
+								<?php if ( '' !== $view_url ) : ?>
+									<a class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost" href="<?php echo esc_url( $view_url ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'צפייה ↗', 'kivun' ); ?></a>
+								<?php endif; ?>
+								<a class="kivun-cc-btn kivun-cc-btn--sm" href="<?php echo esc_url( $edit_url ); ?>"><?php esc_html_e( 'עריכה', 'kivun' ); ?></a>
+								<?php echo self::duplicate_form( (int) ( $g['view_id'] ?? 0 ), $page_url, 'kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built from escaped parts in duplicate_form(). ?>
+								<?php if ( $can_delete ) : ?>
+									<?php echo self::delete_form( (string) $gid, $page_url, __( 'מחיקה', 'kivun' ), 'kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--danger' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built from escaped parts in delete_form(). ?>
+								<?php endif; ?>
+							</td>
+						</tr>
+					<?php endforeach; ?>
+					</tbody>
+				</table>
+				</div>
+			<?php endif; ?>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Registration/lead totals keyed by content post ID, for the library table.
+	 *
+	 * @return array<int,int>
+	 */
+	private static function leads_per_content(): array {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$rows = $wpdb->get_results(
+			"SELECT course_id, COUNT(*) AS total
+			 FROM {$wpdb->prefix}kivun_registrations
+			 WHERE course_id > 0
+			 GROUP BY course_id"
+		);
+
+		$counts = array();
+		foreach ( $rows as $r ) {
+			$counts[ (int) $r->course_id ] = (int) $r->total;
+		}
+		return $counts;
+	}
+
+	/**
+	 * Render the leads / registrations CRM on the front end: the same data and
+	 * inline editing as the wp-admin page, so managing enquiries never requires
+	 * opening wp-admin.
+	 *
+	 * @param string $page_url The current page URL (filters post back here).
+	 * @return void
+	 */
+	private static function front_leads( string $page_url ): void {
+		global $wpdb;
+
+		$statuses    = Kivun_Admin::reg_statuses();
+		$type_labels = Kivun_Admin::reg_type_labels();
+
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Read-only listing filters.
+		$content_filter = isset( $_GET['kivun_content'] ) ? absint( wp_unslash( $_GET['kivun_content'] ) ) : 0;
+		$type_filter    = isset( $_GET['kivun_ltype'] ) ? sanitize_text_field( wp_unslash( $_GET['kivun_ltype'] ) ) : '';
+		$status_filter  = isset( $_GET['kivun_lstatus'] ) ? sanitize_key( wp_unslash( $_GET['kivun_lstatus'] ) ) : '';
+		$search         = isset( $_GET['kivun_ls'] ) ? sanitize_text_field( wp_unslash( $_GET['kivun_ls'] ) ) : '';
+		$per_page       = isset( $_GET['kivun_lpp'] ) ? absint( wp_unslash( $_GET['kivun_lpp'] ) ) : 25;
+		$paged          = isset( $_GET['kivun_lpaged'] ) ? max( 1, absint( wp_unslash( $_GET['kivun_lpaged'] ) ) ) : 1;
+		// phpcs:enable WordPress.Security.NonceVerification.Recommended
+
+		if ( ! in_array( $per_page, array( 25, 50, 100, 200 ), true ) ) {
+			$per_page = 25;
+		}
+
+		$conds = array();
+		if ( $content_filter ) {
+			$conds[] = $wpdb->prepare( 'r.course_id = %d', $content_filter );
+		}
+		if ( '' !== $type_filter && isset( $type_labels[ $type_filter ] ) ) {
+			$conds[] = $wpdb->prepare( 'r.type = %s', $type_filter );
+		}
+		if ( '' !== $status_filter && isset( $statuses[ $status_filter ] ) ) {
+			$conds[] = $wpdb->prepare( 'r.status = %s', $status_filter );
+		}
+		if ( '' !== $search ) {
+			$like    = '%' . $wpdb->esc_like( $search ) . '%';
+			$conds[] = $wpdb->prepare( '(r.name LIKE %s OR r.email LIKE %s OR r.phone LIKE %s)', $like, $like, $like );
+		}
+		$where = $conds ? 'WHERE ' . implode( ' AND ', $conds ) : '';
+
+		$limit_sql = $wpdb->prepare( 'LIMIT %d OFFSET %d', $per_page, ( $paged - 1 ) * $per_page );
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$rows  = $wpdb->get_results(
+			"SELECT r.*, p.post_title AS course_title
+			 FROM {$wpdb->prefix}kivun_registrations r
+			 LEFT JOIN {$wpdb->posts} p ON p.ID = r.course_id
+			 $where
+			 ORDER BY r.created_at DESC
+			 $limit_sql"
+		);
+		$found = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}kivun_registrations r $where" );
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+
+		$total_pages = max( 1, (int) ceil( $found / $per_page ) );
+		$paged       = min( $paged, $total_pages );
+
+		$contents = get_posts(
+			array(
+				'post_type'              => array_values( self::type_map() ),
+				'post_status'            => array( 'publish', 'draft', 'pending' ),
+				'posts_per_page'         => -1,
+				'orderby'                => 'title',
+				'order'                  => 'ASC',
+				'no_found_rows'          => true,
+				'update_post_meta_cache' => false,
+				'update_post_term_cache' => false,
+			)
+		);
+
+		$can_delete_rows = current_user_can( 'manage_options' );
+
+		// Base args preserved across filtering and paging.
+		$base_args = array( 'kivun_tab' => 'leads' );
+		if ( $content_filter ) {
+			$base_args['kivun_content'] = $content_filter;
+		}
+		if ( '' !== $type_filter ) {
+			$base_args['kivun_ltype'] = $type_filter;
+		}
+		if ( '' !== $status_filter ) {
+			$base_args['kivun_lstatus'] = $status_filter;
+		}
+		if ( '' !== $search ) {
+			$base_args['kivun_ls'] = $search;
+		}
+		$base_args['kivun_lpp'] = $per_page;
+
+		$page_link = static function ( int $p ) use ( $base_args, $page_url ): string {
+			return add_query_arg( array_merge( $base_args, array( 'kivun_lpaged' => $p ) ), $page_url );
+		};
+		?>
+		<div class="kivun-cc-front">
+			<div class="kivun-cc-head">
+				<h2 class="kivun-cc-title"><?php esc_html_e( 'לידים והרשמות', 'kivun' ); ?></h2>
+				<p class="kivun-cc-lead"><?php esc_html_e( 'כל הפניות שהתקבלו מהתכנים — עדכון סטטוס והערות נשמרים אוטומטית.', 'kivun' ); ?></p>
+			</div>
+
+			<div class="kivun-cc-leadbar">
+				<span class="kivun-stat"><strong><?php echo esc_html( number_format_i18n( $found ) ); ?></strong> <?php esc_html_e( 'רשומות בתצוגה', 'kivun' ); ?></span>
+				<a class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost" href="<?php echo esc_url( Kivun_Export::url( 'registrations', $content_filter ) ); ?>">
+					⬇ <?php esc_html_e( 'ייצוא CSV', 'kivun' ); ?>
+				</a>
+			</div>
+
+			<form class="kivun-cc-leadfilters" method="get" action="<?php echo esc_url( $page_url ); ?>">
+				<input type="hidden" name="kivun_tab" value="leads">
+
+				<label class="kivun-sr-only" for="kivun-lf-content"><?php esc_html_e( 'סינון לפי תוכן', 'kivun' ); ?></label>
+				<select id="kivun-lf-content" name="kivun_content">
+					<option value="0"><?php esc_html_e( 'כל התכנים', 'kivun' ); ?></option>
+					<?php foreach ( $contents as $c ) : ?>
+						<option value="<?php echo esc_attr( $c->ID ); ?>" <?php selected( $content_filter, $c->ID ); ?>><?php echo esc_html( $c->post_title ); ?></option>
+					<?php endforeach; ?>
+				</select>
+
+				<label class="kivun-sr-only" for="kivun-lf-type"><?php esc_html_e( 'סינון לפי סוג', 'kivun' ); ?></label>
+				<select id="kivun-lf-type" name="kivun_ltype">
+					<option value=""><?php esc_html_e( 'כל הסוגים', 'kivun' ); ?></option>
+					<?php foreach ( $type_labels as $tv => $tl ) : ?>
+						<option value="<?php echo esc_attr( $tv ); ?>" <?php selected( $type_filter, $tv ); ?>><?php echo esc_html( $tl ); ?></option>
+					<?php endforeach; ?>
+				</select>
+
+				<label class="kivun-sr-only" for="kivun-lf-status"><?php esc_html_e( 'סינון לפי סטטוס', 'kivun' ); ?></label>
+				<select id="kivun-lf-status" name="kivun_lstatus">
+					<option value=""><?php esc_html_e( 'כל הסטטוסים', 'kivun' ); ?></option>
+					<?php foreach ( $statuses as $sv => $sl ) : ?>
+						<option value="<?php echo esc_attr( $sv ); ?>" <?php selected( $status_filter, $sv ); ?>><?php echo esc_html( $sl ); ?></option>
+					<?php endforeach; ?>
+				</select>
+
+				<label class="kivun-sr-only" for="kivun-lf-search"><?php esc_html_e( 'חיפוש', 'kivun' ); ?></label>
+				<input type="search" id="kivun-lf-search" name="kivun_ls" value="<?php echo esc_attr( $search ); ?>" placeholder="<?php esc_attr_e( 'שם, אימייל או טלפון…', 'kivun' ); ?>">
+
+				<label class="kivun-sr-only" for="kivun-lf-pp"><?php esc_html_e( 'רשומות בעמוד', 'kivun' ); ?></label>
+				<select id="kivun-lf-pp" name="kivun_lpp">
+					<?php foreach ( array( 25, 50, 100, 200 ) as $pp ) : ?>
+						<option value="<?php echo esc_attr( $pp ); ?>" <?php selected( $per_page, $pp ); ?>>
+							<?php
+							/* translators: %d: number of rows shown per page. */
+							echo esc_html( sprintf( __( '%d בעמוד', 'kivun' ), $pp ) );
+							?>
+						</option>
+					<?php endforeach; ?>
+				</select>
+
+				<button type="submit" class="kivun-cc-btn kivun-cc-btn--sm"><?php esc_html_e( 'סינון', 'kivun' ); ?></button>
+				<?php if ( $content_filter || '' !== $type_filter || '' !== $status_filter || '' !== $search ) : ?>
+					<a class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost" href="<?php echo esc_url( add_query_arg( 'kivun_tab', 'leads', $page_url ) ); ?>"><?php esc_html_e( 'ניקוי', 'kivun' ); ?></a>
+				<?php endif; ?>
+			</form>
+
+			<?php if ( ! $rows ) : ?>
+				<div class="kivun-cc-note"><?php esc_html_e( 'לא נמצאו רשומות תואמות.', 'kivun' ); ?></div>
+			<?php else : ?>
+				<div class="kivun-cc-tablewrap">
+				<table class="kivun-cc-table kivun-cc-leadtable">
+					<thead>
+						<tr>
+							<th scope="col"><?php esc_html_e( 'שם', 'kivun' ); ?></th>
+							<th scope="col"><?php esc_html_e( 'תוכן', 'kivun' ); ?></th>
+							<th scope="col"><?php esc_html_e( 'סוג', 'kivun' ); ?></th>
+							<th scope="col"><?php esc_html_e( 'יצירת קשר', 'kivun' ); ?></th>
+							<th scope="col"><?php esc_html_e( 'עיר', 'kivun' ); ?></th>
+							<th scope="col"><?php esc_html_e( 'דיוור', 'kivun' ); ?></th>
+							<th scope="col"><?php esc_html_e( 'הערות', 'kivun' ); ?></th>
+							<th scope="col"><?php esc_html_e( 'תאריך', 'kivun' ); ?></th>
+							<th scope="col"><?php esc_html_e( 'סטטוס', 'kivun' ); ?></th>
+							<?php if ( $can_delete_rows ) : ?>
+								<th scope="col"><?php esc_html_e( 'מחיקה', 'kivun' ); ?></th>
 							<?php endif; ?>
-							<a class="kivun-cc-btn kivun-cc-btn--sm" href="<?php echo esc_url( add_query_arg( 'kivun_group', rawurlencode( $gid ), remove_query_arg( array( 'kivun_saved', 'kivun_cc_error', 'kivun_deleted' ), $page_url ) ) ); ?>"><?php esc_html_e( 'עריכה', 'kivun' ); ?></a>
-							<?php echo self::duplicate_form( (int) ( $g['view_id'] ?? 0 ), $page_url, 'kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built from escaped parts in duplicate_form(). ?>
-							<?php if ( $can_delete ) : ?>
-								<?php echo self::delete_form( (string) $gid, $page_url, __( 'מחיקה', 'kivun' ), 'kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--danger' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built from escaped parts in delete_form(). ?>
+						</tr>
+					</thead>
+					<tbody>
+					<?php foreach ( $rows as $r ) : ?>
+						<tr>
+							<td><strong><?php echo esc_html( $r->name ); ?></strong></td>
+							<td>
+								<?php
+								$row_title = $r->course_title ? $r->course_title : __( '(נמחק)', 'kivun' );
+								$row_link  = $r->course_id ? (string) get_permalink( (int) $r->course_id ) : '';
+								if ( $row_link ) :
+									?>
+									<a href="<?php echo esc_url( $row_link ); ?>" target="_blank" rel="noopener"><?php echo esc_html( $row_title ); ?></a>
+								<?php else : ?>
+									<?php echo esc_html( $row_title ); ?>
+								<?php endif; ?>
+								<?php if ( ! empty( $r->source ) ) : ?>
+									<span class="kivun-cc-source"><?php echo esc_html( (string) $r->source ); ?></span>
+								<?php endif; ?>
+							</td>
+							<td><span class="kivun-cc-badge"><?php echo esc_html( $type_labels[ $r->type ?? 'registration' ] ?? (string) $r->type ); ?></span></td>
+							<td class="kivun-app-contact">
+								<a href="mailto:<?php echo esc_attr( $r->email ); ?>"><?php echo esc_html( $r->email ); ?></a>
+								<?php if ( $r->phone ) : ?>
+									<a href="tel:<?php echo esc_attr( $r->phone ); ?>"><?php echo esc_html( $r->phone ); ?></a>
+								<?php endif; ?>
+							</td>
+							<td><?php echo esc_html( (string) ( $r->city ?? '' ) ); ?></td>
+							<td><?php echo esc_html( empty( $r->marketing_consent ) ? '—' : '✓' ); ?></td>
+							<td>
+								<?php
+								// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Returns pre-escaped HTML.
+								echo Kivun_Admin::notes_input( 'registrations', (int) $r->id, (string) ( $r->notes ?? '' ) );
+								?>
+								<span class="kivun-saved-indicator" role="status" aria-live="polite" style="display:none"></span>
+							</td>
+							<td class="kivun-cc-date"><?php echo esc_html( wp_date( 'd/m/Y H:i', strtotime( $r->created_at ) ) ); ?></td>
+							<td>
+								<?php
+								// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Returns pre-escaped HTML.
+								echo Kivun_Admin::status_select( 'registrations', (int) $r->id, (string) $r->status, $statuses );
+								?>
+								<span class="kivun-saved-indicator" role="status" aria-live="polite" style="display:none"></span>
+							</td>
+							<?php if ( $can_delete_rows ) : ?>
+								<td>
+									<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--danger kivun-delete-row" data-table="registrations" data-id="<?php echo esc_attr( $r->id ); ?>">
+										<?php esc_html_e( 'מחיקה', 'kivun' ); ?>
+									</button>
+								</td>
 							<?php endif; ?>
+						</tr>
+					<?php endforeach; ?>
+					</tbody>
+				</table>
+				</div>
+
+				<?php if ( $total_pages > 1 ) : ?>
+					<div class="kivun-cc-pager">
+						<?php if ( $paged > 1 ) : ?>
+							<a class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost" href="<?php echo esc_url( $page_link( $paged - 1 ) ); ?>">‹ <?php esc_html_e( 'הקודם', 'kivun' ); ?></a>
+						<?php endif; ?>
+						<span class="kivun-cc-pager__state">
+							<?php
+							/* translators: 1: current page, 2: total pages. */
+							echo esc_html( sprintf( __( 'עמוד %1$d מתוך %2$d', 'kivun' ), $paged, $total_pages ) );
+							?>
 						</span>
-					</li>
-				<?php endforeach; ?>
-			</ul>
+						<?php if ( $paged < $total_pages ) : ?>
+							<a class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost" href="<?php echo esc_url( $page_link( $paged + 1 ) ); ?>"><?php esc_html_e( 'הבא', 'kivun' ); ?> ›</a>
+						<?php endif; ?>
+					</div>
+				<?php endif; ?>
+			<?php endif; ?>
 		</div>
 		<?php
 	}

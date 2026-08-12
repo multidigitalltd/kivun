@@ -486,14 +486,21 @@
 		});
 	});
 
-	// ── Employer dashboard tabs (WAI-ARIA tab pattern) ───────────────────────────
+	// ── Tabs (WAI-ARIA tab pattern) — employer dashboard + content console ───────
 	function getTabs(tab) {
 		return Array.prototype.slice.call(tab.closest('.kivun-tabs').querySelectorAll('.kivun-tab'));
 	}
 
+	// The tabbed containers in the plugin. Panels are scoped to their own
+	// container so two tab sets on one page never toggle each other.
+	function tabScope(el) {
+		return el.closest('.kivun-employer-dashboard, .kivun-cc-console');
+	}
+
 	function activateTab(tab, focusIt) {
 		if (!tab) { return; }
-		var dash = tab.closest('.kivun-employer-dashboard');
+		var dash = tabScope(tab);
+		if (!dash) { return; }
 		var name = tab.dataset.tab;
 
 		dash.querySelectorAll('.kivun-tab').forEach(function (t) {
@@ -544,7 +551,8 @@
 		var link = e.target.closest('.kivun-view-job-apps');
 		if (!link) { return; }
 
-		var dash = link.closest('.kivun-employer-dashboard');
+		var dash = tabScope(link);
+		if (!dash) { return; }
 		activateTab(dash.querySelector('.kivun-tab[data-tab="applications"]'), true);
 		var jobFilter = dash.querySelector('#kivun-apps-filter-job');
 		if (jobFilter) { jobFilter.value = String(link.dataset.job); }

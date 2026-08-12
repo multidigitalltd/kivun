@@ -423,25 +423,8 @@ class Kivun_Admin {
 			return;
 		}
 
-		$reg_statuses = array(
-			'new_lead'     => 'ליד חדש',
-			'next_cycle'   => 'למחזור הבא',
-			'new'          => 'חדש',
-			'contacted'    => 'נוצר קשר',
-			'interested'   => 'מעוניין',
-			'enrolled'     => 'נרשם סופית',
-			'closed'       => 'נסגר ✓',
-			'not_relevant' => 'לא רלוונטי',
-		);
-
-		$type_labels = array(
-			'registration' => 'הרשמה',
-			'lead'         => 'מתעניין',
-			'workshop'     => 'דף נחיתה',
-			'session'      => 'סדנה',
-			'event'        => 'אירוע',
-			'form'         => 'טופס',
-		);
+		$reg_statuses = self::reg_statuses();
+		$type_labels  = self::reg_type_labels();
 
 		printf(
 			'<p style="margin-bottom:.5rem"><a href="%s" class="button button-small">⬇ ייצוא CSV</a></p>',
@@ -574,6 +557,41 @@ class Kivun_Admin {
 	}
 
 	/**
+	 * Registration/lead status vocabulary, shared by the wp-admin CRM page and
+	 * the front-end content console so both speak the same language.
+	 *
+	 * @return array<string,string>
+	 */
+	public static function reg_statuses(): array {
+		return array(
+			'new_lead'     => __( 'ליד חדש', 'kivun' ),
+			'next_cycle'   => __( 'למחזור הבא', 'kivun' ),
+			'new'          => __( 'חדש', 'kivun' ),
+			'contacted'    => __( 'נוצר קשר', 'kivun' ),
+			'interested'   => __( 'מעוניין', 'kivun' ),
+			'enrolled'     => __( 'נרשם סופית', 'kivun' ),
+			'closed'       => __( 'נסגר ✓', 'kivun' ),
+			'not_relevant' => __( 'לא רלוונטי', 'kivun' ),
+		);
+	}
+
+	/**
+	 * Registration/lead source-type labels, shared with the front-end console.
+	 *
+	 * @return array<string,string>
+	 */
+	public static function reg_type_labels(): array {
+		return array(
+			'registration' => __( 'הרשמה', 'kivun' ),
+			'lead'         => __( 'מתעניין', 'kivun' ),
+			'workshop'     => __( 'דף נחיתה', 'kivun' ),
+			'session'      => __( 'סדנה', 'kivun' ),
+			'event'        => __( 'אירוע', 'kivun' ),
+			'form'         => __( 'טופס', 'kivun' ),
+		);
+	}
+
+	/**
 	 * Build an escaped notes textarea for a CRM row.
 	 *
 	 * @param string $table The CRM table key ('registrations' or 'applications').
@@ -581,7 +599,7 @@ class Kivun_Admin {
 	 * @param string $value The current note value.
 	 * @return string
 	 */
-	private static function notes_input( string $table, int $id, string $value ): string {
+	public static function notes_input( string $table, int $id, string $value ): string {
 		return sprintf(
 			'<textarea class="kivun-notes-input" data-table="%s" data-id="%d" rows="2" placeholder="%s">%s</textarea>',
 			esc_attr( $table ),
@@ -632,7 +650,7 @@ class Kivun_Admin {
 	 * @param array  $options Map of status value => label.
 	 * @return string
 	 */
-	private static function status_select( string $table, int $id, string $current, array $options ): string {
+	public static function status_select( string $table, int $id, string $current, array $options ): string {
 		$html = sprintf(
 			'<select class="kivun-status-select" data-table="%s" data-id="%d">',
 			esc_attr( $table ),
@@ -1260,25 +1278,8 @@ class Kivun_Admin {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin filter.
 		$search = isset( $_GET['s'] ) ? sanitize_text_field( wp_unslash( $_GET['s'] ) ) : '';
 
-		$reg_statuses = array(
-			'new_lead'     => 'ליד חדש',
-			'next_cycle'   => 'למחזור הבא',
-			'new'          => 'חדש',
-			'contacted'    => 'נוצר קשר',
-			'interested'   => 'מעוניין',
-			'enrolled'     => 'נרשם סופית',
-			'closed'       => 'נסגר ✓',
-			'not_relevant' => 'לא רלוונטי',
-		);
-
-		$type_labels = array(
-			'registration' => 'הרשמה',
-			'lead'         => 'מתעניין',
-			'workshop'     => 'דף נחיתה',
-			'session'      => 'סדנה',
-			'event'        => 'אירוע',
-			'form'         => 'טופס',
-		);
+		$reg_statuses = self::reg_statuses();
+		$type_labels  = self::reg_type_labels();
 
 		$conds = array();
 		if ( $course_filter ) {

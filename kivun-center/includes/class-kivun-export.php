@@ -32,33 +32,35 @@ class Kivun_Export {
 		$type    = sanitize_key( wp_unslash( $_GET['type'] ?? '' ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Nonce verified via check_admin_referer above.
 		$post_id = absint( wp_unslash( $_GET['post_id'] ?? 0 ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Nonce verified via check_admin_referer above.
 
-		// Board managers (site admins + the jobs-board manager role) may export
-		// applications for the whole board, or scoped to one publisher.
-		// phpcs:ignore WordPress.WP.Capabilities.Unknown -- Custom plugin capability.
-		$manages_board = current_user_can( 'manage_options' ) || current_user_can( 'kivun_manage_jobs' );
+		// Optional publisher scope, used when a manager is "acting as" a publisher.
+		$employer_id = absint( wp_unslash( $_GET['employer'] ?? 0 ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Nonce verified via check_admin_referer above.
 
-		if ( ! $manages_board ) {
-			// Plain employer: applications for their own jobs only.
-			if ( 'applications' !== $type || ! current_user_can( 'kivun_employer' ) ) { // phpcs:ignore WordPress.WP.Capabilities.Unknown -- Custom plugin capability.
+		// Each export type carries its own rule, so a user who is authorised for
+		// one (say an editor exporting leads) is not judged by the other's.
+		if ( 'registrations' === $type ) {
+			// Course/lead enquiries — content managers and administrators.
+			if ( ! Kivun_Content_Creator::can_manage_leads() ) {
+				wp_die( 'Unauthorized' );
+			}
+			self::export_registrations( $post_id );
+			return;
+		}
+
+		if ( 'applications' === $type ) {
+			// Whole board for admins and the jobs-board manager; a plain
+			// employer is restricted to applications for their own jobs.
+			if ( Kivun_Employer::can_manage_all() ) {
+				self::export_applications( $post_id, $employer_id );
+				return;
+			}
+			if ( ! current_user_can( 'kivun_employer' ) ) { // phpcs:ignore WordPress.WP.Capabilities.Unknown -- Custom plugin capability.
 				wp_die( 'Unauthorized' );
 			}
 			self::export_applications( $post_id, get_current_user_id() );
 			return;
 		}
 
-		// Registrations (courses/leads) remain admin-only.
-		if ( 'registrations' === $type && ! current_user_can( 'manage_options' ) ) {
-			wp_die( 'Unauthorized' );
-		}
-
-		// Optional publisher scope, used when a manager is "acting as" a publisher.
-		$employer_id = absint( wp_unslash( $_GET['employer'] ?? 0 ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Nonce verified via check_admin_referer above.
-
-		match ( $type ) {
-			'registrations' => self::export_registrations( $post_id ),
-			'applications'  => self::export_applications( $post_id, $employer_id ),
-			default         => wp_die( 'Invalid type' ),
-		};
+		wp_die( 'Invalid type' );
 	}
 
 	// ── Registrations CSV ─────────────────────────────────────────────────────.
