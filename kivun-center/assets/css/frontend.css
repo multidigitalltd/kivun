@@ -788,7 +788,10 @@
 .kivun-tab:hover { color: var(--kc-dark); }
 .kivun-tab.is-active { color: var(--kc-dark); background: #fff; box-shadow: 0 2px 8px rgba(35,35,35,.08); }
 .kivun-tab-badge {
-	background: var(--kc-accent); color: #fff; font-size: .72rem; font-weight: 700;
+	/* --kc-accent only exists inside the employer dashboard. Without the
+	   fallback the background resolves to nothing and the white count sits
+	   invisibly on a white tab bar. */
+	background: var(--kc-accent, var(--kivun-accent)); color: #fff; font-size: .72rem; font-weight: 700;
 	border-radius: 999px; padding: .1rem .5rem; line-height: 1.4;
 }
 .kivun-tab-badge--inline { background: #fdf3d8; color: #8a6311; margin-inline-start: .4rem; }
@@ -1040,8 +1043,31 @@
 	color: #fff;
 	box-shadow: 0 2px 8px rgba(0,0,0,.18);
 }
-.kivun-cc-console .kivun-cc-tabs .kivun-tab.is-active .kivun-tab-badge { background: rgba(255,255,255,.24); color: #fff; }
+/* Counts on the tabs you are NOT on still have to be readable — they are the
+   reason to click through. A tinted chip on the light bar, inverted once the
+   tab is active and the bar goes dark. */
+.kivun-cc-console .kivun-cc-tabs .kivun-tab .kivun-tab-badge {
+	background: var(--cc-tint);
+	color: var(--cc-ink);
+	border: 1px solid var(--cc-line);
+}
+.kivun-cc-console .kivun-cc-tabs .kivun-tab:hover .kivun-tab-badge { border-color: transparent; }
+.kivun-cc-console .kivun-cc-tabs .kivun-tab.is-active .kivun-tab-badge {
+	background: rgba(255,255,255,.24);
+	color: #fff;
+	border-color: transparent;
+}
 .kivun-cc-tabicon { font-size: 1rem; line-height: 1; }
+
+/* Themes and page builders sometimes run the console output through wpautop,
+   which turns the newlines between block elements into empty <p> tags and
+   stray <br>s. They are invisible but occupy a full line each, showing up as
+   unexplained bands of whitespace inside the panel. */
+.kivun-cc-console p:empty { display: none !important; }
+.kivun-cc-console > br,
+.kivun-cc-console .kivun-tab-panel > br,
+.kivun-cc-console .kivun-cc-form > br { display: none !important; }
+.kivun-cc-console .kivun-cc-form { margin: 0 !important; }
 
 /* Panels sit on cards so each section reads as its own workspace. */
 .kivun-cc-console > .kivun-tab-panel.is-active {
