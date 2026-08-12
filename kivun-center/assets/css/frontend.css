@@ -1314,6 +1314,29 @@
 .kivun-cc-iconbtn .kivun-icon { width: 17px; height: 17px; }
 .kivun-cc-iconbtn--danger:hover { background: #dc2626; border-color: #dc2626; color: #fff; }
 
+/* Campaign (UTM) builder */
+.kivun-camp-builder { margin-bottom: 1.35rem; }
+.kivun-camp-out { display: flex; gap: .5rem; align-items: center; }
+.kivun-camp-out .kivun-camp-result {
+	flex: 1 1 auto;
+	background: #f8fafc;
+	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+	font-size: .82rem;
+	direction: ltr;
+	text-align: left;
+}
+.kivun-camp-cell { display: flex; gap: .4rem; align-items: center; min-width: 320px; }
+.kivun-camp-saved {
+	flex: 1 1 auto;
+	background: #f8fafc;
+	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+	font-size: .76rem;
+	padding: .4rem .55rem;
+	direction: ltr;
+	text-align: left;
+}
+.kivun-camp-copy { white-space: nowrap; flex: 0 0 auto; }
+
 /* Date range filter */
 .kivun-cc-daterange { display: inline-flex; align-items: center; gap: .35rem; }
 .kivun-cc-daterange label { font-size: .8rem; color: var(--kivun-muted); font-weight: 600; }

@@ -44,6 +44,7 @@ class Kivun_Core {
 		Kivun_Forms_Router::init();
 		Kivun_Lead_Capture::init();
 		Kivun_Utm::init();
+		Kivun_Campaigns::init();
 		Kivun_Duplicate::init();
 		Kivun_Thank_You::init();
 		Kivun_Content_Creator::init();
@@ -106,6 +107,7 @@ class Kivun_Core {
 			'class-kivun-forms-router',
 			'class-kivun-lead-capture',
 			'class-kivun-utm',
+			'class-kivun-campaigns',
 			'class-kivun-duplicate',
 			'class-kivun-thank-you',
 			'class-kivun-content-creator',
@@ -188,6 +190,7 @@ class Kivun_Core {
 					'confirm_send_login'       => __( 'לשלוח למפרסם מייל עם קישור להגדרת סיסמה?', 'kivun' ),
 					'confirm_disable_employer' => __( 'להשבית את המפרסם? הוא לא יוכל להתחבר ולא יופיע ברשימת הפרסום. המשרות וההגשות שלו יישמרו.', 'kivun' ),
 					'renew_prompt'             => __( 'תאריך סגירה חדש למשרה (YYYY-MM-DD):', 'kivun' ),
+					'confirm_delete_campaign'  => __( 'למחוק את הקמפיין מהרשימה? הלידים שהגיעו דרכו יישמרו.', 'kivun' ),
 				),
 			)
 		);

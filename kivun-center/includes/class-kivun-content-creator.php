@@ -1204,10 +1204,13 @@ class Kivun_Content_Creator {
 		// content leads table.
 		$show_jobs = Kivun_Employer::can_manage_all();
 
+		$show_camp = Kivun_Campaigns::can_manage();
+
 		if (
-			! in_array( $tab, array( 'form', 'library', 'leads', 'jobs' ), true ) ||
+			! in_array( $tab, array( 'form', 'library', 'leads', 'jobs', 'campaigns' ), true ) ||
 			( 'leads' === $tab && ! $show_leads ) ||
-			( 'jobs' === $tab && ! $show_jobs )
+			( 'jobs' === $tab && ! $show_jobs ) ||
+			( 'campaigns' === $tab && ! $show_camp )
 		) {
 			$tab = 'form';
 		}
@@ -1235,6 +1238,13 @@ class Kivun_Content_Creator {
 				'label' => __( 'לידים והרשמות', 'kivun' ),
 				'icon'  => 'leads',
 				'count' => $stats['leads'],
+			);
+		}
+		if ( $show_camp ) {
+			$console_tabs['campaigns'] = array(
+				'label' => __( 'קמפיינים', 'kivun' ),
+				'icon'  => 'filter',
+				'count' => null,
 			);
 		}
 		if ( $show_jobs ) {
@@ -1328,6 +1338,12 @@ class Kivun_Content_Creator {
 			<?php if ( $show_leads ) : ?>
 				<section class="kivun-tab-panel <?php echo 'leads' === $tab ? 'is-active' : ''; ?>" data-panel="leads" id="kivun-ccpanel-leads" role="tabpanel" aria-labelledby="kivun-cctab-leads" tabindex="0" <?php echo 'leads' === $tab ? '' : 'hidden'; ?>>
 					<?php self::front_leads( $page_url ); ?>
+				</section>
+			<?php endif; ?>
+
+			<?php if ( $show_camp ) : ?>
+				<section class="kivun-tab-panel <?php echo 'campaigns' === $tab ? 'is-active' : ''; ?>" data-panel="campaigns" id="kivun-ccpanel-campaigns" role="tabpanel" aria-labelledby="kivun-cctab-campaigns" tabindex="0" <?php echo 'campaigns' === $tab ? '' : 'hidden'; ?>>
+					<?php self::front_campaigns(); ?>
 				</section>
 			<?php endif; ?>
 
@@ -2201,6 +2217,196 @@ class Kivun_Content_Creator {
 					</tbody>
 				</table>
 				</div>
+			<?php endif; ?>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Render the campaign builder: a UTM link generator plus the list of links
+	 * already built, with how many leads each one produced.
+	 *
+	 * @return void
+	 */
+	private static function front_campaigns(): void {
+		$campaigns = Kivun_Campaigns::all();
+		$counts    = Kivun_Campaigns::lead_counts();
+
+		// Targets: content created here, plus every published page.
+		$contents = get_posts(
+			array(
+				'post_type'              => array_values( self::type_map() ),
+				'post_status'            => 'publish',
+				'posts_per_page'         => -1,
+				'orderby'                => 'title',
+				'order'                  => 'ASC',
+				'no_found_rows'          => true,
+				'update_post_meta_cache' => false,
+				'update_post_term_cache' => false,
+			)
+		);
+		$pages    = get_posts(
+			array(
+				'post_type'              => 'page',
+				'post_status'            => 'publish',
+				'posts_per_page'         => 100, // phpcs:ignore WordPress.WP.PostsPerPage.posts_per_page_posts_per_page
+				'orderby'                => 'title',
+				'order'                  => 'ASC',
+				'no_found_rows'          => true,
+				'update_post_meta_cache' => false,
+				'update_post_term_cache' => false,
+			)
+		);
+		?>
+		<div class="kivun-cc-front">
+			<div class="kivun-cc-head">
+				<h2 class="kivun-cc-title"><?php esc_html_e( 'קמפיינים', 'kivun' ); ?></h2>
+				<p class="kivun-cc-lead">
+					<?php esc_html_e( 'בניית קישורים מתויגים לקמפיינים. כשמישהו נכנס דרך קישור כזה ומשאיר פרטים, מקור הפנייה נרשם אוטומטית בטבלת הלידים — כך רואים איזה קמפיין באמת מביא פניות.', 'kivun' ); ?>
+				</p>
+			</div>
+
+			<div class="kivun-cc-card kivun-camp-builder">
+				<label class="kivun-cc-label"><?php esc_html_e( 'בניית קישור חדש', 'kivun' ); ?></label>
+				<form class="kivun-campaign-form" novalidate>
+
+					<div class="kivun-form-grid">
+						<div class="kivun-form-row">
+							<label for="kivun-camp-target"><?php esc_html_e( 'יעד הקישור *', 'kivun' ); ?></label>
+							<select id="kivun-camp-target" class="kivun-cc-input kivun-camp-target">
+								<option value=""><?php esc_html_e( '— בחר/י יעד —', 'kivun' ); ?></option>
+								<?php if ( $contents ) : ?>
+									<optgroup label="<?php esc_attr_e( 'תכנים', 'kivun' ); ?>">
+										<?php foreach ( $contents as $c ) : ?>
+											<option value="<?php echo esc_url( (string) get_permalink( $c->ID ) ); ?>"><?php echo esc_html( $c->post_title ); ?></option>
+										<?php endforeach; ?>
+									</optgroup>
+								<?php endif; ?>
+								<?php if ( $pages ) : ?>
+									<optgroup label="<?php esc_attr_e( 'עמודים באתר', 'kivun' ); ?>">
+										<?php foreach ( $pages as $pg ) : ?>
+											<option value="<?php echo esc_url( (string) get_permalink( $pg->ID ) ); ?>"><?php echo esc_html( $pg->post_title ); ?></option>
+										<?php endforeach; ?>
+									</optgroup>
+								<?php endif; ?>
+								<option value="__custom__"><?php esc_html_e( 'כתובת אחרת (הדבקה ידנית)…', 'kivun' ); ?></option>
+							</select>
+							<input type="url" class="kivun-cc-input kivun-camp-custom" dir="ltr" placeholder="https://…" hidden>
+						</div>
+
+						<div class="kivun-form-row">
+							<label for="kivun-camp-name"><?php esc_html_e( 'שם הקמפיין *', 'kivun' ); ?></label>
+							<input type="text" id="kivun-camp-name" class="kivun-cc-input kivun-camp-campaign" placeholder="<?php esc_attr_e( 'למשל: סדנת קיץ 2026', 'kivun' ); ?>">
+							<p class="kivun-field-hint"><?php esc_html_e( 'יומר אוטומטית לאותיות קטנות עם מקפים.', 'kivun' ); ?></p>
+						</div>
+
+						<div class="kivun-form-row">
+							<label for="kivun-camp-source"><?php esc_html_e( 'מקור *', 'kivun' ); ?></label>
+							<select id="kivun-camp-source" class="kivun-cc-input kivun-camp-source">
+								<option value=""><?php esc_html_e( '— בחר/י —', 'kivun' ); ?></option>
+								<?php foreach ( Kivun_Campaigns::sources() as $sv => $sl ) : ?>
+									<option value="<?php echo esc_attr( $sv ); ?>"><?php echo esc_html( $sl ); ?></option>
+								<?php endforeach; ?>
+								<option value="__custom__"><?php esc_html_e( 'אחר…', 'kivun' ); ?></option>
+							</select>
+							<input type="text" class="kivun-cc-input kivun-camp-source-custom" dir="ltr" placeholder="<?php esc_attr_e( 'מקור אחר', 'kivun' ); ?>" hidden>
+						</div>
+
+						<div class="kivun-form-row">
+							<label for="kivun-camp-medium"><?php esc_html_e( 'מדיום', 'kivun' ); ?></label>
+							<select id="kivun-camp-medium" class="kivun-cc-input kivun-camp-medium">
+								<option value=""><?php esc_html_e( '— ללא —', 'kivun' ); ?></option>
+								<?php foreach ( Kivun_Campaigns::mediums() as $mv => $ml ) : ?>
+									<option value="<?php echo esc_attr( $mv ); ?>"><?php echo esc_html( $ml ); ?></option>
+								<?php endforeach; ?>
+								<option value="__custom__"><?php esc_html_e( 'אחר…', 'kivun' ); ?></option>
+							</select>
+							<input type="text" class="kivun-cc-input kivun-camp-medium-custom" dir="ltr" placeholder="<?php esc_attr_e( 'מדיום אחר', 'kivun' ); ?>" hidden>
+						</div>
+					</div>
+
+					<label class="kivun-cc-sub"><?php esc_html_e( 'הקישור המוכן', 'kivun' ); ?></label>
+					<div class="kivun-camp-out">
+						<input type="text" class="kivun-cc-input kivun-camp-result" dir="ltr" readonly placeholder="<?php esc_attr_e( 'מלאו יעד, שם קמפיין ומקור…', 'kivun' ); ?>">
+						<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost kivun-camp-copy"><?php esc_html_e( 'העתקה', 'kivun' ); ?></button>
+					</div>
+
+					<p class="kivun-error kivun-camp-error" style="display:none;color:var(--kivun-error)"></p>
+
+					<div class="kivun-form-actions">
+						<button type="submit" class="kivun-cc-btn"><?php esc_html_e( 'שמירת הקמפיין', 'kivun' ); ?></button>
+					</div>
+				</form>
+			</div>
+
+			<?php if ( ! $campaigns ) : ?>
+				<div class="kivun-cc-note"><?php esc_html_e( 'עדיין לא נשמרו קמפיינים.', 'kivun' ); ?></div>
+			<?php else : ?>
+				<div class="kivun-cc-tablewrap">
+				<table class="kivun-cc-table">
+					<thead>
+						<tr>
+							<th scope="col"><?php esc_html_e( 'קמפיין', 'kivun' ); ?></th>
+							<th scope="col"><?php esc_html_e( 'מקור / מדיום', 'kivun' ); ?></th>
+							<th scope="col"><?php esc_html_e( 'קישור', 'kivun' ); ?></th>
+							<th scope="col"><?php esc_html_e( 'לידים', 'kivun' ); ?></th>
+							<th scope="col"><?php esc_html_e( 'נוצר', 'kivun' ); ?></th>
+							<th scope="col"><?php esc_html_e( 'פעולות', 'kivun' ); ?></th>
+						</tr>
+					</thead>
+					<tbody>
+					<?php foreach ( $campaigns as $camp ) : ?>
+						<tr data-campaign-row="<?php echo esc_attr( $camp->id ); ?>">
+							<td><strong><?php echo esc_html( $camp->label ); ?></strong></td>
+							<td>
+								<span class="kivun-cc-badge"><?php echo esc_html( $camp->utm_source ); ?></span>
+								<?php if ( $camp->utm_medium ) : ?>
+									<span class="kivun-cc-badge"><?php echo esc_html( $camp->utm_medium ); ?></span>
+								<?php endif; ?>
+							</td>
+							<td class="kivun-camp-cell">
+								<input type="text" class="kivun-cc-input kivun-camp-saved" dir="ltr" readonly value="<?php echo esc_url( $camp->final_url ); ?>">
+								<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost kivun-camp-copy"><?php esc_html_e( 'העתקה', 'kivun' ); ?></button>
+							</td>
+							<td>
+								<?php
+								$camp_leads = (int) ( $counts[ $camp->utm_campaign ] ?? 0 );
+								if ( $camp_leads ) :
+									?>
+									<a class="kivun-cc-leadlink" href="
+									<?php
+									echo esc_url(
+										add_query_arg(
+											array(
+												'kivun_tab' => 'leads',
+												'kivun_ls' => $camp->utm_campaign,
+											)
+										)
+									);
+									?>
+																		"><?php echo esc_html( number_format_i18n( $camp_leads ) ); ?></a>
+								<?php else : ?>
+									<span class="kivun-muted" aria-hidden="true">—</span>
+								<?php endif; ?>
+							</td>
+							<td class="kivun-cc-date"><?php echo esc_html( wp_date( 'd/m/Y', strtotime( $camp->created_at ) ) ); ?></td>
+							<td>
+								<button
+									type="button"
+									class="kivun-cc-iconbtn kivun-cc-iconbtn--danger kivun-delete-campaign"
+									data-id="<?php echo esc_attr( $camp->id ); ?>"
+									title="<?php esc_attr_e( 'מחיקת הקמפיין', 'kivun' ); ?>"
+								>
+									<?php echo kivun_icon( 'trash' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?>
+									<span class="kivun-sr-only"><?php esc_html_e( 'מחיקת הקמפיין', 'kivun' ); ?></span>
+								</button>
+							</td>
+						</tr>
+					<?php endforeach; ?>
+					</tbody>
+				</table>
+				</div>
+				<p class="kivun-field-hint"><?php esc_html_e( 'מחיקת קמפיין מסירה את הקישור מהרשימה בלבד — הלידים שכבר הגיעו דרכו נשמרים.', 'kivun' ); ?></p>
 			<?php endif; ?>
 		</div>
 		<?php

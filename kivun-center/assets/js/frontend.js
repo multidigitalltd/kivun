@@ -486,6 +486,159 @@
 		});
 	});
 
+	// ── Campaign (UTM) link builder ──────────────────────────────────────────────
+	function kivunCampClean(value) {
+		return String(value || '')
+			.trim()
+			.replace(/[\s_]+/g, '-')
+			.replace(/[^\p{L}\p{N}\-.]+/gu, '')
+			.replace(/-{2,}/g, '-')
+			.replace(/^-|-$/g, '')
+			.toLowerCase();
+	}
+
+	// Mirrors the PHP builder so the preview matches exactly what gets saved.
+	function kivunCampBuild(form) {
+		var pick = function (selectClass, customClass) {
+			var sel = form.querySelector('.' + selectClass);
+			if (!sel) { return ''; }
+			if (sel.value === '__custom__') {
+				var custom = form.querySelector('.' + customClass);
+				return custom ? kivunCampClean(custom.value) : '';
+			}
+			return kivunCampClean(sel.value);
+		};
+
+		var targetSel = form.querySelector('.kivun-camp-target');
+		var target = targetSel ? targetSel.value : '';
+		if (target === '__custom__') {
+			var custom = form.querySelector('.kivun-camp-custom');
+			target = custom ? custom.value.trim() : '';
+		}
+
+		var campaignEl = form.querySelector('.kivun-camp-campaign');
+		var parts = {
+			utm_source: pick('kivun-camp-source', 'kivun-camp-source-custom'),
+			utm_medium: pick('kivun-camp-medium', 'kivun-camp-medium-custom'),
+			utm_campaign: campaignEl ? kivunCampClean(campaignEl.value) : ''
+		};
+
+		if (!target || !parts.utm_source || !parts.utm_campaign) { return { url: '', parts: parts, target: target }; }
+
+		var url;
+		try { url = new URL(target); } catch (err) { return { url: '', parts: parts, target: target }; }
+		Object.keys(parts).forEach(function (k) {
+			url.searchParams.delete(k);
+			if (parts[k]) { url.searchParams.set(k, parts[k]); }
+		});
+		return { url: decodeURI(url.toString()), parts: parts, target: target };
+	}
+
+	function kivunCampRefresh(form) {
+		var out = form.querySelector('.kivun-camp-result');
+		if (out) { out.value = kivunCampBuild(form).url; }
+	}
+
+	// Reveal the free-text input when "other" is chosen.
+	document.addEventListener('change', function (e) {
+		var sel = e.target.closest('.kivun-camp-target, .kivun-camp-source, .kivun-camp-medium');
+		if (!sel) { return; }
+		var form = sel.closest('.kivun-campaign-form');
+		if (!form) { return; }
+
+		var map = {
+			'kivun-camp-target': 'kivun-camp-custom',
+			'kivun-camp-source': 'kivun-camp-source-custom',
+			'kivun-camp-medium': 'kivun-camp-medium-custom'
+		};
+		Object.keys(map).forEach(function (cls) {
+			if (!sel.classList.contains(cls)) { return; }
+			var custom = form.querySelector('.' + map[cls]);
+			if (custom) {
+				custom.hidden = sel.value !== '__custom__';
+				if (!custom.hidden) { custom.focus(); }
+			}
+		});
+		kivunCampRefresh(form);
+	});
+
+	document.addEventListener('input', function (e) {
+		var field = e.target.closest('.kivun-campaign-form input');
+		if (!field || field.classList.contains('kivun-camp-result')) { return; }
+		kivunCampRefresh(field.closest('.kivun-campaign-form'));
+	});
+
+	// Copy — both the preview and any saved row.
+	document.addEventListener('click', function (e) {
+		var copy = e.target.closest('.kivun-camp-copy');
+		if (!copy) { return; }
+		var field = copy.parentNode.querySelector('.kivun-camp-result, .kivun-camp-saved');
+		if (!field || !field.value) { return; }
+
+		var done = function () {
+			var original = copy.textContent;
+			copy.textContent = '✓ הועתק';
+			setTimeout(function () { copy.textContent = original; }, 1600);
+		};
+		if (navigator.clipboard) {
+			navigator.clipboard.writeText(field.value).then(done, function () { field.select(); });
+		} else {
+			field.select();
+			try { document.execCommand('copy'); done(); } catch (err) { /* selection is the fallback */ }
+		}
+	});
+
+	document.addEventListener('submit', function (e) {
+		var form = e.target.closest('.kivun-campaign-form');
+		if (!form) { return; }
+		e.preventDefault();
+
+		var built = kivunCampBuild(form);
+		var err = form.querySelector('.kivun-camp-error');
+		if (!built.url) {
+			showError(err, 'יש לבחור יעד, מקור ושם קמפיין.');
+			return;
+		}
+		if (err) { err.style.display = 'none'; }
+
+		var nameEl = form.querySelector('.kivun-camp-campaign');
+		post(params({
+			action: 'kivun_save_campaign',
+			nonce: kivun.nonce,
+			target_url: built.target,
+			label: nameEl ? nameEl.value.trim() : '',
+			utm_source: built.parts.utm_source,
+			utm_medium: built.parts.utm_medium,
+			utm_campaign: built.parts.utm_campaign
+		})).then(function (res) {
+			if (res.success) {
+				window.location.reload();
+			} else {
+				showError(err, res.data.message);
+			}
+		}).catch(function () {
+			showError(err, kivun.i18n.error_generic);
+		});
+	});
+
+	document.addEventListener('click', function (e) {
+		var del = e.target.closest('.kivun-delete-campaign');
+		if (!del) { return; }
+		if (!window.confirm(kivun.i18n.confirm_delete_campaign)) { return; }
+
+		del.disabled = true;
+		post(params({ action: 'kivun_delete_campaign', nonce: kivun.nonce, id: del.dataset.id }))
+			.then(function (res) {
+				if (res.success) {
+					var row = document.querySelector('[data-campaign-row="' + del.dataset.id + '"]');
+					if (row) { row.parentNode.removeChild(row); }
+				} else {
+					del.disabled = false;
+				}
+			})
+			.catch(function () { del.disabled = false; });
+	});
+
 	// ── Content publishing wizard (multi-step form) ──────────────────────────────
 	// Every field stays in the DOM the whole time — only visibility changes — so
 	// the form still submits as one payload and the save logic is untouched.
