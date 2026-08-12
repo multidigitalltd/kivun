@@ -1186,6 +1186,88 @@
 .kivun-cc-leadbar .kivun-stat { display: inline-flex; align-items: baseline; gap: .35rem; flex: 0 0 auto; }
 .kivun-cc-leadbar .kivun-stat strong { display: inline; font-size: 1rem; margin: 0; color: var(--cc-ink); }
 
+/* ── Publishing wizard (multi-step form) ─────────────────────────────────── */
+/* One flow instead of two columns: display:contents lets the main and side
+   groups dissolve so every card orders freely within a single step. */
+/* align-items:start on the two-column grid would stop the cards stretching
+   once the container becomes a single flex column. */
+.kivun-cc-wizard .kivun-cc-grid { display: flex; flex-direction: column; gap: 1.25rem; align-items: stretch; }
+.kivun-cc-wizard .kivun-cc-main,
+.kivun-cc-wizard .kivun-cc-side { display: contents; }
+/* Step visibility is a separate axis from the type-based [hidden] on the
+   course/session/event cards, so it uses its own class and never clobbers it. */
+.kivun-cc-wizard .kivun-step-off { display: none !important; }
+
+.kivun-wiz-steps {
+	display: flex;
+	flex-wrap: wrap;
+	gap: .4rem;
+	list-style: none;
+	margin: 0 0 1.35rem;
+	padding: 0;
+	counter-reset: none;
+}
+.kivun-wiz-step {
+	display: flex;
+	align-items: center;
+	gap: .5rem;
+	flex: 1 1 150px;
+	padding: .6rem .85rem;
+	background: #fff;
+	border: 1px solid var(--kivun-border);
+	border-radius: 12px;
+	font-size: .85rem;
+	font-weight: 700;
+	color: var(--kivun-muted);
+	cursor: pointer;
+	transition: border-color .15s, color .15s, background .15s;
+}
+.kivun-wiz-step:hover { border-color: var(--kivun-accent); color: var(--kivun-dark); }
+.kivun-wiz-step__num {
+	display: grid;
+	place-items: center;
+	width: 26px;
+	height: 26px;
+	flex: 0 0 auto;
+	border-radius: 50%;
+	background: #f1f2f4;
+	color: var(--kivun-muted);
+	font-size: .82rem;
+	font-weight: 800;
+}
+.kivun-wiz-step.is-current {
+	border-color: var(--kivun-accent);
+	color: var(--kivun-dark);
+	background: #fff;
+	box-shadow: 0 2px 10px rgba(0,0,0,.07);
+}
+.kivun-wiz-step.is-current .kivun-wiz-step__num { background: var(--kivun-accent); color: #fff; }
+.kivun-wiz-step.is-done { color: var(--kivun-dark); }
+.kivun-wiz-step.is-done .kivun-wiz-step__num { background: #dcfce7; color: #15803d; }
+.kivun-wiz-step.is-done .kivun-wiz-step__num::after { content: "✓"; }
+.kivun-wiz-step.is-done .kivun-wiz-step__num { font-size: 0; }
+.kivun-wiz-step.is-done .kivun-wiz-step__num::after { font-size: .85rem; }
+
+.kivun-wiz-nav {
+	display: flex;
+	align-items: center;
+	gap: .75rem;
+	margin-top: 1.35rem;
+	padding-top: 1.15rem;
+	border-top: 1px solid var(--kivun-border);
+}
+.kivun-wiz-progress { font-size: .85rem; color: var(--kivun-muted); font-weight: 600; margin-inline-end: auto; }
+/* The buttons declare display:inline-flex, which would otherwise beat the
+   [hidden] attribute's UA display:none and leak the wrong step's controls. */
+.kivun-wiz-nav [hidden] { display: none !important; }
+.kivun-field-invalid { border-color: var(--kivun-error) !important; box-shadow: 0 0 0 3px rgba(220,38,38,.12) !important; }
+
+@media (max-width: 600px) {
+	.kivun-wiz-step__label { display: none; }
+	.kivun-wiz-step { flex: 0 0 auto; justify-content: center; }
+	.kivun-wiz-nav { flex-wrap: wrap; }
+}
+
 /* Icons — stroke SVGs that inherit the surrounding colour. */
 .kivun-icon { width: 1.05em; height: 1.05em; flex: 0 0 auto; vertical-align: -.15em; }
 .kivun-cc-tabicon { width: 1.15em; height: 1.15em; }

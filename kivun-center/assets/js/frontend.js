@@ -486,6 +486,101 @@
 		});
 	});
 
+	// ── Content publishing wizard (multi-step form) ──────────────────────────────
+	// Every field stays in the DOM the whole time — only visibility changes — so
+	// the form still submits as one payload and the save logic is untouched.
+	var KIVUN_WIZ_LAST = 4;
+
+	function kivunWizCards(form) {
+		return Array.prototype.slice.call(form.querySelectorAll('[data-step]'));
+	}
+
+	function kivunWizShow(form, step) {
+		step = Math.min(KIVUN_WIZ_LAST, Math.max(1, step));
+		form.dataset.current = String(step);
+
+		kivunWizCards(form).forEach(function (card) {
+			card.classList.toggle('kivun-step-off', card.dataset.step !== String(step));
+		});
+
+		form.querySelectorAll('.kivun-wiz-step').forEach(function (li) {
+			var n = Number(li.dataset.gostep);
+			li.classList.toggle('is-current', n === step);
+			li.classList.toggle('is-done', n < step);
+		});
+
+		var prev = form.querySelector('.kivun-wiz-prev');
+		var next = form.querySelector('.kivun-wiz-next');
+		var send = form.querySelector('.kivun-wiz-submit');
+		if (prev) { prev.hidden = step === 1; }
+		if (next) { next.hidden = step === KIVUN_WIZ_LAST; }
+		if (send) { send.hidden = step !== KIVUN_WIZ_LAST; }
+
+		var progress = form.querySelector('.kivun-wiz-progress');
+		if (progress) { progress.textContent = 'שלב ' + step + ' מתוך ' + KIVUN_WIZ_LAST; }
+
+		// TinyMCE measures itself on init; a hidden editor comes back at zero
+		// height, so nudge it once its step becomes visible.
+		window.dispatchEvent(new Event('resize'));
+		form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+	}
+
+	// Only block on fields that are actually visible in the current step.
+	function kivunWizValid(form, step) {
+		var ok = true;
+		kivunWizCards(form).forEach(function (card) {
+			if (card.dataset.step !== String(step) || card.hidden) { return; }
+			card.querySelectorAll('[required]').forEach(function (field) {
+				if (!field.value.trim()) {
+					field.classList.add('kivun-field-invalid');
+					if (ok) { field.focus(); }
+					ok = false;
+				} else {
+					field.classList.remove('kivun-field-invalid');
+				}
+			});
+		});
+		return ok;
+	}
+
+	document.addEventListener('click', function (e) {
+		var btn = e.target.closest('.kivun-wiz-next, .kivun-wiz-prev, .kivun-wiz-step');
+		if (!btn) { return; }
+		var form = btn.closest('.kivun-cc-wizard');
+		if (!form) { return; }
+
+		var current = Number(form.dataset.current || 1);
+
+		if (btn.classList.contains('kivun-wiz-prev')) {
+			kivunWizShow(form, current - 1);
+			return;
+		}
+		if (btn.classList.contains('kivun-wiz-next')) {
+			if (kivunWizValid(form, current)) { kivunWizShow(form, current + 1); }
+			return;
+		}
+		// Clicking the stepper: forward only after the current step validates.
+		var target = Number(btn.dataset.gostep);
+		if (target <= current || kivunWizValid(form, current)) { kivunWizShow(form, target); }
+	});
+
+	// Submitting from any step must still surface a missing required field.
+	document.addEventListener('submit', function (e) {
+		var form = e.target.closest('.kivun-cc-wizard');
+		if (!form) { return; }
+		for (var s = 1; s <= KIVUN_WIZ_LAST; s++) {
+			if (!kivunWizValid(form, s)) {
+				e.preventDefault();
+				kivunWizShow(form, s);
+				return;
+			}
+		}
+	});
+
+	document.querySelectorAll('.kivun-cc-wizard').forEach(function (form) {
+		kivunWizShow(form, 1);
+	});
+
 	// ── Tabs (WAI-ARIA tab pattern) — employer dashboard + content console ───────
 	function getTabs(tab) {
 		return Array.prototype.slice.call(tab.closest('.kivun-tabs').querySelectorAll('.kivun-tab'));

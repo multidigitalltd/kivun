@@ -587,7 +587,7 @@ class Kivun_Admin {
 			'workshop'     => __( 'דף נחיתה', 'kivun' ),
 			'session'      => __( 'סדנה', 'kivun' ),
 			'event'        => __( 'אירוע', 'kivun' ),
-			'form'         => __( 'טופס', 'kivun' ),
+			'form'         => __( 'טופס באתר', 'kivun' ),
 		);
 	}
 
