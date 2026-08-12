@@ -193,23 +193,23 @@
 	gap: .75rem;
 	padding: .7rem 1.1rem;
 	margin-bottom: 1.1rem;
-	background: #eff4ff;
-	border: 1px solid var(--kivun-primary);
+	background: #f7f7f8;
+	border: 1px solid var(--kivun-accent);
 	border-radius: 12px;
 	font-size: .95rem;
 }
-.kivun-acting-banner strong { color: var(--kivun-primary); }
-.kivun-acting-exit { font-weight: 600; color: var(--kivun-primary); text-decoration: none; white-space: nowrap; }
+.kivun-acting-banner strong { color: var(--kivun-accent); }
+.kivun-acting-exit { font-weight: 600; color: var(--kivun-accent); text-decoration: none; white-space: nowrap; }
 .kivun-acting-exit:hover { text-decoration: underline; }
 .kivun-add-employer-form {
 	padding: 1.25rem 1.35rem;
 	margin-bottom: 1.35rem;
 	background: #fff;
-	border: 2px solid var(--kivun-primary);
+	border: 2px solid var(--kivun-accent);
 	border-radius: 16px;
-	box-shadow: 0 2px 14px rgba(37,99,235,.12);
+	box-shadow: 0 2px 14px rgba(0,0,0,.10);
 }
-.kivun-add-employer-form h3 { margin: 0 0 1rem; font-size: 1.05rem; font-weight: 700; color: var(--kivun-primary); }
+.kivun-add-employer-form h3 { margin: 0 0 1rem; font-size: 1.05rem; font-weight: 700; color: var(--kivun-accent); }
 .kivun-check-inline {
 	display: flex;
 	align-items: flex-start;
@@ -221,7 +221,7 @@
 }
 .kivun-check-inline input { margin-top: .2rem; flex: 0 0 auto; width: auto; }
 .kivun-field-hint { margin: .35rem 0 0; font-size: .78rem; color: var(--kivun-muted); }
-.kivun-mgr-only select { border-color: var(--kivun-primary); background: #f7faff; }
+.kivun-mgr-only select { border-color: var(--kivun-accent); background: #fdfdfd; }
 .kivun-row-owner { display: block; font-size: .78rem; color: var(--kivun-muted); margin-top: .15rem; }
 
 /* Publishers table + job expiry */
@@ -873,8 +873,8 @@
 @media (max-width: 860px) { .kivun-cc-grid { grid-template-columns: 1fr; } .kivun-cc-side { position: static; } }
 
 .kivun-cc-card { background: #fff; border: 1px solid var(--kivun-border); border-radius: 16px; padding: 1.25rem 1.35rem; box-shadow: 0 2px 10px rgba(0,0,0,.05); }
-.kivun-cc-card.kivun-cc-section[data-type="event"] { border: 2px solid var(--kivun-primary); background: #eff4ff; box-shadow: 0 2px 14px rgba(37,99,235,.14); }
-.kivun-cc-card.kivun-cc-section[data-type="event"] .kivun-cc-h3 { color: var(--kivun-primary); display: flex; align-items: center; gap: .4rem; }
+.kivun-cc-card.kivun-cc-section[data-type="event"] { border: 2px solid var(--kivun-accent); background: #fbf7f8; box-shadow: 0 2px 14px rgba(0,0,0,.10); }
+.kivun-cc-card.kivun-cc-section[data-type="event"] .kivun-cc-h3 { color: var(--kivun-accent); display: flex; align-items: center; gap: .4rem; }
 .kivun-cc-card.kivun-cc-section[data-type="event"] .kivun-cc-h3::before { content: "📅"; }
 .kivun-cc-h3 { margin: 0 0 .85rem; font-size: 1.05rem; font-weight: 700; color: var(--kivun-accent); }
 .kivun-cc-label { display: block; font-weight: 700; font-size: 1rem; margin-bottom: .5rem; color: var(--kivun-text); }
@@ -914,11 +914,14 @@
 
 /* ── Content management console (tabs, library, leads CRM) ───────────────── */
 .kivun-cc-console {
-	--cc-surface: #fff;
-	--cc-canvas: #f1f5f9;
-	--cc-ink: #0f172a;
-	--cc-line: #e2e8f0;
-	--cc-brand: #2563eb;
+	/* Brand-driven: --kivun-accent follows the site's Elementor global colour,
+	   so the console re-skins itself with the brand rather than a fixed blue. */
+	--cc-brand: var(--kivun-accent);
+	--cc-ink: var(--kivun-dark);
+	--cc-surface: var(--kivun-bg-card, #fff);
+	--cc-canvas: var(--kivun-card-bg, #f5f5f5);
+	--cc-line: var(--kivun-border);
+	--cc-tint: rgba(0, 0, 0, .04);
 	max-width: 1320px;
 	margin: 0 auto;
 	padding: 1.1rem;
@@ -932,7 +935,8 @@
 .kivun-cc-console .kivun-cc-head { margin-bottom: 1.1rem; }
 .kivun-cc-console .kivun-cc-title { font-size: 1.3rem; font-weight: 800; margin: 0 0 .2rem; }
 .kivun-cc-console .kivun-cc-lead { font-size: .88rem; color: var(--kivun-muted); margin: 0; line-height: 1.6; }
-.kivun-cc-sep-note { display: inline-block; margin-top: .35rem; font-size: .82rem; color: var(--cc-brand); font-weight: 600; }
+.kivun-cc-sep-note { display: inline-block; margin-top: .35rem; font-size: .82rem; color: var(--cc-brand); font-weight: 700; }
+.kivun-cc-console .kivun-cc-leadlink { color: var(--cc-brand); }
 
 /* Top bar — makes the console read as an application, not a page section. */
 .kivun-cc-topbar {
@@ -943,10 +947,12 @@
 	gap: 1rem;
 	padding: 1rem 1.25rem;
 	margin-bottom: 1rem;
-	background: linear-gradient(135deg, #1e3a8a, #2563eb);
+	/* Darkening overlay over the brand colour — works for any brand hue
+	   without needing a second, hard-coded shade. */
+	background: linear-gradient(135deg, rgba(0,0,0,.42), rgba(0,0,0,.02)), var(--cc-brand);
 	border-radius: 16px;
 	color: #fff;
-	box-shadow: 0 6px 20px rgba(30,58,138,.22);
+	box-shadow: 0 6px 20px rgba(0,0,0,.18);
 }
 .kivun-cc-topbar__brand { display: flex; align-items: center; gap: .85rem; }
 .kivun-cc-topbar__mark {
@@ -1022,11 +1028,11 @@
 	box-shadow: none;
 	transition: background .15s, color .15s;
 }
-.kivun-cc-console .kivun-cc-tabs .kivun-tab:hover { background: #f1f5f9; color: var(--cc-ink); }
+.kivun-cc-console .kivun-cc-tabs .kivun-tab:hover { background: var(--cc-tint); color: var(--cc-ink); }
 .kivun-cc-console .kivun-cc-tabs .kivun-tab.is-active {
 	background: var(--cc-brand);
 	color: #fff;
-	box-shadow: 0 2px 8px rgba(37,99,235,.28);
+	box-shadow: 0 2px 8px rgba(0,0,0,.18);
 }
 .kivun-cc-console .kivun-cc-tabs .kivun-tab.is-active .kivun-tab-badge { background: rgba(255,255,255,.24); color: #fff; }
 .kivun-cc-tabicon { font-size: 1rem; line-height: 1; }
@@ -1064,9 +1070,9 @@
 }
 .kivun-cc-table tbody tr:last-child td { border-bottom: none; }
 .kivun-cc-table tbody tr { transition: background .12s; }
-.kivun-cc-table tbody tr:nth-child(even) { background: #fcfdfe; }
-.kivun-cc-table tbody tr:hover { background: #eff6ff; }
-.kivun-cc-table a { color: var(--kivun-primary); text-decoration: none; font-weight: 600; }
+.kivun-cc-table tbody tr:nth-child(even) { background: #fcfcfd; }
+.kivun-cc-table tbody tr:hover { background: var(--cc-tint, rgba(0,0,0,.04)); }
+.kivun-cc-table a { color: var(--cc-brand, var(--kivun-accent)); text-decoration: none; font-weight: 600; }
 .kivun-cc-table a:hover { text-decoration: underline; }
 .kivun-cc-table td strong { font-weight: 700; color: var(--cc-ink, #0f172a); }
 
@@ -1076,10 +1082,16 @@
 	padding: .12rem .55rem;
 	font-size: .74rem;
 	font-weight: 700;
-	color: var(--kivun-primary);
-	background: #eff4ff;
+	color: var(--cc-brand, var(--kivun-accent));
+	background: #f3f4f6;
 	border-radius: 999px;
 	white-space: nowrap;
+}
+/* Tint the badge with the brand colour where color-mix is available, so it
+   keeps working whatever hue the site's global colour is set to. */
+@supports (background: color-mix(in srgb, red 10%, white)) {
+	.kivun-cc-badge { background: color-mix(in srgb, var(--cc-brand, var(--kivun-accent)) 12%, #fff); }
+	.kivun-cc-console .kivun-cc-table tbody tr:hover { background: color-mix(in srgb, var(--cc-brand) 6%, #fff); }
 }
 .kivun-cc-rowactions { display: flex; flex-wrap: wrap; gap: .3rem; align-items: center; }
 .kivun-cc-rowactions form { display: inline; margin: 0; }
@@ -1138,32 +1150,32 @@
 .kivun-cc-pager { display: flex; align-items: center; justify-content: center; gap: .75rem; margin-top: 1rem; }
 .kivun-cc-pager__state { font-size: .85rem; color: var(--kivun-muted); }
 
-/* Console palette: the CRM reads as a tool, so actions are blue/neutral/red
-   rather than the site's marketing accent. Scoped to the console only. */
+/* Console palette: primary actions carry the brand colour, secondary actions
+   stay neutral and destructive stays red. Scoped to the console only. */
 .kivun-cc-console .kivun-cc-title { color: var(--cc-ink); }
 .kivun-cc-console .kivun-cc-btn {
 	background: var(--cc-brand);
+	color: #fff;
 	border-radius: 9px;
 	padding: .55rem 1.05rem;
 	font-size: .88rem;
 	font-weight: 700;
 }
-.kivun-cc-console .kivun-cc-btn { color: #fff; }
-.kivun-cc-console .kivun-cc-btn:hover { background: #1d4ed8; filter: none; color: #fff; }
+.kivun-cc-console .kivun-cc-btn:hover { filter: brightness(.92); color: #fff; }
 .kivun-cc-console .kivun-cc-btn--sm { padding: .4rem .8rem; font-size: .82rem; }
 /* Buttons rendered as links inside a table would otherwise pick up the
    table's link colour and vanish against their own background. */
 .kivun-cc-console .kivun-cc-table a.kivun-cc-btn { color: #fff; text-decoration: none; }
-.kivun-cc-console .kivun-cc-table a.kivun-cc-btn--ghost { color: #334155; }
+.kivun-cc-console .kivun-cc-table a.kivun-cc-btn--ghost { color: var(--cc-ink); }
 .kivun-cc-console .kivun-cc-table a.kivun-cc-btn--ghost:hover { color: var(--cc-ink); }
 .kivun-cc-console .kivun-cc-table a.kivun-cc-btn--danger { color: #dc2626; }
 .kivun-cc-console .kivun-cc-table a.kivun-cc-btn--danger:hover { color: #fff; }
 .kivun-cc-console .kivun-cc-btn--ghost {
 	background: #fff;
-	color: #334155;
+	color: var(--cc-ink);
 	border: 1px solid var(--cc-line);
 }
-.kivun-cc-console .kivun-cc-btn--ghost:hover { background: #f1f5f9; color: var(--cc-ink); border-color: #cbd5e1; }
+.kivun-cc-console .kivun-cc-btn--ghost:hover { background: var(--cc-tint); color: var(--cc-ink); border-color: var(--kivun-muted); }
 .kivun-cc-console .kivun-cc-btn--danger { background: #fff; color: #dc2626; border: 1px solid #fecaca; }
 .kivun-cc-console .kivun-cc-btn--danger:hover { background: #dc2626; color: #fff; border-color: #dc2626; }
 
