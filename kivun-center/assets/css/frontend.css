@@ -764,6 +764,8 @@
 .kivun-status--publish { background: #e7f6ec; color: #1a7a40; }
 .kivun-status--draft   { background: #eef0f4; color: #515a6b; }
 .kivun-status--pending { background: #fdf3d8; color: #8a6311; }
+.kivun-status--private { background: #ede9fe; color: #6d28d9; }
+.kivun-status--future  { background: #dbeafe; color: #1d4ed8; }
 .kivun-notice { padding: 1.1rem 1.25rem; background: var(--kc-soft); border: 1px solid var(--kc-line); border-radius: 12px; color: #5b6472; }
 .kivun-no-results { color: var(--kivun-muted); padding: 2rem; text-align: center; }
 .kivun-muted { color: #aab0bb; }
@@ -1387,6 +1389,15 @@
 .kivun-cc-table .kivun-status--publish { background: #dcfce7; color: #15803d; }
 .kivun-cc-table .kivun-status--draft,
 .kivun-cc-table .kivun-status--pending { background: #fef3c7; color: #a16207; }
+/* Scheduled and private are neither live nor unfinished — give them their own
+   colours so the library can be scanned at a glance. */
+.kivun-cc-table .kivun-status--private { background: #ede9fe; color: #6d28d9; }
+.kivun-cc-table .kivun-status--future  { background: #dbeafe; color: #1d4ed8; }
+
+/* Publish-status card: the date picker appears only when scheduling. */
+.kivun-cc-schedule { margin-top: .75rem; }
+.kivun-cc-schedule[hidden] { display: none; }
+.kivun-cc-status-note { margin-top: .6rem; }
 
 /* The jobs board shares the console's visual language, both standalone (it
    carries .kivun-cc-console itself) and embedded inside the content console. */

@@ -486,6 +486,38 @@
 		});
 	});
 
+	// ── Publish status — reveal the date picker only when scheduling ─────────────
+	function kivunSyncSchedule(select) {
+		var card = select.closest('.kivun-cc-card');
+		var box = card && card.querySelector('.kivun-cc-schedule');
+		if (!box) { return; }
+
+		var scheduling = select.value === 'future';
+		box.hidden = !scheduling;
+
+		var field = box.querySelector('input[name="schedule"]');
+		if (!field) { return; }
+
+		// Default to a round hour tomorrow, so choosing "scheduled" never leaves
+		// an empty date that would silently fall back to publishing now.
+		if (scheduling && !field.value) {
+			var when = new Date();
+			when.setDate(when.getDate() + 1);
+			when.setMinutes(0, 0, 0);
+			var pad = function (n) { return String(n).padStart(2, '0'); };
+			field.value = when.getFullYear() + '-' + pad(when.getMonth() + 1) + '-' + pad(when.getDate()) +
+				'T' + pad(when.getHours()) + ':00';
+		}
+		if (scheduling) { field.setAttribute('required', 'required'); } else { field.removeAttribute('required'); }
+	}
+
+	document.addEventListener('change', function (e) {
+		var select = e.target.closest('.kivun-cc-status');
+		if (select) { kivunSyncSchedule(select); }
+	});
+
+	document.querySelectorAll('.kivun-cc-status').forEach(kivunSyncSchedule);
+
 	// ── Campaign (UTM) link builder ──────────────────────────────────────────────
 	function kivunCampClean(value) {
 		return String(value || '')

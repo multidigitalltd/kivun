@@ -90,7 +90,7 @@ class Kivun_Content_Creator {
 		$posts = get_posts(
 			array(
 				'post_type'              => array_values( self::type_map() ),
-				'post_status'            => array( 'publish', 'draft', 'pending' ),
+				'post_status'            => array( 'publish', 'draft', 'pending', 'private', 'future' ),
 				'posts_per_page'         => -1,
 				'meta_key'               => self::GROUP_META, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
 				'meta_value'             => $group, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
@@ -130,6 +130,7 @@ class Kivun_Content_Creator {
 			'cta_content'      => '',
 			'cta_button'       => '',
 			'status'           => 'publish',
+			'schedule'         => '',
 			'thumb_id'         => '0',
 			'course_capacity'  => '',
 			'course_wc'        => '',
@@ -159,6 +160,10 @@ class Kivun_Content_Creator {
 		$v['long']     = (string) get_post_field( 'post_content', $primary );
 		$v['status']   = (string) get_post_status( $primary );
 		$v['thumb_id'] = (string) (int) get_post_thumbnail_id( $primary );
+		if ( 'future' === $v['status'] ) {
+			// datetime-local wants Y-m-d\TH:i, in site time.
+			$v['schedule'] = str_replace( ' ', 'T', substr( (string) get_post_field( 'post_date', $primary ), 0, 16 ) );
+		}
 
 		// Shared fields — read from whichever primary type exists, per its keys.
 		$keys = self::shared_meta_keys( $primary_key );
@@ -574,12 +579,18 @@ class Kivun_Content_Creator {
 							</div>
 						</div>
 
-						<div class="kivun-lp-card">
+						<div class="kivun-lp-card kivun-cc-card">
 							<label class="kivun-lp-label"><?php esc_html_e( 'סטטוס', 'kivun' ); ?></label>
-							<select name="status" class="kivun-lp-input">
+							<select name="status" class="kivun-lp-input kivun-cc-status">
 								<option value="publish" <?php selected( $v['status'], 'publish' ); ?>><?php esc_html_e( 'מפורסם', 'kivun' ); ?></option>
 								<option value="draft" <?php selected( $v['status'], 'draft' ); ?>><?php esc_html_e( 'טיוטה', 'kivun' ); ?></option>
+								<option value="private" <?php selected( $v['status'], 'private' ); ?>><?php esc_html_e( 'פרטי', 'kivun' ); ?></option>
+								<option value="future" <?php selected( $v['status'], 'future' ); ?>><?php esc_html_e( 'מתוזמן', 'kivun' ); ?></option>
 							</select>
+							<div class="kivun-cc-schedule" <?php echo 'future' === $v['status'] ? '' : 'hidden'; ?>>
+								<label class="kivun-lp-label" for="kivun-lp-schedule"><?php esc_html_e( 'תאריך ושעת הפרסום', 'kivun' ); ?></label>
+								<input type="datetime-local" id="kivun-lp-schedule" name="schedule" class="kivun-lp-input" value="<?php echo esc_attr( $v['schedule'] ); ?>">
+							</div>
 						</div>
 
 					</div>
@@ -607,6 +618,19 @@ class Kivun_Content_Creator {
 				} );
 			} );
 			kivunUpdateNonEvent();
+			// The publish-date field is only meaningful when scheduling. The
+			// shared front-end script does not load on this screen, so the
+			// toggle lives here.
+			( function () {
+				var statusSel = document.querySelector( '.kivun-cc-status' );
+				if ( ! statusSel ) { return; }
+				var sync = function () {
+					var box = document.querySelector( '.kivun-cc-schedule' );
+					if ( box ) { box.hidden = statusSel.value !== 'future'; }
+				};
+				statusSel.addEventListener( 'change', sync );
+				sync();
+			} )();
 			var frame,
 				selectBtn = document.querySelector( '.kivun-lp-media__select' ),
 				removeBtn = document.querySelector( '.kivun-lp-media__remove' ),
@@ -786,7 +810,7 @@ class Kivun_Content_Creator {
 		$posts = get_posts(
 			array(
 				'post_type'              => array_values( self::type_map() ),
-				'post_status'            => array( 'publish', 'draft', 'pending' ),
+				'post_status'            => array( 'publish', 'draft', 'pending', 'private', 'future' ),
 				'posts_per_page'         => 200, // phpcs:ignore WordPress.WP.PostsPerPage.posts_per_page_posts_per_page
 				'meta_key'               => self::GROUP_META, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
 				'orderby'                => 'date',
@@ -875,6 +899,53 @@ class Kivun_Content_Creator {
 	}
 
 	/**
+	 * Resolve the requested post status, and the publish date that goes with it.
+	 *
+	 * Scheduling is the one status that can be asked for and not granted: a
+	 * date in the past would leave the post sitting as 'future' and never
+	 * appearing, so it publishes immediately instead. An empty date does the
+	 * same rather than failing the whole save.
+	 *
+	 * @return array{status:string,postdate:string,postdate_gmt:string} Status and both date forms (empty when not scheduling).
+	 */
+	private static function collect_status(): array {
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- The caller verifies the nonce before calling run_save().
+		$requested = isset( $_POST['status'] ) ? sanitize_key( wp_unslash( $_POST['status'] ) ) : 'publish';
+		$raw_date  = isset( $_POST['schedule'] ) ? sanitize_text_field( wp_unslash( $_POST['schedule'] ) ) : '';
+		// phpcs:enable WordPress.Security.NonceVerification.Missing
+
+		$none = array(
+			'status'       => in_array( $requested, array( 'publish', 'draft', 'private' ), true ) ? $requested : 'publish',
+			'postdate'     => '',
+			'postdate_gmt' => '',
+		);
+
+		if ( 'future' !== $requested ) {
+			return $none;
+		}
+
+		// The picker sends wall-clock time as the site reads it, so it must be
+		// interpreted in the site timezone — not PHP's, which WordPress pins to
+		// UTC. Getting this wrong publishes hours off the requested moment.
+		$tz = wp_timezone();
+		try {
+			$when = new \DateTimeImmutable( str_replace( 'T', ' ', $raw_date ), $tz );
+		} catch ( \Exception $e ) {
+			return $none;
+		}
+
+		if ( '' === $raw_date || $when <= new \DateTimeImmutable( 'now', $tz ) ) {
+			return $none;
+		}
+
+		return array(
+			'status'       => 'future',
+			'postdate'     => $when->format( 'Y-m-d H:i:s' ),
+			'postdate_gmt' => $when->setTimezone( new \DateTimeZone( 'UTC' ) )->format( 'Y-m-d H:i:s' ),
+		);
+	}
+
+	/**
 	 * Read the submitted content and create/update the selected posts.
 	 *
 	 * The caller MUST verify a nonce and the user capability before invoking it.
@@ -887,6 +958,8 @@ class Kivun_Content_Creator {
 		if ( '' === $title ) {
 			return new \WP_Error( 'kivun_no_title', __( 'יש להזין כותרת.', 'kivun' ) );
 		}
+
+		$status = self::collect_status();
 
 		$s = array(
 			'title'    => $title,
@@ -901,7 +974,9 @@ class Kivun_Content_Creator {
 			'cta_t'    => isset( $_POST['cta_title'] ) ? sanitize_text_field( wp_unslash( $_POST['cta_title'] ) ) : '',
 			'cta_c'    => isset( $_POST['cta_content'] ) ? sanitize_textarea_field( wp_unslash( $_POST['cta_content'] ) ) : '',
 			'cta_b'    => isset( $_POST['cta_button'] ) ? sanitize_text_field( wp_unslash( $_POST['cta_button'] ) ) : '',
-			'status'   => ( isset( $_POST['status'] ) && 'draft' === $_POST['status'] ) ? 'draft' : 'publish',
+			'status'   => $status['status'],
+			'postdate' => $status['postdate'],
+			'postgmt'  => $status['postdate_gmt'],
 		);
 
 		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized per value below.
@@ -1053,6 +1128,14 @@ class Kivun_Content_Creator {
 		);
 		if ( '' !== $shared['slug'] ) {
 			$postarr['post_name'] = $shared['slug'];
+		}
+		if ( 'future' === $shared['status'] && ! empty( $shared['postdate'] ) ) {
+			// Both forms are set explicitly: post_date in site time for display,
+			// post_date_gmt because that is what wp-cron compares against when
+			// deciding a scheduled post is due.
+			$postarr['post_date']     = $shared['postdate'];
+			$postarr['post_date_gmt'] = $shared['postgmt'];
+			$postarr['edit_date']     = true;
 		}
 
 		if ( $existing ) {
@@ -1392,7 +1475,7 @@ class Kivun_Content_Creator {
 		$posts = get_posts(
 			array(
 				'post_type'              => array_values( self::type_map() ),
-				'post_status'            => array( 'publish', 'draft', 'pending' ),
+				'post_status'            => array( 'publish', 'draft', 'pending', 'private', 'future' ),
 				'posts_per_page'         => -1,
 				'meta_key'               => self::GROUP_META, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
 				'no_found_rows'          => true,
@@ -1432,7 +1515,7 @@ class Kivun_Content_Creator {
 			$job_ids       = get_posts(
 				array(
 					'post_type'      => 'kivun_job',
-					'post_status'    => array( 'publish', 'draft', 'pending' ),
+					'post_status'    => array( 'publish', 'draft', 'pending', 'private', 'future' ),
 					'posts_per_page' => -1,
 					'fields'         => 'ids',
 					'no_found_rows'  => true,
@@ -2038,11 +2121,37 @@ class Kivun_Content_Creator {
 						</div>
 
 						<div class="kivun-cc-card" data-step="4" style="order:3">
-							<label class="kivun-cc-label" for="kivun-ccf-status"><?php esc_html_e( 'סטטוס', 'kivun' ); ?></label>
-							<select id="kivun-ccf-status" name="status" class="kivun-cc-input">
-								<option value="publish" <?php selected( $v['status'], 'publish' ); ?>><?php esc_html_e( 'מפורסם', 'kivun' ); ?></option>
-								<option value="draft" <?php selected( $v['status'], 'draft' ); ?>><?php esc_html_e( 'טיוטה', 'kivun' ); ?></option>
+							<label class="kivun-cc-label" for="kivun-ccf-status"><?php esc_html_e( 'סטטוס פרסום', 'kivun' ); ?></label>
+							<select id="kivun-ccf-status" name="status" class="kivun-cc-input kivun-cc-status">
+								<option value="publish" <?php selected( $v['status'], 'publish' ); ?>><?php esc_html_e( 'פרסום מיידי — גלוי לכולם', 'kivun' ); ?></option>
+								<option value="draft" <?php selected( $v['status'], 'draft' ); ?>><?php esc_html_e( 'טיוטה — לא מפורסם, נשמר לעריכה', 'kivun' ); ?></option>
+								<option value="private" <?php selected( $v['status'], 'private' ); ?>><?php esc_html_e( 'פרטי — גלוי רק לבעלי הרשאה', 'kivun' ); ?></option>
+								<option value="future" <?php selected( $v['status'], 'future' ); ?>><?php esc_html_e( 'מתוזמן — יפורסם אוטומטית בתאריך', 'kivun' ); ?></option>
 							</select>
+
+							<div class="kivun-cc-schedule" <?php echo 'future' === $v['status'] ? '' : 'hidden'; ?>>
+								<label class="kivun-cc-sub" for="kivun-ccf-schedule"><?php esc_html_e( 'תאריך ושעת הפרסום', 'kivun' ); ?></label>
+								<input
+									type="datetime-local"
+									id="kivun-ccf-schedule"
+									name="schedule"
+									class="kivun-cc-input"
+									value="<?php echo esc_attr( $v['schedule'] ); ?>"
+								>
+								<p class="kivun-field-hint">
+									<?php
+									printf(
+										/* translators: %s: the site's current local time. */
+										esc_html__( 'התוכן יפורסם אוטומטית במועד שנבחר. השעה הנוכחית באתר: %s', 'kivun' ),
+										esc_html( wp_date( 'd/m/Y H:i' ) )
+									);
+									?>
+								</p>
+							</div>
+
+							<p class="kivun-field-hint kivun-cc-status-note">
+								<?php esc_html_e( 'הסטטוס חל על כל הפריטים שנוצרים יחד — דף הנחיתה, הקורס והסדנה.', 'kivun' ); ?>
+							</p>
 						</div>
 					</div>
 				</div>
@@ -2091,7 +2200,7 @@ class Kivun_Content_Creator {
 		$posts = get_posts(
 			array(
 				'post_type'              => array_values( self::type_map() ),
-				'post_status'            => array( 'publish', 'draft', 'pending' ),
+				'post_status'            => array( 'publish', 'draft', 'pending', 'private', 'future' ),
 				'posts_per_page'         => 200, // phpcs:ignore WordPress.WP.PostsPerPage.posts_per_page_posts_per_page
 				'meta_key'               => self::GROUP_META, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
 				'orderby'                => 'date',
@@ -2126,9 +2235,23 @@ class Kivun_Content_Creator {
 			}
 			$groups[ $g ]['types'][] = $labels[ $p->post_type ] ?? $p->post_type;
 			$groups[ $g ]['ids'][]   = (int) $p->ID;
-			// A group counts as published as soon as any of its posts is live.
-			if ( 'publish' === $p->post_status ) {
-				$groups[ $g ]['status'] = 'publish';
+			// A group counts as published as soon as any of its posts is live;
+			// short of that, report the most informative state it is actually
+			// in — "scheduled" and "private" both say more than "draft".
+			$rank = array(
+				'draft'   => 0,
+				'pending' => 1,
+				'private' => 2,
+				'future'  => 3,
+				'publish' => 4,
+			);
+			$have = $rank[ $groups[ $g ]['status'] ] ?? 0;
+			$new  = $rank[ $p->post_status ] ?? 0;
+			if ( $new > $have ) {
+				$groups[ $g ]['status'] = $p->post_status;
+			}
+			if ( 'future' === $p->post_status ) {
+				$groups[ $g ]['scheduled'] = get_the_date( 'd/m/Y H:i', $p->ID );
 			}
 		}
 
@@ -2179,9 +2302,21 @@ class Kivun_Content_Creator {
 								<?php endforeach; ?>
 							</td>
 							<td>
+								<?php
+								$status_labels = array(
+									'publish' => __( 'פורסם', 'kivun' ),
+									'draft'   => __( 'טיוטה', 'kivun' ),
+									'pending' => __( 'ממתין לאישור', 'kivun' ),
+									'private' => __( 'פרטי', 'kivun' ),
+									'future'  => __( 'מתוזמן', 'kivun' ),
+								);
+								?>
 								<span class="kivun-status kivun-status--<?php echo esc_attr( $g['status'] ); ?>">
-									<?php echo esc_html( 'publish' === $g['status'] ? __( 'פורסם', 'kivun' ) : __( 'טיוטה', 'kivun' ) ); ?>
+									<?php echo esc_html( $status_labels[ $g['status'] ] ?? $g['status'] ); ?>
 								</span>
+								<?php if ( ! empty( $g['scheduled'] ) && 'future' === $g['status'] ) : ?>
+									<span class="kivun-cc-source"><?php echo esc_html( $g['scheduled'] ); ?></span>
+								<?php endif; ?>
 							</td>
 							<td>
 								<?php if ( $group_leads ) : ?>
@@ -2530,7 +2665,7 @@ class Kivun_Content_Creator {
 		$contents = get_posts(
 			array(
 				'post_type'              => array_values( self::type_map() ),
-				'post_status'            => array( 'publish', 'draft', 'pending' ),
+				'post_status'            => array( 'publish', 'draft', 'pending', 'private', 'future' ),
 				'posts_per_page'         => -1,
 				'orderby'                => 'title',
 				'order'                  => 'ASC',
