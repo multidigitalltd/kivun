@@ -233,15 +233,32 @@ class Kivun_Mercaz {
 			$type
 		);
 
-		if ( is_wp_error( $result ) ) {
-			return $result;
+		$items = ( ! is_wp_error( $result ) && is_array( $result['data'] ) ) ? $result['data'] : array();
+		$scope = 'edit';
+
+		// A content manager only sees their own records, so on a new account the
+		// edit listing is empty and reveals nothing. The public listing still
+		// shows the shape of a real record, which is what is being asked for.
+		if ( ! $items ) {
+			$public = self::request(
+				'GET',
+				self::ENDPOINTS[ $type ],
+				array( 'per_page' => 1 ),
+				null,
+				$type
+			);
+			if ( is_wp_error( $public ) ) {
+				return is_wp_error( $result ) ? $result : $public;
+			}
+			$items = is_array( $public['data'] ) ? $public['data'] : array();
+			$scope = 'public';
 		}
 
-		$items = is_array( $result['data'] ) ? $result['data'] : array();
 		if ( ! $items ) {
 			return array(
 				'type'   => $type,
 				'empty'  => true,
+				'scope'  => $scope,
 				'fields' => array(),
 				'meta'   => array(),
 			);
@@ -262,6 +279,7 @@ class Kivun_Mercaz {
 		return array(
 			'type'   => $type,
 			'empty'  => false,
+			'scope'  => $scope,
 			'fields' => $fields,
 			'meta'   => $meta,
 		);

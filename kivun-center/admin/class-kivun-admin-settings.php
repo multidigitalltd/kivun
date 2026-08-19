@@ -654,6 +654,9 @@ class Kivun_Admin_Settings {
 												html += '<p><em><?php echo esc_js( __( 'אין פריטים קיימים לקריאה בסוג הזה.', 'kivun' ) ); ?></em></p>';
 												return;
 											}
+											if ( r.scope === 'public' ) {
+												html += '<p><em><?php echo esc_js( __( 'נקרא מפריט ציבורי — עדיין אין תוכן משלכם בסוג הזה.', 'kivun' ) ); ?></em></p>';
+											}
 											var rows = function ( obj, title ) {
 												var keys = Object.keys( obj || {} );
 												if ( ! keys.length ) { return ''; }
