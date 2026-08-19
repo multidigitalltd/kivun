@@ -192,6 +192,8 @@ class Kivun_Core {
 					'renew_prompt'             => __( 'תאריך סגירה חדש למשרה (YYYY-MM-DD):', 'kivun' ),
 					'confirm_delete_campaign'  => __( 'למחוק את הקמפיין וכל הקישורים שתחתיו? הפניות שהגיעו דרכם יישמרו.', 'kivun' ),
 					'confirm_delete_link'      => __( 'למחוק את הקישור? הפניות שהגיעו דרכו יישמרו.', 'kivun' ),
+					'confirm_replace_whatsapp' => __( 'כבר יש הודעה בתיבה. ליצור אותה מחדש ולהחליף את מה שכתוב?', 'kivun' ),
+					'wa_from_fields'           => __( 'נוצר מהשדות (ללא AI)', 'kivun' ),
 				),
 			)
 		);

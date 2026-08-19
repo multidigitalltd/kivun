@@ -29,6 +29,7 @@ class Kivun_AI_Content {
 	 */
 	public static function init(): void {
 		add_action( 'wp_ajax_kivun_generate_ai_content', array( __CLASS__, 'ajax_generate' ) );
+		add_action( 'wp_ajax_kivun_generate_whatsapp', array( __CLASS__, 'ajax_whatsapp' ) );
 	}
 
 	/**
@@ -222,6 +223,265 @@ class Kivun_AI_Content {
 			'cost'     => $plain( $fields['cost'] ?? '' ),
 			'date'     => $plain( $fields['date'] ?? '' ),
 		);
+	}
+
+	// ── WhatsApp promo ────────────────────────────────────────────────────────.
+
+	/**
+	 * Build a WhatsApp promo from the content currently in the editor.
+	 *
+	 * Falls back to the template when no API key is configured, so the button
+	 * always produces something usable; the caller is told which was used.
+	 *
+	 * @return void
+	 */
+	public static function ajax_whatsapp(): void {
+		check_ajax_referer( 'kivun_ai_content', 'nonce' );
+
+		if ( ! is_user_logged_in() || ! current_user_can( 'edit_posts' ) ) {
+			wp_send_json_error( array( 'message' => __( 'אין לך הרשאה ליצירת תוכן.', 'kivun' ) ) );
+		}
+
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- Verified above.
+		$plain  = static function ( $key ) {
+			return isset( $_POST[ $key ] )
+				? sanitize_text_field( wp_strip_all_tags( wp_unslash( $_POST[ $key ] ) ) )
+				: '';
+		};
+		$fields = array(
+			'type'     => isset( $_POST['type'] ) ? sanitize_key( wp_unslash( $_POST['type'] ) ) : '',
+			'title'    => $plain( 'title' ),
+			'short'    => $plain( 'short' ),
+			'audience' => $plain( 'audience' ),
+			'duration' => $plain( 'duration' ),
+			'cost'     => $plain( 'cost' ),
+			'date'     => $plain( 'date' ),
+			'location' => $plain( 'location' ),
+			'url'      => isset( $_POST['url'] ) ? esc_url_raw( wp_unslash( $_POST['url'] ) ) : '',
+		);
+		// phpcs:enable WordPress.Security.NonceVerification.Missing
+
+		if ( '' === $fields['title'] && '' === $fields['short'] ) {
+			wp_send_json_error( array( 'message' => __( 'מלאו לפחות כותרת ותיאור קצר לפני יצירת הודעת הוואטסאפ.', 'kivun' ) ) );
+		}
+
+		$key = trim( (string) Kivun_Admin_Settings::get( 'openai_api_key', '' ) );
+		if ( '' === $key ) {
+			wp_send_json_success(
+				array(
+					'text'   => self::whatsapp_template( $fields ),
+					'source' => 'template',
+				)
+			);
+		}
+
+		$text = self::generate_whatsapp( $fields );
+		if ( is_wp_error( $text ) ) {
+			// A failed call should not leave the user with nothing.
+			wp_send_json_success(
+				array(
+					'text'   => self::whatsapp_template( $fields ),
+					'source' => 'template',
+					'notice' => $text->get_error_message(),
+				)
+			);
+		}
+
+		wp_send_json_success(
+			array(
+				'text'   => $text,
+				'source' => 'ai',
+			)
+		);
+	}
+
+	/**
+	 * Assemble the promo from the fields alone, in the house format.
+	 *
+	 * This is the shape the centre already sends: a bold hook, a short
+	 * invitation, the practical details one per line behind an emoji, a
+	 * scarcity nudge, and the registration link last.
+	 *
+	 * @param array<string,string> $f Content fields.
+	 * @return string
+	 */
+	public static function whatsapp_template( array $f ): string {
+		$hooks = array(
+			'course'  => '🎓',
+			'session' => '🧩',
+			'event'   => '📣',
+			'landing' => '🚀',
+		);
+		$emoji = $hooks[ $f['type'] ] ?? '🚀';
+
+		$out   = array();
+		$out[] = '*' . $emoji . ' ' . $f['title'] . '*';
+		$out[] = '';
+
+		if ( '' !== $f['short'] ) {
+			$out[] = $f['short'];
+			$out[] = '';
+		}
+
+		$details = array();
+		if ( '' !== $f['cost'] ) {
+			$details[] = '✅ ' . $f['cost'];
+		}
+		if ( '' !== $f['duration'] ) {
+			$details[] = '📅 ' . $f['duration'];
+		}
+		if ( '' !== $f['date'] ) {
+			$details[] = '🕐 ' . $f['date'];
+		}
+		if ( '' !== $f['location'] ) {
+			$details[] = '📍 ' . $f['location'];
+		}
+		if ( '' !== $f['audience'] ) {
+			$details[] = '👥 ' . $f['audience'];
+		}
+		if ( $details ) {
+			$out[] = implode( "\n", $details );
+			$out[] = '';
+		}
+
+		$out[] = __( 'מספר המקומות מוגבל – מומלץ להירשם בהקדם!', 'kivun' );
+
+		if ( '' !== $f['url'] ) {
+			$out[] = '';
+			$out[] = '👉 ' . __( 'להרשמה:', 'kivun' );
+			$out[] = $f['url'];
+		}
+
+		return implode( "\n", $out );
+	}
+
+	/**
+	 * Ask the model to write the promo, holding it to the house format.
+	 *
+	 * @param array<string,string> $f Content fields.
+	 * @return string|\WP_Error
+	 */
+	public static function generate_whatsapp( array $f ) {
+		$key = trim( (string) Kivun_Admin_Settings::get( 'openai_api_key', '' ) );
+		if ( '' === $key ) {
+			return new \WP_Error( 'kivun_ai_no_key', __( 'לא הוגדר מפתח API.', 'kivun' ) );
+		}
+
+		$model = (string) Kivun_Admin_Settings::get( 'ai_text_model', 'gpt-4o-mini' );
+		$model = '' !== trim( $model ) ? trim( $model ) : 'gpt-4o-mini';
+
+		$labels     = array(
+			'landing' => 'דף נחיתה',
+			'course'  => 'קורס',
+			'session' => 'סדנה',
+			'event'   => 'אירוע',
+		);
+		$type_label = $labels[ $f['type'] ] ?? 'תוכן';
+
+		// The centre's existing format, given as a worked example. Describing
+		// the shape in prose produces near-misses; showing it does not.
+		$example = "*🚀 רוצים להגדיל את ההכנסות ולצמוח כלכלית? 💰*\n\n"
+			. "מרכז כיוון מזמינים אותך לסדנת הגדלת הכנסות – סדנה פרקטית שתעניק לכם כלים מעשיים לשיפור המצב הכלכלי, יצירת מקורות הכנסה נוספים ותכנון פיננסי נכון.\n\n"
+			. "✅ ללא עלות\n📅 3 מפגשים\n🕐 בין השעות 19:00–22:00\n📍 מרכז כיוון ירושלים\n\n"
+			. "מספר המקומות מוגבל – מומלץ להירשם בהקדם!\n\n"
+			. '👉 להרשמה:';
+
+		$system = 'אתה כותב הודעות שיווקיות קצרות בעברית עבור מרכז כיוון, מרכז קהילתי בירושלים, להפצה בקבוצות וואטסאפ. '
+			. 'כתוב בגוף פונה, חם ומזמין, בלי סופרלטיבים מוגזמים ובלי סימני קריאה מיותרים. '
+			. 'החזר אך ורק אובייקט JSON תקין עם המפתח "text" בלבד.';
+
+		$rules = "פורמט ההודעה — הקפד עליו במדויק:\n"
+			. "1. שורה ראשונה: וו פתיחה קצר בין כוכביות (הדגשה בוואטסאפ), עם אימוג'י בתחילתה ובסופה. עדיף שאלה שמדברת אל הכאב או הרצון של הקורא.\n"
+			. "2. שורה ריקה, ואז פסקה אחת קצרה (2–3 שורות) שמזמינה ומסבירה מה יוצא למשתתף.\n"
+			. "3. שורה ריקה, ואז שורת פרטים אחת לכל פריט, כל אחת פותחת באימוג'י מתאים (עלות, מספר מפגשים, שעות, מיקום). אל תמציא פרטים שלא נמסרו — פשוט השמט אותם.\n"
+			. "4. שורה ריקה, ואז משפט דחיפות קצר.\n"
+			. "5. אם נמסרה כתובת קישור: שורה ריקה, ואז '👉 להרשמה:' ובשורה נפרדת הקישור המלא בדיוק כפי שנמסר. אם לא נמסר קישור — אל תמציא כתובת ואל תכתוב את שורת ההרשמה.\n"
+			. "אורך כולל: עד 120 מילים. אל תשתמש בכותרות Markdown, ברשימות ממוספרות או בקו תחתון.\n\n"
+			. "דוגמה לסגנון הרצוי:\n" . $example;
+
+		$given = array();
+		foreach ( array(
+			'title'    => 'כותרת',
+			'short'    => 'תיאור קצר',
+			'audience' => 'קהל יעד',
+			'duration' => 'משך / מבנה',
+			'cost'     => 'עלות',
+			'date'     => 'מועדים ושעות',
+			'location' => 'מיקום',
+			'url'      => 'קישור להרשמה',
+		) as $field => $label ) {
+			if ( '' !== ( $f[ $field ] ?? '' ) ) {
+				$given[] = $label . ': ' . $f[ $field ];
+			}
+		}
+
+		$user = sprintf(
+			"כתוב הודעת וואטסאפ עבור %s.\n\nהפרטים שנמסרו:\n%s\n\n%s",
+			$type_label,
+			implode( "\n", $given ),
+			$rules
+		);
+
+		$response = wp_remote_post(
+			self::ENDPOINT,
+			array(
+				'timeout' => 60,
+				'headers' => array(
+					'Authorization' => 'Bearer ' . $key,
+					'Content-Type'  => 'application/json',
+				),
+				'body'    => wp_json_encode(
+					array(
+						'model'           => $model,
+						'messages'        => array(
+							array(
+								'role'    => 'system',
+								'content' => $system,
+							),
+							array(
+								'role'    => 'user',
+								'content' => $user,
+							),
+						),
+						'response_format' => array( 'type' => 'json_object' ),
+						'temperature'     => 0.8,
+					)
+				),
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$code = (int) wp_remote_retrieve_response_code( $response );
+		$data = json_decode( (string) wp_remote_retrieve_body( $response ), true );
+
+		if ( 200 !== $code ) {
+			return new \WP_Error( 'kivun_ai_api', self::friendly_error( $code, $data ) );
+		}
+
+		$content = is_array( $data ) && isset( $data['choices'][0]['message']['content'] )
+			? (string) $data['choices'][0]['message']['content']
+			: '';
+		$parsed  = json_decode( $content, true );
+		$text    = is_array( $parsed ) ? (string) ( $parsed['text'] ?? '' ) : '';
+
+		if ( '' === trim( $text ) ) {
+			return new \WP_Error( 'kivun_ai_parse', __( 'לא התקבל תוכן תקין מהשירות.', 'kivun' ) );
+		}
+
+		// The model occasionally invents a placeholder link. Only the real one
+		// may appear, so anything else is stripped rather than sent out.
+		$text = preg_replace_callback(
+			'#https?://\S+#',
+			static function ( $m ) use ( $f ) {
+				return ( '' !== $f['url'] && $m[0] === $f['url'] ) ? $m[0] : '';
+			},
+			$text
+		);
+
+		return trim( wp_strip_all_tags( (string) $text ) );
 	}
 
 	/**

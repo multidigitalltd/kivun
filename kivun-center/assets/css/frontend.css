@@ -1427,6 +1427,17 @@
 .kivun-cc-schedule[hidden] { display: none; }
 .kivun-cc-status-note { margin-top: .6rem; }
 
+/* WhatsApp promo box — monospace-free but roomy, since the copy is read as
+   a message rather than as a form field. */
+.kivun-wa-text {
+	margin-top: .6rem;
+	line-height: 1.7;
+	white-space: pre-wrap;
+	font-size: .9rem;
+}
+.kivun-wa-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .6rem; }
+.kivun-cc-wa-status { display: inline-block; margin-inline-start: .5rem; font-size: .82rem; color: var(--kivun-muted); }
+
 /* The jobs board shares the console's visual language, both standalone (it
    carries .kivun-cc-console itself) and embedded inside the content console. */
 .kivun-employer-dashboard.kivun-cc-console .kivun-jobs-table-wrap,

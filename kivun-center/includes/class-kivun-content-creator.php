@@ -131,6 +131,7 @@ class Kivun_Content_Creator {
 			'cta_button'       => '',
 			'status'           => 'publish',
 			'schedule'         => '',
+			'whatsapp'         => '',
 			'thumb_id'         => '0',
 			'course_capacity'  => '',
 			'course_wc'        => '',
@@ -160,6 +161,7 @@ class Kivun_Content_Creator {
 		$v['long']     = (string) get_post_field( 'post_content', $primary );
 		$v['status']   = (string) get_post_status( $primary );
 		$v['thumb_id'] = (string) (int) get_post_thumbnail_id( $primary );
+		$v['whatsapp'] = (string) get_post_meta( $primary, '_kivun_whatsapp', true );
 		if ( 'future' === $v['status'] ) {
 			// datetime-local wants Y-m-d\TH:i, in site time.
 			$v['schedule'] = str_replace( ' ', 'T', substr( (string) get_post_field( 'post_date', $primary ), 0, 16 ) );
@@ -974,6 +976,7 @@ class Kivun_Content_Creator {
 			'cta_t'    => isset( $_POST['cta_title'] ) ? sanitize_text_field( wp_unslash( $_POST['cta_title'] ) ) : '',
 			'cta_c'    => isset( $_POST['cta_content'] ) ? sanitize_textarea_field( wp_unslash( $_POST['cta_content'] ) ) : '',
 			'cta_b'    => isset( $_POST['cta_button'] ) ? sanitize_text_field( wp_unslash( $_POST['cta_button'] ) ) : '',
+			'whatsapp' => isset( $_POST['whatsapp'] ) ? sanitize_textarea_field( wp_unslash( $_POST['whatsapp'] ) ) : '',
 			'status'   => $status['status'],
 			'postdate' => $status['postdate'],
 			'postgmt'  => $status['postdate_gmt'],
@@ -1151,6 +1154,9 @@ class Kivun_Content_Creator {
 		$post_id = (int) $result;
 
 		update_post_meta( $post_id, self::GROUP_META, $group );
+		// The WhatsApp promo describes the group, not one post type, so every
+		// post in the group carries the same copy.
+		update_post_meta( $post_id, '_kivun_whatsapp', $shared['whatsapp'] ?? '' );
 		foreach ( $meta as $key => $value ) {
 			update_post_meta( $post_id, $key, $value );
 		}
@@ -1812,6 +1818,16 @@ class Kivun_Content_Creator {
 		$editing     = (bool) $group_posts;
 		$v           = self::form_values( $group_posts );
 
+		// The registration link for the WhatsApp promo. A landing page is the
+		// natural destination; otherwise the first published post in the group.
+		$group_view_url = '';
+		foreach ( array( 'landing', 'course', 'session', 'event' ) as $kivun_pref ) {
+			if ( ! empty( $group_posts[ $kivun_pref ] ) && 'publish' === get_post_status( $group_posts[ $kivun_pref ] ) ) {
+				$group_view_url = (string) get_permalink( $group_posts[ $kivun_pref ] );
+				break;
+			}
+		}
+
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only status flag.
 		$saved = ! empty( $_GET['kivun_saved'] );
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only status flag.
@@ -2118,6 +2134,39 @@ class Kivun_Content_Creator {
 									</div>
 								<?php endif; ?>
 							</div>
+						</div>
+
+						<div class="kivun-cc-card kivun-cc-wa" data-step="4" style="order:4">
+							<label class="kivun-cc-label" for="kivun-ccf-whatsapp"><?php esc_html_e( 'הודעה להפצה בוואטסאפ', 'kivun' ); ?></label>
+							<p class="kivun-cc-hint"><?php esc_html_e( 'תמצית שיווקית של התוכן, בפורמט שמתאים לשליחה בקבוצות. אפשר לערוך אחרי היצירה — מה שיישמר כאן הוא מה שיישמר עם התוכן.', 'kivun' ); ?></p>
+
+							<button
+								type="button"
+								class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost kivun-wa-btn"
+								data-ajax="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>"
+								data-nonce="<?php echo esc_attr( wp_create_nonce( 'kivun_ai_content' ) ); ?>"
+								data-url="<?php echo esc_url( $group_view_url ); ?>"
+							>
+								<?php echo kivun_icon( 'sparkle' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?><?php esc_html_e( 'צור הודעה לוואטסאפ', 'kivun' ); ?>
+							</button>
+							<span class="kivun-cc-wa-status" role="status" aria-live="polite"></span>
+
+							<textarea
+								id="kivun-ccf-whatsapp"
+								name="whatsapp"
+								class="kivun-cc-input kivun-cc-textarea kivun-wa-text"
+								rows="12"
+								dir="rtl"
+								placeholder="<?php esc_attr_e( 'לחצו על "צור הודעה לוואטסאפ" — או כתבו כאן בעצמכם.', 'kivun' ); ?>"
+							><?php echo esc_textarea( $v['whatsapp'] ); ?></textarea>
+
+							<div class="kivun-wa-actions">
+								<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost kivun-wa-copy"><?php esc_html_e( 'העתקת ההודעה', 'kivun' ); ?></button>
+								<a class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost kivun-wa-share" href="https://wa.me/" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'שליחה בוואטסאפ', 'kivun' ); ?></a>
+							</div>
+							<?php if ( '' === $group_view_url ) : ?>
+								<p class="kivun-field-hint"><?php esc_html_e( 'הקישור להרשמה יתווסף אחרי הפרסום — צרו את ההודעה שוב אז, או הדביקו את הכתובת ידנית.', 'kivun' ); ?></p>
+							<?php endif; ?>
 						</div>
 
 						<div class="kivun-cc-card" data-step="4" style="order:3">

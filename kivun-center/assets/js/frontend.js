@@ -518,6 +518,105 @@
 
 	document.querySelectorAll('.kivun-cc-status').forEach(kivunSyncSchedule);
 
+	// ── WhatsApp promo generator ─────────────────────────────────────────────────
+	function kivunWaField(form, selector) {
+		var el = form.querySelector(selector);
+		if (!el) { return ''; }
+		// Strip tags: the rich fields hold HTML, and the promo is plain text.
+		var tmp = document.createElement('div');
+		tmp.innerHTML = el.value || '';
+		return (tmp.textContent || '').trim();
+	}
+
+	function kivunWaShareLink(text) {
+		return 'https://wa.me/?text=' + encodeURIComponent(text);
+	}
+
+	document.addEventListener('click', function (e) {
+		var btn = e.target.closest('.kivun-wa-btn');
+		if (!btn) { return; }
+
+		var form = btn.closest('form');
+		var card = btn.closest('.kivun-cc-wa');
+		var out = card && card.querySelector('.kivun-wa-text');
+		var status = card && card.querySelector('.kivun-cc-wa-status');
+		if (!form || !out) { return; }
+
+		// Replacing copy the user may have edited is destructive — ask first.
+		if (out.value.trim() && !window.confirm(kivun.i18n.confirm_replace_whatsapp)) { return; }
+
+		var checked = form.querySelector('[name="publish[]"]:checked, [name="publish[]"]');
+		var data = new URLSearchParams({
+			action: 'kivun_generate_whatsapp',
+			nonce: btn.dataset.nonce,
+			type: checked ? checked.value : '',
+			title: kivunWaField(form, '[name="title"]'),
+			short: kivunWaField(form, '[name="short"]'),
+			audience: kivunWaField(form, '[name="audience"]'),
+			duration: kivunWaField(form, '[name="duration"]'),
+			cost: kivunWaField(form, '[name="cost"]'),
+			date: kivunWaField(form, '[name="date"]'),
+			location: kivunWaField(form, '[name="session_location"]') || kivunWaField(form, '[name="event_location"]'),
+			url: btn.dataset.url || ''
+		});
+
+		btn.disabled = true;
+		if (status) { status.textContent = kivun.i18n.sending; }
+
+		fetch(btn.dataset.ajax, { method: 'POST', credentials: 'same-origin', body: data })
+			.then(function (r) { return r.json(); })
+			.then(function (res) {
+				btn.disabled = false;
+				if (!res.success) {
+					if (status) { status.textContent = (res.data && res.data.message) || kivun.i18n.error_generic; }
+					return;
+				}
+				out.value = res.data.text;
+				if (status) {
+					status.textContent = res.data.notice
+						? res.data.notice
+						: (res.data.source === 'template' ? kivun.i18n.wa_from_fields : kivun.i18n.saved);
+				}
+			})
+			.catch(function () {
+				btn.disabled = false;
+				if (status) { status.textContent = kivun.i18n.error_generic; }
+			});
+	});
+
+	document.addEventListener('click', function (e) {
+		var copy = e.target.closest('.kivun-wa-copy');
+		if (!copy) { return; }
+		var card = copy.closest('.kivun-cc-wa');
+		var field = card && card.querySelector('.kivun-wa-text');
+		if (!field || !field.value.trim()) { return; }
+
+		var done = function () {
+			var original = copy.textContent;
+			copy.textContent = '✓ הועתק';
+			setTimeout(function () { copy.textContent = original; }, 1600);
+		};
+		if (navigator.clipboard) {
+			navigator.clipboard.writeText(field.value).then(done, function () { field.select(); });
+		} else {
+			field.select();
+			try { document.execCommand('copy'); done(); } catch (err) { /* selection is the fallback */ }
+		}
+	});
+
+	// Keep the share link in step with whatever is currently in the box.
+	document.addEventListener('click', function (e) {
+		var share = e.target.closest('.kivun-wa-share');
+		if (!share) { return; }
+		var card = share.closest('.kivun-cc-wa');
+		var field = card && card.querySelector('.kivun-wa-text');
+		if (!field || !field.value.trim()) {
+			e.preventDefault();
+			return;
+		}
+		share.href = kivunWaShareLink(field.value);
+	});
+
 	// ── Campaigns and their tracking links ───────────────────────────────────────
 	function kivunCampClean(value) {
 		return String(value || '')
