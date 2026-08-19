@@ -36,6 +36,33 @@ class Kivun_Mercaz {
 	);
 
 	/**
+	 * Credentials to use instead of the stored ones, for testing values that
+	 * are typed into the settings form but not saved yet.
+	 *
+	 * @var array{user:string,pass:string}|null
+	 */
+	private static $override;
+
+	/**
+	 * Use these credentials for the rest of the request.
+	 *
+	 * @param string $user Username.
+	 * @param string $pass Application password.
+	 * @return void
+	 */
+	public static function use_credentials( string $user, string $pass ): void {
+		$user = trim( $user );
+		$pass = trim( $pass );
+
+		self::$override = ( '' !== $user && '' !== $pass )
+			? array(
+				'user' => $user,
+				'pass' => $pass,
+			)
+			: null;
+	}
+
+	/**
 	 * Register the admin-side AJAX handlers.
 	 *
 	 * @return void
@@ -90,8 +117,8 @@ class Kivun_Mercaz {
 			return new \WP_Error( 'kivun_mercaz_unconfigured', __( 'לא הוגדרה כתובת ל-API של מרכז כיוון.', 'kivun' ) );
 		}
 
-		$user = trim( (string) Kivun_Admin_Settings::get( 'mercaz_user', '' ) );
-		$pass = trim( (string) Kivun_Admin_Settings::get( 'mercaz_pass', '' ) );
+		$user = self::$override ? self::$override['user'] : trim( (string) Kivun_Admin_Settings::get( 'mercaz_user', '' ) );
+		$pass = self::$override ? self::$override['pass'] : trim( (string) Kivun_Admin_Settings::get( 'mercaz_pass', '' ) );
 		if ( '' === $user || '' === $pass ) {
 			return new \WP_Error( 'kivun_mercaz_unconfigured', __( 'לא הוגדרו פרטי התחברות ל-API של מרכז כיוון.', 'kivun' ) );
 		}
@@ -324,6 +351,16 @@ class Kivun_Mercaz {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_send_json_error( array( 'message' => __( 'אין לך הרשאה.', 'kivun' ) ) );
 		}
+
+		// Test what is on screen, not what was last saved: otherwise the first
+		// thing anyone does — fill the fields in and press the button — reports
+		// that nothing is configured.
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- Verified above.
+		self::use_credentials(
+			sanitize_text_field( wp_unslash( $_POST['user'] ?? '' ) ),
+			sanitize_text_field( wp_unslash( $_POST['pass'] ?? '' ) )
+		);
+		// phpcs:enable WordPress.Security.NonceVerification.Missing
 	}
 
 	/**

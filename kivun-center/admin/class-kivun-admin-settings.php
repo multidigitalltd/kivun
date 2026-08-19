@@ -594,7 +594,7 @@ class Kivun_Admin_Settings {
 							<?php esc_html_e( 'הצגת שדות התוכן', 'kivun' ); ?>
 						</button>
 						<p class="description">
-							<?php esc_html_e( 'בדיקת חיבור מאמתת את הפרטים ומדווחת באיזה תפקיד התחברתם. הצגת שדות קוראת פריט קיים מכל סוג ומראה אילו שדות הוא באמת מכיל — כך המיפוי נבנה לפי המציאות ולא לפי ניחוש. יש לשמור את ההגדרות לפני הבדיקה.', 'kivun' ); ?>
+							<?php esc_html_e( 'בדיקת חיבור מאמתת את הפרטים ומדווחת באיזה תפקיד התחברתם. הצגת שדות קוראת פריט קיים מכל סוג ומראה אילו שדות הוא באמת מכיל — כך המיפוי נבנה לפי המציאות ולא לפי ניחוש. הבדיקה משתמשת במה שכתוב בשדות למעלה, גם לפני שמירה.', 'kivun' ); ?>
 						</p>
 						<div class="kivun-mercaz-result" style="margin-top:10px"></div>
 						<script>
@@ -613,6 +613,12 @@ class Kivun_Admin_Settings {
 								btn.disabled = true;
 								say( '<em><?php echo esc_js( __( 'בודק…', 'kivun' ) ); ?></em>' );
 								body.append( 'nonce', btn.dataset.nonce );
+
+								// Send what is typed in, so the button works before saving.
+								var u = document.querySelector( '[name="mercaz_user"]' );
+								var w = document.querySelector( '[name="mercaz_pass"]' );
+								if ( u ) { body.append( 'user', u.value ); }
+								if ( w ) { body.append( 'pass', w.value ); }
 								fetch( ajaxurl, { method: 'POST', credentials: 'same-origin', body: body } )
 									.then( function ( r ) { return r.json(); } )
 									.then( function ( res ) {
