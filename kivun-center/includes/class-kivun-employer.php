@@ -190,10 +190,12 @@ class Kivun_Employer {
 		$city       = sanitize_text_field( wp_unslash( $_POST['city'] ?? '' ) );
 		$work_hours = sanitize_text_field( wp_unslash( $_POST['work_hours'] ?? '' ) );
 		$experience = sanitize_text_field( wp_unslash( $_POST['experience_years'] ?? '' ) );
-		$scope      = sanitize_text_field( wp_unslash( $_POST['scope'] ?? '' ) );
-		$region     = sanitize_text_field( wp_unslash( $_POST['region'] ?? '' ) );
-		$field      = sanitize_text_field( wp_unslash( $_POST['field'] ?? '' ) );
-		$deadline   = self::sanitize_deadline( sanitize_text_field( wp_unslash( $_POST['deadline'] ?? '' ) ) );
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized per value.
+		$features = array_filter( array_map( 'sanitize_text_field', (array) wp_unslash( $_POST['features'] ?? array() ) ) );
+		$scope    = sanitize_text_field( wp_unslash( $_POST['scope'] ?? '' ) );
+		$region   = sanitize_text_field( wp_unslash( $_POST['region'] ?? '' ) );
+		$field    = sanitize_text_field( wp_unslash( $_POST['field'] ?? '' ) );
+		$deadline = self::sanitize_deadline( sanitize_text_field( wp_unslash( $_POST['deadline'] ?? '' ) ) );
 
 		if ( ! $title || ! $description ) {
 			wp_send_json_error( array( 'message' => __( 'כותרת ותיאור הם שדות חובה.', 'kivun' ) ) );
@@ -229,6 +231,8 @@ class Kivun_Employer {
 		update_post_meta( $job_id, '_kivun_city', $city );
 		update_post_meta( $job_id, '_kivun_work_hours', $work_hours );
 		update_post_meta( $job_id, '_kivun_experience_years', $experience );
+		// Always set, so clearing every box actually clears them.
+		wp_set_object_terms( $job_id, $features ? $features : null, 'kivun_job_feature' );
 		self::save_deadline( $job_id, $deadline );
 
 		if ( $scope ) {
@@ -273,9 +277,11 @@ class Kivun_Employer {
 		$city       = sanitize_text_field( wp_unslash( $_POST['city'] ?? '' ) );
 		$work_hours = sanitize_text_field( wp_unslash( $_POST['work_hours'] ?? '' ) );
 		$experience = sanitize_text_field( wp_unslash( $_POST['experience_years'] ?? '' ) );
-		$scope      = sanitize_text_field( wp_unslash( $_POST['scope'] ?? '' ) );
-		$region     = sanitize_text_field( wp_unslash( $_POST['region'] ?? '' ) );
-		$field      = sanitize_text_field( wp_unslash( $_POST['field'] ?? '' ) );
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized per value.
+		$features = array_filter( array_map( 'sanitize_text_field', (array) wp_unslash( $_POST['features'] ?? array() ) ) );
+		$scope    = sanitize_text_field( wp_unslash( $_POST['scope'] ?? '' ) );
+		$region   = sanitize_text_field( wp_unslash( $_POST['region'] ?? '' ) );
+		$field    = sanitize_text_field( wp_unslash( $_POST['field'] ?? '' ) );
 
 		if ( ! $title || ! $description ) {
 			wp_send_json_error( array( 'message' => __( 'כותרת ותיאור הם שדות חובה.', 'kivun' ) ) );
@@ -303,6 +309,8 @@ class Kivun_Employer {
 		update_post_meta( $job_id, '_kivun_city', $city );
 		update_post_meta( $job_id, '_kivun_work_hours', $work_hours );
 		update_post_meta( $job_id, '_kivun_experience_years', $experience );
+		// Always set, so clearing every box actually clears them.
+		wp_set_object_terms( $job_id, $features ? $features : null, 'kivun_job_feature' );
 		self::save_deadline( $job_id, self::sanitize_deadline( sanitize_text_field( wp_unslash( $_POST['deadline'] ?? '' ) ) ) );
 
 		wp_set_object_terms( $job_id, $scope ? $scope : array(), 'kivun_job_scope' );

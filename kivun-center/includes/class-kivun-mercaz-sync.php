@@ -144,6 +144,22 @@ class Kivun_Mercaz_Sync {
 		wp_send_json_success( array( 'cities' => $names ) );
 	}
 
+	/**
+	 * The remote term id for a post's term in a local taxonomy.
+	 *
+	 * The two vocabularies are kept identical by name, so a term resolves
+	 * directly. Nothing is translated on the way out.
+	 *
+	 * @param int    $post_id Post id.
+	 * @param string $local   Local taxonomy.
+	 * @param string $remote  Remote taxonomy rest_base.
+	 * @return int Remote term id, or 0 when there is no match.
+	 */
+	private static function mapped_term( int $post_id, string $local, string $remote ): int {
+		$name = self::local_term_name( $post_id, $local );
+		return '' === $name ? 0 : self::resolve_term( $remote, $name, 'jobs' );
+	}
+
 	// ── Term resolution ───────────────────────────────────────────────────────.
 
 	/**
@@ -337,14 +353,17 @@ class Kivun_Mercaz_Sync {
 
 		$body = array(
 			'title'  => get_the_title( $post ),
-			'status' => in_array( $post->post_status, array( 'publish', 'draft', 'pending', 'private', 'future' ), true )
+			'status' => in_array( $post->post_status, array( 'publish', 'draft', 'pending', 'private' ), true )
 				? $post->post_status
 				: 'draft',
 		);
 
-		// A scheduled local post must carry its date, or it publishes at once.
+		// Scheduling is expressed as a future date on a published item, not as
+		// a 'future' status — that is how their API documents it, and it also
+		// avoids depending on 'future' being an accepted status value.
 		if ( 'future' === $post->post_status ) {
-			$body['date'] = get_post_time( 'Y-m-d\TH:i:s', false, $post );
+			$body['status'] = 'publish';
+			$body['date']   = get_post_time( 'Y-m-d\TH:i:s', false, $post );
 		}
 
 		// Settlement: optional in the API, but a record without one is missing
@@ -400,14 +419,28 @@ class Kivun_Mercaz_Sync {
 				// The district is derived from the account's profile for a job
 				// manager, and sending it is refused outright — so it is never
 				// sent from here. An administrator would set it explicitly.
-				$job_cat = self::resolve_term( 'job_cat', self::local_term_name( $post->ID, 'kivun_job_field' ), 'jobs' );
+				$job_cat = self::mapped_term( $post->ID, 'kivun_job_field', 'job_cat' );
 				if ( $job_cat ) {
 					$body['job_cat'] = array( $job_cat );
 				}
 
-				$job_type = self::resolve_term( 'job-type', self::local_term_name( $post->ID, 'kivun_job_scope' ), 'jobs' );
+				$job_type = self::mapped_term( $post->ID, 'kivun_job_scope', 'job-type' );
 				if ( $job_type ) {
 					$body['job-type'] = array( $job_type );
+				}
+
+				// Features are multi-select, unlike the single-value taxonomies.
+				$features = array();
+				foreach ( (array) get_the_terms( $post->ID, 'kivun_job_feature' ) as $feature ) {
+					if ( isset( $feature->name ) ) {
+						$id = self::resolve_term( 'job_features', (string) $feature->name, 'jobs' );
+						if ( $id ) {
+							$features[] = $id;
+						}
+					}
+				}
+				if ( $features ) {
+					$body['job_features'] = $features;
 				}
 				break;
 		}

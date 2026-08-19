@@ -207,8 +207,78 @@ class Kivun_Installer {
 		);
 
 		self::migrate_campaign_links();
+		self::align_job_terms();
 
 		update_option( 'kivun_db_version', KIVUN_VERSION );
+	}
+
+	/**
+	 * Rename the job taxonomies to the names Mercaz Kivun uses.
+	 *
+	 * The two sites named the same things differently — "משרה מלאה" against
+	 * "מלאה", "טכנולוגיה ומחשבים" against "הייטק" — so a term could not be
+	 * matched across them and jobs arrived uncategorised. Renaming rather than
+	 * recreating keeps every existing job attached to its term.
+	 *
+	 * @return void
+	 */
+	private static function align_job_terms(): void {
+		if ( get_option( 'kivun_job_terms_aligned' ) ) {
+			return;
+		}
+
+		$renames = array(
+			'kivun_job_scope' => array(
+				'משרה מלאה'  => 'מלאה',
+				'משרה חלקית' => 'חלקית',
+			),
+			'kivun_job_field' => array(
+				'חינוך והוראה'           => 'חינוך',
+				'מכירות ושיווק'          => 'מכירות',
+				'טכנולוגיה ומחשבים'      => 'הייטק',
+				'בריאות ורפואה'          => 'בריאות',
+				'ניהול ומנהל'            => 'ניהול',
+				'אדמינסטרציה ומזכירות'   => 'אדמיניסטרציה',
+				'כספים וחשבונאות'        => 'כספים',
+				'עיצוב ויצירה'           => 'עיצוב ואמנות',
+				'רווחה ושירותים חברתיים' => 'טיפול',
+				'ייעוץ מקצועי'           => 'כללי',
+			),
+		);
+
+		foreach ( $renames as $taxonomy => $pairs ) {
+			if ( ! taxonomy_exists( $taxonomy ) ) {
+				continue;
+			}
+
+			foreach ( $pairs as $from => $to ) {
+				$old = get_term_by( 'name', $from, $taxonomy );
+				if ( ! $old || is_wp_error( $old ) ) {
+					continue;
+				}
+
+				// If the destination name already exists, move the posts over
+				// and drop the old term — two terms cannot share a name.
+				$existing = get_term_by( 'name', $to, $taxonomy );
+				if ( $existing && ! is_wp_error( $existing ) && (int) $existing->term_id !== (int) $old->term_id ) {
+					$posts = get_objects_in_term( array( (int) $old->term_id ), $taxonomy );
+					if ( ! is_wp_error( $posts ) ) {
+						foreach ( $posts as $post_id ) {
+							wp_set_object_terms( (int) $post_id, (int) $existing->term_id, $taxonomy, true );
+						}
+					}
+					wp_delete_term( (int) $old->term_id, $taxonomy );
+					continue;
+				}
+
+				wp_update_term( (int) $old->term_id, $taxonomy, array( 'name' => $to ) );
+			}
+		}
+
+		// Seed anything still missing, including the new features taxonomy.
+		self::seed_default_terms();
+
+		update_option( 'kivun_job_terms_aligned', 1 );
 	}
 
 	/**
@@ -310,13 +380,19 @@ class Kivun_Installer {
 	 */
 	private static function seed_default_terms(): void {
 		$defaults = array(
-			'kivun_job_scope'  => array(
-				'משרה מלאה',
-				'משרה חלקית',
+			'kivun_job_scope'   => array(
+				'מלאה',
+				'חלקית',
+				'משמרות',
+				'היברידית',
+				'עבודה מהבית',
 				'פרילנס',
+				'סטודנט',
+				'משרת אם',
+				'משרה לאקדמאים',
 				'התנדבות',
 			),
-			'kivun_job_region' => array(
+			'kivun_job_region'  => array(
 				'מרכז',
 				'תל אביב והסביבה',
 				'ירושלים',
@@ -327,19 +403,58 @@ class Kivun_Installer {
 				'השרון',
 				'עבודה מהבית',
 			),
-			'kivun_job_field'  => array(
-				'חינוך והוראה',
-				'ייעוץ מקצועי',
-				'מכירות ושיווק',
-				'טכנולוגיה ומחשבים',
-				'בריאות ורפואה',
-				'רווחה ושירותים חברתיים',
-				'ניהול ומנהל',
-				'אדמינסטרציה ומזכירות',
-				'כספים וחשבונאות',
-				'עיצוב ויצירה',
+			// These match the Mercaz Kivun vocabulary exactly, so a term resolves
+			// there by name and nothing has to be translated on the way out.
+			'kivun_job_field'   => array(
+				'אבטחה',
+				'אדמיניסטרציה',
+				'אדרכילות/בנייה',
+				'אחזקה ולוגיסטיקה',
+				'ביטוח',
+				'ביטחון',
+				'בנקאות',
+				'בריאות',
+				'דיגיטל',
+				'הדרכה',
+				'הידרותרפיה',
+				'הייטק',
+				'הנדסה',
+				'הנהלת חשבונות',
+				'חינוך',
+				'חשבות שכר',
+				'חשמל',
+				'טיפול',
+				'כללי',
+				'כספים',
+				'מכירות',
+				'מסעדות/אוכל',
+				'מציל',
+				'משאבי אנוש',
+				'ניהול',
+				'נקיון',
+				'סיעוד',
+				'עבודה מהבית',
+				'עיצוב גרפי',
+				'עיצוב ואמנות',
+				'עריכת דין',
+				'פיזותרפיה',
+				'פרסום ושיווק',
+				'קמעונאות',
+				'ריפוי בעיסוק',
+				'רכב',
+				'שירותי לקוחות',
+				'תעופה',
+				'תעשייה',
 			),
-			'kivun_course_cat' => array(
+			'kivun_job_feature' => array(
+				'משרה זמנית',
+				'משרה מיידית',
+				'מתאים להורים',
+				'מתאים למגזר החרדי',
+				'מתאים לסטודנטים',
+				'רכב צמוד',
+			),
+			'kivun_course_cat'  => array(
 				'כישורי עבודה',
 				'יזמות עסקית',
 				'פיתוח אישי',

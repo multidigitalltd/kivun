@@ -150,6 +150,20 @@ class Kivun_Post_Types {
 		);
 
 		register_taxonomy(
+			'kivun_job_feature',
+			'kivun_job',
+			array(
+				'labels'       => array(
+					'name'          => 'מאפייני משרה',
+					'singular_name' => 'מאפיין',
+				),
+				'hierarchical' => false,
+				'show_in_rest' => true,
+				'rewrite'      => array( 'slug' => 'job-feature' ),
+			)
+		);
+
+		register_taxonomy(
 			'kivun_job_region',
 			'kivun_job',
 			array(

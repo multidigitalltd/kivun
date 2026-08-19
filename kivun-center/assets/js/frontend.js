@@ -463,6 +463,11 @@
 				setField('city', row.dataset.city);
 				setField('work_hours', row.dataset.workHours);
 				setField('experience_years', row.dataset.experience);
+
+				var chosen = (row.dataset.features || '').split('|').filter(Boolean);
+				form.querySelectorAll('[name="features[]"]').forEach(function (box) {
+					box.checked = chosen.indexOf(box.value) !== -1;
+				});
 				kivunSetEditor('kivunjobdesc', row.dataset.description);
 				kivunSetEditor('kivunjobreq', row.dataset.requirements);
 

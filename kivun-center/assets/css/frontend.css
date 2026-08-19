@@ -1450,6 +1450,13 @@
 .kivun-mercaz-status.is-ok { color: #15803d; }
 .kivun-mercaz-status.is-error { color: var(--kivun-error); }
 
+/* Multi-select job features. */
+.kivun-field--wide { grid-column: 1 / -1; }
+.kivun-field-legend { display: block; font-weight: 600; margin-bottom: .4rem; font-size: .9rem; }
+.kivun-checkgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: .4rem .9rem; }
+.kivun-checkitem { display: flex; align-items: center; gap: .4rem; font-size: .88rem; font-weight: 400; cursor: pointer; }
+.kivun-checkitem input { margin: 0; }
+
 /* The jobs board shares the console's visual language, both standalone (it
    carries .kivun-cc-console itself) and embedded inside the content console. */
 .kivun-employer-dashboard.kivun-cc-console .kivun-jobs-table-wrap,

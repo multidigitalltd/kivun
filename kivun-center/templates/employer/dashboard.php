@@ -79,21 +79,27 @@ $jobs = get_posts(
 	)
 );
 
-$scopes  = get_terms(
+$scopes   = get_terms(
 	array(
 		'taxonomy'   => 'kivun_job_scope',
 		'hide_empty' => false,
 	)
 );
-$regions = get_terms(
+$regions  = get_terms(
 	array(
 		'taxonomy'   => 'kivun_job_region',
 		'hide_empty' => false,
 	)
 );
-$fields  = get_terms(
+$fields   = get_terms(
 	array(
 		'taxonomy'   => 'kivun_job_field',
+		'hide_empty' => false,
+	)
+);
+$features = get_terms(
+	array(
+		'taxonomy'   => 'kivun_job_feature',
 		'hide_empty' => false,
 	)
 );
@@ -376,6 +382,20 @@ $kivun_user     = wp_get_current_user();
 						<input type="text" id="kivun-f-salary" name="salary" placeholder="10,000–15,000 ₪">
 					</div>
 
+					<?php if ( $features && ! is_wp_error( $features ) ) : ?>
+						<div class="kivun-field kivun-field--wide">
+							<span class="kivun-field-legend"><?php esc_html_e( 'מאפייני משרה', 'kivun' ); ?></span>
+							<div class="kivun-checkgrid">
+								<?php foreach ( $features as $t ) : ?>
+									<label class="kivun-checkitem">
+										<input type="checkbox" name="features[]" value="<?php echo esc_attr( $t->name ); ?>">
+										<span><?php echo esc_html( $t->name ); ?></span>
+									</label>
+								<?php endforeach; ?>
+							</div>
+						</div>
+					<?php endif; ?>
+
 					<div class="kivun-field">
 						<label for="kivun-f-city"><?php esc_html_e( 'יישוב', 'kivun' ); ?></label>
 						<input type="text" id="kivun-f-city" name="city" list="kivun-city-list" autocomplete="off" placeholder="<?php esc_attr_e( 'למשל: ירושלים', 'kivun' ); ?>">
@@ -477,6 +497,11 @@ $kivun_user     = wp_get_current_user();
 						data-city="<?php echo esc_attr( get_post_meta( $job->ID, '_kivun_city', true ) ); ?>"
 						data-work-hours="<?php echo esc_attr( get_post_meta( $job->ID, '_kivun_work_hours', true ) ); ?>"
 						data-experience="<?php echo esc_attr( get_post_meta( $job->ID, '_kivun_experience_years', true ) ); ?>"
+						<?php
+						$kivun_feat_t = get_the_terms( $job->ID, 'kivun_job_feature' );
+						$kivun_feat   = ( $kivun_feat_t && ! is_wp_error( $kivun_feat_t ) ) ? wp_list_pluck( $kivun_feat_t, 'name' ) : array();
+						?>
+						data-features="<?php echo esc_attr( implode( '|', $kivun_feat ) ); ?>"
 					>
 						<td><span class="kivun-job-id">#<?php echo esc_html( (string) $job->ID ); ?></span></td>
 						<td>
