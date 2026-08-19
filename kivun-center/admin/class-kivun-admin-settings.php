@@ -226,8 +226,6 @@ class Kivun_Admin_Settings {
 				'whatsapp_number'        => sanitize_text_field( wp_unslash( $_POST['whatsapp_number'] ?? '' ) ),
 				'whatsapp_message'       => sanitize_text_field( wp_unslash( $_POST['whatsapp_message'] ?? '' ) ),
 				'openai_api_key'         => sanitize_text_field( wp_unslash( $_POST['openai_api_key'] ?? '' ) ),
-				'mercaz_url'             => esc_url_raw( wp_unslash( $_POST['mercaz_url'] ?? '' ) ),
-				'mercaz_jobs_url'        => esc_url_raw( wp_unslash( $_POST['mercaz_jobs_url'] ?? '' ) ),
 				'mercaz_user'            => sanitize_text_field( wp_unslash( $_POST['mercaz_user'] ?? '' ) ),
 				'mercaz_pass'            => sanitize_text_field( wp_unslash( $_POST['mercaz_pass'] ?? '' ) ),
 				'mercaz_auto'            => ! empty( $_POST['mercaz_auto'] ),
@@ -553,17 +551,10 @@ class Kivun_Admin_Settings {
 				</tr>
 				<tr><th colspan="2"><h2><?php esc_html_e( 'חיבור למרכז כיוון (Content & Jobs API)', 'kivun' ); ?></h2></th></tr>
 				<tr>
-					<th scope="row"><?php esc_html_e( 'כתובת ה-API', 'kivun' ); ?></th>
+					<th scope="row"><?php esc_html_e( 'כתובת', 'kivun' ); ?></th>
 					<td>
-						<input type="url" name="mercaz_url" value="<?php echo esc_attr( $o( 'mercaz_url' ) ); ?>" class="regular-text" dir="ltr" placeholder="https://mercaz-kivun.co.il/wp-json/wp/v2">
-						<p class="description"><?php esc_html_e( 'הבסיס של ה-API, עד ‎/wp/v2 (ללא לוכסן בסוף).', 'kivun' ); ?></p>
-					</td>
-				</tr>
-				<tr>
-					<th scope="row"><?php esc_html_e( 'כתובת ה-API למשרות', 'kivun' ); ?></th>
-					<td>
-						<input type="url" name="mercaz_jobs_url" value="<?php echo esc_attr( $o( 'mercaz_jobs_url' ) ); ?>" class="regular-text" dir="ltr" placeholder="https://mercaz-kivun.staging24.link/wp-json/wp/v2">
-						<p class="description"><?php esc_html_e( 'רק אם המשרות יושבות על שרת אחר מהתוכן. אם ריק — תשמש הכתובת שלמעלה.', 'kivun' ); ?></p>
+						<code dir="ltr"><?php echo esc_html( Kivun_Mercaz::base_url() ); ?></code>
+						<p class="description"><?php esc_html_e( 'קבועה — אין מה למלא.', 'kivun' ); ?></p>
 					</td>
 				</tr>
 				<tr>

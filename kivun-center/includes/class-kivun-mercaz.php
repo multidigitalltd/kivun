@@ -18,6 +18,13 @@ defined( 'ABSPATH' ) || exit;
 class Kivun_Mercaz {
 
 	/**
+	 * The Mercaz Kivun API base. It is fixed, so it is not asked for: the jobs
+	 * documentation is published on a staging host but the API itself is not.
+	 * Override with the kivun_mercaz_base_url filter if that ever changes.
+	 */
+	const DEFAULT_BASE = 'https://mercaz-kivun.co.il/wp-json/wp/v2';
+
+	/**
 	 * Content types the API exposes, and the endpoint each one lives at.
 	 */
 	private const ENDPOINTS = array(
@@ -41,19 +48,20 @@ class Kivun_Mercaz {
 	/**
 	 * The API base for a given content type.
 	 *
-	 * Jobs are documented against a different host from the rest of the content
-	 * API, so they get their own optional base; when it is blank the main one
-	 * is used for everything.
-	 *
 	 * @param string $type Content type key.
 	 * @return string Base URL with no trailing slash, or '' when unconfigured.
 	 */
 	public static function base_url( string $type = '' ): string {
-		$main = trim( (string) Kivun_Admin_Settings::get( 'mercaz_url', '' ) );
-		$jobs = trim( (string) Kivun_Admin_Settings::get( 'mercaz_jobs_url', '' ) );
+		$saved = trim( (string) Kivun_Admin_Settings::get( 'mercaz_url', '' ) );
+		$base  = '' !== $saved ? $saved : self::DEFAULT_BASE;
 
-		$base = ( 'jobs' === $type && '' !== $jobs ) ? $jobs : $main;
-		return untrailingslashit( $base );
+		/**
+		 * Filter the API base, per content type.
+		 *
+		 * @param string $base The base URL.
+		 * @param string $type Content type key.
+		 */
+		return untrailingslashit( (string) apply_filters( 'kivun_mercaz_base_url', $base, $type ) );
 	}
 
 	/**
@@ -62,8 +70,7 @@ class Kivun_Mercaz {
 	 * @return bool
 	 */
 	public static function configured(): bool {
-		return '' !== self::base_url()
-			&& '' !== trim( (string) Kivun_Admin_Settings::get( 'mercaz_user', '' ) )
+		return '' !== trim( (string) Kivun_Admin_Settings::get( 'mercaz_user', '' ) )
 			&& '' !== trim( (string) Kivun_Admin_Settings::get( 'mercaz_pass', '' ) );
 	}
 
