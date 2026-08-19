@@ -46,6 +46,7 @@ class Kivun_Core {
 		Kivun_Utm::init();
 		Kivun_Campaigns::init();
 		Kivun_Mercaz::init();
+		Kivun_Mercaz_Sync::init();
 		Kivun_Duplicate::init();
 		Kivun_Thank_You::init();
 		Kivun_Content_Creator::init();
@@ -110,6 +111,7 @@ class Kivun_Core {
 			'class-kivun-utm',
 			'class-kivun-campaigns',
 			'class-kivun-mercaz',
+			'class-kivun-mercaz-sync',
 			'class-kivun-duplicate',
 			'class-kivun-thank-you',
 			'class-kivun-content-creator',
