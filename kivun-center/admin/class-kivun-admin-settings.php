@@ -590,11 +590,8 @@ class Kivun_Admin_Settings {
 						<button type="button" class="button kivun-mercaz-test" data-nonce="<?php echo esc_attr( wp_create_nonce( 'kivun_mercaz' ) ); ?>">
 							<?php esc_html_e( 'בדיקת חיבור', 'kivun' ); ?>
 						</button>
-						<button type="button" class="button kivun-mercaz-inspect" data-nonce="<?php echo esc_attr( wp_create_nonce( 'kivun_mercaz' ) ); ?>">
-							<?php esc_html_e( 'הצגת שדות התוכן', 'kivun' ); ?>
-						</button>
 						<p class="description">
-							<?php esc_html_e( 'בדיקת חיבור מאמתת את הפרטים ומדווחת באיזה תפקיד התחברתם. הצגת שדות קוראת פריט קיים מכל סוג ומראה אילו שדות הוא באמת מכיל — כך המיפוי נבנה לפי המציאות ולא לפי ניחוש. הבדיקה משתמשת במה שכתוב בשדות למעלה, גם לפני שמירה.', 'kivun' ); ?>
+							<?php esc_html_e( 'מאמת את הפרטים ומדווח באיזה תפקיד התחברתם. משתמש במה שכתוב בשדות למעלה, גם לפני שמירה.', 'kivun' ); ?>
 						</p>
 						<div class="kivun-mercaz-result" style="margin-top:10px"></div>
 						<script>
@@ -646,44 +643,6 @@ class Kivun_Admin_Settings {
 								} );
 							}
 
-							var inspectBtn = document.querySelector( '.kivun-mercaz-inspect' );
-							if ( inspectBtn ) {
-								inspectBtn.addEventListener( 'click', function () {
-									var b = new URLSearchParams();
-									b.append( 'action', 'kivun_mercaz_inspect' );
-									call( inspectBtn, b, function ( d ) {
-										var html = '';
-										Object.keys( d.report ).forEach( function ( type ) {
-											var r = d.report[ type ];
-											html += '<h4 style="margin:14px 0 4px">' + esc( type ) + '</h4>';
-											if ( r.error ) {
-												html += '<p style="color:#b32d2e">' + esc( r.error ) + '</p>';
-												return;
-											}
-											if ( r.empty ) {
-												html += '<p><em><?php echo esc_js( __( 'אין פריטים קיימים לקריאה בסוג הזה.', 'kivun' ) ); ?></em></p>';
-												return;
-											}
-											if ( r.scope === 'public' ) {
-												html += '<p><em><?php echo esc_js( __( 'נקרא מפריט ציבורי — עדיין אין תוכן משלכם בסוג הזה.', 'kivun' ) ); ?></em></p>';
-											}
-											var rows = function ( obj, title ) {
-												var keys = Object.keys( obj || {} );
-												if ( ! keys.length ) { return ''; }
-												var out = '<p style="margin:6px 0 2px"><strong>' + esc( title ) + '</strong></p>';
-												out += '<table class="widefat striped" style="max-width:900px"><tbody>';
-												keys.forEach( function ( k ) {
-													out += '<tr><td style="width:220px"><code>' + esc( k ) + '</code></td><td>' + esc( obj[ k ] ) + '</td></tr>';
-												} );
-												return out + '</tbody></table>';
-											};
-											html += rows( r.fields, '<?php echo esc_js( __( 'שדות', 'kivun' ) ); ?>' );
-											html += rows( r.meta, 'meta' );
-										} );
-										say( html || '<p><?php echo esc_js( __( 'לא התקבלו נתונים.', 'kivun' ) ); ?></p>' );
-									} );
-								} );
-							}
 						} () );
 						</script>
 					</td>

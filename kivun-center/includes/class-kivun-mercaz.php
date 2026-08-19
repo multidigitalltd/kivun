@@ -25,17 +25,6 @@ class Kivun_Mercaz {
 	const DEFAULT_BASE = 'https://mercaz-kivun.co.il/wp-json/wp/v2';
 
 	/**
-	 * Content types the API exposes, and the endpoint each one lives at.
-	 */
-	private const ENDPOINTS = array(
-		'posts'     => 'posts',
-		'events'    => 'events',
-		'courses'   => 'courses',
-		'workshops' => 'workshops',
-		'jobs'      => 'jobs',
-	);
-
-	/**
 	 * Credentials to use instead of the stored ones, for testing values that
 	 * are typed into the settings form but not saved yet.
 	 *
@@ -69,7 +58,6 @@ class Kivun_Mercaz {
 	 */
 	public static function init(): void {
 		add_action( 'wp_ajax_kivun_mercaz_test', array( __CLASS__, 'ajax_test' ) );
-		add_action( 'wp_ajax_kivun_mercaz_inspect', array( __CLASS__, 'ajax_inspect' ) );
 	}
 
 	/**
@@ -235,109 +223,6 @@ class Kivun_Mercaz {
 		);
 	}
 
-	/**
-	 * Read one existing item of a type and report the fields it actually
-	 * carries, including its meta keys.
-	 *
-	 * The published specification lists the schema names but not their
-	 * contents, and writing a field the site's templates do not read saves
-	 * successfully and then renders wrongly — which is far harder to notice
-	 * than an error. Asking the live API what a real record looks like is the
-	 * only reliable way to map onto it.
-	 *
-	 * @param string $type Content type key.
-	 * @return array<string,mixed>|\WP_Error
-	 */
-	public static function inspect( string $type ) {
-		if ( ! isset( self::ENDPOINTS[ $type ] ) ) {
-			return new \WP_Error( 'kivun_mercaz_type', __( 'סוג תוכן לא מוכר.', 'kivun' ) );
-		}
-
-		$result = self::request(
-			'GET',
-			self::ENDPOINTS[ $type ],
-			array(
-				// Drafts are hidden unless asked for; without this an empty list
-				// looks like "nothing exists" when it means "none published".
-				'context'  => 'edit',
-				'status'   => 'publish,draft,pending,private',
-				'per_page' => 1,
-			),
-			null,
-			$type
-		);
-
-		$items = ( ! is_wp_error( $result ) && is_array( $result['data'] ) ) ? $result['data'] : array();
-		$scope = 'edit';
-
-		// A content manager only sees their own records, so on a new account the
-		// edit listing is empty and reveals nothing. The public listing still
-		// shows the shape of a real record, which is what is being asked for.
-		if ( ! $items ) {
-			$public = self::request(
-				'GET',
-				self::ENDPOINTS[ $type ],
-				array( 'per_page' => 1 ),
-				null,
-				$type
-			);
-			if ( is_wp_error( $public ) ) {
-				return is_wp_error( $result ) ? $result : $public;
-			}
-			$items = is_array( $public['data'] ) ? $public['data'] : array();
-			$scope = 'public';
-		}
-
-		if ( ! $items ) {
-			return array(
-				'type'   => $type,
-				'empty'  => true,
-				'scope'  => $scope,
-				'fields' => array(),
-				'meta'   => array(),
-			);
-		}
-
-		$item = (array) $items[0];
-		$meta = array();
-		foreach ( (array) ( $item['meta'] ?? array() ) as $key => $value ) {
-			$meta[ (string) $key ] = self::describe( $value );
-		}
-		unset( $item['meta'] );
-
-		$fields = array();
-		foreach ( $item as $key => $value ) {
-			$fields[ (string) $key ] = self::describe( $value );
-		}
-
-		return array(
-			'type'   => $type,
-			'empty'  => false,
-			'scope'  => $scope,
-			'fields' => $fields,
-			'meta'   => $meta,
-		);
-	}
-
-	/**
-	 * A one-line, truncated preview of a value, for the diagnostics table.
-	 *
-	 * @param mixed $value Any decoded JSON value.
-	 * @return string
-	 */
-	private static function describe( $value ): string {
-		if ( is_array( $value ) ) {
-			$json = wp_json_encode( $value, JSON_UNESCAPED_UNICODE );
-			return mb_substr( (string) $json, 0, 160 );
-		}
-		if ( is_bool( $value ) ) {
-			return $value ? 'true' : 'false';
-		}
-		$text = wp_strip_all_tags( (string) $value );
-		$text = preg_replace( '/\s+/u', ' ', $text );
-		return mb_substr( trim( (string) $text ), 0, 160 );
-	}
-
 	// ── AJAX ──────────────────────────────────────────────────────────────────.
 
 	/**
@@ -393,29 +278,5 @@ class Kivun_Mercaz {
 				'roles'   => $roles,
 			)
 		);
-	}
-
-	/**
-	 * AJAX: report the fields a live record of each type carries.
-	 *
-	 * @return void
-	 */
-	public static function ajax_inspect(): void {
-		self::guard();
-
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Verified in guard().
-		$type = isset( $_POST['type'] ) ? sanitize_key( wp_unslash( $_POST['type'] ) ) : '';
-
-		$types  = '' !== $type ? array( $type ) : array_keys( self::ENDPOINTS );
-		$report = array();
-
-		foreach ( $types as $one ) {
-			$result         = self::inspect( $one );
-			$report[ $one ] = is_wp_error( $result )
-				? array( 'error' => $result->get_error_message() )
-				: $result;
-		}
-
-		wp_send_json_success( array( 'report' => $report ) );
 	}
 }
