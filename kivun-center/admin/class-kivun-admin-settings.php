@@ -230,6 +230,7 @@ class Kivun_Admin_Settings {
 				'mercaz_jobs_url'        => esc_url_raw( wp_unslash( $_POST['mercaz_jobs_url'] ?? '' ) ),
 				'mercaz_user'            => sanitize_text_field( wp_unslash( $_POST['mercaz_user'] ?? '' ) ),
 				'mercaz_pass'            => sanitize_text_field( wp_unslash( $_POST['mercaz_pass'] ?? '' ) ),
+				'mercaz_auto'            => ! empty( $_POST['mercaz_auto'] ),
 				'ai_image_model'         => sanitize_text_field( wp_unslash( $_POST['ai_image_model'] ?? 'gpt-image-1' ) ),
 				'ai_image_quality'       => sanitize_key( wp_unslash( $_POST['ai_image_quality'] ?? 'medium' ) ),
 				'turnstile_site_key'     => sanitize_text_field( wp_unslash( $_POST['turnstile_site_key'] ?? '' ) ),
@@ -577,6 +578,18 @@ class Kivun_Admin_Settings {
 						<input type="password" name="mercaz_pass" value="<?php echo esc_attr( $o( 'mercaz_pass' ) ); ?>" class="regular-text" dir="ltr" autocomplete="off" placeholder="xxxx xxxx xxxx xxxx xxxx xxxx">
 						<p class="description">
 							<?php esc_html_e( 'Application Password מתוך פרופיל המשתמש באתר מרכז כיוון — לא סיסמת ההתחברות הרגילה. אפשר להדביק עם או בלי רווחים.', 'kivun' ); ?>
+						</p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'שליחה אוטומטית', 'kivun' ); ?></th>
+					<td>
+						<label>
+							<input type="checkbox" name="mercaz_auto" value="1" <?php checked( (bool) $o( 'mercaz_auto' ) ); ?>>
+							<?php esc_html_e( 'לשלוח תוכן למרכז כיוון בכל פרסום ועדכון', 'kivun' ); ?>
+						</label>
+						<p class="description">
+							<?php esc_html_e( 'השליחה רצה ברקע ולא מעכבת את השמירה. גם כשהאפשרות כבויה אפשר לשלוח ידנית מכל פריט. טיוטה נשלחת כטיוטה, כך שאפשר לבדוק שם לפני הפרסום.', 'kivun' ); ?>
 						</p>
 					</td>
 				</tr>

@@ -87,6 +87,13 @@ class Kivun_Admin {
 				<td><input type="text" name="_kivun_session_audience" value="<?php echo esc_attr( $f( '_kivun_session_audience' ) ); ?>"></td>
 			</tr>
 			<tr>
+				<th><label><?php esc_html_e( 'יישוב', 'kivun' ); ?></label></th>
+				<td>
+					<input type="text" name="_kivun_city" value="<?php echo esc_attr( $f( '_kivun_city' ) ); ?>" placeholder="<?php esc_attr_e( 'למשל: ירושלים', 'kivun' ); ?>">
+					<p class="description"><?php esc_html_e( 'נשלח למרכז כיוון. תוכן ללא יישוב לא יופיע שם בחיפוש לפי מרחק.', 'kivun' ); ?></p>
+				</td>
+			</tr>
+			<tr>
 				<th><?php esc_html_e( 'תאריך / מועד', 'kivun' ); ?></th>
 				<td><input type="text" name="_kivun_session_date" value="<?php echo esc_attr( $f( '_kivun_session_date' ) ); ?>" placeholder="15.9.2025 | 18:00"></td>
 			</tr>
@@ -148,6 +155,13 @@ class Kivun_Admin {
 			<tr>
 				<th><?php esc_html_e( 'קהל יעד', 'kivun' ); ?></th>
 				<td><input type="text" name="_kivun_event_audience" value="<?php echo esc_attr( $f( '_kivun_event_audience' ) ); ?>"></td>
+			</tr>
+			<tr>
+				<th><label><?php esc_html_e( 'יישוב', 'kivun' ); ?></label></th>
+				<td>
+					<input type="text" name="_kivun_city" value="<?php echo esc_attr( $f( '_kivun_city' ) ); ?>" placeholder="<?php esc_attr_e( 'למשל: ירושלים', 'kivun' ); ?>">
+					<p class="description"><?php esc_html_e( 'נשלח למרכז כיוון. תוכן ללא יישוב לא יופיע שם בחיפוש לפי מרחק.', 'kivun' ); ?></p>
+				</td>
 			</tr>
 			<tr>
 				<th><?php esc_html_e( 'תאריך האירוע', 'kivun' ); ?></th>
@@ -283,6 +297,13 @@ class Kivun_Admin {
 				<td><textarea name="_kivun_target_audience" rows="3"><?php echo esc_textarea( $f( '_kivun_target_audience' ) ); ?></textarea></td>
 			</tr>
 			<tr>
+				<th><label><?php esc_html_e( 'יישוב', 'kivun' ); ?></label></th>
+				<td>
+					<input type="text" name="_kivun_city" value="<?php echo esc_attr( $f( '_kivun_city' ) ); ?>" placeholder="<?php esc_attr_e( 'למשל: ירושלים', 'kivun' ); ?>">
+					<p class="description"><?php esc_html_e( 'נשלח למרכז כיוון. תוכן ללא יישוב לא יופיע שם בחיפוש לפי מרחק.', 'kivun' ); ?></p>
+				</td>
+			</tr>
+			<tr>
 				<th><?php esc_html_e( 'זמנים / מועדים', 'kivun' ); ?></th>
 				<td><input type="text" name="_kivun_schedule" value="<?php echo esc_attr( $f( '_kivun_schedule' ) ); ?>" placeholder="ג׳ 18:00–20:00 | מתחיל 1.9"></td>
 			</tr>
@@ -383,6 +404,13 @@ class Kivun_Admin {
 			<tr>
 				<th><?php esc_html_e( 'למי מיועדת', 'kivun' ); ?></th>
 				<td><textarea name="_kivun_ws_audience" rows="3"><?php echo esc_textarea( $f( '_kivun_ws_audience' ) ); ?></textarea></td>
+			</tr>
+			<tr>
+				<th><label><?php esc_html_e( 'יישוב', 'kivun' ); ?></label></th>
+				<td>
+					<input type="text" name="_kivun_city" value="<?php echo esc_attr( $f( '_kivun_city' ) ); ?>" placeholder="<?php esc_attr_e( 'למשל: ירושלים', 'kivun' ); ?>">
+					<p class="description"><?php esc_html_e( 'נשלח למרכז כיוון. תוכן ללא יישוב לא יופיע שם בחיפוש לפי מרחק.', 'kivun' ); ?></p>
+				</td>
 			</tr>
 			<tr>
 				<th><?php esc_html_e( 'מקסימום משתתפים', 'kivun' ); ?></th>
@@ -763,6 +791,21 @@ class Kivun_Admin {
 				<td><input type="text" name="_kivun_salary" value="<?php echo esc_attr( $f( '_kivun_salary' ) ); ?>" placeholder="10,000–15,000 ₪"></td>
 			</tr>
 			<tr>
+				<th><label><?php esc_html_e( 'יישוב', 'kivun' ); ?></label></th>
+				<td>
+					<input type="text" name="_kivun_city" value="<?php echo esc_attr( $f( '_kivun_city' ) ); ?>" placeholder="<?php esc_attr_e( 'למשל: ירושלים', 'kivun' ); ?>">
+					<p class="description"><?php esc_html_e( 'משרה ללא יישוב לא תופיע בחיפוש לפי מרחק במרכז כיוון.', 'kivun' ); ?></p>
+				</td>
+			</tr>
+			<tr>
+				<th><label><?php esc_html_e( 'שעות עבודה', 'kivun' ); ?></label></th>
+				<td><input type="text" name="_kivun_work_hours" value="<?php echo esc_attr( $f( '_kivun_work_hours' ) ); ?>" placeholder="08:00-16:00"></td>
+			</tr>
+			<tr>
+				<th><label><?php esc_html_e( 'שנות ניסיון נדרשות', 'kivun' ); ?></label></th>
+				<td><input type="number" min="0" max="50" step="1" name="_kivun_experience_years" value="<?php echo esc_attr( $f( '_kivun_experience_years' ) ); ?>"></td>
+			</tr>
+			<tr>
 				<th><?php esc_html_e( 'דרישות', 'kivun' ); ?></th>
 				<td><textarea name="_kivun_requirements" rows="4"><?php echo esc_textarea( $f( '_kivun_requirements' ) ); ?></textarea></td>
 			</tr>
@@ -804,6 +847,7 @@ class Kivun_Admin {
 
 			foreach ( array(
 				'_kivun_target_audience' => 'textarea',
+				'_kivun_city'            => 'text',
 				'_kivun_schedule'        => 'text',
 				'_kivun_duration'        => 'text',
 				'_kivun_price'           => 'absint',
@@ -832,6 +876,7 @@ class Kivun_Admin {
 				'_kivun_ws_duration'   => 'text',
 				'_kivun_ws_location'   => 'text',
 				'_kivun_ws_audience'   => 'textarea',
+				'_kivun_city'          => 'text',
 				'_kivun_ws_capacity'   => 'absint',
 				'_kivun_contact_email' => 'email',
 			) as $key => $type ) {
@@ -850,6 +895,7 @@ class Kivun_Admin {
 			foreach ( array(
 				'_kivun_session_short'       => 'textarea',
 				'_kivun_session_audience'    => 'text',
+				'_kivun_city'                => 'text',
 				'_kivun_session_date'        => 'text',
 				'_kivun_session_duration'    => 'text',
 				'_kivun_session_cost'        => 'text',
@@ -873,6 +919,7 @@ class Kivun_Admin {
 			foreach ( array(
 				'_kivun_event_short'        => 'textarea',
 				'_kivun_event_audience'     => 'text',
+				'_kivun_city'               => 'text',
 				'_kivun_event_date'         => 'text',
 				'_kivun_event_time'         => 'text',
 				'_kivun_event_cost'         => 'text',
@@ -898,11 +945,14 @@ class Kivun_Admin {
 			}
 
 			foreach ( array(
-				'_kivun_employer_email' => 'email',
-				'_kivun_company'        => 'text',
-				'_kivun_description'    => 'kses',
-				'_kivun_salary'         => 'text',
-				'_kivun_requirements'   => 'kses',
+				'_kivun_employer_email'   => 'email',
+				'_kivun_company'          => 'text',
+				'_kivun_description'      => 'kses',
+				'_kivun_salary'           => 'text',
+				'_kivun_requirements'     => 'kses',
+				'_kivun_city'             => 'text',
+				'_kivun_work_hours'       => 'text',
+				'_kivun_experience_years' => 'text',
 			) as $key => $type ) {
 				self::save_field( $post_id, $key, $type );
 			}

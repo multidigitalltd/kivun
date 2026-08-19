@@ -57,6 +57,91 @@ class Kivun_Mercaz_Sync {
 	 */
 	public static function init(): void {
 		add_action( 'wp_ajax_kivun_mercaz_push', array( __CLASS__, 'ajax_push' ) );
+		add_action( 'wp_ajax_kivun_city_search', array( __CLASS__, 'ajax_city_search' ) );
+
+		// Pushing happens on a scheduled tick rather than inline: a save should
+		// not wait on someone else's server, and a slow or unreachable API
+		// would otherwise look like the editor hanging.
+		add_action( 'save_post', array( __CLASS__, 'queue_push' ), 20, 2 );
+		add_action( 'kivun_mercaz_push_event', array( __CLASS__, 'push' ) );
+	}
+
+	/**
+	 * Queue a post for pushing after it is saved.
+	 *
+	 * @param int      $post_id The post id.
+	 * @param \WP_Post $post    The post.
+	 * @return void
+	 */
+	public static function queue_push( int $post_id, \WP_Post $post ): void {
+		if ( wp_is_post_autosave( $post_id ) || wp_is_post_revision( $post_id ) ) {
+			return;
+		}
+		if ( ! isset( self::type_map()[ $post->post_type ] ) ) {
+			return;
+		}
+		// auto-draft and trash are not content anyone meant to publish.
+		if ( ! in_array( $post->post_status, array( 'publish', 'draft', 'pending', 'private', 'future' ), true ) ) {
+			return;
+		}
+		if ( '' === trim( (string) $post->post_title ) || ! Kivun_Mercaz::configured() ) {
+			return;
+		}
+		if ( ! (bool) Kivun_Admin_Settings::get( 'mercaz_auto', false ) ) {
+			return;
+		}
+
+		if ( ! wp_next_scheduled( 'kivun_mercaz_push_event', array( $post_id ) ) ) {
+			wp_schedule_single_event( time() + 20, 'kivun_mercaz_push_event', array( $post_id ) );
+		}
+	}
+
+	/**
+	 * AJAX: search the remote settlement vocabulary for the autocomplete.
+	 *
+	 * @return void
+	 */
+	public static function ajax_city_search(): void {
+		check_ajax_referer( 'kivun_nonce', 'nonce' );
+
+		if ( ! current_user_can( 'edit_posts' ) ) {
+			wp_send_json_error();
+		}
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Verified above.
+		$term = sanitize_text_field( wp_unslash( $_POST['term'] ?? '' ) );
+		if ( mb_strlen( $term ) < 2 ) {
+			wp_send_json_success( array( 'cities' => array() ) );
+		}
+
+		$cache_key = 'kivun_city_q_' . md5( $term );
+		$cached    = get_transient( $cache_key );
+		if ( false !== $cached ) {
+			wp_send_json_success( array( 'cities' => $cached ) );
+		}
+
+		$result = Kivun_Mercaz::request(
+			'GET',
+			'city',
+			array(
+				'search'   => $term,
+				'per_page' => 20,
+			)
+		);
+
+		if ( is_wp_error( $result ) || ! is_array( $result['data'] ) ) {
+			wp_send_json_success( array( 'cities' => array() ) );
+		}
+
+		$names = array();
+		foreach ( $result['data'] as $city ) {
+			if ( ! empty( $city['name'] ) ) {
+				$names[] = (string) $city['name'];
+			}
+		}
+
+		set_transient( $cache_key, $names, DAY_IN_SECONDS );
+		wp_send_json_success( array( 'cities' => $names ) );
 	}
 
 	// ── Term resolution ───────────────────────────────────────────────────────.
@@ -202,6 +287,17 @@ class Kivun_Mercaz_Sync {
 		if ( '' === $raw ) {
 			return '';
 		}
+
+		// Day-first is how dates read in Hebrew, but strtotime() reads a slash
+		// as the American month-first order, so "31/12/2026" is not a date to
+		// it and would be dropped without a word. Try the local order first.
+		foreach ( array( 'd/m/Y', 'd.m.Y', 'd-m-Y' ) as $format ) {
+			$parsed = \DateTimeImmutable::createFromFormat( $format, $raw );
+			if ( $parsed && $parsed->format( $format ) === $raw ) {
+				return $parsed->format( 'Y-m-d' );
+			}
+		}
+
 		$stamp = strtotime( $raw );
 		return $stamp ? gmdate( 'Y-m-d', $stamp ) : '';
 	}

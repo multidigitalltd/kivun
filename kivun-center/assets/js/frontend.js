@@ -460,6 +460,9 @@
 				setField('field', row.dataset.field);
 				setField('employer_id', row.dataset.employer);
 				setField('deadline', row.dataset.deadline);
+				setField('city', row.dataset.city);
+				setField('work_hours', row.dataset.workHours);
+				setField('experience_years', row.dataset.experience);
 				kivunSetEditor('kivunjobdesc', row.dataset.description);
 				kivunSetEditor('kivunjobreq', row.dataset.requirements);
 
@@ -517,6 +520,66 @@
 	});
 
 	document.querySelectorAll('.kivun-cc-status').forEach(kivunSyncSchedule);
+
+	// ── Settlement autocomplete (Mercaz Kivun vocabulary) ────────────────────────
+	var kivunCityTimer;
+
+	document.addEventListener('input', function (e) {
+		var field = e.target.closest('input[list="kivun-city-list"]');
+		if (!field) { return; }
+
+		var term = field.value.trim();
+		if (term.length < 2) { return; }
+
+		// The vocabulary holds over a thousand settlements, so it is queried on
+		// demand rather than shipped to the page.
+		clearTimeout(kivunCityTimer);
+		kivunCityTimer = setTimeout(function () {
+			post(params({ action: 'kivun_city_search', nonce: kivun.nonce, term: term }))
+				.then(function (res) {
+					if (!res.success || !res.data.cities) { return; }
+					var list = document.getElementById('kivun-city-list');
+					if (!list) { return; }
+					list.innerHTML = '';
+					res.data.cities.forEach(function (name) {
+						var opt = document.createElement('option');
+						opt.value = name;
+						list.appendChild(opt);
+					});
+				})
+				.catch(function () { /* autocomplete is a convenience, not a gate */ });
+		}, 300);
+	});
+
+	// ── Send one item to Mercaz Kivun ────────────────────────────────────────────
+	document.addEventListener('click', function (e) {
+		var btn = e.target.closest('.kivun-mercaz-push');
+		if (!btn) { return; }
+
+		var status = btn.parentNode.querySelector('.kivun-mercaz-status');
+		btn.disabled = true;
+		if (status) { status.textContent = kivun.i18n.sending; }
+
+		post(params({ action: 'kivun_mercaz_push', nonce: kivun.nonce, post_id: btn.dataset.id }))
+			.then(function (res) {
+				btn.disabled = false;
+				if (!status) { return; }
+				if (res.success) {
+					status.textContent = res.data.message;
+					status.className = 'kivun-mercaz-status is-ok';
+				} else {
+					status.textContent = (res.data && res.data.message) || kivun.i18n.error_generic;
+					status.className = 'kivun-mercaz-status is-error';
+				}
+			})
+			.catch(function () {
+				btn.disabled = false;
+				if (status) {
+					status.textContent = kivun.i18n.error_generic;
+					status.className = 'kivun-mercaz-status is-error';
+				}
+			});
+	});
 
 	// ── WhatsApp promo generator ─────────────────────────────────────────────────
 	function kivunWaField(form, selector) {

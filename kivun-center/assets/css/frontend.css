@@ -1438,6 +1438,18 @@
 .kivun-wa-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .6rem; }
 .kivun-cc-wa-status { display: inline-block; margin-inline-start: .5rem; font-size: .82rem; color: var(--kivun-muted); }
 
+/* Mercaz Kivun push state, per row. */
+.kivun-mercaz-cell { min-width: 190px; }
+.kivun-mercaz-status {
+	display: block;
+	margin-top: .3rem;
+	font-size: .76rem;
+	color: var(--kivun-muted);
+	line-height: 1.4;
+}
+.kivun-mercaz-status.is-ok { color: #15803d; }
+.kivun-mercaz-status.is-error { color: var(--kivun-error); }
+
 /* The jobs board shares the console's visual language, both standalone (it
    carries .kivun-cc-console itself) and embedded inside the content console. */
 .kivun-employer-dashboard.kivun-cc-console .kivun-jobs-table-wrap,

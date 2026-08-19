@@ -376,9 +376,26 @@ $kivun_user     = wp_get_current_user();
 						<input type="text" id="kivun-f-salary" name="salary" placeholder="10,000–15,000 ₪">
 					</div>
 
+					<div class="kivun-field">
+						<label for="kivun-f-city"><?php esc_html_e( 'יישוב', 'kivun' ); ?></label>
+						<input type="text" id="kivun-f-city" name="city" list="kivun-city-list" autocomplete="off" placeholder="<?php esc_attr_e( 'למשל: ירושלים', 'kivun' ); ?>">
+						<datalist id="kivun-city-list"></datalist>
+						<small class="kivun-hint"><?php esc_html_e( 'היישוב שבו מתבצעת העבודה. משרה ללא יישוב לא תופיע בחיפוש לפי מרחק.', 'kivun' ); ?></small>
+					</div>
+
+					<div class="kivun-field">
+						<label for="kivun-f-work-hours"><?php esc_html_e( 'שעות עבודה (אופציונלי)', 'kivun' ); ?></label>
+						<input type="text" id="kivun-f-work-hours" name="work_hours" placeholder="08:00-16:00">
+					</div>
+
 					<div class="kivun-form-row">
 						<label for="kivun-f-deadline"><?php esc_html_e( 'תאריך סגירה (אופציונלי)', 'kivun' ); ?></label>
 						<input type="date" id="kivun-f-deadline" name="deadline" dir="ltr" min="<?php echo esc_attr( current_time( 'Y-m-d' ) ); ?>">
+					</div>
+
+					<div class="kivun-field">
+						<label for="kivun-f-experience"><?php esc_html_e( 'שנות ניסיון נדרשות (אופציונלי)', 'kivun' ); ?></label>
+						<input type="number" id="kivun-f-experience" name="experience_years" min="0" max="50" step="1" dir="ltr">
 						<p class="kivun-field-hint"><?php esc_html_e( 'לאחר תאריך זה המשרה תרד מהאתר אוטומטית. ריק = ללא הגבלת זמן.', 'kivun' ); ?></p>
 					</div>
 				</div>
@@ -457,6 +474,9 @@ $kivun_user     = wp_get_current_user();
 						data-description="<?php echo esc_attr( get_post_meta( $job->ID, '_kivun_description', true ) ); ?>"
 						data-requirements="<?php echo esc_attr( get_post_meta( $job->ID, '_kivun_requirements', true ) ); ?>"
 						data-deadline="<?php echo esc_attr( $kivun_deadline ); ?>"
+						data-city="<?php echo esc_attr( get_post_meta( $job->ID, '_kivun_city', true ) ); ?>"
+						data-work-hours="<?php echo esc_attr( get_post_meta( $job->ID, '_kivun_work_hours', true ) ); ?>"
+						data-experience="<?php echo esc_attr( get_post_meta( $job->ID, '_kivun_experience_years', true ) ); ?>"
 					>
 						<td><span class="kivun-job-id">#<?php echo esc_html( (string) $job->ID ); ?></span></td>
 						<td>

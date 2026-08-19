@@ -132,6 +132,7 @@ class Kivun_Content_Creator {
 			'status'           => 'publish',
 			'schedule'         => '',
 			'whatsapp'         => '',
+			'city'             => '',
 			'thumb_id'         => '0',
 			'course_capacity'  => '',
 			'course_wc'        => '',
@@ -162,6 +163,7 @@ class Kivun_Content_Creator {
 		$v['status']   = (string) get_post_status( $primary );
 		$v['thumb_id'] = (string) (int) get_post_thumbnail_id( $primary );
 		$v['whatsapp'] = (string) get_post_meta( $primary, '_kivun_whatsapp', true );
+		$v['city']     = (string) get_post_meta( $primary, '_kivun_city', true );
 		if ( 'future' === $v['status'] ) {
 			// datetime-local wants Y-m-d\TH:i, in site time.
 			$v['schedule'] = str_replace( ' ', 'T', substr( (string) get_post_field( 'post_date', $primary ), 0, 16 ) );
@@ -581,6 +583,12 @@ class Kivun_Content_Creator {
 							</div>
 						</div>
 
+						<div class="kivun-lp-card">
+							<label class="kivun-lp-label" for="kivun-lp-city"><?php esc_html_e( 'יישוב', 'kivun' ); ?></label>
+							<input type="text" id="kivun-lp-city" name="city" class="kivun-lp-input" value="<?php echo esc_attr( $v['city'] ); ?>" placeholder="<?php esc_attr_e( 'למשל: ירושלים', 'kivun' ); ?>">
+							<p class="kivun-lp-hint"><?php esc_html_e( 'נשלח למרכז כיוון. תוכן ללא יישוב לא יופיע שם בחיפוש לפי מרחק.', 'kivun' ); ?></p>
+						</div>
+
 						<div class="kivun-lp-card kivun-cc-card">
 							<label class="kivun-lp-label"><?php esc_html_e( 'סטטוס', 'kivun' ); ?></label>
 							<select name="status" class="kivun-lp-input kivun-cc-status">
@@ -977,6 +985,7 @@ class Kivun_Content_Creator {
 			'cta_c'    => isset( $_POST['cta_content'] ) ? sanitize_textarea_field( wp_unslash( $_POST['cta_content'] ) ) : '',
 			'cta_b'    => isset( $_POST['cta_button'] ) ? sanitize_text_field( wp_unslash( $_POST['cta_button'] ) ) : '',
 			'whatsapp' => isset( $_POST['whatsapp'] ) ? sanitize_textarea_field( wp_unslash( $_POST['whatsapp'] ) ) : '',
+			'city'     => isset( $_POST['city'] ) ? sanitize_text_field( wp_unslash( $_POST['city'] ) ) : '',
 			'status'   => $status['status'],
 			'postdate' => $status['postdate'],
 			'postgmt'  => $status['postdate_gmt'],
@@ -1157,6 +1166,7 @@ class Kivun_Content_Creator {
 		// The WhatsApp promo describes the group, not one post type, so every
 		// post in the group carries the same copy.
 		update_post_meta( $post_id, '_kivun_whatsapp', $shared['whatsapp'] ?? '' );
+		update_post_meta( $post_id, '_kivun_city', $shared['city'] ?? '' );
 		foreach ( $meta as $key => $value ) {
 			update_post_meta( $post_id, $key, $value );
 		}
@@ -2136,6 +2146,22 @@ class Kivun_Content_Creator {
 							</div>
 						</div>
 
+						<div class="kivun-cc-card" data-step="3" style="order:5">
+							<label class="kivun-cc-label" for="kivun-ccf-city"><?php esc_html_e( 'יישוב', 'kivun' ); ?></label>
+							<input
+								type="text"
+								id="kivun-ccf-city"
+								name="city"
+								class="kivun-cc-input"
+								list="kivun-city-list"
+								autocomplete="off"
+								value="<?php echo esc_attr( $v['city'] ); ?>"
+								placeholder="<?php esc_attr_e( 'למשל: ירושלים', 'kivun' ); ?>"
+							>
+							<datalist id="kivun-city-list"></datalist>
+							<p class="kivun-field-hint"><?php esc_html_e( 'היישוב שבו מתקיים התוכן. נשלח למרכז כיוון — תוכן ללא יישוב לא מופיע שם בחיפוש לפי מרחק.', 'kivun' ); ?></p>
+						</div>
+
 						<div class="kivun-cc-card kivun-cc-wa" data-step="4" style="order:4">
 							<label class="kivun-cc-label" for="kivun-ccf-whatsapp"><?php esc_html_e( 'הודעה להפצה בוואטסאפ', 'kivun' ); ?></label>
 							<p class="kivun-cc-hint"><?php esc_html_e( 'תמצית שיווקית של התוכן, בפורמט שמתאים לשליחה בקבוצות. אפשר לערוך אחרי היצירה — מה שיישמר כאן הוא מה שיישמר עם התוכן.', 'kivun' ); ?></p>
@@ -2324,6 +2350,9 @@ class Kivun_Content_Creator {
 							<th scope="col"><?php esc_html_e( 'סטטוס', 'kivun' ); ?></th>
 							<th scope="col"><?php esc_html_e( 'פניות', 'kivun' ); ?></th>
 							<th scope="col"><?php esc_html_e( 'תאריך', 'kivun' ); ?></th>
+							<?php if ( Kivun_Mercaz::configured() ) : ?>
+								<th scope="col"><?php esc_html_e( 'מרכז כיוון', 'kivun' ); ?></th>
+							<?php endif; ?>
 							<th scope="col"><?php esc_html_e( 'פעולות', 'kivun' ); ?></th>
 						</tr>
 					</thead>
@@ -2389,6 +2418,27 @@ class Kivun_Content_Creator {
 								<?php endif; ?>
 							</td>
 							<td><?php echo esc_html( $g['date'] ); ?></td>
+							<?php if ( Kivun_Mercaz::configured() ) : ?>
+								<?php
+								$kivun_push_id = (int) $g['view_id'];
+								$kivun_synced  = (string) get_post_meta( $kivun_push_id, Kivun_Mercaz_Sync::SYNCED_AT, true );
+								$kivun_failed  = (string) get_post_meta( $kivun_push_id, Kivun_Mercaz_Sync::LAST_ERROR, true );
+								?>
+								<td class="kivun-mercaz-cell">
+									<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost kivun-mercaz-push" data-id="<?php echo esc_attr( (string) $kivun_push_id ); ?>">
+										<?php echo $kivun_synced ? esc_html__( 'שליחה מחדש', 'kivun' ) : esc_html__( 'שליחה', 'kivun' ); ?>
+									</button>
+									<span class="kivun-mercaz-status <?php echo $kivun_failed ? 'is-error' : ''; ?>">
+										<?php
+										if ( $kivun_failed ) {
+											echo esc_html( $kivun_failed );
+										} elseif ( $kivun_synced ) {
+											echo esc_html( sprintf( /* translators: %s: date and time. */ __( 'נשלח ב-%s', 'kivun' ), wp_date( 'd/m/Y H:i', strtotime( $kivun_synced ) ) ) );
+										}
+										?>
+									</span>
+								</td>
+							<?php endif; ?>
 							<td class="kivun-cc-rowactions">
 								<?php if ( '' !== $view_url ) : ?>
 									<a class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost" href="<?php echo esc_url( $view_url ); ?>" target="_blank" rel="noopener"><?php echo kivun_icon( 'external' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?><?php esc_html_e( 'צפייה', 'kivun' ); ?></a>
