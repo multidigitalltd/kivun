@@ -226,6 +226,10 @@ class Kivun_Admin_Settings {
 				'whatsapp_number'        => sanitize_text_field( wp_unslash( $_POST['whatsapp_number'] ?? '' ) ),
 				'whatsapp_message'       => sanitize_text_field( wp_unslash( $_POST['whatsapp_message'] ?? '' ) ),
 				'openai_api_key'         => sanitize_text_field( wp_unslash( $_POST['openai_api_key'] ?? '' ) ),
+				'mercaz_url'             => esc_url_raw( wp_unslash( $_POST['mercaz_url'] ?? '' ) ),
+				'mercaz_jobs_url'        => esc_url_raw( wp_unslash( $_POST['mercaz_jobs_url'] ?? '' ) ),
+				'mercaz_user'            => sanitize_text_field( wp_unslash( $_POST['mercaz_user'] ?? '' ) ),
+				'mercaz_pass'            => sanitize_text_field( wp_unslash( $_POST['mercaz_pass'] ?? '' ) ),
 				'ai_image_model'         => sanitize_text_field( wp_unslash( $_POST['ai_image_model'] ?? 'gpt-image-1' ) ),
 				'ai_image_quality'       => sanitize_key( wp_unslash( $_POST['ai_image_quality'] ?? 'medium' ) ),
 				'turnstile_site_key'     => sanitize_text_field( wp_unslash( $_POST['turnstile_site_key'] ?? '' ) ),
@@ -546,6 +550,132 @@ class Kivun_Admin_Settings {
 					<th colspan="2" style="padding-top:20px"><h2 style="margin:0"><?php esc_html_e( 'יצירת תמונות AI (תמונה ראשית)', 'kivun' ); ?></h2>
 					<p class="description" style="font-weight:400"><?php esc_html_e( 'מאפשר כפתור "צור תמונה עם AI" בטופס פרסום התוכן. המפתח נשמר בשרת בלבד ואינו נחשף בפרונט.', 'kivun' ); ?></p></th>
 				</tr>
+				<tr><th colspan="2"><h2><?php esc_html_e( 'חיבור למרכז כיוון (Content & Jobs API)', 'kivun' ); ?></h2></th></tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'כתובת ה-API', 'kivun' ); ?></th>
+					<td>
+						<input type="url" name="mercaz_url" value="<?php echo esc_attr( $o( 'mercaz_url' ) ); ?>" class="regular-text" dir="ltr" placeholder="https://mercaz-kivun.co.il/wp-json/wp/v2">
+						<p class="description"><?php esc_html_e( 'הבסיס של ה-API, עד ‎/wp/v2 (ללא לוכסן בסוף).', 'kivun' ); ?></p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'כתובת ה-API למשרות', 'kivun' ); ?></th>
+					<td>
+						<input type="url" name="mercaz_jobs_url" value="<?php echo esc_attr( $o( 'mercaz_jobs_url' ) ); ?>" class="regular-text" dir="ltr" placeholder="https://mercaz-kivun.staging24.link/wp-json/wp/v2">
+						<p class="description"><?php esc_html_e( 'רק אם המשרות יושבות על שרת אחר מהתוכן. אם ריק — תשמש הכתובת שלמעלה.', 'kivun' ); ?></p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'שם משתמש', 'kivun' ); ?></th>
+					<td>
+						<input type="text" name="mercaz_user" value="<?php echo esc_attr( $o( 'mercaz_user' ) ); ?>" class="regular-text" dir="ltr" autocomplete="off">
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'סיסמת יישום', 'kivun' ); ?></th>
+					<td>
+						<input type="password" name="mercaz_pass" value="<?php echo esc_attr( $o( 'mercaz_pass' ) ); ?>" class="regular-text" dir="ltr" autocomplete="off" placeholder="xxxx xxxx xxxx xxxx xxxx xxxx">
+						<p class="description">
+							<?php esc_html_e( 'Application Password מתוך פרופיל המשתמש באתר מרכז כיוון — לא סיסמת ההתחברות הרגילה. אפשר להדביק עם או בלי רווחים.', 'kivun' ); ?>
+						</p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'בדיקה', 'kivun' ); ?></th>
+					<td>
+						<button type="button" class="button kivun-mercaz-test" data-nonce="<?php echo esc_attr( wp_create_nonce( 'kivun_mercaz' ) ); ?>">
+							<?php esc_html_e( 'בדיקת חיבור', 'kivun' ); ?>
+						</button>
+						<button type="button" class="button kivun-mercaz-inspect" data-nonce="<?php echo esc_attr( wp_create_nonce( 'kivun_mercaz' ) ); ?>">
+							<?php esc_html_e( 'הצגת שדות התוכן', 'kivun' ); ?>
+						</button>
+						<p class="description">
+							<?php esc_html_e( 'בדיקת חיבור מאמתת את הפרטים ומדווחת באיזה תפקיד התחברתם. הצגת שדות קוראת פריט קיים מכל סוג ומראה אילו שדות הוא באמת מכיל — כך המיפוי נבנה לפי המציאות ולא לפי ניחוש. יש לשמור את ההגדרות לפני הבדיקה.', 'kivun' ); ?>
+						</p>
+						<div class="kivun-mercaz-result" style="margin-top:10px"></div>
+						<script>
+						( function () {
+							var box = document.querySelector( '.kivun-mercaz-result' );
+							if ( ! box ) { return; }
+
+							var say = function ( html ) { box.innerHTML = html; };
+							var esc = function ( t ) {
+								var d = document.createElement( 'div' );
+								d.textContent = String( t == null ? '' : t );
+								return d.innerHTML;
+							};
+
+							var call = function ( btn, body, done ) {
+								btn.disabled = true;
+								say( '<em><?php echo esc_js( __( 'בודק…', 'kivun' ) ); ?></em>' );
+								body.append( 'nonce', btn.dataset.nonce );
+								fetch( ajaxurl, { method: 'POST', credentials: 'same-origin', body: body } )
+									.then( function ( r ) { return r.json(); } )
+									.then( function ( res ) {
+										btn.disabled = false;
+										if ( ! res.success ) {
+											say( '<div class="notice notice-error inline"><p>' + esc( res.data && res.data.message ) + '</p></div>' );
+											return;
+										}
+										done( res.data );
+									} )
+									.catch( function () {
+										btn.disabled = false;
+										say( '<div class="notice notice-error inline"><p><?php echo esc_js( __( 'הבקשה נכשלה.', 'kivun' ) ); ?></p></div>' );
+									} );
+							};
+
+							var testBtn = document.querySelector( '.kivun-mercaz-test' );
+							if ( testBtn ) {
+								testBtn.addEventListener( 'click', function () {
+									var b = new URLSearchParams();
+									b.append( 'action', 'kivun_mercaz_test' );
+									call( testBtn, b, function ( d ) {
+										say( '<div class="notice notice-success inline"><p><strong>' + esc( d.message ) + '</strong><br>' + esc( d.note ) + '</p></div>' );
+									} );
+								} );
+							}
+
+							var inspectBtn = document.querySelector( '.kivun-mercaz-inspect' );
+							if ( inspectBtn ) {
+								inspectBtn.addEventListener( 'click', function () {
+									var b = new URLSearchParams();
+									b.append( 'action', 'kivun_mercaz_inspect' );
+									call( inspectBtn, b, function ( d ) {
+										var html = '';
+										Object.keys( d.report ).forEach( function ( type ) {
+											var r = d.report[ type ];
+											html += '<h4 style="margin:14px 0 4px">' + esc( type ) + '</h4>';
+											if ( r.error ) {
+												html += '<p style="color:#b32d2e">' + esc( r.error ) + '</p>';
+												return;
+											}
+											if ( r.empty ) {
+												html += '<p><em><?php echo esc_js( __( 'אין פריטים קיימים לקריאה בסוג הזה.', 'kivun' ) ); ?></em></p>';
+												return;
+											}
+											var rows = function ( obj, title ) {
+												var keys = Object.keys( obj || {} );
+												if ( ! keys.length ) { return ''; }
+												var out = '<p style="margin:6px 0 2px"><strong>' + esc( title ) + '</strong></p>';
+												out += '<table class="widefat striped" style="max-width:900px"><tbody>';
+												keys.forEach( function ( k ) {
+													out += '<tr><td style="width:220px"><code>' + esc( k ) + '</code></td><td>' + esc( obj[ k ] ) + '</td></tr>';
+												} );
+												return out + '</tbody></table>';
+											};
+											html += rows( r.fields, '<?php echo esc_js( __( 'שדות', 'kivun' ) ); ?>' );
+											html += rows( r.meta, 'meta' );
+										} );
+										say( html || '<p><?php echo esc_js( __( 'לא התקבלו נתונים.', 'kivun' ) ); ?></p>' );
+									} );
+								} );
+							}
+						} () );
+						</script>
+					</td>
+				</tr>
+
 				<tr>
 					<th scope="row"><?php esc_html_e( 'OpenAI API Key', 'kivun' ); ?></th>
 					<td>
