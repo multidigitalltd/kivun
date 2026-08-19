@@ -88,7 +88,10 @@ class Kivun_Utm {
 	public static function label(): string {
 		$data  = self::data();
 		$parts = array();
-		foreach ( array( 'utm_source', 'utm_medium', 'utm_campaign' ) as $key ) {
+		// utm_content is included so two links in the same campaign that share
+		// a source and medium — the same channel used by two different
+		// publishers — remain distinguishable in the leads table.
+		foreach ( array( 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content' ) as $key ) {
 			if ( ! empty( $data[ $key ] ) ) {
 				$parts[] = $data[ $key ];
 			}

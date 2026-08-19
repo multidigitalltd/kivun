@@ -184,7 +184,93 @@ class Kivun_Installer {
 		"
 		);
 
+		dbDelta(
+			"
+			CREATE TABLE IF NOT EXISTS {$wpdb->prefix}kivun_campaign_links (
+				id          bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+				campaign_id bigint(20) UNSIGNED NOT NULL,
+				label       varchar(191)        NOT NULL DEFAULT '',
+				target_url  varchar(500)        NOT NULL DEFAULT '',
+				final_url   varchar(700)        NOT NULL DEFAULT '',
+				utm_source  varchar(100)        NOT NULL DEFAULT '',
+				utm_medium  varchar(100)        NOT NULL DEFAULT '',
+				utm_term    varchar(150)        NOT NULL DEFAULT '',
+				utm_content varchar(150)        NOT NULL DEFAULT '',
+				utm_label   varchar(400)        NOT NULL DEFAULT '',
+				created_by  bigint(20) UNSIGNED NOT NULL DEFAULT 0,
+				created_at  datetime            NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				PRIMARY KEY (id),
+				KEY campaign_id (campaign_id),
+				KEY utm_label (utm_label)
+			) $collate;
+		"
+		);
+
+		self::migrate_campaign_links();
+
 		update_option( 'kivun_db_version', KIVUN_VERSION );
+	}
+
+	/**
+	 * Campaigns started out as one row per link. They are now a container with
+	 * many links beneath it — one per publisher pushing the same campaign — so
+	 * the original flat rows are folded into that shape: one campaign per
+	 * distinct utm_campaign, and each original row becomes a link under it.
+	 *
+	 * @return void
+	 */
+	private static function migrate_campaign_links(): void {
+		if ( get_option( 'kivun_campaign_links_migrated' ) ) {
+			return;
+		}
+
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$rows = $wpdb->get_results( "SELECT * FROM {$wpdb->prefix}kivun_campaigns ORDER BY id ASC" );
+		if ( ! $rows ) {
+			update_option( 'kivun_campaign_links_migrated', 1 );
+			return;
+		}
+
+		$keep = array();
+		foreach ( $rows as $row ) {
+			$key = (string) $row->utm_campaign;
+
+			// The first row for a campaign name becomes the container; the rest
+			// are absorbed as links and their container rows removed.
+			if ( ! isset( $keep[ $key ] ) ) {
+				$keep[ $key ] = (int) $row->id;
+			}
+
+			$parts = array_filter( array( $row->utm_source, $row->utm_medium, $row->utm_campaign, $row->utm_content ) );
+
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$wpdb->insert(
+				$wpdb->prefix . 'kivun_campaign_links',
+				array(
+					'campaign_id' => $keep[ $key ],
+					'label'       => $row->utm_source ? $row->utm_source : $row->label,
+					'target_url'  => $row->target_url,
+					'final_url'   => $row->final_url,
+					'utm_source'  => $row->utm_source,
+					'utm_medium'  => $row->utm_medium,
+					'utm_term'    => $row->utm_term,
+					'utm_content' => $row->utm_content,
+					'utm_label'   => implode( ' / ', $parts ),
+					'created_by'  => (int) $row->created_by,
+					'created_at'  => $row->created_at,
+				),
+				array( '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s' )
+			);
+
+			if ( (int) $row->id !== $keep[ $key ] ) {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+				$wpdb->delete( $wpdb->prefix . 'kivun_campaigns', array( 'id' => (int) $row->id ), array( '%d' ) );
+			}
+		}
+
+		update_option( 'kivun_campaign_links_migrated', 1 );
 	}
 
 	/**

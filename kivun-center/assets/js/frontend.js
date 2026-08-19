@@ -518,7 +518,7 @@
 
 	document.querySelectorAll('.kivun-cc-status').forEach(kivunSyncSchedule);
 
-	// ── Campaign (UTM) link builder ──────────────────────────────────────────────
+	// ── Campaigns and their tracking links ───────────────────────────────────────
 	function kivunCampClean(value) {
 		return String(value || '')
 			.trim()
@@ -530,41 +530,45 @@
 	}
 
 	// Mirrors the PHP builder so the preview matches exactly what gets saved.
-	function kivunCampBuild(form) {
-		var read = function (cls) {
-			var el = form.querySelector('.' + cls);
-			return el ? kivunCampClean(el.value) : '';
-		};
-
-		var targetSel = form.querySelector('.kivun-camp-target');
-		var target = targetSel ? targetSel.value : '';
-		if (target === '__custom__') {
-			var custom = form.querySelector('.kivun-camp-custom');
-			target = custom ? custom.value.trim() : '';
-		}
-
-		var parts = {
-			utm_source: read('kivun-camp-source'),
-			utm_medium: read('kivun-camp-medium'),
-			utm_campaign: read('kivun-camp-campaign')
-		};
-
-		if (!target || !parts.utm_source || !parts.utm_campaign) { return { url: '', parts: parts, target: target }; }
-
+	function kivunCampUrl(target, parts) {
+		if (!target) { return ''; }
 		var url;
-		// location.href is always a parseable base; location.origin is the string
-		// "null" in some contexts, which makes the URL constructor throw.
-		try { url = new URL(target, window.location.href); } catch (err) { return { url: '', parts: parts, target: target }; }
+		// location.href is always a parseable base; location.origin is the
+		// string "null" in some contexts, which makes the constructor throw.
+		try { url = new URL(target, window.location.href); } catch (err) { return ''; }
 		Object.keys(parts).forEach(function (k) {
 			url.searchParams.delete(k);
 			if (parts[k]) { url.searchParams.set(k, parts[k]); }
 		});
-		return { url: decodeURI(url.toString()), parts: parts, target: target };
+		return decodeURI(url.toString());
 	}
 
-	function kivunCampRefresh(form) {
+	function kivunCampTarget(form) {
+		var sel = form.querySelector('.kivun-camp-target');
+		if (!sel) { return ''; }
+		if (sel.value === '__custom__') {
+			var custom = form.querySelector('.kivun-camp-custom');
+			return custom ? custom.value.trim() : '';
+		}
+		return sel.value;
+	}
+
+	// Preview for a link being added under an existing campaign.
+	function kivunLinkRefresh(form) {
 		var out = form.querySelector('.kivun-camp-result');
-		if (out) { out.value = kivunCampBuild(form).url; }
+		if (!out) { return; }
+
+		var read = function (cls) {
+			var el = form.querySelector('.' + cls);
+			return el ? kivunCampClean(el.value) : '';
+		};
+		var parts = {
+			utm_source: read('kivun-link-source'),
+			utm_medium: read('kivun-link-medium'),
+			utm_campaign: kivunCampClean(form.dataset.campaignSlug),
+			utm_content: read('kivun-link-content')
+		};
+		out.value = parts.utm_source ? kivunCampUrl(out.dataset.target, parts) : '';
 	}
 
 	// Choosing "other" as the target reveals the free URL field.
@@ -579,16 +583,14 @@
 			custom.hidden = sel.value !== '__custom__';
 			if (!custom.hidden) { custom.focus(); }
 		}
-		kivunCampRefresh(form);
 	});
 
 	document.addEventListener('input', function (e) {
-		var field = e.target.closest('.kivun-campaign-form input, .kivun-campaign-form select');
-		if (!field || field.classList.contains('kivun-camp-result')) { return; }
-		kivunCampRefresh(field.closest('.kivun-campaign-form'));
+		var form = e.target.closest('.kivun-camplink-form');
+		if (form && !e.target.classList.contains('kivun-camp-result')) { kivunLinkRefresh(form); }
 	});
 
-	// Copy — both the preview and any saved row.
+	// Copy — the live preview and any saved row.
 	document.addEventListener('click', function (e) {
 		var copy = e.target.closest('.kivun-camp-copy');
 		if (!copy) { return; }
@@ -608,49 +610,26 @@
 		}
 	});
 
-	document.addEventListener('submit', function (e) {
-		var form = e.target.closest('.kivun-campaign-form');
-		if (!form) { return; }
-		e.preventDefault();
+	// Reload back onto the campaigns tab: tabs are switched in JS and a plain
+	// reload would land on the default tab, hiding what was just saved.
+	function kivunCampReload() {
+		try { window.sessionStorage.setItem('kivunConsoleTab', 'campaigns'); } catch (err) { /* private mode */ }
+		var next = new URL(window.location.href);
+		next.searchParams.set('kivun_tab', 'campaigns');
+		window.location.assign(next.toString());
+	}
 
-		var built = kivunCampBuild(form);
-		var err = form.querySelector('.kivun-camp-error');
-		if (!built.url) {
-			showError(err, 'יש לבחור יעד, מקור ושם קמפיין.');
-			return;
+	function kivunCampSubmit(form, body, err) {
+		var btn = form.querySelector('button[type="submit"]');
+		if (btn) {
+			if (btn.disabled) { return; }
+			btn.disabled = true;
 		}
-		if (err) { err.style.display = 'none'; }
+		var unlock = function () { if (btn) { btn.disabled = false; } };
 
-		// Lock the button: the reload below is not instant, and a second click
-		// would store the same campaign twice.
-		var submitBtn = form.querySelector('button[type="submit"]');
-		if (submitBtn) {
-			if (submitBtn.disabled) { return; }
-			submitBtn.disabled = true;
-		}
-		var unlock = function () { if (submitBtn) { submitBtn.disabled = false; } };
-
-		var nameEl = form.querySelector('.kivun-camp-campaign');
-		post(params({
-			action: 'kivun_save_campaign',
-			nonce: kivun.nonce,
-			target_url: built.target,
-			label: nameEl ? nameEl.value.trim() : '',
-			utm_source: built.parts.utm_source,
-			utm_medium: built.parts.utm_medium,
-			utm_campaign: built.parts.utm_campaign
-		})).then(function (res) {
+		post(params(body)).then(function (res) {
 			if (res.success) {
-				// Tabs are switched in JS and never touch the URL, so a plain
-				// reload would land back on the default tab and the freshly
-				// saved campaign would look like it was never stored. Ask for
-				// the campaigns tab both ways: the query arg, plus a one-shot
-				// flag for the case where the arg does not survive the trip
-				// (page caching, a redirect that drops the query string).
-				try { window.sessionStorage.setItem('kivunConsoleTab', 'campaigns'); } catch (err) { /* private mode */ }
-				var next = new URL(window.location.href);
-				next.searchParams.set('kivun_tab', 'campaigns');
-				window.location.assign(next.toString());
+				kivunCampReload();
 			} else {
 				unlock();
 				showError(err, (res.data && res.data.message) || kivun.i18n.error_generic);
@@ -659,24 +638,89 @@
 			unlock();
 			showError(err, kivun.i18n.error_generic);
 		});
+	}
+
+	document.addEventListener('submit', function (e) {
+		// New campaign — the container the links hang from.
+		var campForm = e.target.closest('.kivun-campaign-form');
+		if (campForm) {
+			e.preventDefault();
+			var campErr = campForm.querySelector('.kivun-camp-error');
+			var nameEl = campForm.querySelector('.kivun-camp-campaign');
+			var name = nameEl ? nameEl.value.trim() : '';
+			var target = kivunCampTarget(campForm);
+
+			if (!name || !target) {
+				showError(campErr, 'יש למלא שם קמפיין ולבחור יעד.');
+				return;
+			}
+			if (campErr) { campErr.style.display = 'none'; }
+
+			kivunCampSubmit(campForm, {
+				action: 'kivun_save_campaign',
+				nonce: kivun.nonce,
+				label: name,
+				utm_campaign: kivunCampClean(name),
+				target_url: target
+			}, campErr);
+			return;
+		}
+
+		// New link under an existing campaign.
+		var linkForm = e.target.closest('.kivun-camplink-form');
+		if (!linkForm) { return; }
+		e.preventDefault();
+
+		var linkErr = linkForm.querySelector('.kivun-camp-error');
+		var sourceEl = linkForm.querySelector('.kivun-link-source');
+		var source = sourceEl ? kivunCampClean(sourceEl.value) : '';
+		if (!source) {
+			showError(linkErr, 'יש להזין מקור לקישור.');
+			return;
+		}
+		if (linkErr) { linkErr.style.display = 'none'; }
+
+		var labelEl = linkForm.querySelector('.kivun-link-label');
+		var mediumEl = linkForm.querySelector('.kivun-link-medium');
+		var contentEl = linkForm.querySelector('.kivun-link-content');
+		var preview = linkForm.querySelector('.kivun-camp-result');
+
+		kivunCampSubmit(linkForm, {
+			action: 'kivun_save_campaign_link',
+			nonce: kivun.nonce,
+			campaign_id: linkForm.dataset.campaign,
+			label: labelEl ? labelEl.value.trim() : '',
+			target_url: preview ? preview.dataset.target : '',
+			utm_source: source,
+			utm_medium: mediumEl ? kivunCampClean(mediumEl.value) : '',
+			utm_content: contentEl ? kivunCampClean(contentEl.value) : ''
+		}, linkErr);
 	});
 
 	document.addEventListener('click', function (e) {
-		var del = e.target.closest('.kivun-delete-campaign');
+		var del = e.target.closest('.kivun-delete-campaign, .kivun-delete-link');
 		if (!del) { return; }
-		if (!window.confirm(kivun.i18n.confirm_delete_campaign)) { return; }
+
+		var isCampaign = del.classList.contains('kivun-delete-campaign');
+		var prompt = isCampaign ? kivun.i18n.confirm_delete_campaign : kivun.i18n.confirm_delete_link;
+		if (!window.confirm(prompt)) { return; }
 
 		del.disabled = true;
-		post(params({ action: 'kivun_delete_campaign', nonce: kivun.nonce, id: del.dataset.id }))
-			.then(function (res) {
-				if (res.success) {
-					var row = document.querySelector('[data-campaign-row="' + del.dataset.id + '"]');
-					if (row) { row.parentNode.removeChild(row); }
-				} else {
-					del.disabled = false;
-				}
-			})
-			.catch(function () { del.disabled = false; });
+		post(params({
+			action: isCampaign ? 'kivun_delete_campaign' : 'kivun_delete_campaign_link',
+			nonce: kivun.nonce,
+			id: del.dataset.id
+		})).then(function (res) {
+			if (res.success) {
+				var selector = isCampaign
+					? '[data-campaign-row="' + del.dataset.id + '"]'
+					: '[data-link-row="' + del.dataset.id + '"]';
+				var row = document.querySelector(selector);
+				if (row) { row.parentNode.removeChild(row); }
+			} else {
+				del.disabled = false;
+			}
+		}).catch(function () { del.disabled = false; });
 	});
 
 	// ── Content publishing wizard (multi-step form) ──────────────────────────────

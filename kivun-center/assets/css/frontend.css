@@ -1365,6 +1365,34 @@
 }
 .kivun-camp-copy { white-space: nowrap; flex: 0 0 auto; }
 
+/* A campaign is a block; its links are the table inside it. */
+.kivun-camp-block { margin-bottom: 1.1rem; }
+.kivun-camp-head {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: .75rem;
+	margin-bottom: .85rem;
+}
+.kivun-camp-title { margin: 0 0 .2rem; font-size: 1.05rem; font-weight: 800; color: var(--cc-ink); }
+.kivun-camp-metrics { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; }
+.kivun-camp-total { background: #dcfce7; color: #15803d; }
+.kivun-camp-summary {
+	cursor: pointer;
+	font-weight: 700;
+	font-size: .88rem;
+	color: var(--cc-brand);
+	padding: .35rem 0;
+	list-style: none;
+}
+.kivun-camp-summary::-webkit-details-marker { display: none; }
+.kivun-camp-summary:hover { text-decoration: underline; }
+.kivun-camp-addlink { margin-top: .85rem; border-top: 1px dashed var(--cc-line); padding-top: .5rem; }
+.kivun-camp-addlink[open] .kivun-camp-summary,
+.kivun-camp-new[open] .kivun-camp-summary { margin-bottom: .7rem; }
+.kivun-camp-new { margin-bottom: 1.25rem; }
+
 /* Date range filter */
 .kivun-cc-daterange { display: inline-flex; align-items: center; gap: .35rem; }
 .kivun-cc-daterange label { font-size: .8rem; color: var(--kivun-muted); font-weight: 600; }

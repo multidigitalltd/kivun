@@ -1,11 +1,14 @@
 <?php
 /**
- * UTM campaign link builder.
+ * UTM campaigns and their tracking links.
  *
- * Kivun_Utm already captures utm_* parameters on arrival and folds them into
- * each lead's "source" column. This is the other half: building the tagged
- * links in the first place, keeping them in one place, and reporting how many
- * leads each one actually produced.
+ * Kivun_Utm captures utm_* parameters on arrival and folds them into each
+ * lead's "source" column. This is the other half: building the tagged links,
+ * and reporting how many leads each one produced.
+ *
+ * A campaign is a container — one promotion, one event — and holds many links
+ * beneath it, typically one per publisher pushing it. That way the campaign
+ * total and the per-publisher breakdown come from the same place.
  *
  * @package Kivun
  */
@@ -13,7 +16,7 @@
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Creates, stores and reports on UTM campaign links.
+ * Creates, stores and reports on UTM campaigns and their links.
  */
 class Kivun_Campaigns {
 
@@ -23,14 +26,16 @@ class Kivun_Campaigns {
 	 * @return void
 	 */
 	public static function init(): void {
-		add_action( 'wp_ajax_kivun_save_campaign', array( __CLASS__, 'ajax_save' ) );
-		add_action( 'wp_ajax_kivun_delete_campaign', array( __CLASS__, 'ajax_delete' ) );
+		add_action( 'wp_ajax_kivun_save_campaign', array( __CLASS__, 'ajax_save_campaign' ) );
+		add_action( 'wp_ajax_kivun_delete_campaign', array( __CLASS__, 'ajax_delete_campaign' ) );
+		add_action( 'wp_ajax_kivun_save_campaign_link', array( __CLASS__, 'ajax_save_link' ) );
+		add_action( 'wp_ajax_kivun_delete_campaign_link', array( __CLASS__, 'ajax_delete_link' ) );
 	}
 
 	/**
-	 * Who may build and see campaign links. Campaign data is marketing
-	 * reporting rather than personal data, but it sits beside the leads, so it
-	 * follows the same bar as the leads CRM.
+	 * Who may build and see campaigns. Campaign data is marketing reporting
+	 * rather than personal data, but it sits beside the leads, so it follows
+	 * the same bar as the leads CRM.
 	 *
 	 * @return bool
 	 */
@@ -39,9 +44,9 @@ class Kivun_Campaigns {
 	}
 
 	/**
-	 * Common utm_source values, offered as a list so the same channel is not
-	 * recorded three different ways ("Facebook" / "facebook" / "FB"), which
-	 * would split one campaign across three rows in every report.
+	 * Common utm_source values, offered as suggestions so the same channel is
+	 * not recorded three different ways ("Facebook" / "facebook" / "FB"),
+	 * which would split one campaign across three rows in every report.
 	 *
 	 * @return array<string,string>
 	 */
@@ -119,62 +124,101 @@ class Kivun_Campaigns {
 		return mb_strtolower( trim( (string) $raw, '-' ) );
 	}
 
-	// ── Save ──────────────────────────────────────────────────────────────────.
+	/**
+	 * A stored link's arrival label — the exact string Kivun_Utm writes into a
+	 * lead's source column when someone arrives through it.
+	 *
+	 * @param array<string,string> $utm Source, medium, campaign and content.
+	 * @return string
+	 */
+	private static function utm_label( array $utm ): string {
+		$parts = array();
+		foreach ( array( 'source', 'medium', 'campaign', 'content' ) as $key ) {
+			if ( ! empty( $utm[ $key ] ) ) {
+				$parts[] = $utm[ $key ];
+			}
+		}
+		return implode( ' / ', $parts );
+	}
 
 	/**
-	 * Store a campaign link.
+	 * A destination only has to be a real http(s) address. wp_http_validate_url()
+	 * is deliberately not used: it vets URLs for outbound server requests and
+	 * rejects private hosts and non-standard ports, which are perfectly valid
+	 * destinations for a marketing link.
+	 *
+	 * @param string $target The URL to check.
+	 * @return bool
+	 */
+	private static function valid_target( string $target ): bool {
+		$parsed = wp_parse_url( $target );
+		return (bool) $target
+			&& ! empty( $parsed['host'] )
+			&& in_array( strtolower( $parsed['scheme'] ?? '' ), array( 'http', 'https' ), true );
+	}
+
+	/**
+	 * Shared guard for every campaign write.
 	 *
 	 * @return void
 	 */
-	public static function ajax_save(): void {
+	private static function guard(): void {
 		check_ajax_referer( 'kivun_nonce', 'nonce' );
 
 		if ( ! self::can_manage() ) {
 			wp_send_json_error( array( 'message' => __( 'אין לך הרשאה לנהל קמפיינים.', 'kivun' ) ) );
 		}
+	}
 
+	// ── Campaigns ─────────────────────────────────────────────────────────────.
+
+	/**
+	 * Create a campaign — the container the links hang from.
+	 *
+	 * @return void
+	 */
+	public static function ajax_save_campaign(): void {
+		self::guard();
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- self::guard() verifies the nonce.
+
+		$name   = sanitize_text_field( wp_unslash( $_POST['label'] ?? '' ) );
+		$slug   = self::clean_value( sanitize_text_field( wp_unslash( $_POST['utm_campaign'] ?? '' ) ) );
 		$target = esc_url_raw( wp_unslash( $_POST['target_url'] ?? '' ) );
-		$label  = sanitize_text_field( wp_unslash( $_POST['label'] ?? '' ) );
 
-		$utm = array(
-			'source'   => self::clean_value( sanitize_text_field( wp_unslash( $_POST['utm_source'] ?? '' ) ) ),
-			'medium'   => self::clean_value( sanitize_text_field( wp_unslash( $_POST['utm_medium'] ?? '' ) ) ),
-			'campaign' => self::clean_value( sanitize_text_field( wp_unslash( $_POST['utm_campaign'] ?? '' ) ) ),
-			'term'     => self::clean_value( sanitize_text_field( wp_unslash( $_POST['utm_term'] ?? '' ) ) ),
-			'content'  => self::clean_value( sanitize_text_field( wp_unslash( $_POST['utm_content'] ?? '' ) ) ),
-		);
-
-		// wp_http_validate_url() is meant for outbound requests: it rejects
-		// private hosts and non-standard ports, which are perfectly valid
-		// destinations for a marketing link (staging sites, local domains).
-		// A stored link only needs a real scheme and host.
-		$parsed = wp_parse_url( $target );
-		if (
-			! $target ||
-			empty( $parsed['host'] ) ||
-			! in_array( strtolower( $parsed['scheme'] ?? '' ), array( 'http', 'https' ), true )
-		) {
-			wp_send_json_error( array( 'message' => __( 'יש לבחור יעד תקין לקישור (כתובת מלאה שמתחילה ב-http/https).', 'kivun' ) ) );
+		if ( '' === $slug ) {
+			$slug = self::clean_value( $name );
 		}
-		if ( '' === $utm['source'] || '' === $utm['campaign'] ) {
-			wp_send_json_error( array( 'message' => __( 'מקור ושם קמפיין הם שדות חובה.', 'kivun' ) ) );
+		if ( '' === $name ) {
+			$name = $slug;
 		}
 
-		$final = self::build_url( $target, $utm );
+		if ( '' === $slug ) {
+			wp_send_json_error( array( 'message' => __( 'יש לתת שם לקמפיין.', 'kivun' ) ) );
+		}
+		if ( ! self::valid_target( $target ) ) {
+			wp_send_json_error( array( 'message' => __( 'יש לבחור יעד תקין לקמפיין (כתובת מלאה שמתחילה ב-http/https).', 'kivun' ) ) );
+		}
 
 		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$exists = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$wpdb->prefix}kivun_campaigns WHERE utm_campaign = %s", $slug ) );
+		if ( $exists ) {
+			wp_send_json_error( array( 'message' => __( 'כבר קיים קמפיין בשם הזה.', 'kivun' ) ) );
+		}
+
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$ok = $wpdb->insert(
 			$wpdb->prefix . 'kivun_campaigns',
 			array(
-				'label'        => $label ? $label : $utm['campaign'],
+				'label'        => $name,
 				'target_url'   => $target,
-				'final_url'    => $final,
-				'utm_source'   => $utm['source'],
-				'utm_medium'   => $utm['medium'],
-				'utm_campaign' => $utm['campaign'],
-				'utm_term'     => $utm['term'],
-				'utm_content'  => $utm['content'],
+				'final_url'    => '',
+				'utm_source'   => '',
+				'utm_medium'   => '',
+				'utm_campaign' => $slug,
+				'utm_term'     => '',
+				'utm_content'  => '',
 				'created_by'   => get_current_user_id(),
 			),
 			array( '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d' )
@@ -184,26 +228,18 @@ class Kivun_Campaigns {
 			wp_send_json_error( array( 'message' => __( 'שמירת הקמפיין נכשלה.', 'kivun' ) ) );
 		}
 
-		wp_send_json_success(
-			array(
-				'message' => __( 'הקמפיין נשמר.', 'kivun' ),
-				'url'     => $final,
-			)
-		);
+		wp_send_json_success( array( 'message' => __( 'הקמפיין נוצר.', 'kivun' ) ) );
 	}
 
 	/**
-	 * Delete a stored campaign. The leads it produced are untouched — they
-	 * carry their own source label.
+	 * Delete a campaign and the links under it. The leads they produced are
+	 * untouched — they carry their own source label.
 	 *
 	 * @return void
 	 */
-	public static function ajax_delete(): void {
-		check_ajax_referer( 'kivun_nonce', 'nonce' );
-
-		if ( ! self::can_manage() ) {
-			wp_send_json_error( array( 'message' => __( 'אין לך הרשאה לנהל קמפיינים.', 'kivun' ) ) );
-		}
+	public static function ajax_delete_campaign(): void {
+		self::guard();
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- self::guard() verifies the nonce.
 
 		$id = absint( wp_unslash( $_POST['id'] ?? 0 ) );
 		if ( ! $id ) {
@@ -212,7 +248,115 @@ class Kivun_Campaigns {
 
 		global $wpdb;
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$wpdb->delete( $wpdb->prefix . 'kivun_campaign_links', array( 'campaign_id' => $id ), array( '%d' ) );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$wpdb->delete( $wpdb->prefix . 'kivun_campaigns', array( 'id' => $id ), array( '%d' ) );
+
+		wp_send_json_success();
+	}
+
+	// ── Links ─────────────────────────────────────────────────────────────────.
+
+	/**
+	 * Add a tracking link to a campaign.
+	 *
+	 * @return void
+	 */
+	public static function ajax_save_link(): void {
+		self::guard();
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- self::guard() verifies the nonce.
+
+		$campaign_id = absint( wp_unslash( $_POST['campaign_id'] ?? 0 ) );
+
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$campaign = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$wpdb->prefix}kivun_campaigns WHERE id = %d", $campaign_id ) );
+		if ( ! $campaign ) {
+			wp_send_json_error( array( 'message' => __( 'הקמפיין לא נמצא.', 'kivun' ) ) );
+		}
+
+		$label  = sanitize_text_field( wp_unslash( $_POST['label'] ?? '' ) );
+		$target = esc_url_raw( wp_unslash( $_POST['target_url'] ?? '' ) );
+		if ( ! self::valid_target( $target ) ) {
+			$target = (string) $campaign->target_url;
+		}
+
+		$utm = array(
+			'source'   => self::clean_value( sanitize_text_field( wp_unslash( $_POST['utm_source'] ?? '' ) ) ),
+			'medium'   => self::clean_value( sanitize_text_field( wp_unslash( $_POST['utm_medium'] ?? '' ) ) ),
+			'campaign' => (string) $campaign->utm_campaign,
+			'term'     => self::clean_value( sanitize_text_field( wp_unslash( $_POST['utm_term'] ?? '' ) ) ),
+			'content'  => self::clean_value( sanitize_text_field( wp_unslash( $_POST['utm_content'] ?? '' ) ) ),
+		);
+
+		if ( '' === $utm['source'] ) {
+			wp_send_json_error( array( 'message' => __( 'יש להזין מקור לקישור.', 'kivun' ) ) );
+		}
+		if ( ! self::valid_target( $target ) ) {
+			wp_send_json_error( array( 'message' => __( 'יש לבחור יעד תקין לקישור.', 'kivun' ) ) );
+		}
+
+		// Two links in one campaign that resolve to the same arrival label are
+		// indistinguishable in the leads table — their counts would merge.
+		$utm_label = self::utm_label( $utm );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$clash = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT id FROM {$wpdb->prefix}kivun_campaign_links WHERE campaign_id = %d AND utm_label = %s",
+				$campaign_id,
+				$utm_label
+			)
+		);
+		if ( $clash ) {
+			wp_send_json_error(
+				array(
+					'message' => __( 'כבר קיים קישור זהה בקמפיין. הוסיפו "מזהה פרסום" כדי להבדיל ביניהם.', 'kivun' ),
+				)
+			);
+		}
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$ok = $wpdb->insert(
+			$wpdb->prefix . 'kivun_campaign_links',
+			array(
+				'campaign_id' => $campaign_id,
+				'label'       => '' !== $label ? $label : $utm['source'],
+				'target_url'  => $target,
+				'final_url'   => self::build_url( $target, $utm ),
+				'utm_source'  => $utm['source'],
+				'utm_medium'  => $utm['medium'],
+				'utm_term'    => $utm['term'],
+				'utm_content' => $utm['content'],
+				'utm_label'   => $utm_label,
+				'created_by'  => get_current_user_id(),
+			),
+			array( '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d' )
+		);
+
+		if ( false === $ok ) {
+			wp_send_json_error( array( 'message' => __( 'שמירת הקישור נכשלה.', 'kivun' ) ) );
+		}
+
+		wp_send_json_success( array( 'message' => __( 'הקישור נוסף.', 'kivun' ) ) );
+	}
+
+	/**
+	 * Delete a single tracking link.
+	 *
+	 * @return void
+	 */
+	public static function ajax_delete_link(): void {
+		self::guard();
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- self::guard() verifies the nonce.
+
+		$id = absint( wp_unslash( $_POST['id'] ?? 0 ) );
+		if ( ! $id ) {
+			wp_send_json_error();
+		}
+
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$wpdb->delete( $wpdb->prefix . 'kivun_campaign_links', array( 'id' => $id ), array( '%d' ) );
 
 		wp_send_json_success();
 	}
@@ -220,41 +364,59 @@ class Kivun_Campaigns {
 	// ── Reporting ─────────────────────────────────────────────────────────────.
 
 	/**
-	 * All stored campaigns, newest first.
+	 * All campaigns, newest first.
 	 *
 	 * @return array<int,object>
 	 */
 	public static function all(): array {
 		global $wpdb;
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		return $wpdb->get_results( "SELECT * FROM {$wpdb->prefix}kivun_campaigns ORDER BY created_at DESC" );
+		return $wpdb->get_results( "SELECT * FROM {$wpdb->prefix}kivun_campaigns ORDER BY created_at DESC, id DESC" );
 	}
 
 	/**
-	 * How many leads arrived through each campaign.
+	 * Every link, grouped by the campaign it belongs to.
 	 *
-	 * Kivun_Utm writes the arrival label into the lead's source column as
-	 * "UTM: source / medium / campaign", so the campaign name is matched
-	 * inside that string. Counting per campaign name (rather than per stored
-	 * row) means a link shared before it was saved here is still counted.
-	 *
-	 * @return array<string,int> Keyed by utm_campaign.
+	 * @return array<int,array<int,object>>
 	 */
-	public static function lead_counts(): array {
+	public static function links_by_campaign(): array {
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$rows = $wpdb->get_results( "SELECT * FROM {$wpdb->prefix}kivun_campaign_links ORDER BY id ASC" );
+
+		$out = array();
+		foreach ( $rows as $row ) {
+			$out[ (int) $row->campaign_id ][] = $row;
+		}
+		return $out;
+	}
+
+	/**
+	 * How many leads arrived through each link.
+	 *
+	 * Kivun_Utm appends its label to the end of the lead's source column, so
+	 * the stored value always ENDS with the arrival label. Matching on that
+	 * suffix keeps two links apart even when one label is a prefix of another
+	 * (the same source and medium, distinguished only by utm_content).
+	 *
+	 * @return array<int,int> Lead count keyed by link id.
+	 */
+	public static function link_lead_counts(): array {
 		global $wpdb;
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$rows = $wpdb->get_results(
-			"SELECT c.utm_campaign AS name, COUNT(r.id) AS total
-			 FROM {$wpdb->prefix}kivun_campaigns c
+			"SELECT l.id AS link_id, COUNT(r.id) AS total
+			 FROM {$wpdb->prefix}kivun_campaign_links l
 			 LEFT JOIN {$wpdb->prefix}kivun_registrations r
-			   ON r.source LIKE CONCAT('%UTM: %', c.utm_campaign, '%')
-			 GROUP BY c.utm_campaign"
+			   ON r.source LIKE CONCAT('%UTM: ', l.utm_label)
+			 WHERE l.utm_label <> ''
+			 GROUP BY l.id"
 		);
 
 		$counts = array();
 		foreach ( $rows as $row ) {
-			$counts[ (string) $row->name ] = (int) $row->total;
+			$counts[ (int) $row->link_id ] = (int) $row->total;
 		}
 		return $counts;
 	}
