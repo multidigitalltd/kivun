@@ -47,6 +47,7 @@ class Kivun_Core {
 		Kivun_Campaigns::init();
 		Kivun_Mercaz::init();
 		Kivun_Mercaz_Sync::init();
+		Kivun_Phones::init();
 		Kivun_Duplicate::init();
 		Kivun_Thank_You::init();
 		Kivun_Content_Creator::init();
@@ -112,6 +113,7 @@ class Kivun_Core {
 			'class-kivun-campaigns',
 			'class-kivun-mercaz',
 			'class-kivun-mercaz-sync',
+			'class-kivun-phones',
 			'class-kivun-duplicate',
 			'class-kivun-thank-you',
 			'class-kivun-content-creator',
@@ -185,19 +187,21 @@ class Kivun_Core {
 				'ajax_url' => admin_url( 'admin-ajax.php' ),
 				'nonce'    => wp_create_nonce( 'kivun_nonce' ),
 				'i18n'     => array(
-					'sending'                  => __( 'שולח...', 'kivun' ),
-					'submit'                   => __( 'שלח', 'kivun' ),
-					'confirm_delete'           => __( 'האם למחוק משרה זו?', 'kivun' ),
-					'error_generic'            => __( 'אירעה שגיאה, נסה שוב.', 'kivun' ),
-					'saved'                    => __( '✓ נשמר', 'kivun' ),
-					'save_error'               => __( 'שגיאה', 'kivun' ),
-					'confirm_send_login'       => __( 'לשלוח למפרסם מייל עם קישור להגדרת סיסמה?', 'kivun' ),
-					'confirm_disable_employer' => __( 'להשבית את המפרסם? הוא לא יוכל להתחבר ולא יופיע ברשימת הפרסום. המשרות וההגשות שלו יישמרו.', 'kivun' ),
-					'renew_prompt'             => __( 'תאריך סגירה חדש למשרה (YYYY-MM-DD):', 'kivun' ),
-					'confirm_delete_campaign'  => __( 'למחוק את הקמפיין וכל הקישורים שתחתיו? הפניות שהגיעו דרכם יישמרו.', 'kivun' ),
-					'confirm_delete_link'      => __( 'למחוק את הקישור? הפניות שהגיעו דרכו יישמרו.', 'kivun' ),
-					'confirm_replace_whatsapp' => __( 'כבר יש הודעה בתיבה. ליצור אותה מחדש ולהחליף את מה שכתוב?', 'kivun' ),
-					'wa_from_fields'           => __( 'נוצר מהשדות (ללא AI)', 'kivun' ),
+					'sending'                   => __( 'שולח...', 'kivun' ),
+					'submit'                    => __( 'שלח', 'kivun' ),
+					'confirm_delete'            => __( 'האם למחוק משרה זו?', 'kivun' ),
+					'error_generic'             => __( 'אירעה שגיאה, נסה שוב.', 'kivun' ),
+					'saved'                     => __( '✓ נשמר', 'kivun' ),
+					'save_error'                => __( 'שגיאה', 'kivun' ),
+					'confirm_send_login'        => __( 'לשלוח למפרסם מייל עם קישור להגדרת סיסמה?', 'kivun' ),
+					'confirm_disable_employer'  => __( 'להשבית את המפרסם? הוא לא יוכל להתחבר ולא יופיע ברשימת הפרסום. המשרות וההגשות שלו יישמרו.', 'kivun' ),
+					'renew_prompt'              => __( 'תאריך סגירה חדש למשרה (YYYY-MM-DD):', 'kivun' ),
+					'confirm_delete_campaign'   => __( 'למחוק את הקמפיין וכל הקישורים שתחתיו? הפניות שהגיעו דרכם יישמרו.', 'kivun' ),
+					'confirm_delete_link'       => __( 'למחוק את הקישור? הפניות שהגיעו דרכו יישמרו.', 'kivun' ),
+					'confirm_replace_whatsapp'  => __( 'כבר יש הודעה בתיבה. ליצור אותה מחדש ולהחליף את מה שכתוב?', 'kivun' ),
+					'wa_from_fields'            => __( 'נוצר מהשדות (ללא AI)', 'kivun' ),
+					'confirm_delete_phone'      => __( 'להסיר את המספר ואת כל השיוכים שלו? השיחות שנרשמו יישמרו.', 'kivun' ),
+					'confirm_delete_assignment' => __( 'למחוק את השיוך? השיחות שנרשמו בתקופה יישארו ללא שיוך לקמפיין.', 'kivun' ),
 				),
 			)
 		);

@@ -206,6 +206,65 @@ class Kivun_Installer {
 		"
 		);
 
+		dbDelta(
+			"
+			CREATE TABLE IF NOT EXISTS {$wpdb->prefix}kivun_phone_numbers (
+				id          bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+				number      varchar(32)         NOT NULL DEFAULT '',
+				label       varchar(191)        NOT NULL DEFAULT '',
+				is_active   tinyint(1)          NOT NULL DEFAULT 1,
+				created_at  datetime            NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				PRIMARY KEY (id),
+				UNIQUE KEY number (number)
+			) $collate;
+		"
+		);
+
+		dbDelta(
+			"
+			CREATE TABLE IF NOT EXISTS {$wpdb->prefix}kivun_phone_assignments (
+				id          bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+				number_id   bigint(20) UNSIGNED NOT NULL,
+				campaign_id bigint(20) UNSIGNED NOT NULL DEFAULT 0,
+				media       varchar(100)        NOT NULL DEFAULT '',
+				label       varchar(191)        NOT NULL DEFAULT '',
+				starts_on   date                NOT NULL,
+				ends_on     date                DEFAULT NULL,
+				created_by  bigint(20) UNSIGNED NOT NULL DEFAULT 0,
+				created_at  datetime            NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				PRIMARY KEY (id),
+				KEY number_id (number_id),
+				KEY campaign_id (campaign_id),
+				KEY starts_on (starts_on)
+			) $collate;
+		"
+		);
+
+		dbDelta(
+			"
+			CREATE TABLE IF NOT EXISTS {$wpdb->prefix}kivun_calls (
+				id            bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+				number_id     bigint(20) UNSIGNED NOT NULL DEFAULT 0,
+				assignment_id bigint(20) UNSIGNED NOT NULL DEFAULT 0,
+				call_id       varchar(100)        NOT NULL DEFAULT '',
+				dialled       varchar(32)         NOT NULL DEFAULT '',
+				caller        varchar(32)         NOT NULL DEFAULT '',
+				caller_name   varchar(191)        NOT NULL DEFAULT '',
+				answered      tinyint(1)          NOT NULL DEFAULT 0,
+				total_time    int(10) UNSIGNED    NOT NULL DEFAULT 0,
+				talk_time     int(10) UNSIGNED    NOT NULL DEFAULT 0,
+				recording     varchar(500)        NOT NULL DEFAULT '',
+				started_at    datetime            NOT NULL,
+				created_at    datetime            NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				PRIMARY KEY (id),
+				UNIQUE KEY call_id (call_id),
+				KEY number_id (number_id),
+				KEY assignment_id (assignment_id),
+				KEY started_at (started_at)
+			) $collate;
+		"
+		);
+
 		self::migrate_campaign_links();
 		self::align_job_terms();
 

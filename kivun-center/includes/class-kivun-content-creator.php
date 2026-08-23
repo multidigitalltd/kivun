@@ -1363,19 +1363,22 @@ class Kivun_Content_Creator {
 		// content leads table.
 		$show_jobs = Kivun_Employer::can_manage_all();
 
-		$show_camp = Kivun_Campaigns::can_manage();
+		$show_camp  = Kivun_Campaigns::can_manage();
+		$show_calls = Kivun_Phones::can_manage();
 
 		if ( $leads_only ) {
-			$tab       = 'leads';
-			$show_jobs = false;
-			$show_camp = false;
+			$tab        = 'leads';
+			$show_jobs  = false;
+			$show_camp  = false;
+			$show_calls = false;
 		}
 
 		if (
-			! in_array( $tab, array( 'form', 'library', 'leads', 'jobs', 'campaigns' ), true ) ||
+			! in_array( $tab, array( 'form', 'library', 'leads', 'jobs', 'campaigns', 'calls' ), true ) ||
 			( 'leads' === $tab && ! $show_leads ) ||
 			( 'jobs' === $tab && ! $show_jobs ) ||
-			( 'campaigns' === $tab && ! $show_camp )
+			( 'campaigns' === $tab && ! $show_camp ) ||
+			( 'calls' === $tab && ! $show_calls )
 		) {
 			$tab = 'form';
 		}
@@ -1409,6 +1412,13 @@ class Kivun_Content_Creator {
 			$console_tabs['campaigns'] = array(
 				'label' => __( 'קמפיינים', 'kivun' ),
 				'icon'  => 'filter',
+				'count' => null,
+			);
+		}
+		if ( $show_calls ) {
+			$console_tabs['calls'] = array(
+				'label' => __( 'מספרי מעקב', 'kivun' ),
+				'icon'  => 'phone',
 				'count' => null,
 			);
 		}
@@ -1511,6 +1521,12 @@ class Kivun_Content_Creator {
 			<?php if ( $show_camp ) : ?>
 				<section class="kivun-tab-panel <?php echo 'campaigns' === $tab ? 'is-active' : ''; ?>" data-panel="campaigns" id="kivun-ccpanel-campaigns" role="tabpanel" aria-labelledby="kivun-cctab-campaigns" tabindex="0" <?php echo 'campaigns' === $tab ? '' : 'hidden'; ?>>
 					<?php self::front_campaigns(); ?>
+				</section>
+			<?php endif; ?>
+
+			<?php if ( $show_calls ) : ?>
+				<section class="kivun-tab-panel <?php echo 'calls' === $tab ? 'is-active' : ''; ?>" data-panel="calls" id="kivun-ccpanel-calls" role="tabpanel" aria-labelledby="kivun-cctab-calls" tabindex="0" <?php echo 'calls' === $tab ? '' : 'hidden'; ?>>
+					<?php self::front_calls(); ?>
 				</section>
 			<?php endif; ?>
 
@@ -2523,6 +2539,232 @@ class Kivun_Content_Creator {
 				</table>
 				</div>
 			<?php endif; ?>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Render the call-tracking workspace: the pool of virtual numbers, what
+	 * each is currently advertising, and the history of what it advertised
+	 * before — with the calls each period brought in.
+	 *
+	 * @return void
+	 */
+	private static function front_calls(): void {
+		$numbers     = Kivun_Phones::numbers();
+		$assignments = Kivun_Phones::assignments_by_number();
+		$counts      = Kivun_Phones::call_counts();
+		$media       = Kivun_Phones::media();
+		$campaigns   = Kivun_Campaigns::all();
+		$today       = wp_date( 'Y-m-d' );
+		?>
+		<div class="kivun-cc-front">
+			<div class="kivun-cc-head">
+				<h2 class="kivun-cc-title"><?php esc_html_e( 'מספרי מעקב', 'kivun' ); ?></h2>
+				<p class="kivun-cc-lead">
+					<?php esc_html_e( 'לכל מספר וירטואלי אפשר לקבוע במה הוא מתפרסם ובאיזו תקופה. שיחה נרשמת לפי השיוך שהיה פעיל ביום שבו היא הגיעה — כך ששינוי השיוך היום לא משנה את הדוחות של אתמול.', 'kivun' ); ?>
+				</p>
+			</div>
+
+			<details class="kivun-cc-card kivun-camp-new">
+				<summary class="kivun-camp-summary"><?php esc_html_e( '+ הוספת מספר', 'kivun' ); ?></summary>
+				<form class="kivun-phone-form">
+					<div class="kivun-form-grid">
+						<div class="kivun-form-row">
+							<label><?php esc_html_e( 'מספר הטלפון *', 'kivun' ); ?></label>
+							<input type="text" class="kivun-cc-input kivun-phone-number" dir="ltr" placeholder="072-2345678">
+						</div>
+						<div class="kivun-form-row">
+							<label><?php esc_html_e( 'כינוי (אופציונלי)', 'kivun' ); ?></label>
+							<input type="text" class="kivun-cc-input kivun-phone-label" placeholder="<?php esc_attr_e( 'למשל: מספר 7', 'kivun' ); ?>">
+						</div>
+					</div>
+					<p class="kivun-error kivun-phone-error" style="display:none;color:var(--kivun-error)"></p>
+					<div class="kivun-form-actions">
+						<button type="submit" class="kivun-cc-btn"><?php esc_html_e( 'הוספה', 'kivun' ); ?></button>
+					</div>
+				</form>
+			</details>
+
+			<?php if ( ! $numbers ) : ?>
+				<div class="kivun-cc-note"><?php esc_html_e( 'עדיין לא הוגדרו מספרי מעקב.', 'kivun' ); ?></div>
+			<?php else : ?>
+				<?php
+				foreach ( $numbers as $num ) :
+					$history = $assignments[ (int) $num->id ] ?? array();
+					$current = null;
+					foreach ( $history as $row ) {
+						$open = ( null === $row->ends_on || '' === $row->ends_on );
+						if ( $row->starts_on <= $today && ( $open || $row->ends_on >= $today ) ) {
+							$current = $row;
+							break;
+						}
+					}
+					?>
+					<section class="kivun-cc-card kivun-camp-block" data-phone-row="<?php echo esc_attr( $num->id ); ?>">
+						<header class="kivun-camp-head">
+							<div>
+								<h3 class="kivun-camp-title" dir="ltr"><?php echo esc_html( $num->number ); ?></h3>
+								<?php if ( $num->label ) : ?>
+									<span class="kivun-cc-source"><?php echo esc_html( $num->label ); ?></span>
+								<?php endif; ?>
+							</div>
+							<div class="kivun-camp-metrics">
+								<?php if ( $current ) : ?>
+									<span class="kivun-cc-badge kivun-camp-total">
+										<?php echo esc_html( $media[ $current->media ] ?? $current->media ); ?>
+										<?php echo $current->campaign_label ? esc_html( ' · ' . $current->campaign_label ) : ''; ?>
+									</span>
+								<?php else : ?>
+									<span class="kivun-cc-badge"><?php esc_html_e( 'פנוי', 'kivun' ); ?></span>
+								<?php endif; ?>
+								<button
+									type="button"
+									class="kivun-cc-iconbtn kivun-cc-iconbtn--danger kivun-delete-phone"
+									data-id="<?php echo esc_attr( $num->id ); ?>"
+									title="<?php esc_attr_e( 'הסרת המספר', 'kivun' ); ?>"
+								>
+									<?php echo kivun_icon( 'trash' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?>
+									<span class="kivun-sr-only"><?php esc_html_e( 'הסרת המספר', 'kivun' ); ?></span>
+								</button>
+							</div>
+						</header>
+
+						<?php if ( $history ) : ?>
+							<div class="kivun-cc-tablewrap">
+								<table class="kivun-cc-table">
+									<thead>
+										<tr>
+											<th scope="col"><?php esc_html_e( 'תקופה', 'kivun' ); ?></th>
+											<th scope="col"><?php esc_html_e( 'מדיה', 'kivun' ); ?></th>
+											<th scope="col"><?php esc_html_e( 'קמפיין', 'kivun' ); ?></th>
+											<th scope="col"><?php esc_html_e( 'שיחות', 'kivun' ); ?></th>
+											<th scope="col"><?php esc_html_e( 'נענו', 'kivun' ); ?></th>
+											<th scope="col"><?php esc_html_e( 'פעולות', 'kivun' ); ?></th>
+										</tr>
+									</thead>
+									<tbody>
+									<?php foreach ( $history as $row ) : ?>
+										<?php
+										$stat = $counts[ (int) $row->id ] ?? array(
+											'total'    => 0,
+											'answered' => 0,
+										);
+										?>
+										<tr data-assignment-row="<?php echo esc_attr( $row->id ); ?>">
+											<td class="kivun-cc-date">
+												<?php echo esc_html( wp_date( 'd/m/Y', strtotime( $row->starts_on ) ) ); ?>
+												—
+												<?php
+												echo $row->ends_on
+													? esc_html( wp_date( 'd/m/Y', strtotime( $row->ends_on ) ) )
+													: esc_html__( 'פעיל', 'kivun' );
+												?>
+											</td>
+											<td><span class="kivun-cc-badge"><?php echo esc_html( $media[ $row->media ] ?? $row->media ); ?></span></td>
+											<td>
+												<?php echo esc_html( $row->campaign_label ? $row->campaign_label : '—' ); ?>
+												<?php if ( $row->label ) : ?>
+													<span class="kivun-cc-source"><?php echo esc_html( $row->label ); ?></span>
+												<?php endif; ?>
+											</td>
+											<td><strong><?php echo esc_html( number_format_i18n( $stat['total'] ) ); ?></strong></td>
+											<td><?php echo esc_html( number_format_i18n( $stat['answered'] ) ); ?></td>
+											<td>
+												<button
+													type="button"
+													class="kivun-cc-iconbtn kivun-cc-iconbtn--danger kivun-delete-assignment"
+													data-id="<?php echo esc_attr( $row->id ); ?>"
+													title="<?php esc_attr_e( 'מחיקת השיוך', 'kivun' ); ?>"
+												>
+													<?php echo kivun_icon( 'trash' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?>
+													<span class="kivun-sr-only"><?php esc_html_e( 'מחיקת השיוך', 'kivun' ); ?></span>
+												</button>
+											</td>
+										</tr>
+									<?php endforeach; ?>
+									</tbody>
+								</table>
+							</div>
+						<?php else : ?>
+							<p class="kivun-field-hint"><?php esc_html_e( 'למספר הזה עדיין לא הוגדר שיוך. שיחות שיגיעו אליו יירשמו, אך לא ישויכו לקמפיין.', 'kivun' ); ?></p>
+						<?php endif; ?>
+
+						<details class="kivun-camp-addlink">
+							<summary class="kivun-camp-summary"><?php esc_html_e( '+ שיוך לתקופה חדשה', 'kivun' ); ?></summary>
+							<form class="kivun-assignment-form" data-number="<?php echo esc_attr( $num->id ); ?>">
+								<div class="kivun-form-grid">
+									<div class="kivun-form-row">
+										<label><?php esc_html_e( 'מדיה *', 'kivun' ); ?></label>
+										<select class="kivun-cc-input kivun-as-media">
+											<option value=""><?php esc_html_e( '— בחר/י —', 'kivun' ); ?></option>
+											<?php foreach ( $media as $mk => $ml ) : ?>
+												<option value="<?php echo esc_attr( $mk ); ?>"><?php echo esc_html( $ml ); ?></option>
+											<?php endforeach; ?>
+										</select>
+									</div>
+									<div class="kivun-form-row">
+										<label><?php esc_html_e( 'קמפיין', 'kivun' ); ?></label>
+										<select class="kivun-cc-input kivun-as-campaign">
+											<option value="0"><?php esc_html_e( '— ללא —', 'kivun' ); ?></option>
+											<?php foreach ( $campaigns as $camp ) : ?>
+												<option value="<?php echo esc_attr( $camp->id ); ?>"><?php echo esc_html( $camp->label ); ?></option>
+											<?php endforeach; ?>
+										</select>
+										<p class="kivun-field-hint"><?php esc_html_e( 'אותם קמפיינים של הלשונית "קמפיינים" — כך רואים יחד לידים מהאתר ושיחות טלפון.', 'kivun' ); ?></p>
+									</div>
+									<div class="kivun-form-row">
+										<label><?php esc_html_e( 'פירוט הפרסום', 'kivun' ); ?></label>
+										<input type="text" class="kivun-cc-input kivun-as-label" placeholder="<?php esc_attr_e( 'למשל: מודעה בעמוד 4', 'kivun' ); ?>">
+									</div>
+									<div class="kivun-form-row">
+										<label><?php esc_html_e( 'מתאריך *', 'kivun' ); ?></label>
+										<input type="date" class="kivun-cc-input kivun-as-start" dir="ltr" value="<?php echo esc_attr( $today ); ?>">
+									</div>
+									<div class="kivun-form-row">
+										<label><?php esc_html_e( 'עד תאריך', 'kivun' ); ?></label>
+										<input type="date" class="kivun-cc-input kivun-as-end" dir="ltr">
+										<p class="kivun-field-hint"><?php esc_html_e( 'ריק = ממשיך עד שיוגדר שיוך חדש.', 'kivun' ); ?></p>
+									</div>
+								</div>
+								<p class="kivun-error kivun-phone-error" style="display:none;color:var(--kivun-error)"></p>
+								<div class="kivun-form-actions">
+									<button type="submit" class="kivun-cc-btn kivun-cc-btn--sm"><?php esc_html_e( 'שמירת השיוך', 'kivun' ); ?></button>
+								</div>
+							</form>
+						</details>
+					</section>
+				<?php endforeach; ?>
+			<?php endif; ?>
+
+			<div class="kivun-cc-card">
+				<label class="kivun-cc-label"><?php esc_html_e( 'חיבור ל-015', 'kivun' ); ?></label>
+				<p class="kivun-cc-hint">
+					<?php esc_html_e( 'ב-015: Features ← Web Urls Templates ← Create. סמנו "Is Webhooks" = Yes, בחרו Event Filter = Hangup, ושיטת שליחה POST.', 'kivun' ); ?>
+				</p>
+
+				<label class="kivun-cc-sub"><?php esc_html_e( 'כתובת (HTTP URL)', 'kivun' ); ?></label>
+				<div class="kivun-camp-out">
+					<input type="text" class="kivun-cc-input kivun-camp-saved" dir="ltr" readonly value="<?php echo esc_url( Kivun_Phones::webhook_url() ); ?>">
+					<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost kivun-camp-copy"><?php esc_html_e( 'העתקה', 'kivun' ); ?></button>
+				</div>
+
+				<label class="kivun-cc-sub"><?php esc_html_e( 'כותרת (HTTP header)', 'kivun' ); ?></label>
+				<div class="kivun-camp-out">
+					<input type="text" class="kivun-cc-input kivun-camp-saved" dir="ltr" readonly value="Content-Type: application/json">
+					<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost kivun-camp-copy"><?php esc_html_e( 'העתקה', 'kivun' ); ?></button>
+				</div>
+
+				<label class="kivun-cc-sub"><?php esc_html_e( 'גוף הבקשה (HTTP body)', 'kivun' ); ?></label>
+				<textarea class="kivun-cc-input kivun-cc-textarea kivun-camp-saved" dir="ltr" rows="8" readonly>{"callid":#callid#,"uniqueid":#uniqueid#,"start":#start#,"status":"#status#","direction":"#direction#","dnumber":"#dnumber#","cnumber":"#cnumber#","extension":"#extension#","callerid":"#callerid_external#","callername":"#callername#","snumber":"#snumber#","totaltime":#totaltime#,"talktime":#talktime#,"recording":"#recording#"}</textarea>
+				<div class="kivun-wa-actions">
+					<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost kivun-camp-copy"><?php esc_html_e( 'העתקת גוף הבקשה', 'kivun' ); ?></button>
+				</div>
+
+				<p class="kivun-field-hint">
+					<?php esc_html_e( 'הכתובת מכילה מפתח סודי — כל מי שמחזיק בה יכול לרשום שיחות. אין לפרסם אותה מחוץ להגדרות של 015.', 'kivun' ); ?>
+				</p>
+			</div>
 		</div>
 		<?php
 	}

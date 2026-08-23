@@ -685,6 +685,107 @@
 		share.href = kivunWaShareLink(field.value);
 	});
 
+	// ── Tracked phone numbers ────────────────────────────────────────────────────
+	function kivunPhonePost(form, body, err) {
+		var btn = form.querySelector('button[type="submit"]');
+		if (btn) {
+			if (btn.disabled) { return; }
+			btn.disabled = true;
+		}
+
+		post(params(body)).then(function (res) {
+			if (res.success) {
+				kivunCampReload('calls');
+			} else {
+				if (btn) { btn.disabled = false; }
+				showError(err, (res.data && res.data.message) || kivun.i18n.error_generic);
+			}
+		}).catch(function () {
+			if (btn) { btn.disabled = false; }
+			showError(err, kivun.i18n.error_generic);
+		});
+	}
+
+	document.addEventListener('submit', function (e) {
+		var phoneForm = e.target.closest('.kivun-phone-form');
+		if (phoneForm) {
+			e.preventDefault();
+			var pErr = phoneForm.querySelector('.kivun-phone-error');
+			var numEl = phoneForm.querySelector('.kivun-phone-number');
+			var labEl = phoneForm.querySelector('.kivun-phone-label');
+			if (!numEl || !numEl.value.trim()) {
+				showError(pErr, 'יש להזין מספר טלפון.');
+				return;
+			}
+			if (pErr) { pErr.style.display = 'none'; }
+
+			kivunPhonePost(phoneForm, {
+				action: 'kivun_save_phone',
+				nonce: kivun.nonce,
+				number: numEl.value.trim(),
+				label: labEl ? labEl.value.trim() : ''
+			}, pErr);
+			return;
+		}
+
+		var asForm = e.target.closest('.kivun-assignment-form');
+		if (!asForm) { return; }
+		e.preventDefault();
+
+		var aErr = asForm.querySelector('.kivun-phone-error');
+		var media = asForm.querySelector('.kivun-as-media');
+		var start = asForm.querySelector('.kivun-as-start');
+		if (!media || !media.value) {
+			showError(aErr, 'יש לבחור מדיה.');
+			return;
+		}
+		if (!start || !start.value) {
+			showError(aErr, 'יש לבחור תאריך התחלה.');
+			return;
+		}
+		if (aErr) { aErr.style.display = 'none'; }
+
+		var campaign = asForm.querySelector('.kivun-as-campaign');
+		var label = asForm.querySelector('.kivun-as-label');
+		var end = asForm.querySelector('.kivun-as-end');
+
+		kivunPhonePost(asForm, {
+			action: 'kivun_save_phone_assignment',
+			nonce: kivun.nonce,
+			number_id: asForm.dataset.number,
+			campaign_id: campaign ? campaign.value : 0,
+			media: media.value,
+			label: label ? label.value.trim() : '',
+			starts_on: start.value,
+			ends_on: end ? end.value : ''
+		}, aErr);
+	});
+
+	document.addEventListener('click', function (e) {
+		var del = e.target.closest('.kivun-delete-phone, .kivun-delete-assignment');
+		if (!del) { return; }
+
+		var isNumber = del.classList.contains('kivun-delete-phone');
+		if (!window.confirm(isNumber ? kivun.i18n.confirm_delete_phone : kivun.i18n.confirm_delete_assignment)) { return; }
+
+		del.disabled = true;
+		post(params({
+			action: isNumber ? 'kivun_delete_phone' : 'kivun_delete_phone_assignment',
+			nonce: kivun.nonce,
+			id: del.dataset.id
+		})).then(function (res) {
+			if (res.success) {
+				var sel = isNumber
+					? '[data-phone-row="' + del.dataset.id + '"]'
+					: '[data-assignment-row="' + del.dataset.id + '"]';
+				var row = document.querySelector(sel);
+				if (row) { row.parentNode.removeChild(row); }
+			} else {
+				del.disabled = false;
+			}
+		}).catch(function () { del.disabled = false; });
+	});
+
 	// ── Campaigns and their tracking links ───────────────────────────────────────
 	function kivunCampClean(value) {
 		return String(value || '')
@@ -761,7 +862,8 @@
 	document.addEventListener('click', function (e) {
 		var copy = e.target.closest('.kivun-camp-copy');
 		if (!copy) { return; }
-		var field = copy.parentNode.querySelector('.kivun-camp-result, .kivun-camp-saved');
+		var field = copy.parentNode.querySelector('.kivun-camp-result, .kivun-camp-saved')
+			|| (copy.closest('.kivun-cc-card') || document).querySelector('textarea.kivun-camp-saved');
 		if (!field || !field.value) { return; }
 
 		var done = function () {
@@ -779,10 +881,11 @@
 
 	// Reload back onto the campaigns tab: tabs are switched in JS and a plain
 	// reload would land on the default tab, hiding what was just saved.
-	function kivunCampReload() {
-		try { window.sessionStorage.setItem('kivunConsoleTab', 'campaigns'); } catch (err) { /* private mode */ }
+	function kivunCampReload(tab) {
+		tab = tab || 'campaigns';
+		try { window.sessionStorage.setItem('kivunConsoleTab', tab); } catch (err) { /* private mode */ }
 		var next = new URL(window.location.href);
-		next.searchParams.set('kivun_tab', 'campaigns');
+		next.searchParams.set('kivun_tab', tab);
 		window.location.assign(next.toString());
 	}
 
