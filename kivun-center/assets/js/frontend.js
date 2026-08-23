@@ -1066,6 +1066,18 @@
 		if (dash.classList.contains('kivun-cc-console') && window.history && history.replaceState) {
 			try {
 				var url = new URL(window.location.href);
+
+				// Every other kivun_* parameter describes the tab being left:
+				// an edit in progress (kivun_group), a lead filter, a page
+				// number. Carrying them over means the next reload lands on a
+				// view nobody asked for — kivun_group in particular forces the
+				// console back to the publish form — or narrows a table to
+				// nothing. Switching tabs starts that tab clean.
+				Array.from(url.searchParams.keys()).forEach(function (key) {
+					if (key.indexOf('kivun_') === 0 && key !== 'kivun_tab') {
+						url.searchParams.delete(key);
+					}
+				});
 				url.searchParams.set('kivun_tab', name);
 				history.replaceState(null, '', url.toString());
 			} catch (err) { /* URL unsupported — the tab still switches. */ }

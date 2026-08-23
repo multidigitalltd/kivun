@@ -2466,6 +2466,13 @@ class Kivun_Content_Creator {
 	 * @return void
 	 */
 	private static function front_campaigns(): void {
+		// Links here are built from the page's own address. add_query_arg() with
+		// no base builds on the CURRENT one, which drags every stale parameter
+		// along: a leftover kivun_group forces the console back to the publish
+		// form, and a leftover filter narrows the leads table to nothing.
+		$page_url = (string) get_permalink();
+		$page_url = $page_url ? $page_url : home_url();
+
 		$campaigns   = Kivun_Campaigns::all();
 		$links_by_id = Kivun_Campaigns::links_by_campaign();
 		$link_counts = Kivun_Campaigns::link_lead_counts();
@@ -2618,7 +2625,8 @@ class Kivun_Content_Creator {
 															array(
 																'kivun_tab' => 'leads',
 																'kivun_ls'  => $link->utm_label,
-															)
+															),
+															$page_url
 														)
 													);
 													?>
