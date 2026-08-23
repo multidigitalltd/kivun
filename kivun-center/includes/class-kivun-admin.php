@@ -30,6 +30,7 @@ class Kivun_Admin {
 
 		// Applications & Registrations admin pages.
 		add_action( 'admin_menu', array( __CLASS__, 'admin_menu' ) );
+		add_action( 'admin_menu', array( __CLASS__, 'console_menus' ), 20 );
 
 		// WC product search for course metabox.
 		add_action( 'wp_ajax_kivun_search_products', array( __CLASS__, 'ajax_search_products' ) );
@@ -1135,6 +1136,39 @@ class Kivun_Admin {
 
 	/**
 	 * Register the applications and registrations admin submenu pages.
+	 *
+	 * @return void
+	 */
+	public static function console_menus(): void {
+		// Campaigns and call tracking live in the front-end console, but they are
+		// management screens rather than content, so they belong in wp-admin too
+		// — reachable without knowing which page carries the shortcode. They hang
+		// off the Kivun Center menu, which is registered by another class at the
+		// same priority, so this runs later to be sure the parent exists.
+		if ( Kivun_Campaigns::can_manage() ) {
+			add_submenu_page(
+				'kivun-settings',
+				__( 'קמפיינים', 'kivun' ),
+				__( 'קמפיינים', 'kivun' ),
+				'edit_others_posts',
+				'kivun-campaigns',
+				array( 'Kivun_Content_Creator', 'admin_campaigns_page' )
+			);
+		}
+		if ( Kivun_Phones::can_manage() ) {
+			add_submenu_page(
+				'kivun-settings',
+				__( 'מספרי מעקב', 'kivun' ),
+				__( 'מספרי מעקב', 'kivun' ),
+				'edit_others_posts',
+				'kivun-calls',
+				array( 'Kivun_Content_Creator', 'admin_calls_page' )
+			);
+		}
+	}
+
+	/**
+	 * Register the plugin's admin list screens and shortcuts.
 	 *
 	 * @return void
 	 */

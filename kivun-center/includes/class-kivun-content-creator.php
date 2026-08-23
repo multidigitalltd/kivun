@@ -2544,6 +2544,69 @@ class Kivun_Content_Creator {
 	}
 
 	/**
+	 * Load what the console's markup needs, for an admin screen showing it.
+	 *
+	 * The front-end bundle is registered on wp_enqueue_scripts, which does not
+	 * run in wp-admin, so the same files and the same `kivun` object are set up
+	 * here rather than reimplementing either.
+	 *
+	 * @return void
+	 */
+	private static function enqueue_console_assets(): void {
+		wp_enqueue_style( 'kivun-frontend', KIVUN_URL . 'assets/css/' . Kivun_Core::asset( 'frontend', 'css' ), array(), KIVUN_VERSION );
+		wp_enqueue_script( 'kivun-frontend', KIVUN_URL . 'assets/js/' . Kivun_Core::asset( 'frontend', 'js' ), array(), KIVUN_VERSION, true );
+		wp_localize_script(
+			'kivun-frontend',
+			'kivun',
+			array(
+				'ajax_url' => admin_url( 'admin-ajax.php' ),
+				'nonce'    => wp_create_nonce( 'kivun_nonce' ),
+				'i18n'     => array(
+					'sending'                   => __( 'שולח...', 'kivun' ),
+					'saved'                     => __( '✓ נשמר', 'kivun' ),
+					'error_generic'             => __( 'אירעה שגיאה, נסה שוב.', 'kivun' ),
+					'confirm_delete_campaign'   => __( 'למחוק את הקמפיין וכל הקישורים שתחתיו? הפניות שהגיעו דרכם יישמרו.', 'kivun' ),
+					'confirm_delete_link'       => __( 'למחוק את הקישור? הפניות שהגיעו דרכו יישמרו.', 'kivun' ),
+					'confirm_delete_phone'      => __( 'להסיר את המספר ואת כל השיוכים שלו? השיחות שנרשמו יישמרו.', 'kivun' ),
+					'confirm_delete_assignment' => __( 'למחוק את השיוך? השיחות שנרשמו בתקופה יישארו ללא שיוך לקמפיין.', 'kivun' ),
+				),
+			)
+		);
+	}
+
+	/**
+	 * The campaigns workspace, as a wp-admin page.
+	 *
+	 * @return void
+	 */
+	public static function admin_campaigns_page(): void {
+		if ( ! Kivun_Campaigns::can_manage() ) {
+			wp_die( esc_html__( 'אין לך הרשאה לצפות בעמוד הזה.', 'kivun' ) );
+		}
+
+		self::enqueue_console_assets();
+		echo '<div class="wrap"><div class="kivun-cc-console" dir="rtl">';
+		self::front_campaigns();
+		echo '</div></div>';
+	}
+
+	/**
+	 * The call-tracking workspace, as a wp-admin page.
+	 *
+	 * @return void
+	 */
+	public static function admin_calls_page(): void {
+		if ( ! Kivun_Phones::can_manage() ) {
+			wp_die( esc_html__( 'אין לך הרשאה לצפות בעמוד הזה.', 'kivun' ) );
+		}
+
+		self::enqueue_console_assets();
+		echo '<div class="wrap"><div class="kivun-cc-console" dir="rtl">';
+		self::front_calls();
+		echo '</div></div>';
+	}
+
+	/**
 	 * Render the call-tracking workspace: the pool of virtual numbers, what
 	 * each is currently advertising, and the history of what it advertised
 	 * before — with the calls each period brought in.
