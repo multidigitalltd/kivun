@@ -2915,7 +2915,9 @@ class Kivun_Content_Creator {
 		);
 
 		$can_delete_rows = current_user_can( 'manage_options' );
-		$read_only       = self::is_leads_only();
+		// Notes are internal CRM commentary, so they stay with the editors; the
+		// status is the one thing a leads reader may change.
+		$notes_read_only = self::is_leads_only();
 
 		// Base args preserved across filtering and paging.
 		$base_args = array( 'kivun_tab' => 'leads' );
@@ -3085,7 +3087,7 @@ class Kivun_Content_Creator {
 							<td><?php echo esc_html( (string) ( $r->city ?? '' ) ); ?></td>
 							<td><?php echo esc_html( empty( $r->marketing_consent ) ? '—' : '✓' ); ?></td>
 							<td>
-								<?php if ( $read_only ) : ?>
+								<?php if ( $notes_read_only ) : ?>
 									<?php echo esc_html( (string) ( $r->notes ?? '' ) ); ?>
 								<?php else : ?>
 									<?php
@@ -3097,17 +3099,13 @@ class Kivun_Content_Creator {
 							</td>
 							<td class="kivun-cc-date"><?php echo esc_html( wp_date( 'd/m/Y H:i', strtotime( $r->created_at ) ) ); ?></td>
 							<td>
-								<?php if ( $read_only ) : ?>
-									<span class="kivun-status kivun-status--<?php echo esc_attr( (string) $r->status ); ?>">
-										<?php echo esc_html( $statuses[ $r->status ] ?? (string) $r->status ); ?>
-									</span>
-								<?php else : ?>
-									<?php
-									// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Returns pre-escaped HTML.
-									echo Kivun_Admin::status_select( 'registrations', (int) $r->id, (string) $r->status, $statuses );
-									?>
-									<span class="kivun-saved-indicator" role="status" aria-live="polite" style="display:none"></span>
-								<?php endif; ?>
+								<?php
+								// Everyone who can see the leads can move one along;
+								// tracking progress is the point of the table.
+								// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Returns pre-escaped HTML.
+								echo Kivun_Admin::status_select( 'registrations', (int) $r->id, (string) $r->status, $statuses );
+								?>
+								<span class="kivun-saved-indicator" role="status" aria-live="polite" style="display:none"></span>
 							</td>
 							<?php if ( $can_delete_rows ) : ?>
 								<td>
