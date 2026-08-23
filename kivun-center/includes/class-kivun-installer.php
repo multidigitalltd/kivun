@@ -349,6 +349,7 @@ class Kivun_Installer {
 	 * - kivun_employer:      a business — posts and manages its OWN jobs.
 	 * - kivun_jobs_manager:  manages ALL jobs and applications on the board, but
 	 *                        has no access to any other part of the site.
+	 * - kivun_leads_viewer:  reads the leads table and nothing else.
 	 *
 	 * @return void
 	 */
@@ -360,6 +361,19 @@ class Kivun_Installer {
 				array( 'read' => true )
 			);
 		}
+
+		// A reader for the leads table and nothing else. It deliberately holds
+		// no editing capability: the status and note handlers already require
+		// edit_posts, so this role is refused by them without a second check.
+		remove_role( 'kivun_leads_viewer' );
+		add_role(
+			'kivun_leads_viewer',
+			__( 'צפייה בלידים', 'kivun' ),
+			array(
+				'read'             => true,
+				'kivun_view_leads' => true,
+			)
+		);
 
 		// Re-create so capability changes propagate on upgrade.
 		remove_role( 'kivun_jobs_manager' );

@@ -1277,7 +1277,63 @@ class Kivun_Content_Creator {
 	 * @return bool
 	 */
 	public static function can_manage_leads(): bool {
-		return current_user_can( 'edit_others_posts' ) || current_user_can( 'manage_options' );
+		if ( current_user_can( 'edit_others_posts' ) || current_user_can( 'manage_options' ) ) {
+			return true;
+		}
+		// phpcs:ignore WordPress.WP.Capabilities.Unknown -- Custom plugin capability.
+		return current_user_can( 'kivun_view_leads' );
+	}
+
+	/**
+	 * Split a lead's stored source into where it came from and its UTM parts.
+	 *
+	 * Kivun_Utm appends "UTM: source / medium / campaign / content" to the end
+	 * of whatever the form recorded, so the two are separated by the last
+	 * occurrence of that marker rather than by position.
+	 *
+	 * @param string $source The stored source column.
+	 * @return array{origin:string,source:string,medium:string,campaign:string,content:string}
+	 */
+	public static function parse_source( string $source ): array {
+		$out = array(
+			'origin'   => trim( $source ),
+			'source'   => '',
+			'medium'   => '',
+			'campaign' => '',
+			'content'  => '',
+		);
+
+		$at = mb_strpos( $source, 'UTM: ' );
+		if ( false === $at ) {
+			return $out;
+		}
+
+		$out['origin'] = trim( rtrim( trim( mb_substr( $source, 0, $at ) ), '·' ) );
+		$parts         = array_map( 'trim', explode( '/', mb_substr( $source, $at + 5 ) ) );
+
+		foreach ( array( 'source', 'medium', 'campaign', 'content' ) as $i => $key ) {
+			if ( isset( $parts[ $i ] ) && '' !== $parts[ $i ] ) {
+				$out[ $key ] = $parts[ $i ];
+			}
+		}
+
+		return $out;
+	}
+
+	/**
+	 * Whether the current user may read the leads and nothing else.
+	 *
+	 * The console is otherwise a content editor; this role has no business in
+	 * it beyond the table, so every other tab is withheld rather than shown
+	 * and refused.
+	 *
+	 * @return bool
+	 */
+	public static function is_leads_only(): bool {
+		// phpcs:ignore WordPress.WP.Capabilities.Unknown -- Custom plugin capability.
+		return current_user_can( 'kivun_view_leads' )
+			&& ! current_user_can( 'edit_others_posts' )
+			&& ! current_user_can( 'manage_options' );
 	}
 
 	/**
@@ -1293,8 +1349,12 @@ class Kivun_Content_Creator {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only tab state.
 		$tab = isset( $_GET['kivun_tab'] ) ? sanitize_key( wp_unslash( $_GET['kivun_tab'] ) ) : '';
 
+		// A leads reader has one tab, so nothing else can be reached — not by a
+		// stale URL and not by an edit link kept from a previous session.
+		$leads_only = self::is_leads_only();
+
 		// Editing a specific group always lands on the form.
-		if ( '' !== $group ) {
+		if ( '' !== $group && ! $leads_only ) {
 			$tab = 'form';
 		}
 		$show_leads = self::can_manage_leads();
@@ -1304,6 +1364,12 @@ class Kivun_Content_Creator {
 		$show_jobs = Kivun_Employer::can_manage_all();
 
 		$show_camp = Kivun_Campaigns::can_manage();
+
+		if ( $leads_only ) {
+			$tab       = 'leads';
+			$show_jobs = false;
+			$show_camp = false;
+		}
 
 		if (
 			! in_array( $tab, array( 'form', 'library', 'leads', 'jobs', 'campaigns' ), true ) ||
@@ -1320,7 +1386,7 @@ class Kivun_Content_Creator {
 		$stats      = self::console_stats( $show_leads, $show_jobs );
 		$user       = wp_get_current_user();
 
-		$console_tabs = array(
+		$console_tabs = $leads_only ? array() : array(
 			'form'    => array(
 				'label' => __( 'פרסום תוכן', 'kivun' ),
 				'icon'  => 'publish',
@@ -1426,13 +1492,15 @@ class Kivun_Content_Creator {
 				<?php endforeach; ?>
 			</div>
 
-			<section class="kivun-tab-panel <?php echo 'form' === $tab ? 'is-active' : ''; ?>" data-panel="form" id="kivun-ccpanel-form" role="tabpanel" aria-labelledby="kivun-cctab-form" tabindex="0" <?php echo 'form' === $tab ? '' : 'hidden'; ?>>
-				<?php self::front_form(); ?>
-			</section>
+			<?php if ( ! $leads_only ) : ?>
+				<section class="kivun-tab-panel <?php echo 'form' === $tab ? 'is-active' : ''; ?>" data-panel="form" id="kivun-ccpanel-form" role="tabpanel" aria-labelledby="kivun-cctab-form" tabindex="0" <?php echo 'form' === $tab ? '' : 'hidden'; ?>>
+					<?php self::front_form(); ?>
+				</section>
 
-			<section class="kivun-tab-panel <?php echo 'library' === $tab ? 'is-active' : ''; ?>" data-panel="library" id="kivun-ccpanel-library" role="tabpanel" aria-labelledby="kivun-cctab-library" tabindex="0" <?php echo 'library' === $tab ? '' : 'hidden'; ?>>
-				<?php self::front_library( $page_url, $can_delete ); ?>
-			</section>
+				<section class="kivun-tab-panel <?php echo 'library' === $tab ? 'is-active' : ''; ?>" data-panel="library" id="kivun-ccpanel-library" role="tabpanel" aria-labelledby="kivun-cctab-library" tabindex="0" <?php echo 'library' === $tab ? '' : 'hidden'; ?>>
+					<?php self::front_library( $page_url, $can_delete ); ?>
+				</section>
+			<?php endif; ?>
 
 			<?php if ( $show_leads ) : ?>
 				<section class="kivun-tab-panel <?php echo 'leads' === $tab ? 'is-active' : ''; ?>" data-panel="leads" id="kivun-ccpanel-leads" role="tabpanel" aria-labelledby="kivun-cctab-leads" tabindex="0" <?php echo 'leads' === $tab ? '' : 'hidden'; ?>>
@@ -2847,6 +2915,7 @@ class Kivun_Content_Creator {
 		);
 
 		$can_delete_rows = current_user_can( 'manage_options' );
+		$read_only       = self::is_leads_only();
 
 		// Base args preserved across filtering and paging.
 		$base_args = array( 'kivun_tab' => 'leads' );
@@ -2956,6 +3025,7 @@ class Kivun_Content_Creator {
 						<tr>
 							<th scope="col"><?php esc_html_e( 'שם', 'kivun' ); ?></th>
 							<th scope="col"><?php esc_html_e( 'תוכן', 'kivun' ); ?></th>
+							<th scope="col"><?php esc_html_e( 'מקור (UTM)', 'kivun' ); ?></th>
 							<th scope="col"><?php esc_html_e( 'סוג', 'kivun' ); ?></th>
 							<th scope="col"><?php esc_html_e( 'יצירת קשר', 'kivun' ); ?></th>
 							<th scope="col"><?php esc_html_e( 'עיר', 'kivun' ); ?></th>
@@ -2982,8 +3052,27 @@ class Kivun_Content_Creator {
 								<?php else : ?>
 									<?php echo esc_html( $row_title ); ?>
 								<?php endif; ?>
-								<?php if ( ! empty( $r->source ) ) : ?>
-									<span class="kivun-cc-source"><?php echo esc_html( (string) $r->source ); ?></span>
+								<?php
+								$src = self::parse_source( (string) ( $r->source ?? '' ) );
+								if ( '' !== $src['origin'] ) :
+									?>
+									<span class="kivun-cc-source"><?php echo esc_html( $src['origin'] ); ?></span>
+								<?php endif; ?>
+							</td>
+							<td class="kivun-cc-utm">
+								<?php if ( '' !== $src['source'] ) : ?>
+									<span class="kivun-cc-badge"><?php echo esc_html( $src['source'] ); ?></span>
+									<?php if ( '' !== $src['medium'] ) : ?>
+										<span class="kivun-cc-badge"><?php echo esc_html( $src['medium'] ); ?></span>
+									<?php endif; ?>
+									<?php if ( '' !== $src['campaign'] ) : ?>
+										<span class="kivun-cc-source">
+											<?php echo esc_html( $src['campaign'] ); ?>
+											<?php echo '' !== $src['content'] ? esc_html( ' · ' . $src['content'] ) : ''; ?>
+										</span>
+									<?php endif; ?>
+								<?php else : ?>
+									<span class="kivun-muted" aria-hidden="true">—</span>
 								<?php endif; ?>
 							</td>
 							<td><span class="kivun-cc-badge"><?php echo esc_html( $type_labels[ $r->type ?? 'registration' ] ?? (string) $r->type ); ?></span></td>
@@ -2996,19 +3085,29 @@ class Kivun_Content_Creator {
 							<td><?php echo esc_html( (string) ( $r->city ?? '' ) ); ?></td>
 							<td><?php echo esc_html( empty( $r->marketing_consent ) ? '—' : '✓' ); ?></td>
 							<td>
-								<?php
-								// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Returns pre-escaped HTML.
-								echo Kivun_Admin::notes_input( 'registrations', (int) $r->id, (string) ( $r->notes ?? '' ) );
-								?>
-								<span class="kivun-saved-indicator" role="status" aria-live="polite" style="display:none"></span>
+								<?php if ( $read_only ) : ?>
+									<?php echo esc_html( (string) ( $r->notes ?? '' ) ); ?>
+								<?php else : ?>
+									<?php
+									// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Returns pre-escaped HTML.
+									echo Kivun_Admin::notes_input( 'registrations', (int) $r->id, (string) ( $r->notes ?? '' ) );
+									?>
+									<span class="kivun-saved-indicator" role="status" aria-live="polite" style="display:none"></span>
+								<?php endif; ?>
 							</td>
 							<td class="kivun-cc-date"><?php echo esc_html( wp_date( 'd/m/Y H:i', strtotime( $r->created_at ) ) ); ?></td>
 							<td>
-								<?php
-								// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Returns pre-escaped HTML.
-								echo Kivun_Admin::status_select( 'registrations', (int) $r->id, (string) $r->status, $statuses );
-								?>
-								<span class="kivun-saved-indicator" role="status" aria-live="polite" style="display:none"></span>
+								<?php if ( $read_only ) : ?>
+									<span class="kivun-status kivun-status--<?php echo esc_attr( (string) $r->status ); ?>">
+										<?php echo esc_html( $statuses[ $r->status ] ?? (string) $r->status ); ?>
+									</span>
+								<?php else : ?>
+									<?php
+									// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Returns pre-escaped HTML.
+									echo Kivun_Admin::status_select( 'registrations', (int) $r->id, (string) $r->status, $statuses );
+									?>
+									<span class="kivun-saved-indicator" role="status" aria-live="polite" style="display:none"></span>
+								<?php endif; ?>
 							</td>
 							<?php if ( $can_delete_rows ) : ?>
 								<td>
