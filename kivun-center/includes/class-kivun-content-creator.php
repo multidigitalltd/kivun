@@ -2612,7 +2612,7 @@ class Kivun_Content_Creator {
 							<div class="kivun-camp-metrics">
 								<?php if ( $current ) : ?>
 									<span class="kivun-cc-badge kivun-camp-total">
-										<?php echo esc_html( $media[ $current->media ] ?? $current->media ); ?>
+										<?php echo esc_html( Kivun_Phones::media_label( (string) $current->media ) ); ?>
 										<?php echo $current->campaign_label ? esc_html( ' · ' . $current->campaign_label ) : ''; ?>
 									</span>
 								<?php else : ?>
@@ -2661,7 +2661,7 @@ class Kivun_Content_Creator {
 													: esc_html__( 'פעיל', 'kivun' );
 												?>
 											</td>
-											<td><span class="kivun-cc-badge"><?php echo esc_html( $media[ $row->media ] ?? $row->media ); ?></span></td>
+											<td><span class="kivun-cc-badge"><?php echo esc_html( Kivun_Phones::media_label( (string) $row->media ) ); ?></span></td>
 											<td>
 												<?php echo esc_html( $row->campaign_label ? $row->campaign_label : '—' ); ?>
 												<?php if ( $row->label ) : ?>
@@ -2696,12 +2696,8 @@ class Kivun_Content_Creator {
 								<div class="kivun-form-grid">
 									<div class="kivun-form-row">
 										<label><?php esc_html_e( 'מדיה *', 'kivun' ); ?></label>
-										<select class="kivun-cc-input kivun-as-media">
-											<option value=""><?php esc_html_e( '— בחר/י —', 'kivun' ); ?></option>
-											<?php foreach ( $media as $mk => $ml ) : ?>
-												<option value="<?php echo esc_attr( $mk ); ?>"><?php echo esc_html( $ml ); ?></option>
-											<?php endforeach; ?>
-										</select>
+										<input type="text" class="kivun-cc-input kivun-as-media" list="kivun-media-list" autocomplete="off" placeholder="<?php esc_attr_e( 'למשל: עיתון', 'kivun' ); ?>">
+										<p class="kivun-field-hint"><?php esc_html_e( 'טקסט חופשי. ההצעות הן קיצור דרך — כדאי לכתוב אותה מדיה באותו נוסח, אחרת היא תתפצל לשתי שורות בדוח.', 'kivun' ); ?></p>
 									</div>
 									<div class="kivun-form-row">
 										<label><?php esc_html_e( 'קמפיין', 'kivun' ); ?></label>
@@ -2736,6 +2732,12 @@ class Kivun_Content_Creator {
 					</section>
 				<?php endforeach; ?>
 			<?php endif; ?>
+
+			<datalist id="kivun-media-list">
+				<?php foreach ( $media as $suggestion ) : ?>
+					<option value="<?php echo esc_attr( $suggestion ); ?>"></option>
+				<?php endforeach; ?>
+			</datalist>
 
 			<div class="kivun-cc-card">
 				<label class="kivun-cc-label"><?php esc_html_e( 'חיבור ל-015', 'kivun' ); ?></label>

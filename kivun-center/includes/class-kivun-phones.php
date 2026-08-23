@@ -51,16 +51,39 @@ class Kivun_Phones {
 	}
 
 	/**
-	 * The advertising media a number can be published in.
+	 * Suggested advertising media, offered as autocomplete rather than as a
+	 * closed list — the medium is a label on a report, not a key anything is
+	 * matched by, so an unlisted one should not be a dead end.
 	 *
-	 * A managed list rather than free text: "עיתון בשבע" and "בשבע" typed on
-	 * different days would split one channel across two rows in every report,
-	 * and there is no way to merge them afterwards.
-	 *
-	 * @return array<string,string>
+	 * @return array<int,string>
 	 */
 	public static function media(): array {
 		return array(
+			__( 'עיתון', 'kivun' ),
+			__( 'רדיו', 'kivun' ),
+			__( 'שלט חוצות', 'kivun' ),
+			__( 'פלייר / חלוקה', 'kivun' ),
+			__( 'דיוור לתיבות', 'kivun' ),
+			__( 'מגזין / עלון', 'kivun' ),
+			__( 'פרסום על אוטובוסים', 'kivun' ),
+			__( 'שילוט במקום', 'kivun' ),
+			__( 'פרסום דיגיטלי', 'kivun' ),
+			__( 'מדריך טלפונים', 'kivun' ),
+			__( 'חסות / שיתוף פעולה', 'kivun' ),
+		);
+	}
+
+	/**
+	 * How a stored medium should read.
+	 *
+	 * Assignments saved before the field was free text hold a key rather than
+	 * a label, so those are translated back; anything else is shown as typed.
+	 *
+	 * @param string $stored The stored value.
+	 * @return string
+	 */
+	public static function media_label( string $stored ): string {
+		$legacy = array(
 			'newspaper'   => __( 'עיתון', 'kivun' ),
 			'radio'       => __( 'רדיו', 'kivun' ),
 			'billboard'   => __( 'שלט חוצות', 'kivun' ),
@@ -74,6 +97,7 @@ class Kivun_Phones {
 			'sponsorship' => __( 'חסות / שיתוף פעולה', 'kivun' ),
 			'other'       => __( 'אחר', 'kivun' ),
 		);
+		return $legacy[ $stored ] ?? $stored;
 	}
 
 	/**
@@ -293,7 +317,7 @@ class Kivun_Phones {
 
 		$number_id   = absint( wp_unslash( $_POST['number_id'] ?? 0 ) );
 		$campaign_id = absint( wp_unslash( $_POST['campaign_id'] ?? 0 ) );
-		$media       = sanitize_key( wp_unslash( $_POST['media'] ?? '' ) );
+		$media       = trim( preg_replace( '/\s+/u', ' ', sanitize_text_field( wp_unslash( $_POST['media'] ?? '' ) ) ) ?? '' );
 		$label       = sanitize_text_field( wp_unslash( $_POST['label'] ?? '' ) );
 		$starts      = self::as_date( sanitize_text_field( wp_unslash( $_POST['starts_on'] ?? '' ) ) );
 		$ends        = self::as_date( sanitize_text_field( wp_unslash( $_POST['ends_on'] ?? '' ) ) );
@@ -302,8 +326,8 @@ class Kivun_Phones {
 		if ( ! $number_id || '' === $starts ) {
 			wp_send_json_error( array( 'message' => __( 'יש לבחור מספר ותאריך התחלה.', 'kivun' ) ) );
 		}
-		if ( ! isset( self::media()[ $media ] ) ) {
-			wp_send_json_error( array( 'message' => __( 'יש לבחור מדיה.', 'kivun' ) ) );
+		if ( '' === $media ) {
+			wp_send_json_error( array( 'message' => __( 'יש להזין מדיה.', 'kivun' ) ) );
 		}
 		if ( '' !== $ends && $ends < $starts ) {
 			wp_send_json_error( array( 'message' => __( 'תאריך הסיום מוקדם מתאריך ההתחלה.', 'kivun' ) ) );
