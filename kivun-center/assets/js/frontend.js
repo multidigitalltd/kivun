@@ -786,6 +786,43 @@
 		}).catch(function () { del.disabled = false; });
 	});
 
+	document.addEventListener('click', function (e) {
+		var btn = e.target.closest('.kivun-phone-import-btn');
+		if (!btn) { return; }
+
+		var wrap = btn.closest('.kivun-phone-import');
+		var file = wrap && wrap.querySelector('.kivun-phone-file');
+		var status = wrap && wrap.querySelector('.kivun-phone-import-status');
+		if (!file || !file.files || !file.files.length) {
+			if (status) { status.textContent = 'יש לבחור קובץ.'; }
+			return;
+		}
+
+		// A file upload cannot go as URL-encoded parameters.
+		var data = new FormData();
+		data.append('action', 'kivun_import_phones');
+		data.append('nonce', kivun.nonce);
+		data.append('file', file.files[0]);
+
+		btn.disabled = true;
+		if (status) { status.textContent = kivun.i18n.sending; }
+
+		post(data).then(function (res) {
+			btn.disabled = false;
+			if (res.success) {
+				if (status) { status.textContent = res.data.message; }
+				// Only reload when something actually landed, so the message
+				// stays readable when nothing did.
+				if (res.data.added) { setTimeout(function () { kivunCampReload('calls'); }, 1200); }
+			} else if (status) {
+				status.textContent = (res.data && res.data.message) || kivun.i18n.error_generic;
+			}
+		}).catch(function () {
+			btn.disabled = false;
+			if (status) { status.textContent = kivun.i18n.error_generic; }
+		});
+	});
+
 	// ── Campaigns and their tracking links ───────────────────────────────────────
 	function kivunCampClean(value) {
 		return String(value || '')

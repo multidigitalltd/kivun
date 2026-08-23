@@ -2647,6 +2647,18 @@ class Kivun_Content_Creator {
 						<button type="submit" class="kivun-cc-btn"><?php esc_html_e( 'הוספה', 'kivun' ); ?></button>
 					</div>
 				</form>
+
+				<div class="kivun-phone-import">
+					<label class="kivun-cc-sub"><?php esc_html_e( 'או ייבוא מקובץ CSV', 'kivun' ); ?></label>
+					<p class="kivun-field-hint">
+						<?php esc_html_e( 'עמודה אחת עם המספר, ואם רוצים עמודה נוספת עם כינוי. שורת כותרת, סדר העמודות וקידוד עברית מזוהים לבד. מספרים שכבר קיימים יידלגו.', 'kivun' ); ?>
+					</p>
+					<div class="kivun-camp-out">
+						<input type="file" class="kivun-cc-input kivun-phone-file" accept=".csv,text/csv,text/plain">
+						<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost kivun-phone-import-btn"><?php esc_html_e( 'ייבוא', 'kivun' ); ?></button>
+					</div>
+					<span class="kivun-cc-wa-status kivun-phone-import-status" role="status" aria-live="polite"></span>
+				</div>
 			</details>
 
 			<?php if ( ! $numbers ) : ?>

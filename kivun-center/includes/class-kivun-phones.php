@@ -36,6 +36,7 @@ class Kivun_Phones {
 
 		add_action( 'wp_ajax_kivun_save_phone', array( __CLASS__, 'ajax_save_number' ) );
 		add_action( 'wp_ajax_kivun_delete_phone', array( __CLASS__, 'ajax_delete_number' ) );
+		add_action( 'wp_ajax_kivun_import_phones', array( __CLASS__, 'ajax_import' ) );
 		add_action( 'wp_ajax_kivun_save_phone_assignment', array( __CLASS__, 'ajax_save_assignment' ) );
 		add_action( 'wp_ajax_kivun_delete_phone_assignment', array( __CLASS__, 'ajax_delete_assignment' ) );
 	}
@@ -279,6 +280,174 @@ class Kivun_Phones {
 		);
 
 		wp_send_json_success( array( 'message' => __( 'המספר נוסף.', 'kivun' ) ) );
+	}
+
+	/**
+	 * Import numbers from a CSV file.
+	 *
+	 * @return void
+	 */
+	public static function ajax_import(): void {
+		self::guard();
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- self::guard() verifies the nonce.
+		if ( empty( $_FILES['file']['tmp_name'] ) ) {
+			wp_send_json_error( array( 'message' => __( 'לא נבחר קובץ.', 'kivun' ) ) );
+		}
+
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized, WordPress.Security.NonceVerification.Missing -- Path from PHP's own upload handling.
+		$tmp = $_FILES['file']['tmp_name'];
+		if ( ! is_uploaded_file( $tmp ) ) {
+			wp_send_json_error( array( 'message' => __( 'העלאת הקובץ נכשלה.', 'kivun' ) ) );
+		}
+
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading an upload, not a remote file.
+		$raw = (string) file_get_contents( $tmp );
+		if ( '' === trim( $raw ) ) {
+			wp_send_json_error( array( 'message' => __( 'הקובץ ריק.', 'kivun' ) ) );
+		}
+
+		$rows = self::parse_csv( $raw );
+		if ( ! $rows ) {
+			wp_send_json_error( array( 'message' => __( 'לא נמצאו שורות בקובץ.', 'kivun' ) ) );
+		}
+
+		global $wpdb;
+		$added   = 0;
+		$skipped = 0;
+		$invalid = 0;
+
+		foreach ( $rows as $cells ) {
+			// The number is whichever cell looks like one, so a file with an
+			// index column, or with the label first, still imports.
+			$number = '';
+			$label  = '';
+			foreach ( $cells as $cell ) {
+				$digits = self::normalise( $cell );
+				if ( '' === $number && mb_strlen( $digits ) >= 7 ) {
+					$number = $digits;
+					continue;
+				}
+				// A label is a cell with words in it. Anything else in the row —
+				// a row number, a blank spacer column — is not one.
+				if ( '' === $label && preg_match( '/\p{L}/u', $cell ) ) {
+					$label = mb_substr( trim( $cell ), 0, 190 );
+				}
+			}
+
+			if ( '' === $number ) {
+				++$invalid;
+				continue;
+			}
+
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$exists = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$wpdb->prefix}kivun_phone_numbers WHERE number = %s", $number ) );
+			if ( $exists ) {
+				++$skipped;
+				continue;
+			}
+
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$wpdb->insert(
+				$wpdb->prefix . 'kivun_phone_numbers',
+				array(
+					'number' => $number,
+					'label'  => $label,
+				),
+				array( '%s', '%s' )
+			);
+			++$added;
+		}
+
+		wp_send_json_success(
+			array(
+				'message' => sprintf(
+					/* translators: 1: added, 2: skipped, 3: invalid. */
+					__( 'יובאו %1$d מספרים. %2$d כבר היו קיימים, %3$d שורות לא הכילו מספר.', 'kivun' ),
+					$added,
+					$skipped,
+					$invalid
+				),
+				'added'   => $added,
+			)
+		);
+	}
+
+	/**
+	 * Convert a Hebrew CSV to UTF-8.
+	 *
+	 * Not every mbstring build knows the Windows-1255 name — asking it for one
+	 * it does not have is a fatal error on PHP 8 — so the encodings it reports
+	 * are tried first and iconv is the fallback. If neither can do it the bytes
+	 * are returned unchanged: the numbers are ASCII digits and still import
+	 * correctly, and only the labels come through garbled.
+	 *
+	 * @param string $raw The file's bytes.
+	 * @return string
+	 */
+	private static function to_utf8( string $raw ): string {
+		$known = mb_list_encodings();
+
+		foreach ( array( 'Windows-1255', 'CP1255', 'ISO-8859-8' ) as $encoding ) {
+			if ( in_array( $encoding, $known, true ) ) {
+				$converted = mb_convert_encoding( $raw, 'UTF-8', $encoding );
+				if ( is_string( $converted ) && mb_check_encoding( $converted, 'UTF-8' ) ) {
+					return $converted;
+				}
+			}
+		}
+
+		if ( function_exists( 'iconv' ) ) {
+			$converted = @iconv( 'CP1255', 'UTF-8//IGNORE', $raw ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- An unsupported charset warns; the fallback below handles it.
+			if ( is_string( $converted ) && '' !== $converted ) {
+				return $converted;
+			}
+		}
+
+		return $raw;
+	}
+
+	/**
+	 * Read a CSV export into rows of cells.
+	 *
+	 * Written against what spreadsheets actually produce rather than the ideal
+	 * file: Excel on a Hebrew system writes windows-1255 and separates with a
+	 * semicolon, and its UTF-8 export carries a byte-order mark that would
+	 * otherwise become part of the first value.
+	 *
+	 * @param string $raw The uploaded file's contents.
+	 * @return array<int,array<int,string>>
+	 */
+	public static function parse_csv( string $raw ): array {
+		$raw = preg_replace( '/^\xEF\xBB\xBF/', '', $raw ) ?? $raw;
+
+		if ( ! mb_check_encoding( $raw, 'UTF-8' ) ) {
+			$raw = self::to_utf8( $raw );
+		}
+
+		$lines = preg_split( '/\r\n|\r|\n/', $raw );
+		$lines = is_array( $lines ) ? $lines : array();
+		$lines = array_values( array_filter( $lines, static fn( $line ) => '' !== trim( (string) $line ) ) );
+		if ( ! $lines ) {
+			return array();
+		}
+
+		// Whichever separator appears more often across the file is the one in
+		// use; guessing from the first line alone misreads a header.
+		$sample    = implode( "\n", array_slice( $lines, 0, 5 ) );
+		$delimiter = substr_count( $sample, ';' ) > substr_count( $sample, ',' ) ? ';' : ',';
+
+		$rows = array();
+		foreach ( $lines as $line ) {
+			$cells = str_getcsv( (string) $line, $delimiter );
+			if ( $cells ) {
+				$rows[] = array_map( static fn( $cell ) => sanitize_text_field( (string) $cell ), $cells );
+			}
+		}
+
+		// A header row holds no number, so it falls out on its own when the
+		// rows are scanned — nothing has to be assumed about its wording.
+		return $rows;
 	}
 
 	/**
