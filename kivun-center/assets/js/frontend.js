@@ -685,6 +685,70 @@
 		share.href = kivunWaShareLink(field.value);
 	});
 
+	// ── Leads access — invite a viewer ───────────────────────────────────────────
+	document.addEventListener('submit', function (e) {
+		var form = e.target.closest('.kivun-viewer-form');
+		if (!form) { return; }
+		e.preventDefault();
+
+		var err = form.querySelector('.kivun-viewer-error');
+		var status = form.querySelector('.kivun-viewer-status');
+		var emailEl = form.querySelector('.kivun-viewer-email');
+		var nameEl = form.querySelector('.kivun-viewer-name');
+
+		if (!emailEl || !emailEl.value.trim()) {
+			showError(err, 'יש להזין כתובת אימייל.');
+			return;
+		}
+		if (err) { err.style.display = 'none'; }
+
+		var btn = form.querySelector('button[type="submit"]');
+		if (btn) {
+			if (btn.disabled) { return; }
+			btn.disabled = true;
+		}
+		if (status) { status.textContent = kivun.i18n.sending; }
+
+		post(params({
+			action: 'kivun_add_leads_viewer',
+			nonce: kivun.nonce,
+			email: emailEl.value.trim(),
+			name: nameEl ? nameEl.value.trim() : ''
+		})).then(function (res) {
+			if (btn) { btn.disabled = false; }
+			if (res.success) {
+				if (status) { status.textContent = res.data.message; }
+				// Reload so the new viewer appears in the list below.
+				setTimeout(function () { kivunCampReload('leads'); }, 1500);
+			} else {
+				if (status) { status.textContent = ''; }
+				showError(err, (res.data && res.data.message) || kivun.i18n.error_generic);
+			}
+		}).catch(function () {
+			if (btn) { btn.disabled = false; }
+			if (status) { status.textContent = ''; }
+			showError(err, kivun.i18n.error_generic);
+		});
+	});
+
+	document.addEventListener('click', function (e) {
+		var del = e.target.closest('.kivun-remove-viewer');
+		if (!del) { return; }
+		if (!window.confirm(kivun.i18n.confirm_remove_viewer)) { return; }
+
+		del.disabled = true;
+		post(params({ action: 'kivun_remove_leads_viewer', nonce: kivun.nonce, user_id: del.dataset.id }))
+			.then(function (res) {
+				if (res.success) {
+					var row = document.querySelector('[data-viewer-row="' + del.dataset.id + '"]');
+					if (row) { row.parentNode.removeChild(row); }
+				} else {
+					del.disabled = false;
+				}
+			})
+			.catch(function () { del.disabled = false; });
+	});
+
 	// ── Tracked phone numbers ────────────────────────────────────────────────────
 	function kivunPhonePost(form, body, err) {
 		var btn = form.querySelector('button[type="submit"]');

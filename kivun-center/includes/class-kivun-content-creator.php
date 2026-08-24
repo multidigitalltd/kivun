@@ -43,6 +43,9 @@ class Kivun_Content_Creator {
 		add_action( 'admin_post_kivun_create_content_front', array( __CLASS__, 'handle_front_save' ) );
 		add_action( 'admin_post_kivun_delete_content_front', array( __CLASS__, 'handle_front_delete' ) );
 		add_action( 'admin_post_kivun_cc_duplicate_front', array( __CLASS__, 'handle_front_duplicate' ) );
+
+		add_action( 'wp_ajax_kivun_add_leads_viewer', array( __CLASS__, 'ajax_add_leads_viewer' ) );
+		add_action( 'wp_ajax_kivun_remove_leads_viewer', array( __CLASS__, 'ajax_remove_leads_viewer' ) );
 	}
 
 	/**
@@ -1282,6 +1285,154 @@ class Kivun_Content_Creator {
 		}
 		// phpcs:ignore WordPress.WP.Capabilities.Unknown -- Custom plugin capability.
 		return current_user_can( 'kivun_view_leads' );
+	}
+
+	/**
+	 * Who may hand out access to the leads table.
+	 *
+	 * Creating a user account and granting it sight of every enquiry the centre
+	 * receives is an administrator's decision, not an editor's — the leads tab
+	 * is open to editors, so this is checked separately from seeing it.
+	 *
+	 * @return bool
+	 */
+	public static function can_grant_leads_access(): bool {
+		return current_user_can( 'create_users' ) && current_user_can( 'promote_users' );
+	}
+
+	/**
+	 * Everyone currently holding the leads-viewer role.
+	 *
+	 * @return array<int,\WP_User>
+	 */
+	public static function leads_viewers(): array {
+		return get_users(
+			array(
+				'role'    => 'kivun_leads_viewer',
+				'orderby' => 'display_name',
+				'order'   => 'ASC',
+			)
+		);
+	}
+
+	/**
+	 * AJAX: give someone access to the leads table.
+	 *
+	 * @return void
+	 */
+	public static function ajax_add_leads_viewer(): void {
+		check_ajax_referer( 'kivun_nonce', 'nonce' );
+
+		if ( ! self::can_grant_leads_access() ) {
+			wp_send_json_error( array( 'message' => __( 'רק מנהל אתר יכול להוסיף גישה ללידים.', 'kivun' ) ) );
+		}
+
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- Verified above.
+		$email = sanitize_email( wp_unslash( $_POST['email'] ?? '' ) );
+		$name  = sanitize_text_field( wp_unslash( $_POST['name'] ?? '' ) );
+		// phpcs:enable WordPress.Security.NonceVerification.Missing
+
+		if ( ! is_email( $email ) ) {
+			wp_send_json_error( array( 'message' => __( 'יש להזין כתובת אימייל תקינה.', 'kivun' ) ) );
+		}
+
+		$existing = get_user_by( 'email', $email );
+
+		if ( $existing ) {
+			// An account already here is granted the role rather than refused:
+			// refusing would leave no way to give an existing colleague access.
+			if ( in_array( 'kivun_leads_viewer', (array) $existing->roles, true ) ) {
+				wp_send_json_error( array( 'message' => __( 'למשתמש הזה כבר יש גישה ללידים.', 'kivun' ) ) );
+			}
+
+			// An administrator or editor already sees the leads; adding this
+			// role would take capabilities away rather than add them.
+			if ( user_can( $existing, 'edit_others_posts' ) || user_can( $existing, 'manage_options' ) ) {
+				wp_send_json_error(
+					array(
+						'message' => __( 'למשתמש הזה כבר יש גישה ללידים מתוקף תפקידו הקיים.', 'kivun' ),
+					)
+				);
+			}
+
+			$existing->add_role( 'kivun_leads_viewer' );
+			wp_send_json_success(
+				array(
+					'message' => sprintf(
+						/* translators: %s: user display name. */
+						__( 'הגישה ניתנה למשתמש הקיים %s.', 'kivun' ),
+						$existing->display_name
+					),
+				)
+			);
+		}
+
+		// A fresh account. The login is derived from the address, since these
+		// are colleagues invited by email rather than people choosing a name.
+		$base  = sanitize_user( current( explode( '@', $email ) ), true );
+		$login = '' !== $base ? $base : 'leads' . wp_rand( 100, 999 );
+		$try   = $login;
+		$n     = 1;
+		while ( username_exists( $try ) ) {
+			++$n;
+			$try = $login . $n;
+		}
+
+		$user_id = wp_insert_user(
+			array(
+				'user_login'   => $try,
+				'user_email'   => $email,
+				'user_pass'    => wp_generate_password( 20, true ),
+				'display_name' => '' !== $name ? $name : $try,
+				'first_name'   => $name,
+				'role'         => 'kivun_leads_viewer',
+			)
+		);
+
+		if ( is_wp_error( $user_id ) ) {
+			wp_send_json_error( array( 'message' => $user_id->get_error_message() ) );
+		}
+
+		// The password was generated here and never shown, so the invitation
+		// email is the only way in — it carries a set-your-password link.
+		wp_new_user_notification( (int) $user_id, null, 'user' );
+
+		wp_send_json_success(
+			array(
+				'message' => sprintf(
+					/* translators: %s: email address. */
+					__( 'נוצר משתמש חדש ונשלחה אליו הזמנה ל-%s.', 'kivun' ),
+					$email
+				),
+			)
+		);
+	}
+
+	/**
+	 * AJAX: take away access to the leads table.
+	 *
+	 * @return void
+	 */
+	public static function ajax_remove_leads_viewer(): void {
+		check_ajax_referer( 'kivun_nonce', 'nonce' );
+
+		if ( ! self::can_grant_leads_access() ) {
+			wp_send_json_error( array( 'message' => __( 'רק מנהל אתר יכול לשנות גישה ללידים.', 'kivun' ) ) );
+		}
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Verified above.
+		$user_id = absint( wp_unslash( $_POST['user_id'] ?? 0 ) );
+		$user    = $user_id ? get_userdata( $user_id ) : false;
+
+		if ( ! $user || ! in_array( 'kivun_leads_viewer', (array) $user->roles, true ) ) {
+			wp_send_json_error( array( 'message' => __( 'המשתמש לא נמצא.', 'kivun' ) ) );
+		}
+
+		// Only the role is removed. Deleting the account would be a far larger
+		// act than "stop showing them the leads", and is not what was asked.
+		$user->remove_role( 'kivun_leads_viewer' );
+
+		wp_send_json_success( array( 'message' => __( 'הגישה הוסרה.', 'kivun' ) ) );
 	}
 
 	/**
@@ -3274,6 +3425,70 @@ class Kivun_Content_Creator {
 					<?php endif; ?>
 				</p>
 			</div>
+
+			<?php if ( self::can_grant_leads_access() ) : ?>
+				<?php $kivun_viewers = self::leads_viewers(); ?>
+				<details class="kivun-cc-card kivun-camp-new kivun-viewers">
+					<summary class="kivun-camp-summary">
+						<?php esc_html_e( '+ הוספת גישה לצפייה בלידים', 'kivun' ); ?>
+						<?php if ( $kivun_viewers ) : ?>
+							<span class="kivun-cc-badge"><?php echo esc_html( number_format_i18n( count( $kivun_viewers ) ) ); ?></span>
+						<?php endif; ?>
+					</summary>
+
+					<form class="kivun-viewer-form">
+						<div class="kivun-form-grid">
+							<div class="kivun-form-row">
+								<label><?php esc_html_e( 'אימייל *', 'kivun' ); ?></label>
+								<input type="email" class="kivun-cc-input kivun-viewer-email" dir="ltr" autocomplete="off" placeholder="name@example.com">
+							</div>
+							<div class="kivun-form-row">
+								<label><?php esc_html_e( 'שם', 'kivun' ); ?></label>
+								<input type="text" class="kivun-cc-input kivun-viewer-name" placeholder="<?php esc_attr_e( 'למשל: רחל לוי', 'kivun' ); ?>">
+							</div>
+						</div>
+
+						<p class="kivun-field-hint">
+							<?php esc_html_e( 'נוצר משתמש חדש ונשלחת אליו הזמנה במייל לבחירת סיסמה. הוא יראה את טבלת הלידים בלבד ויוכל לעדכן סטטוס — בלי גישה לתוכן, לקמפיינים או לשאר האתר. אם כבר יש לו חשבון, תתווסף לו ההרשאה.', 'kivun' ); ?>
+						</p>
+
+						<p class="kivun-error kivun-viewer-error" style="display:none;color:var(--kivun-error)"></p>
+						<span class="kivun-cc-wa-status kivun-viewer-status" role="status" aria-live="polite"></span>
+
+						<div class="kivun-form-actions">
+							<button type="submit" class="kivun-cc-btn"><?php esc_html_e( 'שליחת הזמנה', 'kivun' ); ?></button>
+						</div>
+					</form>
+
+					<?php if ( $kivun_viewers ) : ?>
+						<label class="kivun-cc-sub"><?php esc_html_e( 'בעלי גישה כרגע', 'kivun' ); ?></label>
+						<div class="kivun-cc-tablewrap">
+							<table class="kivun-cc-table">
+								<tbody>
+								<?php foreach ( $kivun_viewers as $kivun_viewer ) : ?>
+									<tr data-viewer-row="<?php echo esc_attr( $kivun_viewer->ID ); ?>">
+										<td><strong><?php echo esc_html( $kivun_viewer->display_name ); ?></strong></td>
+										<td dir="ltr"><?php echo esc_html( $kivun_viewer->user_email ); ?></td>
+										<td>
+											<button
+												type="button"
+												class="kivun-cc-iconbtn kivun-cc-iconbtn--danger kivun-remove-viewer"
+												data-id="<?php echo esc_attr( $kivun_viewer->ID ); ?>"
+												title="<?php esc_attr_e( 'הסרת הגישה', 'kivun' ); ?>"
+											>
+												<?php echo kivun_icon( 'trash' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?>
+												<span class="kivun-sr-only"><?php esc_html_e( 'הסרת הגישה', 'kivun' ); ?></span>
+											</button>
+										</td>
+									</tr>
+								<?php endforeach; ?>
+								</tbody>
+							</table>
+						</div>
+						<p class="kivun-field-hint"><?php esc_html_e( 'הסרה מבטלת את ההרשאה בלבד — חשבון המשתמש נשאר.', 'kivun' ); ?></p>
+					<?php endif; ?>
+				</details>
+			<?php endif; ?>
 
 			<div class="kivun-cc-leadbar">
 				<span class="kivun-stat"><strong><?php echo esc_html( number_format_i18n( $found ) ); ?></strong> <?php esc_html_e( 'רשומות בתצוגה', 'kivun' ); ?></span>

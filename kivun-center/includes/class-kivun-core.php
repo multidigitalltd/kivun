@@ -202,6 +202,7 @@ class Kivun_Core {
 					'wa_from_fields'            => __( 'נוצר מהשדות (ללא AI)', 'kivun' ),
 					'confirm_delete_phone'      => __( 'להסיר את המספר ואת כל השיוכים שלו? השיחות שנרשמו יישמרו.', 'kivun' ),
 					'confirm_delete_assignment' => __( 'למחוק את השיוך? השיחות שנרשמו בתקופה יישארו ללא שיוך לקמפיין.', 'kivun' ),
+					'confirm_remove_viewer'     => __( 'להסיר את הגישה ללידים? חשבון המשתמש יישאר.', 'kivun' ),
 				),
 			)
 		);
