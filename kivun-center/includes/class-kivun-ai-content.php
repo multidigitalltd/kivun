@@ -211,7 +211,7 @@ class Kivun_AI_Content {
 		}
 
 		$plain = static function ( $value ) {
-			return sanitize_text_field( wp_strip_all_tags( (string) ( $value ?? '' ) ) );
+			return self::plain_text( (string) ( $value ?? '' ) );
 		};
 
 		return array(
@@ -223,6 +223,46 @@ class Kivun_AI_Content {
 			'cost'     => $plain( $fields['cost'] ?? '' ),
 			'date'     => $plain( $fields['date'] ?? '' ),
 		);
+	}
+
+	/**
+	 * Reduce a value to plain text, whatever shape the markup arrived in.
+	 *
+	 * strip_tags() only sees real angle brackets, so a tag that arrives
+	 * entity-encoded — "&lt;p&gt;" — passes through untouched, is handed to the
+	 * model as if it were prose, and comes back imitated in the output. The
+	 * decode therefore has to happen first, and the pair has to repeat, because
+	 * content that has been through two escaping passes needs two decodes.
+	 *
+	 * @param string $raw        Any stored or submitted value.
+	 * @param bool   $keep_lines Keep line breaks (for a whole message rather than one field).
+	 * @return string
+	 */
+	public static function plain_text( string $raw, bool $keep_lines = false ): string {
+		$text     = $raw;
+		$previous = '';
+
+		for ( $pass = 0; $pass < 3 && $text !== $previous; $pass++ ) {
+			$previous = $text;
+			$text     = html_entity_decode( $text, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+
+			// A break or a closing paragraph separates words. Dropping it with
+			// the rest of the markup would run the words either side together.
+			$text = (string) preg_replace( '#<br\s*/?>|</p>|</div>|</li>#i', "\n", $text );
+
+			$text = wp_strip_all_tags( $text );
+		}
+
+		if ( ! $keep_lines ) {
+			return trim( (string) preg_replace( '/\s+/u', ' ', $text ) );
+		}
+
+		// Collapse runs of spaces without touching the line structure, and cap
+		// blank lines at one so the message keeps its shape.
+		$text = (string) preg_replace( '/[ \t]+/u', ' ', $text );
+		$text = (string) preg_replace( '/\n{3,}/u', "\n\n", $text );
+
+		return trim( $text );
 	}
 
 	// ── WhatsApp promo ────────────────────────────────────────────────────────.
@@ -245,7 +285,7 @@ class Kivun_AI_Content {
 		// phpcs:disable WordPress.Security.NonceVerification.Missing -- Verified above.
 		$plain  = static function ( $key ) {
 			return isset( $_POST[ $key ] )
-				? sanitize_text_field( wp_strip_all_tags( wp_unslash( $_POST[ $key ] ) ) )
+				? self::plain_text( sanitize_textarea_field( wp_unslash( $_POST[ $key ] ) ) )
 				: '';
 		};
 		$fields = array(
@@ -481,7 +521,7 @@ class Kivun_AI_Content {
 			$text
 		);
 
-		return trim( wp_strip_all_tags( (string) $text ) );
+		return self::plain_text( (string) $text, true );
 	}
 
 	/**

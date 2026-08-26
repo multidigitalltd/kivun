@@ -620,10 +620,25 @@
 	function kivunWaField(form, selector) {
 		var el = form.querySelector(selector);
 		if (!el) { return ''; }
-		// Strip tags: the rich fields hold HTML, and the promo is plain text.
+
+		// The rich fields hold HTML, and the promo is plain text. Decoding and
+		// stripping has to repeat: a tag stored entity-encoded ("&lt;p&gt;")
+		// survives one pass, since reading textContent turns it into a literal
+		// "<p>" rather than removing it.
+		var text = el.value || '';
+		var previous;
 		var tmp = document.createElement('div');
-		tmp.innerHTML = el.value || '';
-		return (tmp.textContent || '').trim();
+
+		for (var pass = 0; pass < 3 && text !== previous; pass++) {
+			previous = text;
+			// A break separates words; removing it with the rest of the markup
+			// would run the words either side together.
+			text = text.replace(/<br\s*\/?>|<\/p>|<\/div>|<\/li>/gi, ' ');
+			tmp.innerHTML = text;
+			text = tmp.textContent || '';
+		}
+
+		return text.replace(/\s+/g, ' ').trim();
 	}
 
 	function kivunWaShareLink(text) {
