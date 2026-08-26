@@ -1102,6 +1102,12 @@
 		var del = e.target.closest('.kivun-delete-campaign, .kivun-delete-link');
 		if (!del) { return; }
 
+		// The campaign's delete button sits inside the <summary>, so a click on
+		// it would otherwise also open or close the panel — including when the
+		// confirmation is declined.
+		e.preventDefault();
+		e.stopPropagation();
+
 		var isCampaign = del.classList.contains('kivun-delete-campaign');
 		var prompt = isCampaign ? kivun.i18n.confirm_delete_campaign : kivun.i18n.confirm_delete_link;
 		if (!window.confirm(prompt)) { return; }

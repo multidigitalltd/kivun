@@ -3108,11 +3108,19 @@ class Kivun_Content_Creator {
 						$total += (int) ( $link_counts[ (int) $link->id ] ?? 0 );
 					}
 					?>
-					<section class="kivun-cc-card kivun-camp-block" data-campaign-row="<?php echo esc_attr( $camp->id ); ?>">
-						<header class="kivun-camp-head">
-							<div>
-								<h3 class="kivun-camp-title"><?php echo esc_html( $camp->label ); ?></h3>
-								<span class="kivun-cc-source"><code><?php echo esc_html( $camp->utm_campaign ); ?></code></span>
+					<?php
+					// Collapsed by default. With many campaigns, each holding many
+					// links, everything open at once buries the one being looked
+					// for — and the header alone already carries the counts.
+					?>
+					<details class="kivun-cc-card kivun-camp-block" data-campaign-row="<?php echo esc_attr( $camp->id ); ?>">
+						<summary class="kivun-camp-head">
+							<div class="kivun-camp-heading">
+								<span class="kivun-camp-caret" aria-hidden="true"></span>
+								<div>
+									<h3 class="kivun-camp-title"><?php echo esc_html( $camp->label ); ?></h3>
+									<span class="kivun-cc-source"><code><?php echo esc_html( $camp->utm_campaign ); ?></code></span>
+								</div>
 							</div>
 							<div class="kivun-camp-metrics">
 								<span class="kivun-cc-badge"><?php echo esc_html( sprintf( /* translators: %s: number of links. */ _n( '%s קישור', '%s קישורים', count( $links ), 'kivun' ), number_format_i18n( count( $links ) ) ) ); ?></span>
@@ -3127,7 +3135,7 @@ class Kivun_Content_Creator {
 									<span class="kivun-sr-only"><?php esc_html_e( 'מחיקת הקמפיין', 'kivun' ); ?></span>
 								</button>
 							</div>
-						</header>
+						</summary>
 
 						<?php if ( $links ) : ?>
 							<div class="kivun-cc-tablewrap">
@@ -3240,7 +3248,7 @@ class Kivun_Content_Creator {
 								</div>
 							</form>
 						</details>
-					</section>
+					</details>
 				<?php endforeach; ?>
 
 				<p class="kivun-field-hint"><?php esc_html_e( 'מחיקה מסירה את הקישור מהרשימה בלבד — הפניות שכבר הגיעו דרכו נשמרות.', 'kivun' ); ?></p>

@@ -1367,6 +1367,27 @@
 
 /* A campaign is a block; its links are the table inside it. */
 .kivun-camp-block { margin-bottom: 1.1rem; }
+
+/* A campaign is collapsed to its header until opened. */
+.kivun-camp-block > summary {
+	cursor: pointer;
+	list-style: none;
+	margin-bottom: 0;
+}
+.kivun-camp-block > summary::-webkit-details-marker { display: none; }
+.kivun-camp-block[open] > summary { margin-bottom: .85rem; }
+.kivun-camp-heading { display: flex; align-items: flex-start; gap: .5rem; }
+.kivun-camp-caret {
+	flex: 0 0 auto;
+	margin-top: .3rem;
+	width: 0;
+	height: 0;
+	border-block: 5px solid transparent;
+	border-inline-end: 6px solid var(--kivun-muted);
+	transition: transform .15s;
+}
+.kivun-camp-block[open] > summary .kivun-camp-caret { transform: rotate(-90deg); }
+.kivun-camp-block > summary:hover .kivun-camp-title { color: var(--cc-brand); }
 .kivun-camp-head {
 	display: flex;
 	flex-wrap: wrap;
