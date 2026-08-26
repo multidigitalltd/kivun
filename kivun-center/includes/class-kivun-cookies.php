@@ -105,11 +105,18 @@ class Kivun_Cookies {
 			return;
 		}
 
+		// A blank setting falls back to the site's own privacy policy page, which
+		// WordPress already knows about. Without this the link is simply absent
+		// on any site that never filled the field in — which is most of them,
+		// since nothing on screen says the field exists.
+		$policy_url = trim( (string) Kivun_Admin_Settings::get( 'cookie_policy_url', '' ) );
+		if ( '' === $policy_url ) {
+			$policy_url = (string) get_privacy_policy_url();
+		}
+
 		kivun_get_template(
 			'cookies/banner.php',
-			array(
-				'policy_url' => (string) Kivun_Admin_Settings::get( 'cookie_policy_url', '' ),
-			)
+			array( 'policy_url' => $policy_url )
 		);
 	}
 }

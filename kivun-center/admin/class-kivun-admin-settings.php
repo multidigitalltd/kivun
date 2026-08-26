@@ -413,6 +413,20 @@ class Kivun_Admin_Settings {
 					<th scope="row"><?php esc_html_e( 'קישור למדיניות פרטיות', 'kivun' ); ?></th>
 					<td>
 						<input type="url" name="cookie_policy_url" value="<?php echo esc_attr( $o( 'cookie_policy_url' ) ); ?>" class="regular-text" placeholder="https://...">
+						<p class="description">
+							<?php
+							$kivun_wp_policy = (string) get_privacy_policy_url();
+							if ( '' !== $kivun_wp_policy ) {
+								printf(
+									/* translators: %s: the site's privacy policy URL. */
+									esc_html__( 'אם השדה ריק, הבאנר מקשר לעמוד מדיניות הפרטיות של האתר: %s', 'kivun' ),
+									esc_url( $kivun_wp_policy )
+								);
+							} else {
+								esc_html_e( 'אם השדה ריק, הבאנר מקשר לעמוד מדיניות הפרטיות שמוגדר בהגדרות → פרטיות. כרגע לא מוגדר עמוד כזה, ולכן לא יוצג קישור.', 'kivun' );
+							}
+							?>
+						</p>
 						<p class="description"><?php esc_html_e( 'מוצג כקישור בבאנר העוגיות. השאר ריק כדי להסתיר את הקישור.', 'kivun' ); ?></p>
 					</td>
 				</tr>

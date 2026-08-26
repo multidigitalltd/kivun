@@ -17,7 +17,8 @@ defined( 'ABSPATH' ) || exit;
 				<p>
 					<?php esc_html_e( 'אתר זה עושה שימוש בעוגיות ובכלי מעקב כדי לשפר את חוויית הגלישה ולנתח את השימוש באתר.', 'kivun' ); ?>
 					<?php if ( '' !== trim( $policy_url ) ) : ?>
-						<a class="kivun-cc-policy" href="<?php echo esc_url( $policy_url ); ?>"><?php esc_html_e( 'למדיניות הפרטיות', 'kivun' ); ?></a>
+						<?php esc_html_e( 'המשך הגלישה מהווה הסכמה למדיניות הפרטיות.', 'kivun' ); ?>
+						<a class="kivun-cc-policy" href="<?php echo esc_url( $policy_url ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'למדיניות הפרטיות המלאה', 'kivun' ); ?></a>
 					<?php endif; ?>
 				</p>
 			</div>
