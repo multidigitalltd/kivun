@@ -73,6 +73,10 @@ class Kivun_Core {
 		add_action( 'elementor_pro/forms/actions/register', array( 'Kivun_Elementor', 'register_form_actions' ) );
 		add_action( 'elementor_pro/init', array( 'Kivun_Elementor', 'register_form_actions_legacy' ), 99 );
 
+		// Management screens must never be served from a page cache — see
+		// prevent_caching() for why this is not optional.
+		add_action( 'template_redirect', array( __CLASS__, 'prevent_caching' ), 0 );
+
 		add_filter( 'body_class', array( __CLASS__, 'body_classes' ) );
 		add_action( 'wp_enqueue_scripts', array( __CLASS__, 'enqueue_frontend' ) );
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_admin' ) );
@@ -126,6 +130,119 @@ class Kivun_Core {
 		}
 		require_once KIVUN_DIR . 'admin/class-kivun-admin-settings.php';
 		require_once KIVUN_DIR . 'shortcodes/class-kivun-shortcodes.php';
+	}
+
+	/**
+	 * The shortcodes that render a live management screen.
+	 *
+	 * @return array<int,string>
+	 */
+	private static function management_shortcodes(): array {
+		return array(
+			'kivun_content_creator',
+			'kivun_employer_dashboard',
+			'kivun_my_applications',
+		);
+	}
+
+	/**
+	 * Keep the management screens out of every page cache.
+	 *
+	 * These pages show live data and carry a nonce. Cached, they fail twice
+	 * over: the tables show whatever was true when the copy was taken — a lead
+	 * submitted minutes ago is simply absent — and the nonce baked into the
+	 * HTML was minted for whoever the page was cached for, so every action
+	 * posted from it is rejected and reads as a random error.
+	 *
+	 * Being logged in is not protection: plenty of setups cache for logged-in
+	 * users, and server-level caches (Varnish, FastCGI, a host's own layer)
+	 * never see WordPress at all.
+	 *
+	 * @return void
+	 */
+	public static function prevent_caching(): void {
+		if ( is_admin() || ! is_singular() ) {
+			return;
+		}
+
+		$post = get_post();
+		if ( ! $post instanceof \WP_Post ) {
+			return;
+		}
+
+		$found = false;
+		foreach ( self::management_shortcodes() as $tag ) {
+			if ( has_shortcode( (string) $post->post_content, $tag ) ) {
+				$found = true;
+				break;
+			}
+		}
+
+		/**
+		 * Filter whether the current page is a management screen.
+		 *
+		 * Page builders keep their content outside post_content, so a site
+		 * whose console lives in an Elementor template can say so here.
+		 *
+		 * @param bool     $found Whether a management shortcode was found.
+		 * @param \WP_Post $post  The current post.
+		 */
+		$found = (bool) apply_filters( 'kivun_is_management_page', $found, $post );
+
+		if ( ! $found ) {
+			return;
+		}
+
+		self::no_cache();
+	}
+
+	/**
+	 * Tell every cache in the stack to skip this response.
+	 *
+	 * Also called when a management shortcode actually renders: page builders
+	 * keep their content out of post_content, so the check on template_redirect
+	 * cannot always see the shortcode coming. Most caching plugins buffer the
+	 * page and re-check the constant before storing it, so setting it late
+	 * still works — the headers are the part that needs to be early.
+	 *
+	 * @return void
+	 */
+	public static function no_cache(): void {
+		// The constant the major caching plugins agree on.
+		if ( ! defined( 'DONOTCACHEPAGE' ) ) {
+			define( 'DONOTCACHEPAGE', true );
+		}
+		if ( ! defined( 'DONOTCACHEOBJECT' ) ) {
+			define( 'DONOTCACHEOBJECT', true );
+		}
+		if ( ! defined( 'DONOTCACHEDB' ) ) {
+			define( 'DONOTCACHEDB', true );
+		}
+
+		// LiteSpeed and WP Rocket listen for their own signals rather than the
+		// constant alone.
+		do_action( 'litespeed_control_set_nocache', 'Kivun management screen' );
+		add_filter( 'rocket_cache_reject_uri', array( __CLASS__, 'reject_current_uri' ) );
+
+		// And the HTTP layer, for the caches that never load WordPress.
+		if ( ! headers_sent() ) {
+			nocache_headers();
+			header( 'Cache-Control: no-cache, no-store, must-revalidate, max-age=0' );
+		}
+	}
+
+	/**
+	 * Add the current URL to WP Rocket's never-cache list.
+	 *
+	 * @param array<int,string> $uris Existing rejected URIs.
+	 * @return array<int,string>
+	 */
+	public static function reject_current_uri( $uris ): array {
+		$uris   = is_array( $uris ) ? $uris : array();
+		$path   = wp_parse_url( home_url( add_query_arg( array() ) ), PHP_URL_PATH );
+		$uris[] = is_string( $path ) ? $path : '';
+
+		return array_values( array_filter( $uris ) );
 	}
 
 	/**

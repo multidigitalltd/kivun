@@ -1462,6 +1462,9 @@
 .kivun-cc-utm .kivun-cc-badge { margin-inline-end: .2rem; }
 .kivun-cc-utm .kivun-cc-source { display: block; margin-top: .2rem; }
 
+/* Generation time — a cached page keeps showing the same one. */
+.kivun-freshness { font-variant-numeric: tabular-nums; color: var(--kivun-muted); cursor: help; }
+
 /* The jobs board shares the console's visual language, both standalone (it
    carries .kivun-cc-console itself) and embedded inside the content console. */
 .kivun-employer-dashboard.kivun-cc-console .kivun-jobs-table-wrap,

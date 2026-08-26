@@ -1241,6 +1241,11 @@ class Kivun_Content_Creator {
 				. '</div></div>';
 		}
 
+		// This screen shows live data and carries a nonce; a cached copy of it
+		// is both stale and unusable. Said again here because a page builder can
+		// hide the shortcode from the earlier check.
+		Kivun_Core::no_cache();
+
 		Kivun_Core::enqueue_frontend_assets();
 		// Voice dictation is for content authors only — load it here (the content
 		// creator page), never on the public lead/registration forms.
@@ -3492,6 +3497,20 @@ class Kivun_Content_Creator {
 
 			<div class="kivun-cc-leadbar">
 				<span class="kivun-stat"><strong><?php echo esc_html( number_format_i18n( $found ) ); ?></strong> <?php esc_html_e( 'רשומות בתצוגה', 'kivun' ); ?></span>
+				<?php
+				// A page served from a cache shows the moment the copy was taken,
+				// not now — so if this time does not change on reload, something
+				// is caching the screen and the table cannot be trusted.
+				?>
+				<span class="kivun-stat kivun-freshness" title="<?php esc_attr_e( 'אם השעה לא משתנה ברענון — הדף מוגש ממטמון והנתונים אינם מעודכנים.', 'kivun' ); ?>">
+					<?php
+					printf(
+						/* translators: %s: time the page was generated. */
+						esc_html__( 'עודכן %s', 'kivun' ),
+						esc_html( wp_date( 'H:i:s' ) )
+					);
+					?>
+				</span>
 				<a class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost" href="<?php echo esc_url( Kivun_Export::url( 'registrations', $content_filter ) ); ?>">
 					<?php echo kivun_icon( 'download' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?><?php esc_html_e( 'ייצוא CSV', 'kivun' ); ?>
 				</a>
