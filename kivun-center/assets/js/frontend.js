@@ -874,6 +874,12 @@
 		var del = e.target.closest('.kivun-delete-phone, .kivun-delete-assignment');
 		if (!del) { return; }
 
+		// The number's delete button sits inside the <summary>, so a click on it
+		// would otherwise also open or close the panel — including when the
+		// confirmation is declined.
+		e.preventDefault();
+		e.stopPropagation();
+
 		var isNumber = del.classList.contains('kivun-delete-phone');
 		if (!window.confirm(isNumber ? kivun.i18n.confirm_delete_phone : kivun.i18n.confirm_delete_assignment)) { return; }
 

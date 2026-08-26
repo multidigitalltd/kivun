@@ -2832,13 +2832,21 @@ class Kivun_Content_Creator {
 						}
 					}
 					?>
-					<section class="kivun-cc-card kivun-camp-block" data-phone-row="<?php echo esc_attr( $num->id ); ?>">
-						<header class="kivun-camp-head">
-							<div>
-								<h3 class="kivun-camp-title" dir="ltr"><?php echo esc_html( $num->number ); ?></h3>
-								<?php if ( $num->label ) : ?>
-									<span class="kivun-cc-source"><?php echo esc_html( $num->label ); ?></span>
-								<?php endif; ?>
+					<?php
+					// Collapsed like the campaigns, and for the same reason: the
+					// pool grows, each number carries its whole history, and all
+					// of it open at once buries the one being looked for.
+					?>
+					<details class="kivun-cc-card kivun-camp-block" data-phone-row="<?php echo esc_attr( $num->id ); ?>">
+						<summary class="kivun-camp-head">
+							<div class="kivun-camp-heading">
+								<span class="kivun-camp-caret" aria-hidden="true"></span>
+								<div>
+									<h3 class="kivun-camp-title" dir="ltr"><?php echo esc_html( $num->number ); ?></h3>
+									<?php if ( $num->label ) : ?>
+										<span class="kivun-cc-source"><?php echo esc_html( $num->label ); ?></span>
+									<?php endif; ?>
+								</div>
 							</div>
 							<div class="kivun-camp-metrics">
 								<?php if ( $current ) : ?>
@@ -2859,7 +2867,7 @@ class Kivun_Content_Creator {
 									<span class="kivun-sr-only"><?php esc_html_e( 'הסרת המספר', 'kivun' ); ?></span>
 								</button>
 							</div>
-						</header>
+						</summary>
 
 						<?php if ( $history ) : ?>
 							<div class="kivun-cc-tablewrap">
@@ -2960,7 +2968,7 @@ class Kivun_Content_Creator {
 								</div>
 							</form>
 						</details>
-					</section>
+					</details>
 				<?php endforeach; ?>
 			<?php endif; ?>
 
