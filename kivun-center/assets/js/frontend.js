@@ -11,7 +11,37 @@
 			method: 'POST',
 			credentials: 'same-origin',
 			body: body
-		}).then(function (r) { return r.json(); });
+		}).then(function (r) {
+			return r.text().then(function (text) {
+				var trimmed = (text || '').trim();
+
+				// admin-ajax answers a rejected nonce with a bare "-1" and a
+				// denied capability with "0". Both are valid JSON, so parsing
+				// them succeeds and the caller sees a response with no success
+				// flag and no message — every cause reduced to "try again".
+				if (trimmed === '-1' || trimmed === '0') {
+					throw new Error(kivun.i18n.session_expired);
+				}
+
+				try {
+					return JSON.parse(trimmed);
+				} catch (err) {
+					// Anything else non-JSON is the server failing before it got
+					// to answer. Say so, with the status, rather than pretending
+					// it is the same as a validation error.
+					throw new Error(
+						r.ok
+							? kivun.i18n.bad_response
+							: kivun.i18n.server_error.replace('%d', r.status)
+					);
+				}
+			});
+		});
+	}
+
+	// The message from post() when it knows what went wrong, else the generic.
+	function failure(e) {
+		return (e && e.message) ? e.message : kivun.i18n.error_generic;
 	}
 
 	function params(obj) {
@@ -143,8 +173,8 @@
 					restore();
 				}
 			})
-			.catch(function () {
-				showError(err, kivun.i18n.error_generic);
+			.catch(function (e) {
+				showError(err, failure(e));
 				restore();
 			});
 	}
@@ -172,8 +202,8 @@
 					showError(err, res.data.message);
 					if (btn) { btn.disabled = false; btn.textContent = originalText; }
 				}
-			}).catch(function () {
-				showError(err, kivun.i18n.error_generic);
+			}).catch(function (e) {
+				showError(err, failure(e));
 				if (btn) { btn.disabled = false; btn.textContent = originalText; }
 			});
 			return;
@@ -577,10 +607,10 @@
 					status.className = 'kivun-mercaz-status is-error';
 				}
 			})
-			.catch(function () {
+			.catch(function (e) {
 				btn.disabled = false;
 				if (status) {
-					status.textContent = kivun.i18n.error_generic;
+					status.textContent = failure(e);
 					status.className = 'kivun-mercaz-status is-error';
 				}
 			});
@@ -646,9 +676,9 @@
 						: (res.data.source === 'template' ? kivun.i18n.wa_from_fields : kivun.i18n.saved);
 				}
 			})
-			.catch(function () {
+			.catch(function (e) {
 				btn.disabled = false;
-				if (status) { status.textContent = kivun.i18n.error_generic; }
+				if (status) { status.textContent = failure(e); }
 			});
 	});
 
@@ -724,10 +754,10 @@
 				if (status) { status.textContent = ''; }
 				showError(err, (res.data && res.data.message) || kivun.i18n.error_generic);
 			}
-		}).catch(function () {
+		}).catch(function (e) {
 			if (btn) { btn.disabled = false; }
 			if (status) { status.textContent = ''; }
-			showError(err, kivun.i18n.error_generic);
+			showError(err, failure(e));
 		});
 	});
 
@@ -764,9 +794,9 @@
 				if (btn) { btn.disabled = false; }
 				showError(err, (res.data && res.data.message) || kivun.i18n.error_generic);
 			}
-		}).catch(function () {
+		}).catch(function (e) {
 			if (btn) { btn.disabled = false; }
-			showError(err, kivun.i18n.error_generic);
+			showError(err, failure(e));
 		});
 	}
 
@@ -881,9 +911,9 @@
 			} else if (status) {
 				status.textContent = (res.data && res.data.message) || kivun.i18n.error_generic;
 			}
-		}).catch(function () {
+		}).catch(function (e) {
 			btn.disabled = false;
-			if (status) { status.textContent = kivun.i18n.error_generic; }
+			if (status) { status.textContent = failure(e); }
 		});
 	});
 
@@ -1005,9 +1035,9 @@
 				unlock();
 				showError(err, (res.data && res.data.message) || kivun.i18n.error_generic);
 			}
-		}).catch(function () {
+		}).catch(function (e) {
 			unlock();
-			showError(err, kivun.i18n.error_generic);
+			showError(err, failure(e));
 		});
 	}
 

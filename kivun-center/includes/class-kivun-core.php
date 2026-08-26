@@ -191,6 +191,10 @@ class Kivun_Core {
 					'submit'                    => __( 'שלח', 'kivun' ),
 					'confirm_delete'            => __( 'האם למחוק משרה זו?', 'kivun' ),
 					'error_generic'             => __( 'אירעה שגיאה, נסה שוב.', 'kivun' ),
+					'session_expired'           => __( 'פג תוקף החיבור. רעננו את הדף ונסו שוב.', 'kivun' ),
+					'bad_response'              => __( 'התקבלה תשובה לא תקינה מהשרת. ייתכן שתוסף אחר מפריע.', 'kivun' ),
+					/* translators: %d: HTTP status code. */
+					'server_error'              => __( 'השרת החזיר שגיאה (%d). נסו שוב, ואם זה חוזר פנו לתמיכה.', 'kivun' ),
 					'saved'                     => __( '✓ נשמר', 'kivun' ),
 					'save_error'                => __( 'שגיאה', 'kivun' ),
 					'confirm_send_login'        => __( 'לשלוח למפרסם מייל עם קישור להגדרת סיסמה?', 'kivun' ),
