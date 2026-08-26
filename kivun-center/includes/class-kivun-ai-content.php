@@ -228,11 +228,12 @@ class Kivun_AI_Content {
 	/**
 	 * Reduce a value to plain text, whatever shape the markup arrived in.
 	 *
-	 * strip_tags() only sees real angle brackets, so a tag that arrives
-	 * entity-encoded — "&lt;p&gt;" — passes through untouched, is handed to the
-	 * model as if it were prose, and comes back imitated in the output. The
-	 * decode therefore has to happen first, and the pair has to repeat, because
-	 * content that has been through two escaping passes needs two decodes.
+	 * Stripping alone is not enough: strip_tags() only sees real angle
+	 * brackets, so a tag that arrives entity-encoded — "&lt;p&gt;" — passes
+	 * through untouched, is handed to the model as if it were prose, and comes
+	 * back imitated in the output. The decode therefore has to happen first,
+	 * and the pair has to repeat, because content that has been through two
+	 * escaping passes needs two decodes.
 	 *
 	 * @param string $raw        Any stored or submitted value.
 	 * @param bool   $keep_lines Keep line breaks (for a whole message rather than one field).
