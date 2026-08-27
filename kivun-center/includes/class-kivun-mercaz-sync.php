@@ -409,11 +409,13 @@ class Kivun_Mercaz_Sync {
 
 				$body['content'] = self::as_html( '' !== $get( '_kivun_description' ) ? $get( '_kivun_description' ) : $post->post_content );
 				$body['meta']    = array(
-					'employer_email' => $get( '_kivun_employer_email' ),
-					'expires_at'     => self::as_date( $get( '_kivun_deadline' ) ),
-					'salary_min'     => $salary['min'],
-					'salary_max'     => $salary['max'],
-					'requirements'   => self::to_repeater( $get( '_kivun_requirements' ) ),
+					'employer_email'   => $get( '_kivun_employer_email' ),
+					'expires_at'       => self::as_date( $get( '_kivun_deadline' ) ),
+					'salary_min'       => $salary['min'],
+					'salary_max'       => $salary['max'],
+					'work_hours'       => $get( '_kivun_work_hours' ),
+					'experience_years' => $get( '_kivun_experience_years' ),
+					'requirements'     => self::to_repeater( $get( '_kivun_requirements' ) ),
 				);
 
 				// The district is derived from the account's profile for a job
