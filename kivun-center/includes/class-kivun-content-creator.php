@@ -1106,8 +1106,44 @@ class Kivun_Content_Creator {
 			);
 		}
 
+		self::remove_unchecked_types( $group, $publish );
+
 		return $group;
 		// phpcs:enable WordPress.Security.NonceVerification.Missing
+	}
+
+	/**
+	 * Take down the content types that were unticked while editing a group.
+	 *
+	 * Unticking used to do nothing at all: only the ticked types were written,
+	 * and the rest were skipped rather than removed — so the page stayed live,
+	 * and the tick came back on reload because the post was still there. From
+	 * the editor's side it looked as though the click had been ignored.
+	 *
+	 * They go to the trash rather than being deleted outright. Clearing a
+	 * checkbox is a light action and should not destroy a page beyond recovery,
+	 * and its registrations are keyed to the post id, which trashing preserves.
+	 *
+	 * @param string            $group   The content group id.
+	 * @param array<int,string> $publish Type keys that are still ticked.
+	 * @return void
+	 */
+	private static function remove_unchecked_types( string $group, array $publish ): void {
+		// Nothing ticked means the form was not asking for anything to change —
+		// the wizard refuses to submit in that state — so treat it as a no-op
+		// rather than as a request to take the whole group down.
+		if ( ! $publish ) {
+			return;
+		}
+
+		foreach ( self::group_posts( $group ) as $type_key => $post_id ) {
+			if ( in_array( $type_key, $publish, true ) ) {
+				continue;
+			}
+			if ( current_user_can( 'delete_post', $post_id ) ) {
+				wp_trash_post( $post_id );
+			}
+		}
 	}
 
 	/**
