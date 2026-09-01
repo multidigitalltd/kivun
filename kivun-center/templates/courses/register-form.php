@@ -1,15 +1,24 @@
 <?php
+/**
+ * Template: course registration form.
+ *
+ * @package Kivun
+ */
+
 defined( 'ABSPATH' ) || exit;
 
-$price      = (int) get_post_meta( $course_id, '_kivun_price',         true );
+$price      = (int) get_post_meta( $course_id, '_kivun_price', true );
 $product_id = (int) get_post_meta( $course_id, '_kivun_wc_product_id', true );
 $is_paid    = $price > 0 && $product_id;
 ?>
 <div class="kivun-register" id="kivun-register-<?php echo esc_attr( $course_id ); ?>">
 	<h3 class="kivun-register__title">
-		<?php echo $is_paid
+		<?php
+		echo $is_paid
+			/* translators: %s: formatted course price in shekels. */
 			? sprintf( esc_html__( 'הרשמה לקורס — %s ₪', 'kivun' ), number_format( $price ) )
-			: esc_html__( 'הרשמה לקורס', 'kivun' ); ?>
+			: esc_html__( 'הרשמה לקורס', 'kivun' );
+		?>
 	</h3>
 
 	<form class="kivun-register-form" novalidate>
@@ -40,9 +49,11 @@ $is_paid    = $price > 0 && $product_id;
 		<p class="kivun-error" style="display:none;color:var(--kivun-error)"></p>
 
 		<button type="submit" class="kivun-btn kivun-btn--primary">
-			<?php echo $is_paid
+			<?php
+			echo $is_paid
 				? esc_html__( 'הרשמה ותשלום', 'kivun' )
-				: esc_html__( 'שלח הרשמה', 'kivun' ); ?>
+				: esc_html__( 'שלח הרשמה', 'kivun' );
+			?>
 		</button>
 	</form>
 </div>

@@ -1,4 +1,12 @@
-<?php defined( 'ABSPATH' ) || exit; ?>
+<?php
+/**
+ * Template: course interest form.
+ *
+ * @package Kivun
+ */
+
+defined( 'ABSPATH' ) || exit;
+?>
 <div class="kivun-interest" id="kivun-interest-<?php echo esc_attr( $post_id ); ?>">
 	<h3 class="kivun-interest__title"><?php esc_html_e( 'מתעניין/ת? נחזור אליך', 'kivun' ); ?></h3>
 	<p class="kivun-interest__sub"><?php esc_html_e( 'השאר פרטים ונציג שלנו יצור איתך קשר עם כל המידע.', 'kivun' ); ?></p>
@@ -24,9 +32,29 @@
 		</div>
 
 		<div class="kivun-form-row">
+			<label><?php esc_html_e( 'עיר', 'kivun' ); ?></label>
+			<input type="text" name="city" autocomplete="address-level2">
+		</div>
+
+		<div class="kivun-form-row">
+			<label><?php esc_html_e( 'מגדר', 'kivun' ); ?></label>
+			<select name="gender">
+				<option value=""><?php esc_html_e( 'בחר/י', 'kivun' ); ?></option>
+				<option value="זכר"><?php esc_html_e( 'זכר', 'kivun' ); ?></option>
+				<option value="נקבה"><?php esc_html_e( 'נקבה', 'kivun' ); ?></option>
+				<option value="אחר"><?php esc_html_e( 'אחר', 'kivun' ); ?></option>
+			</select>
+		</div>
+
+		<div class="kivun-form-row">
 			<label><?php esc_html_e( 'הערות / שאלות', 'kivun' ); ?></label>
 			<textarea name="message" rows="3"></textarea>
 		</div>
+
+		<label class="kivun-consent-row">
+			<input type="checkbox" name="marketing_consent" value="1">
+			<span><?php esc_html_e( 'אני מאשר/ת קבלת דיוור ותכנים שיווקיים.', 'kivun' ); ?></span>
+		</label>
 
 		<p class="kivun-error" style="display:none;color:var(--kivun-error)"></p>
 

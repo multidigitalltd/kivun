@@ -1,202 +1,1793 @@
-/* global kivun, jQuery */
-(function ($) {
+/* global kivun */
+/* Kivun Center — front-end behaviour (vanilla JS, no dependencies). */
+(function () {
 	'use strict';
 
-	// ── Job filters ─────────────────────────────────────────────────────────────
 	var filterTimeout;
 
-	$(document).on('change', '#kivun-filter-scope, #kivun-filter-region, #kivun-filter-field', function () {
-		loadJobs();
-	});
+	// ── Helpers ──────────────────────────────────────────────────────────────────
+	function post(body) {
+		return fetch(kivun.ajax_url, {
+			method: 'POST',
+			credentials: 'same-origin',
+			body: body
+		}).then(function (r) {
+			return r.text().then(function (text) {
+				var trimmed = (text || '').trim();
 
-	$(document).on('input', '#kivun-filter-search', function () {
-		clearTimeout(filterTimeout);
-		filterTimeout = setTimeout(loadJobs, 400);
-	});
+				// admin-ajax answers a rejected nonce with a bare "-1" and a
+				// denied capability with "0". Both are valid JSON, so parsing
+				// them succeeds and the caller sees a response with no success
+				// flag and no message — every cause reduced to "try again".
+				if (trimmed === '-1' || trimmed === '0') {
+					throw new Error(kivun.i18n.session_expired);
+				}
 
-	function loadJobs(paged) {
-		var $board = $('.kivun-jobs-board');
-		if (!$board.length) return;
-
-		$board.addClass('kivun-loading');
-
-		$.post(kivun.ajax_url, {
-			action: 'kivun_filter_jobs',
-			nonce:  kivun.nonce,
-			scope:  $('#kivun-filter-scope').val()  || '',
-			region: $('#kivun-filter-region').val() || '',
-			field:  $('#kivun-filter-field').val()  || '',
-			search: $('#kivun-filter-search').val() || '',
-			paged:  paged || 1,
-		}, function (res) {
-			$board.removeClass('kivun-loading');
-			if (res.success) {
-				$board.html(res.data.html);
-				$('.kivun-jobs-count').text(res.data.count);
-			}
+				try {
+					return JSON.parse(trimmed);
+				} catch (err) {
+					// Anything else non-JSON is the server failing before it got
+					// to answer. Say so, with the status, rather than pretending
+					// it is the same as a validation error.
+					throw new Error(
+						r.ok
+							? kivun.i18n.bad_response
+							: kivun.i18n.server_error.replace('%d', r.status)
+					);
+				}
+			});
 		});
 	}
 
-	// ── Apply form toggle ────────────────────────────────────────────────────────
-	$(document).on('click', '.kivun-apply-toggle', function () {
-		var target = '#' + $(this).data('target');
-		$(target).slideToggle(200);
+	// The message from post() when it knows what went wrong, else the generic.
+	function failure(e) {
+		return (e && e.message) ? e.message : kivun.i18n.error_generic;
+	}
+
+	function params(obj) {
+		return new URLSearchParams(obj);
+	}
+
+	function formParams(form, extra) {
+		var data = new URLSearchParams(new FormData(form));
+		if (extra) {
+			Object.keys(extra).forEach(function (k) { data.append(k, extra[k]); });
+		}
+		return data;
+	}
+
+	function showError(err, message) {
+		if (err) {
+			err.textContent = message;
+			err.style.display = 'block';
+		}
+	}
+
+	function replaceWithSuccess(node, message) {
+		var p = document.createElement('p');
+		p.className = 'kivun-success';
+		p.setAttribute('role', 'status');
+		p.textContent = message;
+		node.parentNode.replaceChild(p, node);
+
+		// The inline line stays as the record of what happened, and the dialog
+		// carries the same news to someone who is not looking at that spot.
+		showThankYou();
+	}
+
+	// ── Thank-you dialog ─────────────────────────────────────────────────────────
+	var thankYouReturn;
+
+	function showThankYou() {
+		var modal = document.querySelector('.kivun-ty');
+		if (!modal || !modal.hidden) { return; }
+
+		thankYouReturn = document.activeElement;
+		modal.hidden = false;
+		document.body.classList.add('kivun-ty-open');
+
+		var dialog = modal.querySelector('.kivun-ty__dialog');
+		if (dialog) { dialog.focus(); }
+	}
+
+	function hideThankYou() {
+		var modal = document.querySelector('.kivun-ty');
+		if (!modal || modal.hidden) { return; }
+
+		modal.hidden = true;
+		document.body.classList.remove('kivun-ty-open');
+
+		// Send focus back where it was, so a keyboard or screen-reader user is
+		// not dropped at the top of the document.
+		if (thankYouReturn && document.contains(thankYouReturn)) { thankYouReturn.focus(); }
+	}
+
+	document.addEventListener('click', function (e) {
+		if (e.target.closest('[data-ty-close]')) { hideThankYou(); }
 	});
 
-	// ── CV application submit ────────────────────────────────────────────────────
-	$(document).on('submit', '.kivun-apply-form', function (e) {
-		e.preventDefault();
-		var $form = $(this);
-		var $btn  = $form.find('[type=submit]');
-		var $err  = $form.find('.kivun-error');
+	document.addEventListener('keydown', function (e) {
+		if (e.key === 'Escape') { hideThankYou(); }
+	});
 
-		$err.hide();
-		$btn.prop('disabled', true).text(kivun.i18n.sending);
+	// ── Job board filters ────────────────────────────────────────────────────────
+	function val(id) {
+		var el = document.getElementById(id);
+		return el ? el.value : '';
+	}
 
-		var data = new FormData(this);
-		data.append('action', 'kivun_submit_application');
-		data.append('nonce',  kivun.nonce);
+	function loadJobs(paged) {
+		var board = document.querySelector('.kivun-jobs-board');
+		if (!board) { return; }
 
-		$.ajax({
-			url:         kivun.ajax_url,
-			type:        'POST',
-			data:        data,
-			processData: false,
-			contentType: false,
-			success: function (res) {
-				if (res.success) {
-					$form.replaceWith('<p class="kivun-success">' + res.data.message + '</p>');
-				} else {
-					$err.text(res.data.message).show();
-					$btn.prop('disabled', false).text(kivun.i18n.submit);
-				}
-			},
-			error: function () {
-				$err.text(kivun.i18n.error_generic).show();
-				$btn.prop('disabled', false).text(kivun.i18n.submit);
-			},
+		board.classList.add('kivun-loading');
+
+		post(params({
+			action: 'kivun_filter_jobs',
+			nonce: kivun.nonce,
+			scope: val('kivun-filter-scope'),
+			region: val('kivun-filter-region'),
+			field: val('kivun-filter-field'),
+			search: val('kivun-filter-search'),
+			paged: paged || 1
+		})).then(function (res) {
+			board.classList.remove('kivun-loading');
+			if (res.success) {
+				board.innerHTML = res.data.html;
+				var count = document.querySelector('.kivun-jobs-count');
+				if (count) { count.textContent = res.data.count; }
+			}
+		}).catch(function () {
+			board.classList.remove('kivun-loading');
 		});
-	});
+	}
 
-	// ── Course registration submit ───────────────────────────────────────────────
-	$(document).on('submit', '.kivun-register-form', function (e) {
-		e.preventDefault();
-		var $form   = $(this);
-		var $btn    = $form.find('[type=submit]');
-		var $err    = $form.find('.kivun-error');
-		var isPaid  = $form.find('[name=is_paid]').val() === '1';
-
-		$err.hide();
-		$btn.prop('disabled', true).text(kivun.i18n.sending);
-
-		if (isPaid) {
-			// Paid course → go through WooCommerce
-			$.post(kivun.ajax_url, $.extend({ action: 'kivun_course_checkout', nonce: kivun.nonce }, formToObj($form)), function (res) {
-				if (res.success) {
-					window.location.href = res.data.checkout_url;
-				} else {
-					$err.text(res.data.message).show();
-					$btn.prop('disabled', false);
-				}
-			});
-		} else {
-			// Free course → direct registration
-			$.post(kivun.ajax_url, $.extend({ action: 'kivun_register_course', nonce: kivun.nonce }, formToObj($form)), function (res) {
-				if (res.success) {
-					$form.replaceWith('<p class="kivun-success">' + res.data.message + '</p>');
-				} else {
-					$err.text(res.data.message).show();
-					$btn.prop('disabled', false);
-				}
-			});
+	document.addEventListener('change', function (e) {
+		if (e.target.closest('#kivun-filter-scope, #kivun-filter-region, #kivun-filter-field')) {
+			loadJobs();
 		}
 	});
 
-	function formToObj($form) {
-		var obj = {};
-		$.each($form.serializeArray(), function (_, f) { obj[f.name] = f.value; });
-		return obj;
+	document.addEventListener('input', function (e) {
+		if (e.target.closest('#kivun-filter-search')) {
+			clearTimeout(filterTimeout);
+			filterTimeout = setTimeout(loadJobs, 400);
+		}
+	});
+
+	// Toggle between "search by categories" and "free search" modes.
+	document.addEventListener('click', function (e) {
+		var tab = e.target.closest('.kivun-filtertab');
+		if (!tab) { return; }
+
+		var wrap = tab.closest('.kivun-jobs-filters');
+		var mode = tab.dataset.filtermode;
+
+		wrap.querySelectorAll('.kivun-filtertab').forEach(function (t) {
+			t.classList.toggle('is-active', t === tab);
+		});
+		wrap.querySelectorAll('[data-filterpanel]').forEach(function (panel) {
+			var show = panel.dataset.filterpanel === mode;
+			panel.hidden = !show;
+			if (!show) {
+				panel.querySelectorAll('select, input').forEach(function (el) { el.value = ''; });
+			}
+		});
+
+		loadJobs();
+	});
+
+	// ── Apply form toggle ────────────────────────────────────────────────────────
+	document.addEventListener('click', function (e) {
+		var toggle = e.target.closest('.kivun-apply-toggle');
+		if (!toggle) { return; }
+		var target = document.getElementById(toggle.dataset.target);
+		if (target) {
+			target.hidden = !target.hidden;
+		}
+	});
+
+	// ── Generic AJAX form submit (URL-encoded) ───────────────────────────────────
+	function handleFormSubmit(form, action, onSuccess) {
+		// Flush any TinyMCE (WYSIWYG) editors into their textareas first.
+		if (window.tinymce) { window.tinymce.triggerSave(); }
+
+		var btn = form.querySelector('[type=submit]');
+		var err = form.querySelector('.kivun-error');
+		var originalText = btn ? btn.textContent : '';
+
+		if (err) { err.style.display = 'none'; }
+		if (btn) { btn.disabled = true; btn.textContent = kivun.i18n.sending; }
+
+		var restore = function () {
+			if (btn) { btn.disabled = false; btn.textContent = originalText; }
+		};
+
+		post(formParams(form, { action: action, nonce: kivun.nonce }))
+			.then(function (res) {
+				if (res.success) {
+					onSuccess(res, form);
+				} else {
+					showError(err, res.data.message);
+					restore();
+				}
+			})
+			.catch(function (e) {
+				showError(err, failure(e));
+				restore();
+			});
 	}
 
-	// ── Lead / Interest form (courses + workshops) ───────────────────────────────
-	$(document).on('submit', '.kivun-lead-form', function (e) {
-		e.preventDefault();
-		var $form = $(this);
-		var $btn  = $form.find('[type=submit]');
-		var $err  = $form.find('.kivun-error');
+	document.addEventListener('submit', function (e) {
+		var form = e.target;
 
-		$err.hide();
-		$btn.prop('disabled', true).text(kivun.i18n.sending);
+		// CV application (multipart — includes the file input).
+		if (form.matches('.kivun-apply-form')) {
+			e.preventDefault();
+			var btn = form.querySelector('[type=submit]');
+			var err = form.querySelector('.kivun-error');
+			var originalText = btn ? btn.textContent : '';
+			if (err) { err.style.display = 'none'; }
+			if (btn) { btn.disabled = true; btn.textContent = kivun.i18n.sending; }
 
-		$.post(kivun.ajax_url, $.extend({ action: 'kivun_submit_lead', nonce: kivun.nonce }, formToObj($form)), function (res) {
-			if (res.success) {
-				$form.replaceWith('<p class="kivun-success">' + res.data.message + '</p>');
-			} else {
-				$err.text(res.data.message).show();
-				$btn.prop('disabled', false).text(kivun.i18n.submit);
+			var data = new FormData(form);
+			data.append('action', 'kivun_submit_application');
+			data.append('nonce', kivun.nonce);
+
+			post(data).then(function (res) {
+				if (res.success) {
+					replaceWithSuccess(form, res.data.message);
+				} else {
+					showError(err, res.data.message);
+					if (btn) { btn.disabled = false; btn.textContent = originalText; }
+				}
+			}).catch(function (e) {
+				showError(err, failure(e));
+				if (btn) { btn.disabled = false; btn.textContent = originalText; }
+			});
+			return;
+		}
+
+		// Course registration (free → direct, paid → WooCommerce checkout).
+		if (form.matches('.kivun-register-form')) {
+			e.preventDefault();
+			var paidField = form.querySelector('[name=is_paid]');
+			var isPaid = paidField && paidField.value === '1';
+			handleFormSubmit(form, isPaid ? 'kivun_course_checkout' : 'kivun_register_course', function (res, theForm) {
+				if (isPaid) {
+					window.location.href = res.data.checkout_url;
+				} else {
+					replaceWithSuccess(theForm, res.data.message);
+				}
+			});
+			return;
+		}
+
+		// Lead / interest form (courses + workshops).
+		if (form.matches('.kivun-lead-form')) {
+			e.preventDefault();
+			handleFormSubmit(form, 'kivun_submit_lead', function (res, theForm) {
+				replaceWithSuccess(theForm, res.data.message);
+			});
+			return;
+		}
+
+		// Employer self-registration.
+		if (form.matches('.kivun-employer-reg-form')) {
+			e.preventDefault();
+			handleFormSubmit(form, 'kivun_register_employer', function (res, theForm) {
+				replaceWithSuccess(theForm, res.data.message);
+			});
+			return;
+		}
+
+		// Manager — create a publisher on the employer's behalf.
+		if (form.matches('.kivun-create-employer-form')) {
+			e.preventDefault();
+			handleFormSubmit(form, 'kivun_create_employer', function () {
+				window.location.reload();
+			});
+			return;
+		}
+
+		// Manager — update an existing publisher's details.
+		if (form.matches('.kivun-update-employer-form')) {
+			e.preventDefault();
+			handleFormSubmit(form, 'kivun_update_employer', function () {
+				window.location.reload();
+			});
+			return;
+		}
+
+		// Employer dashboard — post/update job.
+		if (form.matches('.kivun-employer-form')) {
+			e.preventDefault();
+			handleFormSubmit(form, form.dataset.action, function () {
+				window.location.reload();
+			});
+			return;
+		}
+	});
+
+	// ── Manager dashboard — act-as switcher + add-publisher toggle ────────────────
+	document.addEventListener('change', function (e) {
+		var asSel = e.target.closest('#kivun-as-select');
+		if (!asSel) { return; }
+		var url = new URL(window.location.href);
+		if (asSel.value && asSel.value !== '0') {
+			url.searchParams.set('kivun_as', asSel.value);
+		} else {
+			url.searchParams.delete('kivun_as');
+		}
+		window.location.href = url.toString();
+	});
+
+	function kivunCloseForm(id) {
+		var wrap = document.getElementById(id);
+		if (!wrap) { return; }
+		wrap.hidden = true;
+		var frm = wrap.querySelector('form');
+		if (frm) {
+			frm.reset();
+			var frmErr = frm.querySelector('.kivun-error');
+			if (frmErr) { frmErr.style.display = 'none'; }
+		}
+	}
+
+	function kivunOpenForm(id) {
+		var wrap = document.getElementById(id);
+		if (!wrap) { return null; }
+		wrap.hidden = false;
+		wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+		return wrap;
+	}
+
+	document.addEventListener('click', function (e) {
+		// Open the "add publisher" form (button exists in two places).
+		if (e.target.closest('#kivun-add-employer, #kivun-add-employer-2')) {
+			var openF = kivunOpenForm('kivun-add-employer-form');
+			if (openF) {
+				var firstField = openF.querySelector('input[name="display_name"]');
+				if (firstField) { firstField.focus(); }
 			}
-		});
-	});
+		}
+		if (e.target.closest('#kivun-cancel-add-employer')) {
+			kivunCloseForm('kivun-add-employer-form');
+		}
+		if (e.target.closest('#kivun-cancel-edit-employer')) {
+			kivunCloseForm('kivun-edit-employer-form');
+		}
 
-	// ── Employer registration ────────────────────────────────────────────────────
-	$(document).on('submit', '.kivun-employer-reg-form', function (e) {
-		e.preventDefault();
-		var $form = $(this);
-		var $btn  = $form.find('[type=submit]');
-		var $err  = $form.find('.kivun-error');
-
-		$err.hide();
-		$btn.prop('disabled', true).text(kivun.i18n.sending);
-
-		$.post(kivun.ajax_url, $.extend({ action: 'kivun_register_employer', nonce: kivun.nonce }, formToObj($form)), function (res) {
-			if (res.success) {
-				$form.replaceWith('<p class="kivun-success">' + res.data.message + '</p>');
-			} else {
-				$err.text(res.data.message).show();
-				$btn.prop('disabled', false).text(kivun.i18n.submit);
+		// Edit an existing publisher — populate and open the inline form.
+		var empEdit = e.target.closest('.kivun-edit-employer');
+		if (empEdit) {
+			var empRow2 = document.querySelector('[data-employer-row="' + empEdit.dataset.id + '"]');
+			var empWrap = kivunOpenForm('kivun-edit-employer-form');
+			if (empRow2 && empWrap) {
+				var empForm = empWrap.querySelector('form');
+				var setEmp = function (name, value) {
+					var el = empForm.querySelector('[name="' + name + '"]');
+					if (el) { el.value = value || ''; }
+				};
+				setEmp('employer_id', empEdit.dataset.id);
+				setEmp('display_name', empRow2.dataset.name);
+				setEmp('company', empRow2.dataset.company);
+				setEmp('email', empRow2.dataset.email);
+				setEmp('phone', empRow2.dataset.phone);
+				var focusEmp = empForm.querySelector('input[name="company"]');
+				if (focusEmp) { focusEmp.focus(); }
 			}
-		});
+		}
 	});
 
-	// ── Employer dashboard ───────────────────────────────────────────────────────
-	$('#kivun-toggle-new-job').on('click', function () {
-		$('#kivun-new-job-form').slideDown(200);
+	// ── Manager — send a set-password link to a publisher ────────────────────────
+	document.addEventListener('click', function (e) {
+		var sendBtn = e.target.closest('.kivun-send-login');
+		if (!sendBtn) { return; }
+		if (!window.confirm(kivun.i18n.confirm_send_login)) { return; }
+
+		var note = sendBtn.parentNode.querySelector('.kivun-saved-indicator');
+		sendBtn.disabled = true;
+		post(params({
+			action: 'kivun_send_employer_login',
+			nonce: kivun.nonce,
+			employer_id: sendBtn.dataset.id
+		})).then(function (res) {
+			sendBtn.disabled = false;
+			if (note) {
+				note.textContent = res.success ? res.data.message : res.data.message;
+				note.style.display = 'inline';
+				setTimeout(function () { note.style.display = 'none'; }, 4000);
+			}
+		}).catch(function () { sendBtn.disabled = false; });
 	});
 
-	$('#kivun-cancel-new-job').on('click', function () {
-		$('#kivun-new-job-form').slideUp(200);
-	});
+	// ── Manager — disable / re-enable a publisher ────────────────────────────────
+	document.addEventListener('click', function (e) {
+		var togBtn = e.target.closest('.kivun-toggle-employer');
+		if (!togBtn) { return; }
+		var willDisable = togBtn.dataset.disable === '1';
+		if (willDisable && !window.confirm(kivun.i18n.confirm_disable_employer)) { return; }
 
-	$(document).on('submit', '.kivun-employer-form', function (e) {
-		e.preventDefault();
-		var $form   = $(this);
-		var $btn    = $form.find('[type=submit]');
-		var $err    = $form.find('.kivun-error');
-		var action  = $form.data('action');
-
-		$err.hide();
-		$btn.prop('disabled', true).text(kivun.i18n.sending);
-
-		$.post(kivun.ajax_url, $.extend({ action: action, nonce: kivun.nonce }, formToObj($form)), function (res) {
+		togBtn.disabled = true;
+		post(params({
+			action: 'kivun_toggle_employer',
+			nonce: kivun.nonce,
+			employer_id: togBtn.dataset.id,
+			disable: willDisable ? '1' : '0'
+		})).then(function (res) {
 			if (res.success) {
 				window.location.reload();
 			} else {
-				$err.text(res.data.message).show();
-				$btn.prop('disabled', false);
+				togBtn.disabled = false;
+				window.alert(res.data.message);
 			}
-		});
+		}).catch(function () { togBtn.disabled = false; });
 	});
 
-	$(document).on('click', '.kivun-delete-job', function () {
-		if (!window.confirm(kivun.i18n.confirm_delete)) return;
-		var $btn = $(this);
-		var id   = $btn.data('id');
+	// ── Employer dashboard — renew an expired job ────────────────────────────────
+	document.addEventListener('click', function (e) {
+		var renewBtn = e.target.closest('.kivun-renew-job');
+		if (!renewBtn) { return; }
 
-		$.post(kivun.ajax_url, { action: 'kivun_delete_job', nonce: kivun.nonce, job_id: id }, function (res) {
+		var today = new Date();
+		today.setDate(today.getDate() + 30);
+		var suggested = today.toISOString().slice(0, 10);
+
+		var newDate = window.prompt(kivun.i18n.renew_prompt, suggested);
+		if (!newDate) { return; }
+
+		renewBtn.disabled = true;
+		post(params({
+			action: 'kivun_renew_job',
+			nonce: kivun.nonce,
+			job_id: renewBtn.dataset.id,
+			deadline: newDate
+		})).then(function (res) {
 			if (res.success) {
-				$('[data-job-row="' + id + '"]').fadeOut(300, function () { $(this).remove(); });
+				window.location.reload();
+			} else {
+				renewBtn.disabled = false;
+				window.alert(res.data.message);
+			}
+		}).catch(function () { renewBtn.disabled = false; });
+	});
+
+	// ── Employer dashboard — add / edit job form ─────────────────────────────────
+	function kivunSetEditor(id, html) {
+		if (window.tinymce && window.tinymce.get(id)) {
+			window.tinymce.get(id).setContent(html || '');
+		} else {
+			var ta = document.getElementById(id);
+			if (ta) { ta.value = html || ''; }
+		}
+	}
+
+	function kivunFormMode(isEdit) {
+		var heading = document.getElementById('kivun-new-job-heading');
+		var submit = document.getElementById('kivun-new-job-submit');
+		if (heading) { heading.textContent = isEdit ? heading.dataset.edit : heading.dataset.new; }
+		if (submit) { submit.textContent = isEdit ? submit.dataset.edit : submit.dataset.new; }
+	}
+
+	function kivunResetJobForm() {
+		var form = document.querySelector('.kivun-employer-form');
+		if (!form) { return; }
+		form.reset();
+		form.dataset.action = 'kivun_post_job';
+		var jobId = form.querySelector('input[name="job_id"]');
+		if (jobId) { jobId.value = ''; }
+		kivunSetEditor('kivunjobdesc', '');
+		kivunSetEditor('kivunjobreq', '');
+		// Manager selector: default to the publisher currently being acted-as.
+		var empRow = form.querySelector('.kivun-mgr-only');
+		var empSel = form.querySelector('[name="employer_id"]');
+		if (empRow && empSel) { empSel.value = empRow.dataset.defaultEmployer || ''; }
+		var err = form.querySelector('.kivun-error');
+		if (err) { err.style.display = 'none'; }
+		kivunFormMode(false);
+	}
+
+	document.addEventListener('click', function (e) {
+		if (e.target.closest('#kivun-toggle-new-job')) {
+			var openForm = document.getElementById('kivun-new-job-form');
+			if (openForm) {
+				kivunResetJobForm();
+				openForm.style.display = 'block';
+				// Let any TinyMCE editors recalculate now that they are visible.
+				window.dispatchEvent(new Event('resize'));
+				var first = openForm.querySelector('input[name="title"]');
+				if (first) { first.focus(); }
+			}
+		}
+		if (e.target.closest('#kivun-cancel-new-job')) {
+			var closeForm = document.getElementById('kivun-new-job-form');
+			if (closeForm) { closeForm.style.display = 'none'; }
+			kivunResetJobForm();
+		}
+
+		// Edit an existing job — populate the shared form in edit mode.
+		var editBtn = e.target.closest('.kivun-edit-job');
+		if (editBtn) {
+			var row = editBtn.closest('[data-job-row]');
+			var form = document.querySelector('.kivun-employer-form');
+			var wrap = document.getElementById('kivun-new-job-form');
+			if (row && form && wrap) {
+				form.dataset.action = 'kivun_update_job';
+				var idField = form.querySelector('input[name="job_id"]');
+				if (idField) { idField.value = editBtn.dataset.id; }
+
+				var setField = function (name, value) {
+					var el = form.querySelector('[name="' + name + '"]');
+					if (el) { el.value = value || ''; }
+				};
+				setField('title', row.dataset.title);
+				setField('company', row.dataset.company);
+				setField('salary', row.dataset.salary);
+				setField('scope', row.dataset.scope);
+				setField('region', row.dataset.region);
+				setField('field', row.dataset.field);
+				setField('employer_id', row.dataset.employer);
+				setField('deadline', row.dataset.deadline);
+				setField('city', row.dataset.city);
+				setField('work_hours', row.dataset.workHours);
+				setField('experience_years', row.dataset.experience);
+
+				var chosen = (row.dataset.features || '').split('|').filter(Boolean);
+				form.querySelectorAll('[name="features[]"]').forEach(function (box) {
+					box.checked = chosen.indexOf(box.value) !== -1;
+				});
+				kivunSetEditor('kivunjobdesc', row.dataset.description);
+				kivunSetEditor('kivunjobreq', row.dataset.requirements);
+
+				kivunFormMode(true);
+				wrap.style.display = 'block';
+				window.dispatchEvent(new Event('resize'));
+				wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+			}
+		}
+	});
+
+	// ── Employer dashboard — delete job ──────────────────────────────────────────
+	document.addEventListener('click', function (e) {
+		var del = e.target.closest('.kivun-delete-job');
+		if (!del) { return; }
+		if (!window.confirm(kivun.i18n.confirm_delete)) { return; }
+
+		var id = del.dataset.id;
+		post(params({ action: 'kivun_delete_job', nonce: kivun.nonce, job_id: id })).then(function (res) {
+			if (res.success) {
+				var row = document.querySelector('[data-job-row="' + id + '"]');
+				if (row) { row.parentNode.removeChild(row); }
 			}
 		});
 	});
 
-}(jQuery));
+	// ── Publish status — reveal the date picker only when scheduling ─────────────
+	function kivunSyncSchedule(select) {
+		var card = select.closest('.kivun-cc-card');
+		var box = card && card.querySelector('.kivun-cc-schedule');
+		if (!box) { return; }
+
+		var scheduling = select.value === 'future';
+		box.hidden = !scheduling;
+
+		var field = box.querySelector('input[name="schedule"]');
+		if (!field) { return; }
+
+		// Default to a round hour tomorrow, so choosing "scheduled" never leaves
+		// an empty date that would silently fall back to publishing now.
+		if (scheduling && !field.value) {
+			var when = new Date();
+			when.setDate(when.getDate() + 1);
+			when.setMinutes(0, 0, 0);
+			var pad = function (n) { return String(n).padStart(2, '0'); };
+			field.value = when.getFullYear() + '-' + pad(when.getMonth() + 1) + '-' + pad(when.getDate()) +
+				'T' + pad(when.getHours()) + ':00';
+		}
+		if (scheduling) { field.setAttribute('required', 'required'); } else { field.removeAttribute('required'); }
+	}
+
+	document.addEventListener('change', function (e) {
+		var select = e.target.closest('.kivun-cc-status');
+		if (select) { kivunSyncSchedule(select); }
+	});
+
+	document.querySelectorAll('.kivun-cc-status').forEach(kivunSyncSchedule);
+
+	// ── Settlement autocomplete (Mercaz Kivun vocabulary) ────────────────────────
+	var kivunCityTimer;
+
+	document.addEventListener('input', function (e) {
+		var field = e.target.closest('input[list="kivun-city-list"]');
+		if (!field) { return; }
+
+		var term = field.value.trim();
+		if (term.length < 2) { return; }
+
+		// The vocabulary holds over a thousand settlements, so it is queried on
+		// demand rather than shipped to the page.
+		clearTimeout(kivunCityTimer);
+		kivunCityTimer = setTimeout(function () {
+			post(params({ action: 'kivun_city_search', nonce: kivun.nonce, term: term }))
+				.then(function (res) {
+					if (!res.success || !res.data.cities) { return; }
+					var list = document.getElementById('kivun-city-list');
+					if (!list) { return; }
+					list.innerHTML = '';
+					res.data.cities.forEach(function (name) {
+						var opt = document.createElement('option');
+						opt.value = name;
+						list.appendChild(opt);
+					});
+				})
+				.catch(function () { /* autocomplete is a convenience, not a gate */ });
+		}, 300);
+	});
+
+	// ── Send one item to Mercaz Kivun ────────────────────────────────────────────
+	document.addEventListener('click', function (e) {
+		var btn = e.target.closest('.kivun-mercaz-push');
+		if (!btn) { return; }
+
+		var status = btn.parentNode.querySelector('.kivun-mercaz-status');
+		btn.disabled = true;
+		if (status) { status.textContent = kivun.i18n.sending; }
+
+		post(params({ action: 'kivun_mercaz_push', nonce: kivun.nonce, post_id: btn.dataset.id }))
+			.then(function (res) {
+				btn.disabled = false;
+				if (!status) { return; }
+				if (res.success) {
+					status.textContent = res.data.message;
+					status.className = 'kivun-mercaz-status is-ok';
+				} else {
+					status.textContent = (res.data && res.data.message) || kivun.i18n.error_generic;
+					status.className = 'kivun-mercaz-status is-error';
+				}
+			})
+			.catch(function (e) {
+				btn.disabled = false;
+				if (status) {
+					status.textContent = failure(e);
+					status.className = 'kivun-mercaz-status is-error';
+				}
+			});
+	});
+
+	// ── WhatsApp promo generator ─────────────────────────────────────────────────
+	function kivunWaField(form, selector) {
+		var el = form.querySelector(selector);
+		if (!el) { return ''; }
+
+		// The rich fields hold HTML, and the promo is plain text. Decoding and
+		// stripping has to repeat: a tag stored entity-encoded ("&lt;p&gt;")
+		// survives one pass, since reading textContent turns it into a literal
+		// "<p>" rather than removing it.
+		var text = el.value || '';
+		var previous;
+		var tmp = document.createElement('div');
+
+		for (var pass = 0; pass < 3 && text !== previous; pass++) {
+			previous = text;
+			// A break separates words; removing it with the rest of the markup
+			// would run the words either side together.
+			text = text.replace(/<br\s*\/?>|<\/p>|<\/div>|<\/li>/gi, ' ');
+			tmp.innerHTML = text;
+			text = tmp.textContent || '';
+		}
+
+		return text.replace(/\s+/g, ' ').trim();
+	}
+
+	function kivunWaShareLink(text) {
+		return 'https://wa.me/?text=' + encodeURIComponent(text);
+	}
+
+	document.addEventListener('click', function (e) {
+		var btn = e.target.closest('.kivun-wa-btn');
+		if (!btn) { return; }
+
+		var form = btn.closest('form');
+		var card = btn.closest('.kivun-cc-wa');
+		var out = card && card.querySelector('.kivun-wa-text');
+		var status = card && card.querySelector('.kivun-cc-wa-status');
+		if (!form || !out) { return; }
+
+		// Replacing copy the user may have edited is destructive — ask first.
+		if (out.value.trim() && !window.confirm(kivun.i18n.confirm_replace_whatsapp)) { return; }
+
+		var checked = form.querySelector('[name="publish[]"]:checked, [name="publish[]"]');
+		var data = new URLSearchParams({
+			action: 'kivun_generate_whatsapp',
+			nonce: btn.dataset.nonce,
+			type: checked ? checked.value : '',
+			title: kivunWaField(form, '[name="title"]'),
+			short: kivunWaField(form, '[name="short"]'),
+			audience: kivunWaField(form, '[name="audience"]'),
+			duration: kivunWaField(form, '[name="duration"]'),
+			cost: kivunWaField(form, '[name="cost"]'),
+			date: kivunWaField(form, '[name="date"]'),
+			location: kivunWaField(form, '[name="session_location"]') || kivunWaField(form, '[name="event_location"]'),
+			url: btn.dataset.url || ''
+		});
+
+		btn.disabled = true;
+		if (status) { status.textContent = kivun.i18n.sending; }
+
+		fetch(btn.dataset.ajax, { method: 'POST', credentials: 'same-origin', body: data })
+			.then(function (r) { return r.json(); })
+			.then(function (res) {
+				btn.disabled = false;
+				if (!res.success) {
+					if (status) { status.textContent = (res.data && res.data.message) || kivun.i18n.error_generic; }
+					return;
+				}
+				out.value = res.data.text;
+				if (status) {
+					status.textContent = res.data.notice
+						? res.data.notice
+						: (res.data.source === 'template' ? kivun.i18n.wa_from_fields : kivun.i18n.saved);
+				}
+			})
+			.catch(function (e) {
+				btn.disabled = false;
+				if (status) { status.textContent = failure(e); }
+			});
+	});
+
+	document.addEventListener('click', function (e) {
+		var copy = e.target.closest('.kivun-wa-copy');
+		if (!copy) { return; }
+		var card = copy.closest('.kivun-cc-wa');
+		var field = card && card.querySelector('.kivun-wa-text');
+		if (!field || !field.value.trim()) { return; }
+
+		var done = function () {
+			var original = copy.textContent;
+			copy.textContent = '✓ הועתק';
+			setTimeout(function () { copy.textContent = original; }, 1600);
+		};
+		if (navigator.clipboard) {
+			navigator.clipboard.writeText(field.value).then(done, function () { field.select(); });
+		} else {
+			field.select();
+			try { document.execCommand('copy'); done(); } catch (err) { /* selection is the fallback */ }
+		}
+	});
+
+	// Keep the share link in step with whatever is currently in the box.
+	document.addEventListener('click', function (e) {
+		var share = e.target.closest('.kivun-wa-share');
+		if (!share) { return; }
+		var card = share.closest('.kivun-cc-wa');
+		var field = card && card.querySelector('.kivun-wa-text');
+		if (!field || !field.value.trim()) {
+			e.preventDefault();
+			return;
+		}
+		share.href = kivunWaShareLink(field.value);
+	});
+
+	// ── Leads access — invite a viewer ───────────────────────────────────────────
+	document.addEventListener('submit', function (e) {
+		var form = e.target.closest('.kivun-viewer-form');
+		if (!form) { return; }
+		e.preventDefault();
+
+		var err = form.querySelector('.kivun-viewer-error');
+		var status = form.querySelector('.kivun-viewer-status');
+		var emailEl = form.querySelector('.kivun-viewer-email');
+		var nameEl = form.querySelector('.kivun-viewer-name');
+
+		if (!emailEl || !emailEl.value.trim()) {
+			showError(err, 'יש להזין כתובת אימייל.');
+			return;
+		}
+		if (err) { err.style.display = 'none'; }
+
+		var btn = form.querySelector('button[type="submit"]');
+		if (btn) {
+			if (btn.disabled) { return; }
+			btn.disabled = true;
+		}
+		if (status) { status.textContent = kivun.i18n.sending; }
+
+		post(params({
+			action: 'kivun_add_leads_viewer',
+			nonce: kivun.nonce,
+			email: emailEl.value.trim(),
+			name: nameEl ? nameEl.value.trim() : ''
+		})).then(function (res) {
+			if (btn) { btn.disabled = false; }
+			if (res.success) {
+				if (status) { status.textContent = res.data.message; }
+				// Reload so the new viewer appears in the list below.
+				setTimeout(function () { kivunCampReload('leads'); }, 1500);
+			} else {
+				if (status) { status.textContent = ''; }
+				showError(err, (res.data && res.data.message) || kivun.i18n.error_generic);
+			}
+		}).catch(function (e) {
+			if (btn) { btn.disabled = false; }
+			if (status) { status.textContent = ''; }
+			showError(err, failure(e));
+		});
+	});
+
+	document.addEventListener('click', function (e) {
+		var del = e.target.closest('.kivun-remove-viewer');
+		if (!del) { return; }
+		if (!window.confirm(kivun.i18n.confirm_remove_viewer)) { return; }
+
+		del.disabled = true;
+		post(params({ action: 'kivun_remove_leads_viewer', nonce: kivun.nonce, user_id: del.dataset.id }))
+			.then(function (res) {
+				if (res.success) {
+					var row = document.querySelector('[data-viewer-row="' + del.dataset.id + '"]');
+					if (row) { row.parentNode.removeChild(row); }
+				} else {
+					del.disabled = false;
+				}
+			})
+			.catch(function () { del.disabled = false; });
+	});
+
+	// ── Tracked phone numbers ────────────────────────────────────────────────────
+	function kivunPhonePost(form, body, err) {
+		var btn = form.querySelector('button[type="submit"]');
+		if (btn) {
+			if (btn.disabled) { return; }
+			btn.disabled = true;
+		}
+
+		post(params(body)).then(function (res) {
+			if (res.success) {
+				kivunCampReload('calls');
+			} else {
+				if (btn) { btn.disabled = false; }
+				showError(err, (res.data && res.data.message) || kivun.i18n.error_generic);
+			}
+		}).catch(function (e) {
+			if (btn) { btn.disabled = false; }
+			showError(err, failure(e));
+		});
+	}
+
+	document.addEventListener('submit', function (e) {
+		var phoneForm = e.target.closest('.kivun-phone-form');
+		if (phoneForm) {
+			e.preventDefault();
+			var pErr = phoneForm.querySelector('.kivun-phone-error');
+			var numEl = phoneForm.querySelector('.kivun-phone-number');
+			var labEl = phoneForm.querySelector('.kivun-phone-label');
+			if (!numEl || !numEl.value.trim()) {
+				showError(pErr, 'יש להזין מספר טלפון.');
+				return;
+			}
+			if (pErr) { pErr.style.display = 'none'; }
+
+			kivunPhonePost(phoneForm, {
+				action: 'kivun_save_phone',
+				nonce: kivun.nonce,
+				number: numEl.value.trim(),
+				label: labEl ? labEl.value.trim() : ''
+			}, pErr);
+			return;
+		}
+
+		var asForm = e.target.closest('.kivun-assignment-form');
+		if (!asForm) { return; }
+		e.preventDefault();
+
+		var aErr = asForm.querySelector('.kivun-phone-error');
+		var media = asForm.querySelector('.kivun-as-media');
+		var start = asForm.querySelector('.kivun-as-start');
+		if (!media || !media.value) {
+			showError(aErr, 'יש לבחור מדיה.');
+			return;
+		}
+		if (!start || !start.value) {
+			showError(aErr, 'יש לבחור תאריך התחלה.');
+			return;
+		}
+		if (aErr) { aErr.style.display = 'none'; }
+
+		var campaign = asForm.querySelector('.kivun-as-campaign');
+		var label = asForm.querySelector('.kivun-as-label');
+		var end = asForm.querySelector('.kivun-as-end');
+
+		kivunPhonePost(asForm, {
+			action: 'kivun_save_phone_assignment',
+			nonce: kivun.nonce,
+			number_id: asForm.dataset.number,
+			campaign_id: campaign ? campaign.value : 0,
+			media: media.value,
+			label: label ? label.value.trim() : '',
+			starts_on: start.value,
+			ends_on: end ? end.value : ''
+		}, aErr);
+	});
+
+	document.addEventListener('click', function (e) {
+		var del = e.target.closest('.kivun-delete-phone, .kivun-delete-assignment');
+		if (!del) { return; }
+
+		// The number's delete button sits inside the <summary>, so a click on it
+		// would otherwise also open or close the panel — including when the
+		// confirmation is declined.
+		e.preventDefault();
+		e.stopPropagation();
+
+		var isNumber = del.classList.contains('kivun-delete-phone');
+		if (!window.confirm(isNumber ? kivun.i18n.confirm_delete_phone : kivun.i18n.confirm_delete_assignment)) { return; }
+
+		del.disabled = true;
+		post(params({
+			action: isNumber ? 'kivun_delete_phone' : 'kivun_delete_phone_assignment',
+			nonce: kivun.nonce,
+			id: del.dataset.id
+		})).then(function (res) {
+			if (res.success) {
+				var sel = isNumber
+					? '[data-phone-row="' + del.dataset.id + '"]'
+					: '[data-assignment-row="' + del.dataset.id + '"]';
+				var row = document.querySelector(sel);
+				if (row) { row.parentNode.removeChild(row); }
+			} else {
+				del.disabled = false;
+			}
+		}).catch(function () { del.disabled = false; });
+	});
+
+	document.addEventListener('click', function (e) {
+		var btn = e.target.closest('.kivun-phone-import-btn');
+		if (!btn) { return; }
+
+		var wrap = btn.closest('.kivun-phone-import');
+		var file = wrap && wrap.querySelector('.kivun-phone-file');
+		var status = wrap && wrap.querySelector('.kivun-phone-import-status');
+		if (!file || !file.files || !file.files.length) {
+			if (status) { status.textContent = 'יש לבחור קובץ.'; }
+			return;
+		}
+
+		// A file upload cannot go as URL-encoded parameters.
+		var data = new FormData();
+		data.append('action', 'kivun_import_phones');
+		data.append('nonce', kivun.nonce);
+		data.append('file', file.files[0]);
+
+		btn.disabled = true;
+		if (status) { status.textContent = kivun.i18n.sending; }
+
+		post(data).then(function (res) {
+			btn.disabled = false;
+			if (res.success) {
+				if (status) { status.textContent = res.data.message; }
+				// Only reload when something actually landed, so the message
+				// stays readable when nothing did.
+				if (res.data.added) { setTimeout(function () { kivunCampReload('calls'); }, 1200); }
+			} else if (status) {
+				status.textContent = (res.data && res.data.message) || kivun.i18n.error_generic;
+			}
+		}).catch(function (e) {
+			btn.disabled = false;
+			if (status) { status.textContent = failure(e); }
+		});
+	});
+
+	// ── WhatsApp promo for one campaign link ─────────────────────────────────────
+	document.addEventListener('click', function (e) {
+		var btn = e.target.closest('.kivun-link-wa-btn');
+		if (!btn) { return; }
+
+		var form = btn.closest('.kivun-camplink-form');
+		var out = form && form.querySelector('.kivun-link-wa-text');
+		var status = btn.parentNode.querySelector('.kivun-cc-wa-status');
+		if (!form || !out) { return; }
+
+		var sourceEl = form.querySelector('.kivun-link-source');
+		var source = sourceEl ? kivunCampClean(sourceEl.value) : '';
+		if (!source) {
+			if (status) { status.textContent = 'יש להזין מקור קודם, כדי שהקישור בהודעה יהיה מסומן.'; }
+			return;
+		}
+		if (out.value.trim() && !window.confirm(kivun.i18n.confirm_replace_whatsapp)) { return; }
+
+		var mediumEl = form.querySelector('.kivun-link-medium');
+		var contentEl = form.querySelector('.kivun-link-content');
+		var preview = form.querySelector('.kivun-camp-result');
+
+		btn.disabled = true;
+		if (status) { status.textContent = kivun.i18n.sending; }
+
+		post(params({
+			action: 'kivun_campaign_whatsapp',
+			nonce: kivun.nonce,
+			campaign_id: btn.dataset.campaign,
+			target_url: preview ? preview.dataset.target : '',
+			utm_source: source,
+			utm_medium: mediumEl ? kivunCampClean(mediumEl.value) : '',
+			utm_content: contentEl ? kivunCampClean(contentEl.value) : ''
+		})).then(function (res) {
+			btn.disabled = false;
+			if (!res.success) {
+				if (status) { status.textContent = (res.data && res.data.message) || kivun.i18n.error_generic; }
+				return;
+			}
+			out.value = res.data.text;
+			if (status) {
+				status.textContent = res.data.notice
+					? res.data.notice
+					: (res.data.source === 'template' ? kivun.i18n.wa_from_fields : kivun.i18n.saved);
+			}
+		}).catch(function (err) {
+			btn.disabled = false;
+			if (status) { status.textContent = failure(err); }
+		});
+	});
+
+	// ── Campaigns and their tracking links ───────────────────────────────────────
+	function kivunCampClean(value) {
+		return String(value || '')
+			.trim()
+			.replace(/[\s_]+/g, '-')
+			.replace(/[^\p{L}\p{N}\-.]+/gu, '')
+			.replace(/-{2,}/g, '-')
+			.replace(/^-|-$/g, '')
+			.toLowerCase();
+	}
+
+	// Mirrors the PHP builder so the preview matches exactly what gets saved.
+	function kivunCampUrl(target, parts) {
+		if (!target) { return ''; }
+		var url;
+		// location.href is always a parseable base; location.origin is the
+		// string "null" in some contexts, which makes the constructor throw.
+		try { url = new URL(target, window.location.href); } catch (err) { return ''; }
+		Object.keys(parts).forEach(function (k) {
+			url.searchParams.delete(k);
+			if (parts[k]) { url.searchParams.set(k, parts[k]); }
+		});
+		return decodeURI(url.toString());
+	}
+
+	function kivunCampTarget(form) {
+		var sel = form.querySelector('.kivun-camp-target');
+		if (!sel) { return ''; }
+		if (sel.value === '__custom__') {
+			var custom = form.querySelector('.kivun-camp-custom');
+			return custom ? custom.value.trim() : '';
+		}
+		return sel.value;
+	}
+
+	// Preview for a link being added under an existing campaign.
+	function kivunLinkRefresh(form) {
+		var out = form.querySelector('.kivun-camp-result');
+		if (!out) { return; }
+
+		var read = function (cls) {
+			var el = form.querySelector('.' + cls);
+			return el ? kivunCampClean(el.value) : '';
+		};
+		var parts = {
+			utm_source: read('kivun-link-source'),
+			utm_medium: read('kivun-link-medium'),
+			utm_campaign: kivunCampClean(form.dataset.campaignSlug),
+			utm_content: read('kivun-link-content')
+		};
+		out.value = parts.utm_source ? kivunCampUrl(out.dataset.target, parts) : '';
+	}
+
+	// Choosing "other" as the target reveals the free URL field.
+	document.addEventListener('change', function (e) {
+		var sel = e.target.closest('.kivun-camp-target');
+		if (!sel) { return; }
+		var form = sel.closest('.kivun-campaign-form');
+		if (!form) { return; }
+
+		var custom = form.querySelector('.kivun-camp-custom');
+		if (custom) {
+			custom.hidden = sel.value !== '__custom__';
+			if (!custom.hidden) { custom.focus(); }
+		}
+	});
+
+	document.addEventListener('input', function (e) {
+		var form = e.target.closest('.kivun-camplink-form');
+		if (form && !e.target.classList.contains('kivun-camp-result')) { kivunLinkRefresh(form); }
+	});
+
+	// Copy — the live preview and any saved row.
+	document.addEventListener('click', function (e) {
+		var copy = e.target.closest('.kivun-camp-copy');
+		if (!copy) { return; }
+		var field = copy.parentNode.querySelector('.kivun-camp-result, .kivun-camp-saved')
+			|| (copy.closest('.kivun-cc-card') || document).querySelector('textarea.kivun-camp-saved');
+		if (!field || !field.value) { return; }
+
+		var done = function () {
+			var original = copy.textContent;
+			copy.textContent = '✓ הועתק';
+			setTimeout(function () { copy.textContent = original; }, 1600);
+		};
+		if (navigator.clipboard) {
+			navigator.clipboard.writeText(field.value).then(done, function () { field.select(); });
+		} else {
+			field.select();
+			try { document.execCommand('copy'); done(); } catch (err) { /* selection is the fallback */ }
+		}
+	});
+
+	// Reload back onto the campaigns tab: tabs are switched in JS and a plain
+	// reload would land on the default tab, hiding what was just saved.
+	function kivunCampReload(tab) {
+		tab = tab || 'campaigns';
+		try { window.sessionStorage.setItem('kivunConsoleTab', tab); } catch (err) { /* private mode */ }
+		var next = new URL(window.location.href);
+		next.searchParams.set('kivun_tab', tab);
+		window.location.assign(next.toString());
+	}
+
+	function kivunCampSubmit(form, body, err) {
+		var btn = form.querySelector('button[type="submit"]');
+		if (btn) {
+			if (btn.disabled) { return; }
+			btn.disabled = true;
+		}
+		var unlock = function () { if (btn) { btn.disabled = false; } };
+
+		post(params(body)).then(function (res) {
+			if (res.success) {
+				kivunCampReload();
+			} else {
+				unlock();
+				showError(err, (res.data && res.data.message) || kivun.i18n.error_generic);
+			}
+		}).catch(function (e) {
+			unlock();
+			showError(err, failure(e));
+		});
+	}
+
+	document.addEventListener('submit', function (e) {
+		// New campaign — the container the links hang from.
+		var campForm = e.target.closest('.kivun-campaign-form');
+		if (campForm) {
+			e.preventDefault();
+			var campErr = campForm.querySelector('.kivun-camp-error');
+			var nameEl = campForm.querySelector('.kivun-camp-campaign');
+			var name = nameEl ? nameEl.value.trim() : '';
+			var target = kivunCampTarget(campForm);
+
+			if (!name || !target) {
+				showError(campErr, 'יש למלא שם קמפיין ולבחור יעד.');
+				return;
+			}
+			if (campErr) { campErr.style.display = 'none'; }
+
+			kivunCampSubmit(campForm, {
+				action: 'kivun_save_campaign',
+				nonce: kivun.nonce,
+				label: name,
+				utm_campaign: kivunCampClean(name),
+				target_url: target
+			}, campErr);
+			return;
+		}
+
+		// New link under an existing campaign.
+		var linkForm = e.target.closest('.kivun-camplink-form');
+		if (!linkForm) { return; }
+		e.preventDefault();
+
+		var linkErr = linkForm.querySelector('.kivun-camp-error');
+		var sourceEl = linkForm.querySelector('.kivun-link-source');
+		var source = sourceEl ? kivunCampClean(sourceEl.value) : '';
+		if (!source) {
+			showError(linkErr, 'יש להזין מקור לקישור.');
+			return;
+		}
+		if (linkErr) { linkErr.style.display = 'none'; }
+
+		var labelEl = linkForm.querySelector('.kivun-link-label');
+		var mediumEl = linkForm.querySelector('.kivun-link-medium');
+		var contentEl = linkForm.querySelector('.kivun-link-content');
+		var preview = linkForm.querySelector('.kivun-camp-result');
+
+		var waEl = linkForm.querySelector('.kivun-link-wa-text');
+
+		kivunCampSubmit(linkForm, {
+			action: 'kivun_save_campaign_link',
+			nonce: kivun.nonce,
+			campaign_id: linkForm.dataset.campaign,
+			label: labelEl ? labelEl.value.trim() : '',
+			target_url: preview ? preview.dataset.target : '',
+			utm_source: source,
+			utm_medium: mediumEl ? kivunCampClean(mediumEl.value) : '',
+			utm_content: contentEl ? kivunCampClean(contentEl.value) : '',
+			whatsapp: waEl ? waEl.value : ''
+		}, linkErr);
+	});
+
+	document.addEventListener('click', function (e) {
+		var del = e.target.closest('.kivun-delete-campaign, .kivun-delete-link');
+		if (!del) { return; }
+
+		// The campaign's delete button sits inside the <summary>, so a click on
+		// it would otherwise also open or close the panel — including when the
+		// confirmation is declined.
+		e.preventDefault();
+		e.stopPropagation();
+
+		var isCampaign = del.classList.contains('kivun-delete-campaign');
+		var prompt = isCampaign ? kivun.i18n.confirm_delete_campaign : kivun.i18n.confirm_delete_link;
+		if (!window.confirm(prompt)) { return; }
+
+		del.disabled = true;
+		post(params({
+			action: isCampaign ? 'kivun_delete_campaign' : 'kivun_delete_campaign_link',
+			nonce: kivun.nonce,
+			id: del.dataset.id
+		})).then(function (res) {
+			if (res.success) {
+				var selector = isCampaign
+					? '[data-campaign-row="' + del.dataset.id + '"]'
+					: '[data-link-row="' + del.dataset.id + '"]';
+				var row = document.querySelector(selector);
+				if (row) { row.parentNode.removeChild(row); }
+			} else {
+				del.disabled = false;
+			}
+		}).catch(function () { del.disabled = false; });
+	});
+
+	// ── Content publishing wizard (multi-step form) ──────────────────────────────
+	// Every field stays in the DOM the whole time — only visibility changes — so
+	// the form still submits as one payload and the save logic is untouched.
+	var KIVUN_WIZ_LAST = 4;
+
+	function kivunWizCards(form) {
+		return Array.prototype.slice.call(form.querySelectorAll('[data-step]'));
+	}
+
+	function kivunWizShow(form, step) {
+		step = Math.min(KIVUN_WIZ_LAST, Math.max(1, step));
+		form.dataset.current = String(step);
+
+		kivunWizCards(form).forEach(function (card) {
+			card.classList.toggle('kivun-step-off', card.dataset.step !== String(step));
+		});
+
+		form.querySelectorAll('.kivun-wiz-step').forEach(function (li) {
+			var n = Number(li.dataset.gostep);
+			li.classList.toggle('is-current', n === step);
+			li.classList.toggle('is-done', n < step);
+		});
+
+		var prev = form.querySelector('.kivun-wiz-prev');
+		var next = form.querySelector('.kivun-wiz-next');
+		var send = form.querySelector('.kivun-wiz-submit');
+		if (prev) { prev.hidden = step === 1; }
+		if (next) { next.hidden = step === KIVUN_WIZ_LAST; }
+		if (send) { send.hidden = step !== KIVUN_WIZ_LAST; }
+
+		var progress = form.querySelector('.kivun-wiz-progress');
+		if (progress) { progress.textContent = 'שלב ' + step + ' מתוך ' + KIVUN_WIZ_LAST; }
+
+		// TinyMCE measures itself on init; a hidden editor comes back at zero
+		// height, so nudge it once its step becomes visible.
+		window.dispatchEvent(new Event('resize'));
+		form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+	}
+
+	function kivunWizError(form, message) {
+		var box = form.querySelector('.kivun-wiz-error');
+		if (!box) { return; }
+		box.textContent = message || '';
+		box.hidden = !message;
+	}
+
+	// Only block on fields that are actually visible in the current step.
+	function kivunWizValid(form, step) {
+		var ok = true;
+		kivunWizError(form, '');
+
+		// Step 1 decides what gets created — without a type there is nothing
+		// to publish, and the later steps would ask about nothing.
+		if (step === 1) {
+			var chosen = form.querySelectorAll('.kivun-cc-toggle:checked').length;
+			if (!chosen) {
+				kivunWizError(form, 'יש לבחור לפחות סוג תוכן אחד לפרסום.');
+				var firstToggle = form.querySelector('.kivun-cc-toggle');
+				if (firstToggle) { firstToggle.focus(); }
+				return false;
+			}
+		}
+
+		kivunWizCards(form).forEach(function (card) {
+			if (card.dataset.step !== String(step) || card.hidden) { return; }
+			card.querySelectorAll('[required]').forEach(function (field) {
+				if (!field.value.trim()) {
+					field.classList.add('kivun-field-invalid');
+					if (ok) { field.focus(); }
+					ok = false;
+				} else {
+					field.classList.remove('kivun-field-invalid');
+				}
+			});
+		});
+		if (!ok) { kivunWizError(form, 'יש למלא את שדות החובה המסומנים.'); }
+		return ok;
+	}
+
+	document.addEventListener('click', function (e) {
+		var btn = e.target.closest('.kivun-wiz-next, .kivun-wiz-prev, .kivun-wiz-step');
+		if (!btn) { return; }
+		var form = btn.closest('.kivun-cc-wizard');
+		if (!form) { return; }
+
+		var current = Number(form.dataset.current || 1);
+
+		if (btn.classList.contains('kivun-wiz-prev')) {
+			kivunWizShow(form, current - 1);
+			return;
+		}
+		if (btn.classList.contains('kivun-wiz-next')) {
+			if (kivunWizValid(form, current)) { kivunWizShow(form, current + 1); }
+			return;
+		}
+		// Clicking the stepper: forward only after the current step validates.
+		var target = Number(btn.dataset.gostep);
+		if (target <= current || kivunWizValid(form, current)) { kivunWizShow(form, target); }
+	});
+
+	// Submitting from any step must still surface a missing required field.
+	document.addEventListener('submit', function (e) {
+		var form = e.target.closest('.kivun-cc-wizard');
+		if (!form) { return; }
+		for (var s = 1; s <= KIVUN_WIZ_LAST; s++) {
+			if (!kivunWizValid(form, s)) {
+				e.preventDefault();
+				kivunWizShow(form, s);
+				return;
+			}
+		}
+	});
+
+	// Picking a type clears the "choose a type" warning immediately.
+	document.addEventListener('change', function (e) {
+		var toggle = e.target.closest('.kivun-cc-toggle');
+		if (!toggle) { return; }
+		var form = toggle.closest('.kivun-cc-wizard');
+		if (form && form.querySelectorAll('.kivun-cc-toggle:checked').length) {
+			kivunWizError(form, '');
+		}
+	});
+
+	document.querySelectorAll('.kivun-cc-wizard').forEach(function (form) {
+		kivunWizShow(form, 1);
+	});
+
+	// ── Tabs (WAI-ARIA tab pattern) — employer dashboard + content console ───────
+	function getTabs(tab) {
+		return Array.prototype.slice.call(tab.closest('.kivun-tabs').querySelectorAll('.kivun-tab'));
+	}
+
+	// The tabbed containers in the plugin. Panels are scoped to their own
+	// container so two tab sets on one page never toggle each other.
+	function tabScope(el) {
+		return el.closest('.kivun-employer-dashboard, .kivun-cc-console');
+	}
+
+	// Elements belonging to THIS tab set only. The employer dashboard can be
+	// nested inside the content console, and both use the same class names —
+	// without this, switching a console tab would also toggle the dashboard's
+	// inner panels.
+	function ownedBy(dash, selector) {
+		return Array.prototype.filter.call(
+			dash.querySelectorAll(selector),
+			function (el) { return tabScope(el) === dash; }
+		);
+	}
+
+	function activateTab(tab, focusIt) {
+		if (!tab) { return; }
+		var dash = tabScope(tab);
+		if (!dash) { return; }
+		var name = tab.dataset.tab;
+
+		ownedBy(dash, '.kivun-tab').forEach(function (t) {
+			t.classList.remove('is-active');
+			t.setAttribute('aria-selected', 'false');
+			t.setAttribute('tabindex', '-1');
+		});
+		tab.classList.add('is-active');
+		tab.setAttribute('aria-selected', 'true');
+		tab.setAttribute('tabindex', '0');
+
+		ownedBy(dash, '.kivun-tab-panel').forEach(function (panel) {
+			var match = panel.dataset.panel === name;
+			panel.classList.toggle('is-active', match);
+			panel.hidden = !match;
+		});
+
+		// Keep the console tab in the URL. Server-side links already use
+		// ?kivun_tab=..., so without this a reload (or anything that reloads on
+		// your behalf) silently throws you back to the default tab.
+		if (dash.classList.contains('kivun-cc-console') && window.history && history.replaceState) {
+			try {
+				var url = new URL(window.location.href);
+
+				// Every other kivun_* parameter describes the tab being left:
+				// an edit in progress (kivun_group), a lead filter, a page
+				// number. Carrying them over means the next reload lands on a
+				// view nobody asked for — kivun_group in particular forces the
+				// console back to the publish form — or narrows a table to
+				// nothing. Switching tabs starts that tab clean.
+				Array.from(url.searchParams.keys()).forEach(function (key) {
+					if (key.indexOf('kivun_') === 0 && key !== 'kivun_tab') {
+						url.searchParams.delete(key);
+					}
+				});
+				url.searchParams.set('kivun_tab', name);
+				history.replaceState(null, '', url.toString());
+			} catch (err) { /* URL unsupported — the tab still switches. */ }
+		}
+
+		if (focusIt) { tab.focus(); }
+	}
+
+	document.addEventListener('click', function (e) {
+		var tab = e.target.closest('.kivun-tab');
+		if (tab) { activateTab(tab, false); }
+	});
+
+	// A reload that was asked to land on a specific console tab (see the
+	// campaign save) restores it here, in case the query arg did not survive.
+	(function () {
+		var pending;
+		try {
+			pending = window.sessionStorage.getItem('kivunConsoleTab');
+			window.sessionStorage.removeItem('kivunConsoleTab');
+		} catch (err) { return; }
+		if (!pending) { return; }
+
+		var console_ = document.querySelector('.kivun-cc-console');
+		var target = console_ && console_.querySelector('.kivun-tab[data-tab="' + pending + '"]');
+		if (target && !target.classList.contains('is-active')) { activateTab(target, false); }
+	}());
+
+	document.addEventListener('keydown', function (e) {
+		var tab = e.target.closest('.kivun-tab');
+		if (!tab) { return; }
+
+		var tabs = getTabs(tab);
+		var count = tabs.length;
+		var idx = tabs.indexOf(tab);
+		var next;
+
+		switch (e.key) {
+			case 'ArrowLeft':  next = (idx + 1) % count; break;
+			case 'ArrowRight': next = (idx - 1 + count) % count; break;
+			case 'Home':       next = 0; break;
+			case 'End':        next = count - 1; break;
+			default: return;
+		}
+		e.preventDefault();
+		activateTab(tabs[next], true);
+	});
+
+	// Jump from a job row's submissions count straight into the filtered list.
+	document.addEventListener('click', function (e) {
+		var link = e.target.closest('.kivun-view-job-apps');
+		if (!link) { return; }
+
+		var dash = tabScope(link);
+		if (!dash) { return; }
+		activateTab(dash.querySelector('.kivun-tab[data-tab="applications"]'), true);
+		var jobFilter = dash.querySelector('#kivun-apps-filter-job');
+		if (jobFilter) { jobFilter.value = String(link.dataset.job); }
+		filterApplications();
+	});
+
+	// ── Applications filtering ───────────────────────────────────────────────────
+	document.addEventListener('input', function (e) {
+		if (e.target.closest('#kivun-apps-search')) {
+			clearTimeout(filterTimeout);
+			filterTimeout = setTimeout(filterApplications, 200);
+		}
+	});
+
+	document.addEventListener('change', function (e) {
+		if (e.target.closest('#kivun-apps-filter-job, #kivun-apps-filter-status')) {
+			filterApplications();
+		}
+	});
+
+	function filterApplications() {
+		var rows = document.querySelectorAll('.kivun-app-row');
+		if (!rows.length) { return; }
+
+		var term = (val('kivun-apps-search') || '').toLowerCase().trim();
+		var jobId = val('kivun-apps-filter-job');
+		var status = val('kivun-apps-filter-status');
+		var shown = 0;
+
+		rows.forEach(function (row) {
+			var ok =
+				(!term || (row.dataset.search || '').indexOf(term) !== -1) &&
+				(!jobId || String(row.dataset.job) === jobId) &&
+				(!status || String(row.dataset.status) === status);
+
+			row.style.display = ok ? '' : 'none';
+			if (ok) { shown += 1; }
+		});
+
+		var empty = document.querySelector('.kivun-apps-empty');
+		if (empty) { empty.style.display = shown === 0 ? 'block' : 'none'; }
+	}
+
+	// ── Application inline feedback ───────────────────────────────────────────────
+	function flashSaved(indicator, ok) {
+		if (!indicator) { return; }
+		indicator.textContent = ok ? kivun.i18n.saved : kivun.i18n.save_error;
+		indicator.style.color = ok ? '#15803d' : '#b91c1c';
+		indicator.style.display = 'inline-block';
+		if (ok) {
+			setTimeout(function () { indicator.style.display = 'none'; }, 1600);
+		}
+	}
+
+	// Status update (employer).
+	document.addEventListener('change', function (e) {
+		var select = e.target.closest('.kivun-app-status-select');
+		if (!select) { return; }
+
+		var row = select.closest('.kivun-app-row');
+		var indicator = select.parentNode.querySelector('.kivun-saved-indicator');
+
+		post(params({
+			action: 'kivun_employer_update_app',
+			nonce: kivun.nonce,
+			app_id: select.dataset.app,
+			status: select.value
+		})).then(function (res) {
+			if (res.success) {
+				if (row) { row.dataset.status = res.data.status; }
+				flashSaved(indicator, true);
+			} else {
+				flashSaved(indicator, false);
+			}
+		}).catch(function () {
+			flashSaved(indicator, false);
+		});
+	});
+
+	// Internal note auto-save on blur (employer).
+	document.addEventListener('blur', function (e) {
+		var note = e.target.closest('.kivun-app-note');
+		if (!note) { return; }
+
+		var row = note.closest('.kivun-app-row');
+		var indicator = row ? row.querySelector('.kivun-saved-indicator') : null;
+
+		post(params({
+			action: 'kivun_employer_app_note',
+			nonce: kivun.nonce,
+			app_id: note.dataset.app,
+			note: note.value
+		})).then(function (res) {
+			if (res.success) { flashSaved(indicator, true); }
+		});
+	}, true);
+
+	// ── Employer login: move the social-login button above username/password ──────
+	// Nextend Social Login renders its button wherever it likes (often below the
+	// form); relocate it to just above the login form, regardless of placement.
+	function placeSocialLogin() {
+		var wrap = document.querySelector('.kivun-employer-login');
+		if (!wrap) { return true; }
+		var form = wrap.querySelector('#loginform');
+		if (!form) { return true; }
+
+		var nsl = wrap.querySelector('.nsl-container');
+		if (!nsl) {
+			var node = wrap.nextElementSibling, hops = 0;
+			while (node && hops < 5 && !nsl) {
+				if (node.classList && node.classList.contains('nsl-container')) { nsl = node; }
+				else if (node.querySelector) { nsl = node.querySelector('.nsl-container'); }
+				node = node.nextElementSibling; hops++;
+			}
+		}
+		if (!nsl) { nsl = document.querySelector('.nsl-container'); }
+		if (!nsl) { return false; }
+		if (nsl.parentNode === wrap && nsl.nextElementSibling === form) { return true; }
+		wrap.insertBefore(nsl, form);
+		return true;
+	}
+
+	// ── Content creator (front-end shortcode): toggles, image preview, delete, AI ──
+	if (document.querySelector('.kivun-cc-front')) {
+		function kivunUpdateNonEvent() {
+			var ev = document.querySelector('.kivun-cc-toggle[data-type="event"]:checked'),
+				other = document.querySelector('.kivun-cc-toggle[data-type="landing"]:checked, .kivun-cc-toggle[data-type="course"]:checked, .kivun-cc-toggle[data-type="session"]:checked'),
+				hide = ev && !other;
+			document.querySelectorAll('.kivun-cc-nonevent').forEach(function (el) { el.style.display = hide ? 'none' : ''; });
+		}
+		document.querySelectorAll('.kivun-cc-toggle').forEach(function (cb) {
+			cb.addEventListener('change', function () {
+				var sec = document.querySelector('.kivun-cc-section[data-type="' + cb.dataset.type + '"]');
+				if (sec) { sec.hidden = !cb.checked; }
+				kivunUpdateNonEvent();
+			});
+		});
+		kivunUpdateNonEvent();
+
+		var ccFile = document.querySelector('.kivun-cc-file');
+		if (ccFile) {
+			ccFile.addEventListener('change', function () {
+				var box = document.querySelector('.kivun-cc-media__preview'),
+					img = box ? box.querySelector('img') : null,
+					flag = document.querySelector('.kivun-cc-remove-flag'),
+					rm = document.querySelector('.kivun-cc-media__remove');
+				if (flag) { flag.value = '0'; }
+				if (rm) { rm.hidden = false; }
+				if (ccFile.files && ccFile.files[0] && img && window.FileReader) {
+					var reader = new FileReader();
+					reader.onload = function (e) { img.src = e.target.result; box.style.display = ''; };
+					reader.readAsDataURL(ccFile.files[0]);
+				}
+			});
+		}
+
+		var ccRemove = document.querySelector('.kivun-cc-media__remove');
+		if (ccRemove) {
+			ccRemove.addEventListener('click', function () {
+				var idEl = document.querySelector('.kivun-cc-front [name="thumbnail_id"]'),
+					flag = document.querySelector('.kivun-cc-remove-flag'),
+					box = document.querySelector('.kivun-cc-media__preview'),
+					fileEl = document.querySelector('.kivun-cc-file');
+				if (idEl) { idEl.value = ''; }
+				if (flag) { flag.value = '1'; }
+				if (fileEl) { fileEl.value = ''; }
+				if (box) { box.style.display = 'none'; }
+				ccRemove.hidden = true;
+			});
+		}
+
+		var ccConfirm = 'למחוק את כל התוכן המקושר? הפעולה תעביר לפח את דף הנחיתה, הקורס והסדנה.';
+		document.querySelectorAll('.kivun-cc-delete-form').forEach(function (f) {
+			f.addEventListener('submit', function (e) {
+				if (!window.confirm(ccConfirm)) { e.preventDefault(); }
+			});
+		});
+
+		var ccAi = document.querySelector('.kivun-cc-ai-btn');
+		if (ccAi) {
+			ccAi.addEventListener('click', function () {
+				var titleEl = document.querySelector('.kivun-cc-front [name="title"]'),
+					title = titleEl ? titleEl.value.trim() : '',
+					ccStatus = document.querySelector('.kivun-cc-ai-status'),
+					styleEl = document.querySelector('.kivun-cc-ai-style'),
+					promptEl = document.querySelector('.kivun-cc-ai-prompt'),
+					custom = promptEl ? promptEl.value.trim() : '';
+				if (!title && !custom) {
+					if (ccStatus) { ccStatus.textContent = 'מלאו כותרת או תיאור חופשי.'; }
+					return;
+				}
+				var shortVal = (window.tinymce && tinymce.get('kivun_ccf_short'))
+						? tinymce.get('kivun_ccf_short').getContent({ format: 'text' })
+						: ((document.querySelector('.kivun-cc-front [name="short"]') || {}).value || ''),
+					typeEl = document.querySelector('.kivun-cc-toggle:checked'),
+					fd = new FormData();
+				fd.append('action', 'kivun_generate_ai_image');
+				fd.append('nonce', ccAi.dataset.nonce);
+				fd.append('title', title);
+				fd.append('desc', shortVal);
+				fd.append('type', typeEl ? typeEl.dataset.type : '');
+				fd.append('style', styleEl ? styleEl.value : 'photo');
+				fd.append('prompt', custom);
+
+				ccAi.disabled = true;
+				if (ccStatus) { ccStatus.textContent = 'יוצר תמונה… זה עשוי לקחת עד דקה'; }
+
+				fetch(ccAi.dataset.ajax || kivun.ajax_url, { method: 'POST', body: fd, credentials: 'same-origin' })
+					.then(function (r) { return r.json(); })
+					.then(function (res) {
+						ccAi.disabled = false;
+						if (res && res.success && res.data) {
+							var idEl = document.querySelector('.kivun-cc-front [name="thumbnail_id"]'),
+								box = document.querySelector('.kivun-cc-media__preview'),
+								img = box ? box.querySelector('img') : null;
+							if (idEl) { idEl.value = res.data.id; }
+							if (img) { img.src = res.data.url; box.style.display = ''; }
+							var rmFlag = document.querySelector('.kivun-cc-remove-flag'),
+								rmBtn = document.querySelector('.kivun-cc-media__remove');
+							if (rmFlag) { rmFlag.value = '0'; }
+							if (rmBtn) { rmBtn.hidden = false; }
+							if (ccStatus) { ccStatus.textContent = '✓ נוצרה תמונה'; }
+						} else if (ccStatus) {
+							ccStatus.textContent = (res && res.data && res.data.message) ? res.data.message : 'יצירת התמונה נכשלה';
+						}
+					})
+					.catch(function () {
+						ccAi.disabled = false;
+						if (ccStatus) { ccStatus.textContent = 'שגיאת רשת'; }
+					});
+			});
+		}
+
+		var ccGen = document.querySelector('.kivun-cc-gen-btn');
+		if (ccGen) {
+			ccGen.addEventListener('click', function () {
+				var topicEl = document.querySelector('.kivun-cc-gen-topic'),
+					topic = topicEl ? topicEl.value.trim() : '',
+					toneEl = document.querySelector('.kivun-cc-gen-tone'),
+					imgEl = document.querySelector('.kivun-cc-gen-image'),
+					imgFile = (imgEl && imgEl.files && imgEl.files[0]) ? imgEl.files[0] : null,
+					gStat = document.querySelector('.kivun-cc-gen-status'),
+					typeEl = document.querySelector('.kivun-cc-toggle:checked'),
+					fd = new FormData();
+				if (!topic && !imgFile) {
+					if (gStat) { gStat.textContent = 'מלאו נושא או העלו מודעה.'; }
+					return;
+				}
+				if (imgFile) { fd.append('image', imgFile); }
+				fd.append('action', 'kivun_generate_ai_content');
+				fd.append('nonce', ccGen.dataset.nonce);
+				fd.append('topic', topic);
+				fd.append('tone', toneEl ? toneEl.value : 'marketing');
+				fd.append('type', typeEl ? typeEl.dataset.type : '');
+				ccGen.disabled = true;
+				if (gStat) { gStat.textContent = 'יוצר תוכן… זה עשוי לקחת מספר שניות'; }
+				function setByName(name, val) {
+					var el = document.querySelector('.kivun-cc-front [name="' + name + '"]');
+					if (el) { el.value = val || ''; }
+				}
+				fetch(ccGen.dataset.ajax || kivun.ajax_url, { method: 'POST', body: fd, credentials: 'same-origin' })
+					.then(function (r) { return r.json(); })
+					.then(function (res) {
+						ccGen.disabled = false;
+						if (res && res.success && res.data) {
+							var d = res.data, t = document.getElementById('kivun-ccf-title');
+							if (t && d.title) { t.value = d.title; }
+							kivunSetEditor('kivun_ccf_short', d.short);
+							kivunSetEditor('kivun_ccf_long', d.long);
+							setByName('audience', d.audience);
+							setByName('duration', d.duration);
+							setByName('cost', d.cost);
+							setByName('date', d.date);
+							if (gStat) { gStat.textContent = '✓ נוצר תוכן — ערכו ושמרו'; }
+						} else if (gStat) {
+							gStat.textContent = (res && res.data && res.data.message) ? res.data.message : 'יצירת התוכן נכשלה';
+						}
+					})
+					.catch(function () {
+						ccGen.disabled = false;
+						if (gStat) { gStat.textContent = 'שגיאת רשת'; }
+					});
+			});
+		}
+	}
+
+	if (document.querySelector('.kivun-employer-login')) {
+		if (!placeSocialLogin()) {
+			var tries = 0;
+			var timer = setInterval(function () {
+				tries++;
+				if (placeSocialLogin() || tries > 20) { clearInterval(timer); }
+			}, 200);
+		}
+		if (window.MutationObserver) {
+			var host = document.querySelector('.kivun-employer-login');
+			var obs = new MutationObserver(function () { placeSocialLogin(); });
+			if (host && host.parentNode) {
+				obs.observe(host.parentNode, { childList: true, subtree: true });
+			}
+		}
+	}
+
+}());
