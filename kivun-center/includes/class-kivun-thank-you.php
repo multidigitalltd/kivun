@@ -29,6 +29,62 @@ class Kivun_Thank_You {
 		// or a form's own "Redirect" action, always wins).
 		add_action( 'wp_footer', array( __CLASS__, 'redirect_script' ) );
 		add_action( 'admin_post_kivun_create_thankyou', array( __CLASS__, 'create_page' ) );
+
+		// The plugin's own forms answer over AJAX and never leave the page, so
+		// they get a dialog rather than the redirect above.
+		add_action( 'wp_footer', array( __CLASS__, 'render_popup' ) );
+	}
+
+	/**
+	 * Whether the confirmation dialog should be printed on this request.
+	 *
+	 * @return bool
+	 */
+	public static function popup_enabled(): bool {
+		if ( is_admin() ) {
+			return false;
+		}
+
+		return (bool) apply_filters( 'kivun_thankyou_popup', (bool) Kivun_Admin_Settings::get( 'thankyou_popup', true ) );
+	}
+
+	/**
+	 * Print the confirmation dialog, hidden, for the front-end script to open.
+	 *
+	 * The plugin's forms submit over AJAX and stay on the page, so the visitor
+	 * previously saw only the form being replaced by a line of text — easy to
+	 * miss, and it left them on a landing page with nowhere to go next. The
+	 * dialog says the message plainly and offers the way onward.
+	 *
+	 * @return void
+	 */
+	public static function render_popup(): void {
+		if ( ! self::popup_enabled() ) {
+			return;
+		}
+
+		$title   = (string) Kivun_Admin_Settings::get( 'thankyou_title', '' );
+		$message = (string) Kivun_Admin_Settings::get( 'thankyou_message', '' );
+		$label   = (string) Kivun_Admin_Settings::get( 'thankyou_btn_label', '' );
+		$url     = (string) Kivun_Admin_Settings::get( 'thankyou_btn_url', '' );
+
+		$title   = '' !== trim( $title ) ? $title : __( 'תודה רבה!', 'kivun' );
+		$message = '' !== trim( $message ) ? $message : __( 'פנייתך התקבלה בהצלחה. ניצור איתך קשר בהקדם.', 'kivun' );
+		$label   = '' !== trim( $label ) ? $label : __( 'לאתר מרכז כיוון', 'kivun' );
+		// An unset destination still has to lead somewhere, so it falls back to
+		// this site's own home page rather than rendering a button that does
+		// nothing when pressed.
+		$url = '' !== trim( $url ) ? $url : home_url( '/' );
+
+		kivun_get_template(
+			'thank-you/popup.php',
+			array(
+				'title'   => $title,
+				'message' => $message,
+				'label'   => $label,
+				'url'     => $url,
+			)
+		);
 	}
 
 	/**

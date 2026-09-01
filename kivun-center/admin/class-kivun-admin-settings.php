@@ -237,6 +237,9 @@ class Kivun_Admin_Settings {
 				'thankyou_elementor'     => ! empty( $_POST['thankyou_elementor'] ),
 				'thankyou_title'         => sanitize_text_field( wp_unslash( $_POST['thankyou_title'] ?? '' ) ),
 				'thankyou_message'       => sanitize_textarea_field( wp_unslash( $_POST['thankyou_message'] ?? '' ) ),
+				'thankyou_popup'         => ! empty( $_POST['thankyou_popup'] ),
+				'thankyou_btn_label'     => sanitize_text_field( wp_unslash( $_POST['thankyou_btn_label'] ?? '' ) ),
+				'thankyou_btn_url'       => esc_url_raw( wp_unslash( $_POST['thankyou_btn_url'] ?? '' ) ),
 			)
 		);
 
@@ -557,6 +560,36 @@ class Kivun_Admin_Settings {
 					<th scope="row"><?php esc_html_e( 'תוכן דף התודה', 'kivun' ); ?></th>
 					<td>
 						<textarea name="thankyou_message" rows="2" class="large-text" placeholder="<?php esc_attr_e( 'פנייתך התקבלה בהצלחה. ניצור איתך קשר בהקדם.', 'kivun' ); ?>"><?php echo esc_textarea( $o( 'thankyou_message' ) ); ?></textarea>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'חלון תודה בטפסי התוסף', 'kivun' ); ?></th>
+					<td>
+						<label>
+							<input type="checkbox" name="thankyou_popup" value="1" <?php checked( (bool) $o( 'thankyou_popup', true ) ); ?>>
+							<?php esc_html_e( 'להציג חלון תודה אחרי שליחת טופס בדף נחיתה, קורס, סדנה או אירוע', 'kivun' ); ?>
+						</label>
+						<p class="description">
+							<?php esc_html_e( 'חל על הטפסים של התוסף בלבד. טפסי אלמנטור ממשיכים לעבוד לפי ההגדרה שלמעלה (הפניה לעמוד תודה) — שתי ההגדרות אינן מתנגשות.', 'kivun' ); ?>
+						</p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'כפתור בחלון התודה', 'kivun' ); ?></th>
+					<td>
+						<input type="text" name="thankyou_btn_label" value="<?php echo esc_attr( $o( 'thankyou_btn_label' ) ); ?>" class="regular-text" placeholder="<?php esc_attr_e( 'לאתר מרכז כיוון', 'kivun' ); ?>">
+						<p class="description"><?php esc_html_e( 'הטקסט על הכפתור. אם ריק — יוצג "לאתר מרכז כיוון".', 'kivun' ); ?></p>
+
+						<input type="url" name="thankyou_btn_url" value="<?php echo esc_attr( $o( 'thankyou_btn_url' ) ); ?>" class="regular-text" dir="ltr" placeholder="https://..." style="margin-top:6px">
+						<p class="description">
+							<?php
+							printf(
+								/* translators: %s: the site's home page URL. */
+								esc_html__( 'לאן הכפתור מוביל. אם ריק — יוביל לעמוד הבית של האתר הזה (%s).', 'kivun' ),
+								esc_url( home_url( '/' ) )
+							);
+							?>
+						</p>
 					</td>
 				</tr>
 				<tr>

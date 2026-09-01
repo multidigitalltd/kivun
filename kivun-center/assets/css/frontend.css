@@ -1486,6 +1486,78 @@
 /* Generation time — a cached page keeps showing the same one. */
 .kivun-freshness { font-variant-numeric: tabular-nums; color: var(--kivun-muted); cursor: help; }
 
+/* ── Thank-you dialog (plugin forms) ──────────────────────────────────────── */
+.kivun-ty[hidden] { display: none !important; }
+.kivun-ty {
+	position: fixed;
+	inset: 0;
+	z-index: 99999;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 1rem;
+}
+.kivun-ty__backdrop { position: absolute; inset: 0; background: rgba(15, 23, 42, .55); }
+.kivun-ty__dialog {
+	position: relative;
+	width: min(440px, 100%);
+	background: #fff;
+	border-radius: 18px;
+	padding: 2rem 1.75rem 1.5rem;
+	text-align: center;
+	box-shadow: 0 18px 50px rgba(0, 0, 0, .25);
+	animation: kivun-ty-in .18s ease-out;
+}
+@keyframes kivun-ty-in { from { opacity: 0; transform: translateY(10px); } }
+@media (prefers-reduced-motion: reduce) { .kivun-ty__dialog { animation: none; } }
+.kivun-ty__close {
+	position: absolute;
+	inset-inline-start: .75rem;
+	top: .5rem;
+	background: none;
+	border: 0;
+	font-size: 1.6rem;
+	line-height: 1;
+	color: var(--kivun-muted);
+	cursor: pointer;
+	padding: .2rem .4rem;
+}
+.kivun-ty__icon {
+	width: 56px;
+	height: 56px;
+	margin: 0 auto .9rem;
+	border-radius: 50%;
+	background: #e7f6ec;
+	color: #1a7a40;
+	font-size: 1.8rem;
+	line-height: 56px;
+	font-weight: 700;
+}
+.kivun-ty__title { margin: 0 0 .5rem; font-size: 1.4rem; font-weight: 800; color: var(--kivun-primary, #1f2937); }
+.kivun-ty__text { margin: 0 0 1.35rem; color: #4b5563; line-height: 1.6; }
+.kivun-ty__btn {
+	display: inline-block;
+	padding: .75rem 1.6rem;
+	border-radius: 999px;
+	background: var(--kivun-accent, #d81f4a);
+	color: #fff;
+	font-weight: 700;
+	text-decoration: none;
+}
+.kivun-ty__btn:hover { filter: brightness(1.07); color: #fff; }
+.kivun-ty__dismiss {
+	display: block;
+	margin: .75rem auto 0;
+	background: none;
+	border: 0;
+	color: var(--kivun-muted);
+	font: inherit;
+	font-size: .88rem;
+	cursor: pointer;
+	text-decoration: underline;
+}
+body.kivun-ty-open { overflow: hidden; }
+
 /* The jobs board shares the console's visual language, both standalone (it
    carries .kivun-cc-console itself) and embedded inside the content console. */
 .kivun-employer-dashboard.kivun-cc-console .kivun-jobs-table-wrap,

@@ -69,7 +69,46 @@
 		p.setAttribute('role', 'status');
 		p.textContent = message;
 		node.parentNode.replaceChild(p, node);
+
+		// The inline line stays as the record of what happened, and the dialog
+		// carries the same news to someone who is not looking at that spot.
+		showThankYou();
 	}
+
+	// ── Thank-you dialog ─────────────────────────────────────────────────────────
+	var thankYouReturn;
+
+	function showThankYou() {
+		var modal = document.querySelector('.kivun-ty');
+		if (!modal || !modal.hidden) { return; }
+
+		thankYouReturn = document.activeElement;
+		modal.hidden = false;
+		document.body.classList.add('kivun-ty-open');
+
+		var dialog = modal.querySelector('.kivun-ty__dialog');
+		if (dialog) { dialog.focus(); }
+	}
+
+	function hideThankYou() {
+		var modal = document.querySelector('.kivun-ty');
+		if (!modal || modal.hidden) { return; }
+
+		modal.hidden = true;
+		document.body.classList.remove('kivun-ty-open');
+
+		// Send focus back where it was, so a keyboard or screen-reader user is
+		// not dropped at the top of the document.
+		if (thankYouReturn && document.contains(thankYouReturn)) { thankYouReturn.focus(); }
+	}
+
+	document.addEventListener('click', function (e) {
+		if (e.target.closest('[data-ty-close]')) { hideThankYou(); }
+	});
+
+	document.addEventListener('keydown', function (e) {
+		if (e.key === 'Escape') { hideThankYou(); }
+	});
 
 	// ── Job board filters ────────────────────────────────────────────────────────
 	function val(id) {
