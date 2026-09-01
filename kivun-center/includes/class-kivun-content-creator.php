@@ -977,8 +977,8 @@ class Kivun_Content_Creator {
 		$s = array(
 			'title'    => $title,
 			'slug'     => isset( $_POST['slug'] ) ? sanitize_title( wp_unslash( $_POST['slug'] ) ) : '',
-			'long'     => isset( $_POST['long'] ) ? wp_kses_post( wp_unslash( $_POST['long'] ) ) : '',
-			'short'    => isset( $_POST['short'] ) ? wp_kses_post( wp_unslash( $_POST['short'] ) ) : '',
+			'long'     => isset( $_POST['long'] ) ? self::clean_rich( wp_unslash( $_POST['long'] ) ) : '', // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- clean_rich() runs wp_kses.
+			'short'    => isset( $_POST['short'] ) ? self::clean_rich( wp_unslash( $_POST['short'] ) ) : '', // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- clean_rich() runs wp_kses.
 			'audience' => isset( $_POST['audience'] ) ? wp_kses_post( wp_unslash( $_POST['audience'] ) ) : '',
 			'duration' => isset( $_POST['duration'] ) ? wp_kses_post( wp_unslash( $_POST['duration'] ) ) : '',
 			'cost'     => isset( $_POST['cost'] ) ? wp_kses_post( wp_unslash( $_POST['cost'] ) ) : '',
@@ -1035,7 +1035,7 @@ class Kivun_Content_Creator {
 				$group,
 				'kivun_course',
 				$s,
-				$s['short'],
+				self::excerpt_text( $s['short'] ),
 				$thumb_id,
 				array_merge(
 					array(
@@ -1083,7 +1083,7 @@ class Kivun_Content_Creator {
 				$group,
 				'kivun_event',
 				$s,
-				$s['short'],
+				self::excerpt_text( $s['short'] ),
 				$event_image ? $event_image : $thumb_id,
 				array_merge(
 					array(
@@ -1326,6 +1326,66 @@ class Kivun_Content_Creator {
 		}
 		// phpcs:ignore WordPress.WP.Capabilities.Unknown -- Custom plugin capability.
 		return current_user_can( 'kivun_view_leads' );
+	}
+
+	/**
+	 * The plain-text teaser stored as a post's excerpt.
+	 *
+	 * An excerpt is shown in a card, in a list, in a search result — places
+	 * that style their own text. Markup carried into it wins over the theme,
+	 * so one item ends up in a different font from the rest of the grid.
+	 *
+	 * @param string $html The short description.
+	 * @return string
+	 */
+	private static function excerpt_text( string $html ): string {
+		return Kivun_AI_Content::plain_text( $html );
+	}
+
+	/**
+	 * Keep the formatting a person meant, drop the formatting they carried.
+	 *
+	 * Text pasted from a document or another site arrives wrapped in spans that
+	 * name their own font and size. Stored as-is, the card and the page render
+	 * that text in a font the site never uses, sitting oddly beside content
+	 * typed directly in — which is what a visitor notices first. Paragraphs,
+	 * emphasis and lists are intentional and kept; a font is not.
+	 *
+	 * @param string $html Submitted rich text.
+	 * @return string
+	 */
+	public static function clean_rich( string $html ): string {
+		$allowed = array(
+			'p'          => array(),
+			'br'         => array(),
+			'strong'     => array(),
+			'b'          => array(),
+			'em'         => array(),
+			'i'          => array(),
+			'u'          => array(),
+			'ul'         => array(),
+			'ol'         => array(),
+			'li'         => array(),
+			'h3'         => array(),
+			'h4'         => array(),
+			'blockquote' => array(),
+			'a'          => array(
+				'href'   => true,
+				'title'  => true,
+				'target' => true,
+				'rel'    => true,
+			),
+		);
+
+		$html = wp_kses( $html, $allowed );
+
+		// A paste also brings its own spacing. Non-breaking spaces arrive both
+		// as the character and as the entity — wp_kses decodes neither — and
+		// each one renders as a gap the writer did not type.
+		$html = str_replace( array( "\xc2\xa0", '&nbsp;', '&#160;', '&#xa0;' ), ' ', $html );
+		$html = (string) preg_replace( '/[ \t]{2,}/u', ' ', $html );
+
+		return trim( $html );
 	}
 
 	/**
