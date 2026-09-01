@@ -977,6 +977,57 @@
 		});
 	});
 
+	// ── WhatsApp promo for one campaign link ─────────────────────────────────────
+	document.addEventListener('click', function (e) {
+		var btn = e.target.closest('.kivun-link-wa-btn');
+		if (!btn) { return; }
+
+		var form = btn.closest('.kivun-camplink-form');
+		var out = form && form.querySelector('.kivun-link-wa-text');
+		var status = btn.parentNode.querySelector('.kivun-cc-wa-status');
+		if (!form || !out) { return; }
+
+		var sourceEl = form.querySelector('.kivun-link-source');
+		var source = sourceEl ? kivunCampClean(sourceEl.value) : '';
+		if (!source) {
+			if (status) { status.textContent = 'יש להזין מקור קודם, כדי שהקישור בהודעה יהיה מסומן.'; }
+			return;
+		}
+		if (out.value.trim() && !window.confirm(kivun.i18n.confirm_replace_whatsapp)) { return; }
+
+		var mediumEl = form.querySelector('.kivun-link-medium');
+		var contentEl = form.querySelector('.kivun-link-content');
+		var preview = form.querySelector('.kivun-camp-result');
+
+		btn.disabled = true;
+		if (status) { status.textContent = kivun.i18n.sending; }
+
+		post(params({
+			action: 'kivun_campaign_whatsapp',
+			nonce: kivun.nonce,
+			campaign_id: btn.dataset.campaign,
+			target_url: preview ? preview.dataset.target : '',
+			utm_source: source,
+			utm_medium: mediumEl ? kivunCampClean(mediumEl.value) : '',
+			utm_content: contentEl ? kivunCampClean(contentEl.value) : ''
+		})).then(function (res) {
+			btn.disabled = false;
+			if (!res.success) {
+				if (status) { status.textContent = (res.data && res.data.message) || kivun.i18n.error_generic; }
+				return;
+			}
+			out.value = res.data.text;
+			if (status) {
+				status.textContent = res.data.notice
+					? res.data.notice
+					: (res.data.source === 'template' ? kivun.i18n.wa_from_fields : kivun.i18n.saved);
+			}
+		}).catch(function (err) {
+			btn.disabled = false;
+			if (status) { status.textContent = failure(err); }
+		});
+	});
+
 	// ── Campaigns and their tracking links ───────────────────────────────────────
 	function kivunCampClean(value) {
 		return String(value || '')
@@ -1146,6 +1197,8 @@
 		var contentEl = linkForm.querySelector('.kivun-link-content');
 		var preview = linkForm.querySelector('.kivun-camp-result');
 
+		var waEl = linkForm.querySelector('.kivun-link-wa-text');
+
 		kivunCampSubmit(linkForm, {
 			action: 'kivun_save_campaign_link',
 			nonce: kivun.nonce,
@@ -1154,7 +1207,8 @@
 			target_url: preview ? preview.dataset.target : '',
 			utm_source: source,
 			utm_medium: mediumEl ? kivunCampClean(mediumEl.value) : '',
-			utm_content: contentEl ? kivunCampClean(contentEl.value) : ''
+			utm_content: contentEl ? kivunCampClean(contentEl.value) : '',
+			whatsapp: waEl ? waEl.value : ''
 		}, linkErr);
 	});
 

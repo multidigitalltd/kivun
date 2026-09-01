@@ -3210,6 +3210,16 @@ class Kivun_Content_Creator {
 											<td class="kivun-camp-cell">
 												<input type="text" class="kivun-cc-input kivun-camp-saved" dir="ltr" readonly value="<?php echo esc_url( $link->final_url ); ?>">
 												<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost kivun-camp-copy"><?php esc_html_e( 'העתקה', 'kivun' ); ?></button>
+												<?php if ( ! empty( $link->whatsapp ) ) : ?>
+													<details class="kivun-link-wa-saved">
+														<summary class="kivun-camp-summary"><?php esc_html_e( 'הודעת וואטסאפ', 'kivun' ); ?></summary>
+														<textarea class="kivun-cc-input kivun-cc-textarea kivun-wa-text kivun-camp-saved" rows="8" dir="rtl" readonly><?php echo esc_textarea( (string) $link->whatsapp ); ?></textarea>
+														<div class="kivun-wa-actions">
+															<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost kivun-wa-copy"><?php esc_html_e( 'העתקת ההודעה', 'kivun' ); ?></button>
+															<a class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost kivun-wa-share" href="https://wa.me/" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'שליחה בוואטסאפ', 'kivun' ); ?></a>
+														</div>
+													</details>
+												<?php endif; ?>
 											</td>
 											<td>
 												<?php if ( $link_leads ) : ?>
@@ -3283,6 +3293,28 @@ class Kivun_Content_Creator {
 								<div class="kivun-camp-out">
 									<input type="text" class="kivun-cc-input kivun-camp-result" dir="ltr" readonly data-target="<?php echo esc_url( $camp->target_url ); ?>" placeholder="<?php esc_attr_e( 'מלאו מקור…', 'kivun' ); ?>">
 									<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost kivun-camp-copy"><?php esc_html_e( 'העתקה', 'kivun' ); ?></button>
+								</div>
+
+								<div class="kivun-cc-wa kivun-link-wa">
+									<label class="kivun-cc-sub"><?php esc_html_e( 'הודעה לוואטסאפ למפרסם הזה', 'kivun' ); ?></label>
+									<p class="kivun-field-hint"><?php esc_html_e( 'ההודעה נכתבת מהתוכן שביעד, ומשובץ בה הקישור המסומן של המפרסם הזה — כך שכל מפרסם מפיץ הודעה עם קישור משלו.', 'kivun' ); ?></p>
+
+									<button
+										type="button"
+										class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost kivun-link-wa-btn"
+										data-campaign="<?php echo esc_attr( $camp->id ); ?>"
+									>
+										<?php echo kivun_icon( 'sparkle' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?><?php esc_html_e( 'צור הודעה לוואטסאפ', 'kivun' ); ?>
+									</button>
+									<span class="kivun-cc-wa-status" role="status" aria-live="polite"></span>
+
+									<textarea
+										name="whatsapp"
+										class="kivun-cc-input kivun-cc-textarea kivun-wa-text kivun-link-wa-text"
+										rows="10"
+										dir="rtl"
+										placeholder="<?php esc_attr_e( 'אפשר גם לכתוב כאן בעצמכם. ההודעה תישמר יחד עם הקישור.', 'kivun' ); ?>"
+									></textarea>
 								</div>
 
 								<p class="kivun-error kivun-camp-error" style="display:none;color:var(--kivun-error)"></p>

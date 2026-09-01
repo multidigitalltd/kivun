@@ -30,6 +30,7 @@ class Kivun_Campaigns {
 		add_action( 'wp_ajax_kivun_delete_campaign', array( __CLASS__, 'ajax_delete_campaign' ) );
 		add_action( 'wp_ajax_kivun_save_campaign_link', array( __CLASS__, 'ajax_save_link' ) );
 		add_action( 'wp_ajax_kivun_delete_campaign_link', array( __CLASS__, 'ajax_delete_link' ) );
+		add_action( 'wp_ajax_kivun_campaign_whatsapp', array( __CLASS__, 'ajax_whatsapp' ) );
 	}
 
 	/**
@@ -275,8 +276,9 @@ class Kivun_Campaigns {
 			wp_send_json_error( array( 'message' => __( 'הקמפיין לא נמצא.', 'kivun' ) ) );
 		}
 
-		$label  = sanitize_text_field( wp_unslash( $_POST['label'] ?? '' ) );
-		$target = esc_url_raw( wp_unslash( $_POST['target_url'] ?? '' ) );
+		$label    = sanitize_text_field( wp_unslash( $_POST['label'] ?? '' ) );
+		$whatsapp = sanitize_textarea_field( wp_unslash( $_POST['whatsapp'] ?? '' ) );
+		$target   = esc_url_raw( wp_unslash( $_POST['target_url'] ?? '' ) );
 		if ( ! self::valid_target( $target ) ) {
 			$target = (string) $campaign->target_url;
 		}
@@ -328,9 +330,10 @@ class Kivun_Campaigns {
 				'utm_term'    => $utm['term'],
 				'utm_content' => $utm['content'],
 				'utm_label'   => $utm_label,
+				'whatsapp'    => $whatsapp,
 				'created_by'  => get_current_user_id(),
 			),
-			array( '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d' )
+			array( '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d' )
 		);
 
 		if ( false === $ok ) {
@@ -359,6 +362,152 @@ class Kivun_Campaigns {
 		$wpdb->delete( $wpdb->prefix . 'kivun_campaign_links', array( 'id' => $id ), array( '%d' ) );
 
 		wp_send_json_success();
+	}
+
+	// ── WhatsApp promo per link ───────────────────────────────────────────────.
+
+	/**
+	 * The content fields behind a campaign's destination.
+	 *
+	 * The campaign points at a page, and that page is usually one of ours, so
+	 * its own title and details are the material a promo should be written
+	 * from. When the destination is not a local post — an external page, say —
+	 * only the campaign name is known, and the promo is written from that.
+	 *
+	 * @param object $campaign The campaign row.
+	 * @return array<string,string>
+	 */
+	private static function target_fields( $campaign ): array {
+		$fields = array(
+			'type'     => '',
+			'title'    => (string) $campaign->label,
+			'short'    => '',
+			'audience' => '',
+			'duration' => '',
+			'cost'     => '',
+			'date'     => '',
+			'location' => '',
+		);
+
+		$post_id = url_to_postid( (string) $campaign->target_url );
+		if ( ! $post_id ) {
+			return $fields;
+		}
+
+		$type_keys = array(
+			'kivun_workshop' => 'landing',
+			'kivun_course'   => 'course',
+			'kivun_session'  => 'session',
+			'kivun_event'    => 'event',
+		);
+		$post_type = (string) get_post_type( $post_id );
+
+		$meta = static function ( $key ) use ( $post_id ) {
+			return (string) get_post_meta( $post_id, $key, true );
+		};
+
+		$fields['type']  = $type_keys[ $post_type ] ?? '';
+		$fields['title'] = get_the_title( $post_id );
+
+		// Each type keeps the same information under its own keys, so the first
+		// one that holds a value is the one this post uses.
+		foreach ( array(
+			'short'    => array( '_kivun_lp_short', '_kivun_session_short', '_kivun_event_short' ),
+			'audience' => array( '_kivun_target_audience', '_kivun_ws_audience', '_kivun_session_audience', '_kivun_event_audience' ),
+			'duration' => array( '_kivun_duration', '_kivun_ws_duration', '_kivun_session_duration' ),
+			'cost'     => array( '_kivun_price', '_kivun_lp_cost', '_kivun_session_cost', '_kivun_event_cost' ),
+			'date'     => array( '_kivun_schedule', '_kivun_ws_date', '_kivun_session_date', '_kivun_event_time' ),
+			'location' => array( '_kivun_session_location', '_kivun_ws_location', '_kivun_event_location' ),
+		) as $field => $keys ) {
+			foreach ( $keys as $key ) {
+				$value = $meta( $key );
+				if ( '' !== trim( $value ) ) {
+					$fields[ $field ] = $value;
+					break;
+				}
+			}
+		}
+
+		if ( '' === trim( $fields['short'] ) ) {
+			$fields['short'] = (string) get_the_excerpt( $post_id );
+		}
+
+		return $fields;
+	}
+
+	/**
+	 * Draft a WhatsApp promo carrying one link's own tracked URL.
+	 *
+	 * The point of writing it here rather than in the content editor is the
+	 * link: a promo sent by one publisher has to carry that publisher's URL, or
+	 * every message leads to the same untagged page and the campaign cannot
+	 * tell them apart.
+	 *
+	 * @return void
+	 */
+	public static function ajax_whatsapp(): void {
+		self::guard();
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- self::guard() verifies the nonce.
+
+		$campaign_id = absint( wp_unslash( $_POST['campaign_id'] ?? 0 ) );
+
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$campaign = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$wpdb->prefix}kivun_campaigns WHERE id = %d", $campaign_id ) );
+		if ( ! $campaign ) {
+			wp_send_json_error( array( 'message' => __( 'הקמפיין לא נמצא.', 'kivun' ) ) );
+		}
+
+		$target = esc_url_raw( wp_unslash( $_POST['target_url'] ?? '' ) );
+		if ( ! self::valid_target( $target ) ) {
+			$target = (string) $campaign->target_url;
+		}
+
+		$utm = array(
+			'source'   => self::clean_value( sanitize_text_field( wp_unslash( $_POST['utm_source'] ?? '' ) ) ),
+			'medium'   => self::clean_value( sanitize_text_field( wp_unslash( $_POST['utm_medium'] ?? '' ) ) ),
+			'campaign' => (string) $campaign->utm_campaign,
+			'content'  => self::clean_value( sanitize_text_field( wp_unslash( $_POST['utm_content'] ?? '' ) ) ),
+		);
+		// phpcs:enable WordPress.Security.NonceVerification.Missing
+
+		if ( '' === $utm['source'] ) {
+			wp_send_json_error( array( 'message' => __( 'יש להזין מקור לפני יצירת ההודעה, כדי שהקישור יהיה מסומן.', 'kivun' ) ) );
+		}
+
+		$fields        = self::target_fields( $campaign );
+		$fields['url'] = self::build_url( $target, $utm );
+
+		if ( '' === trim( (string) Kivun_Admin_Settings::get( 'openai_api_key', '' ) ) ) {
+			wp_send_json_success(
+				array(
+					'text'   => Kivun_AI_Content::whatsapp_template( $fields ),
+					'url'    => $fields['url'],
+					'source' => 'template',
+				)
+			);
+		}
+
+		$text = Kivun_AI_Content::generate_whatsapp( $fields );
+		if ( is_wp_error( $text ) ) {
+			// A failed call should still leave something usable in the box.
+			wp_send_json_success(
+				array(
+					'text'   => Kivun_AI_Content::whatsapp_template( $fields ),
+					'url'    => $fields['url'],
+					'source' => 'template',
+					'notice' => $text->get_error_message(),
+				)
+			);
+		}
+
+		wp_send_json_success(
+			array(
+				'text'   => $text,
+				'url'    => $fields['url'],
+				'source' => 'ai',
+			)
+		);
 	}
 
 	// ── Reporting ─────────────────────────────────────────────────────────────.

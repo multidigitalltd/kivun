@@ -1410,6 +1410,11 @@
 .kivun-camp-summary::-webkit-details-marker { display: none; }
 .kivun-camp-summary:hover { text-decoration: underline; }
 .kivun-camp-addlink { margin-top: .85rem; border-top: 1px dashed var(--cc-line); padding-top: .5rem; }
+
+/* The promo that travels with one publisher's link. */
+.kivun-link-wa { margin-top: .9rem; border-top: 1px dashed var(--cc-line); padding-top: .8rem; }
+.kivun-link-wa-saved { margin-top: .45rem; }
+.kivun-link-wa-saved .kivun-wa-text { margin-top: .4rem; font-size: .8rem; }
 .kivun-camp-addlink[open] .kivun-camp-summary,
 .kivun-camp-new[open] .kivun-camp-summary { margin-bottom: .7rem; }
 .kivun-camp-new { margin-bottom: 1.25rem; }

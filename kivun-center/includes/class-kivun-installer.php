@@ -67,7 +67,10 @@ class Kivun_Installer {
 		global $wpdb;
 
 		$tables = array(
-			$wpdb->prefix . 'kivun_applications'  => array(
+			$wpdb->prefix . 'kivun_campaign_links' => array(
+				'whatsapp' => 'text',
+			),
+			$wpdb->prefix . 'kivun_applications'   => array(
 				'user_id'         => 'bigint(20) UNSIGNED NOT NULL DEFAULT 0',
 				'applicant_phone' => "varchar(30) NOT NULL DEFAULT ''",
 				'cv_file'         => "varchar(500) NOT NULL DEFAULT ''",
@@ -75,7 +78,7 @@ class Kivun_Installer {
 				'notes'           => 'text',
 				'status'          => "varchar(20) NOT NULL DEFAULT 'new'",
 			),
-			$wpdb->prefix . 'kivun_registrations' => array(
+			$wpdb->prefix . 'kivun_registrations'  => array(
 				'city'              => "varchar(100) NOT NULL DEFAULT ''",
 				'gender'            => "varchar(20) NOT NULL DEFAULT ''",
 				'marketing_consent' => 'tinyint(1) NOT NULL DEFAULT 0',
@@ -197,6 +200,7 @@ class Kivun_Installer {
 				utm_term    varchar(150)        NOT NULL DEFAULT '',
 				utm_content varchar(150)        NOT NULL DEFAULT '',
 				utm_label   varchar(400)        NOT NULL DEFAULT '',
+				whatsapp    text,
 				created_by  bigint(20) UNSIGNED NOT NULL DEFAULT 0,
 				created_at  datetime            NOT NULL DEFAULT CURRENT_TIMESTAMP,
 				PRIMARY KEY (id),
