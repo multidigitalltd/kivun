@@ -31,6 +31,7 @@ class Kivun_Campaigns {
 		add_action( 'wp_ajax_kivun_save_campaign_link', array( __CLASS__, 'ajax_save_link' ) );
 		add_action( 'wp_ajax_kivun_delete_campaign_link', array( __CLASS__, 'ajax_delete_link' ) );
 		add_action( 'wp_ajax_kivun_campaign_whatsapp', array( __CLASS__, 'ajax_whatsapp' ) );
+		add_action( 'wp_ajax_kivun_save_link_whatsapp', array( __CLASS__, 'ajax_save_whatsapp' ) );
 	}
 
 	/**
@@ -444,6 +445,44 @@ class Kivun_Campaigns {
 		}
 
 		wp_send_json_success( array( 'message' => __( 'הקישור נוסף.', 'kivun' ) ) );
+	}
+
+	/**
+	 * Save just the WhatsApp message of one link.
+	 *
+	 * Rewording a promo is the most frequent change of all, and it changes
+	 * nothing about the link itself — so it is saved on its own rather than by
+	 * resubmitting the whole link and rebuilding its URL.
+	 *
+	 * @return void
+	 */
+	public static function ajax_save_whatsapp(): void {
+		self::guard();
+
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- self::guard() verifies the nonce.
+		$id   = absint( wp_unslash( $_POST['id'] ?? 0 ) );
+		$text = sanitize_textarea_field( wp_unslash( $_POST['whatsapp'] ?? '' ) );
+		// phpcs:enable WordPress.Security.NonceVerification.Missing
+
+		if ( ! $id ) {
+			wp_send_json_error( array( 'message' => __( 'הקישור לא נמצא.', 'kivun' ) ) );
+		}
+
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$ok = $wpdb->update(
+			$wpdb->prefix . 'kivun_campaign_links',
+			array( 'whatsapp' => $text ),
+			array( 'id' => $id ),
+			array( '%s' ),
+			array( '%d' )
+		);
+
+		if ( false === $ok ) {
+			wp_send_json_error( array( 'message' => __( 'שמירת ההודעה נכשלה.', 'kivun' ) ) );
+		}
+
+		wp_send_json_success( array( 'message' => __( 'ההודעה נשמרה.', 'kivun' ) ) );
 	}
 
 	/**

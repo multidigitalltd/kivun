@@ -736,11 +736,18 @@
 			});
 	});
 
+	// The message box a promo button acts on. The button is not always beside
+	// it: on a saved link the copy button sits out in the row while the text
+	// is folded away below, so the nearest enclosing block is what decides.
+	function kivunWaBox(el) {
+		var scope = el.closest('.kivun-cc-wa, .kivun-link-wa-saved, .kivun-camp-cell');
+		return scope ? scope.querySelector('.kivun-wa-text') : null;
+	}
+
 	document.addEventListener('click', function (e) {
 		var copy = e.target.closest('.kivun-wa-copy');
 		if (!copy) { return; }
-		var card = copy.closest('.kivun-cc-wa');
-		var field = card && card.querySelector('.kivun-wa-text');
+		var field = kivunWaBox(copy);
 		if (!field || !field.value.trim()) { return; }
 
 		var done = function () {
@@ -760,13 +767,43 @@
 	document.addEventListener('click', function (e) {
 		var share = e.target.closest('.kivun-wa-share');
 		if (!share) { return; }
-		var card = share.closest('.kivun-cc-wa');
-		var field = card && card.querySelector('.kivun-wa-text');
+		var field = kivunWaBox(share);
 		if (!field || !field.value.trim()) {
 			e.preventDefault();
 			return;
 		}
 		share.href = kivunWaShareLink(field.value);
+	});
+
+	// Save a reworded promo on its own — the link itself is untouched, so
+	// there is nothing to rebuild and no reason to reload the page.
+	document.addEventListener('click', function (e) {
+		var save = e.target.closest('.kivun-wa-save');
+		if (!save) { return; }
+
+		var field = kivunWaBox(save);
+		var status = save.parentNode.querySelector('.kivun-cc-wa-status');
+		if (!field) { return; }
+
+		save.disabled = true;
+		if (status) { status.textContent = kivun.i18n.sending; }
+
+		post(params({
+			action: 'kivun_save_link_whatsapp',
+			nonce: kivun.nonce,
+			id: save.dataset.id,
+			whatsapp: field.value
+		})).then(function (res) {
+			save.disabled = false;
+			if (status) {
+				status.textContent = res.success
+					? res.data.message
+					: ((res.data && res.data.message) || kivun.i18n.error_generic);
+			}
+		}).catch(function (err) {
+			save.disabled = false;
+			if (status) { status.textContent = failure(err); }
+		});
 	});
 
 	// ── Leads access — invite a viewer ───────────────────────────────────────────

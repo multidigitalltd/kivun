@@ -1353,7 +1353,8 @@
 	direction: ltr;
 	text-align: left;
 }
-.kivun-camp-cell { display: flex; gap: .4rem; align-items: center; min-width: 320px; }
+.kivun-camp-cell { min-width: 320px; }
+.kivun-camp-cell__row { display: flex; gap: .4rem; align-items: center; flex-wrap: wrap; }
 .kivun-camp-saved {
 	flex: 1 1 auto;
 	background: #f8fafc;
@@ -1415,6 +1416,8 @@
 .kivun-link-wa { margin-top: .9rem; border-top: 1px dashed var(--cc-line); padding-top: .8rem; }
 .kivun-link-wa-saved { margin-top: .45rem; }
 .kivun-link-wa-saved .kivun-wa-text { margin-top: .4rem; font-size: .8rem; }
+.kivun-link-wa-saved .kivun-wa-actions { align-items: center; }
+.kivun-link-wa-saved .kivun-field-hint { margin-top: .5rem; }
 .kivun-camp-addlink[open] .kivun-camp-summary,
 .kivun-camp-new[open] .kivun-camp-summary { margin-bottom: .7rem; }
 .kivun-camp-new { margin-bottom: 1.25rem; }

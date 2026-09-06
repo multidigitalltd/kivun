@@ -3304,16 +3304,30 @@ class Kivun_Content_Creator {
 												<?php endif; ?>
 											</td>
 											<td class="kivun-camp-cell">
-												<input type="text" class="kivun-cc-input kivun-camp-saved" dir="ltr" readonly value="<?php echo esc_url( $link->final_url ); ?>">
-												<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost kivun-camp-copy"><?php esc_html_e( 'העתקה', 'kivun' ); ?></button>
+												<div class="kivun-camp-cell__row">
+													<input type="text" class="kivun-cc-input kivun-camp-saved" dir="ltr" readonly value="<?php echo esc_url( $link->final_url ); ?>">
+													<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost kivun-camp-copy"><?php esc_html_e( 'העתקה', 'kivun' ); ?></button>
+													<?php if ( ! empty( $link->whatsapp ) ) : ?>
+														<?php
+														// The message is behind a fold, but copying it is the
+														// thing people came to do — so that one button stays
+														// out here and works without opening anything.
+														?>
+														<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost kivun-wa-copy"><?php esc_html_e( 'העתקת ההודעה', 'kivun' ); ?></button>
+													<?php endif; ?>
+												</div>
+
 												<?php if ( ! empty( $link->whatsapp ) ) : ?>
 													<details class="kivun-link-wa-saved">
-														<summary class="kivun-camp-summary"><?php esc_html_e( 'הודעת וואטסאפ', 'kivun' ); ?></summary>
-														<textarea class="kivun-cc-input kivun-cc-textarea kivun-wa-text kivun-camp-saved" rows="8" dir="rtl" readonly><?php echo esc_textarea( (string) $link->whatsapp ); ?></textarea>
+														<summary class="kivun-camp-summary"><?php esc_html_e( 'הצגה ועריכה של ההודעה', 'kivun' ); ?></summary>
+														<textarea class="kivun-cc-input kivun-cc-textarea kivun-wa-text" rows="8" dir="rtl"><?php echo esc_textarea( (string) $link->whatsapp ); ?></textarea>
 														<div class="kivun-wa-actions">
+															<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-wa-save" data-id="<?php echo esc_attr( (string) $link->id ); ?>"><?php esc_html_e( 'שמירת ההודעה', 'kivun' ); ?></button>
 															<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost kivun-wa-copy"><?php esc_html_e( 'העתקת ההודעה', 'kivun' ); ?></button>
 															<a class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost kivun-wa-share" href="https://wa.me/" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'שליחה בוואטסאפ', 'kivun' ); ?></a>
+															<span class="kivun-cc-wa-status" role="status" aria-live="polite"></span>
 														</div>
+														<p class="kivun-field-hint"><?php esc_html_e( 'הקישור המסומן שבתוך ההודעה שייך למפרסם הזה — כדאי לא לשנות אותו. לכתיבת הודעה מחדש מהתוכן שביעד, השתמשו בכפתור העריכה שבסוף השורה.', 'kivun' ); ?></p>
 													</details>
 												<?php endif; ?>
 											</td>
