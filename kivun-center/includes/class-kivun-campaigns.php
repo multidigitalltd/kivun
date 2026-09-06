@@ -174,7 +174,7 @@ class Kivun_Campaigns {
 	// ── Campaigns ─────────────────────────────────────────────────────────────.
 
 	/**
-	 * Create a campaign — the container the links hang from.
+	 * Create or update a campaign — the container the links hang from.
 	 *
 	 * @return void
 	 */
@@ -182,9 +182,11 @@ class Kivun_Campaigns {
 		self::guard();
 		// phpcs:disable WordPress.Security.NonceVerification.Missing -- self::guard() verifies the nonce.
 
+		$id     = absint( wp_unslash( $_POST['id'] ?? 0 ) );
 		$name   = sanitize_text_field( wp_unslash( $_POST['label'] ?? '' ) );
 		$slug   = self::clean_value( sanitize_text_field( wp_unslash( $_POST['utm_campaign'] ?? '' ) ) );
 		$target = esc_url_raw( wp_unslash( $_POST['target_url'] ?? '' ) );
+		// phpcs:enable WordPress.Security.NonceVerification.Missing
 
 		if ( '' === $slug ) {
 			$slug = self::clean_value( $name );
@@ -203,9 +205,49 @@ class Kivun_Campaigns {
 		global $wpdb;
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$exists = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$wpdb->prefix}kivun_campaigns WHERE utm_campaign = %s", $slug ) );
+		$exists = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT id FROM {$wpdb->prefix}kivun_campaigns WHERE utm_campaign = %s AND id <> %d",
+				$slug,
+				$id
+			)
+		);
 		if ( $exists ) {
 			wp_send_json_error( array( 'message' => __( 'כבר קיים קמפיין בשם הזה.', 'kivun' ) ) );
+		}
+
+		if ( $id ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$current = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$wpdb->prefix}kivun_campaigns WHERE id = %d", $id ) );
+			if ( ! $current ) {
+				wp_send_json_error( array( 'message' => __( 'הקמפיין לא נמצא.', 'kivun' ) ) );
+			}
+
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$ok = $wpdb->update(
+				$wpdb->prefix . 'kivun_campaigns',
+				array(
+					'label'        => $name,
+					'target_url'   => $target,
+					'utm_campaign' => $slug,
+				),
+				array( 'id' => $id ),
+				array( '%s', '%s', '%s' ),
+				array( '%d' )
+			);
+
+			if ( false === $ok ) {
+				wp_send_json_error( array( 'message' => __( 'עדכון הקמפיין נכשל.', 'kivun' ) ) );
+			}
+
+			// The identifier is part of every link built under the campaign, so
+			// renaming it rewrites them all — otherwise the links keep pointing
+			// at a campaign name that no longer exists.
+			if ( (string) $current->utm_campaign !== $slug ) {
+				self::rebuild_links( $id, $slug );
+			}
+
+			wp_send_json_success( array( 'message' => __( 'הקמפיין עודכן.', 'kivun' ) ) );
 		}
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
@@ -230,6 +272,44 @@ class Kivun_Campaigns {
 		}
 
 		wp_send_json_success( array( 'message' => __( 'הקמפיין נוצר.', 'kivun' ) ) );
+	}
+
+	/**
+	 * Rewrite every link under a campaign after its identifier changed.
+	 *
+	 * @param int    $campaign_id The campaign.
+	 * @param string $slug        The new utm_campaign value.
+	 * @return void
+	 */
+	private static function rebuild_links( int $campaign_id, string $slug ): void {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$links = $wpdb->get_results(
+			$wpdb->prepare( "SELECT * FROM {$wpdb->prefix}kivun_campaign_links WHERE campaign_id = %d", $campaign_id )
+		);
+
+		foreach ( (array) $links as $link ) {
+			$utm = array(
+				'source'   => (string) $link->utm_source,
+				'medium'   => (string) $link->utm_medium,
+				'campaign' => $slug,
+				'term'     => (string) $link->utm_term,
+				'content'  => (string) $link->utm_content,
+			);
+
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$wpdb->update(
+				$wpdb->prefix . 'kivun_campaign_links',
+				array(
+					'final_url' => self::build_url( (string) $link->target_url, $utm ),
+					'utm_label' => self::utm_label( $utm ),
+				),
+				array( 'id' => (int) $link->id ),
+				array( '%s', '%s' ),
+				array( '%d' )
+			);
+		}
 	}
 
 	/**
@@ -259,7 +339,7 @@ class Kivun_Campaigns {
 	// ── Links ─────────────────────────────────────────────────────────────────.
 
 	/**
-	 * Add a tracking link to a campaign.
+	 * Add a tracking link to a campaign, or update an existing one.
 	 *
 	 * @return void
 	 */
@@ -267,6 +347,7 @@ class Kivun_Campaigns {
 		self::guard();
 		// phpcs:disable WordPress.Security.NonceVerification.Missing -- self::guard() verifies the nonce.
 
+		$id          = absint( wp_unslash( $_POST['id'] ?? 0 ) );
 		$campaign_id = absint( wp_unslash( $_POST['campaign_id'] ?? 0 ) );
 
 		global $wpdb;
@@ -304,9 +385,10 @@ class Kivun_Campaigns {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$clash = $wpdb->get_var(
 			$wpdb->prepare(
-				"SELECT id FROM {$wpdb->prefix}kivun_campaign_links WHERE campaign_id = %d AND utm_label = %s",
+				"SELECT id FROM {$wpdb->prefix}kivun_campaign_links WHERE campaign_id = %d AND utm_label = %s AND id <> %d",
 				$campaign_id,
-				$utm_label
+				$utm_label,
+				$id
 			)
 		);
 		if ( $clash ) {
@@ -317,24 +399,45 @@ class Kivun_Campaigns {
 			);
 		}
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$ok = $wpdb->insert(
-			$wpdb->prefix . 'kivun_campaign_links',
-			array(
-				'campaign_id' => $campaign_id,
-				'label'       => '' !== $label ? $label : $utm['source'],
-				'target_url'  => $target,
-				'final_url'   => self::build_url( $target, $utm ),
-				'utm_source'  => $utm['source'],
-				'utm_medium'  => $utm['medium'],
-				'utm_term'    => $utm['term'],
-				'utm_content' => $utm['content'],
-				'utm_label'   => $utm_label,
-				'whatsapp'    => $whatsapp,
-				'created_by'  => get_current_user_id(),
-			),
-			array( '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d' )
+		$data   = array(
+			'campaign_id' => $campaign_id,
+			'label'       => '' !== $label ? $label : $utm['source'],
+			'target_url'  => $target,
+			'final_url'   => self::build_url( $target, $utm ),
+			'utm_source'  => $utm['source'],
+			'utm_medium'  => $utm['medium'],
+			'utm_term'    => $utm['term'],
+			'utm_content' => $utm['content'],
+			'utm_label'   => $utm_label,
+			'whatsapp'    => $whatsapp,
 		);
+		$format = array( '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' );
+
+		if ( $id ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$ok = $wpdb->update(
+				$wpdb->prefix . 'kivun_campaign_links',
+				$data,
+				array(
+					'id'          => $id,
+					'campaign_id' => $campaign_id,
+				),
+				$format,
+				array( '%d', '%d' )
+			);
+
+			if ( false === $ok ) {
+				wp_send_json_error( array( 'message' => __( 'עדכון הקישור נכשל.', 'kivun' ) ) );
+			}
+
+			wp_send_json_success( array( 'message' => __( 'הקישור עודכן.', 'kivun' ) ) );
+		}
+
+		$data['created_by'] = get_current_user_id();
+		$format[]           = '%d';
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$ok = $wpdb->insert( $wpdb->prefix . 'kivun_campaign_links', $data, $format );
 
 		if ( false === $ok ) {
 			wp_send_json_error( array( 'message' => __( 'שמירת הקישור נכשלה.', 'kivun' ) ) );
@@ -543,10 +646,14 @@ class Kivun_Campaigns {
 	/**
 	 * How many leads arrived through each link.
 	 *
-	 * Kivun_Utm appends its label to the end of the lead's source column, so
-	 * the stored value always ENDS with the arrival label. Matching on that
-	 * suffix keeps two links apart even when one label is a prefix of another
-	 * (the same source and medium, distinguished only by utm_content).
+	 * Leads now record their utm_* values in columns of their own, so a link is
+	 * matched on the values themselves — campaign, source, medium and content —
+	 * rather than on the rendered "a / b / c" label they used to be compared
+	 * by. That label dropped empty values, so its parts could not be told
+	 * apart with certainty, and it changed whenever a link was edited.
+	 *
+	 * Leads captured before those columns existed are still matched the old
+	 * way, on the label at the end of their source text.
 	 *
 	 * @return array<int,int> Lead count keyed by link id.
 	 */
@@ -557,15 +664,57 @@ class Kivun_Campaigns {
 		$rows = $wpdb->get_results(
 			"SELECT l.id AS link_id, COUNT(r.id) AS total
 			 FROM {$wpdb->prefix}kivun_campaign_links l
-			 LEFT JOIN {$wpdb->prefix}kivun_registrations r
-			   ON r.source LIKE CONCAT('%UTM: ', l.utm_label)
-			 WHERE l.utm_label <> ''
+			 INNER JOIN {$wpdb->prefix}kivun_campaigns c ON c.id = l.campaign_id
+			 LEFT JOIN {$wpdb->prefix}kivun_registrations r ON (
+			     (
+			       r.utm_campaign <> ''
+			       AND r.utm_campaign = c.utm_campaign
+			       AND r.utm_source   = l.utm_source
+			       AND r.utm_medium   = l.utm_medium
+			       AND r.utm_content  = l.utm_content
+			     )
+			     OR (
+			       r.utm_campaign = ''
+			       AND l.utm_label <> ''
+			       AND r.source LIKE CONCAT('%UTM: ', l.utm_label)
+			     )
+			 )
 			 GROUP BY l.id"
 		);
 
 		$counts = array();
-		foreach ( $rows as $row ) {
+		foreach ( (array) $rows as $row ) {
 			$counts[ (int) $row->link_id ] = (int) $row->total;
+		}
+		return $counts;
+	}
+
+	/**
+	 * How many leads a campaign brought in total, counted on the campaign
+	 * itself rather than by summing its links.
+	 *
+	 * The two can differ, and the difference is worth seeing: a lead that
+	 * arrived tagged with the campaign but through a link that was since
+	 * edited or deleted belongs to the campaign and to no row under it. Summing
+	 * the rows alone would quietly lose it.
+	 *
+	 * @return array<int,int> Lead count keyed by campaign id.
+	 */
+	public static function campaign_lead_counts(): array {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$rows = $wpdb->get_results(
+			"SELECT c.id AS campaign_id, COUNT(r.id) AS total
+			 FROM {$wpdb->prefix}kivun_campaigns c
+			 LEFT JOIN {$wpdb->prefix}kivun_registrations r
+			   ON r.utm_campaign <> '' AND r.utm_campaign = c.utm_campaign
+			 GROUP BY c.id"
+		);
+
+		$counts = array();
+		foreach ( (array) $rows as $row ) {
+			$counts[ (int) $row->campaign_id ] = (int) $row->total;
 		}
 		return $counts;
 	}

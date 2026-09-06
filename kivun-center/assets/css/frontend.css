@@ -1419,6 +1419,21 @@
 .kivun-camp-new[open] .kivun-camp-summary { margin-bottom: .7rem; }
 .kivun-camp-new { margin-bottom: 1.25rem; }
 
+/* Edit forms open in place, so they are set apart from the row above them. */
+.kivun-camp-editpanel {
+	margin-bottom: .85rem;
+	padding: .85rem 1rem;
+	border: 1px solid var(--cc-line);
+	border-radius: 12px;
+	background: #f9fafb;
+}
+.kivun-cc-table .kivun-link-editrow > td {
+	padding: .85rem 1rem;
+	background: #f9fafb;
+	border-top: 0;
+}
+.kivun-camp-unmapped { margin: 0 0 .7rem; color: #b45309; }
+
 /* Date range filter */
 .kivun-cc-daterange { display: inline-flex; align-items: center; gap: .35rem; }
 .kivun-cc-daterange label { font-size: .8rem; color: var(--kivun-muted); font-weight: 600; }

@@ -49,6 +49,9 @@ class Kivun_Installer {
 		if ( get_option( 'kivun_db_version' ) !== KIVUN_VERSION ) {
 			self::create_tables();
 			self::ensure_columns();
+			// Runs after ensure_columns(), which is what creates the columns
+			// it fills.
+			self::migrate_lead_utm();
 			self::add_roles();
 			// Rewrite slugs may change between versions (e.g. landing pages) —
 			// flush once after the post types register on `init`.
@@ -87,6 +90,10 @@ class Kivun_Installer {
 				'source'            => "varchar(191) NOT NULL DEFAULT ''",
 				'type'              => "varchar(20) NOT NULL DEFAULT 'registration'",
 				'status'            => "varchar(20) NOT NULL DEFAULT 'pending'",
+				'utm_source'        => "varchar(150) NOT NULL DEFAULT ''",
+				'utm_medium'        => "varchar(150) NOT NULL DEFAULT ''",
+				'utm_campaign'      => "varchar(150) NOT NULL DEFAULT ''",
+				'utm_content'       => "varchar(150) NOT NULL DEFAULT ''",
 			),
 		);
 
@@ -136,11 +143,16 @@ class Kivun_Installer {
 				source      varchar(191)        NOT NULL DEFAULT '',
 				type        varchar(20)         NOT NULL DEFAULT 'registration',
 				status      varchar(20)         NOT NULL DEFAULT 'pending',
+				utm_source   varchar(150)       NOT NULL DEFAULT '',
+				utm_medium   varchar(150)       NOT NULL DEFAULT '',
+				utm_campaign varchar(150)       NOT NULL DEFAULT '',
+				utm_content  varchar(150)       NOT NULL DEFAULT '',
 				created_at  datetime            NOT NULL DEFAULT CURRENT_TIMESTAMP,
 				PRIMARY KEY (id),
 				KEY course_id (course_id),
 				KEY type (type),
-				KEY email (email)
+				KEY email (email),
+				KEY utm_campaign (utm_campaign)
 			) $collate;
 		"
 		);
@@ -404,6 +416,98 @@ class Kivun_Installer {
 		}
 
 		update_option( 'kivun_campaign_links_migrated', 1 );
+	}
+
+	/**
+	 * Recover the UTM values of leads captured before they had columns of
+	 * their own.
+	 *
+	 * Until now a lead's campaign lived only inside its "source" text, as
+	 * "UTM: a / b / c" with empty values dropped — so the position of a part
+	 * does not say which field it is, and three parts could be
+	 * source/medium/campaign or source/campaign/content. The campaign names
+	 * are known, though: whichever part matches a real campaign slug is the
+	 * campaign, and everything before and after it falls into place around it.
+	 *
+	 * @return void
+	 */
+	private static function migrate_lead_utm(): void {
+		if ( get_option( 'kivun_lead_utm_migrated' ) ) {
+			return;
+		}
+
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$have = $wpdb->get_col( "SHOW COLUMNS FROM `{$wpdb->prefix}kivun_registrations`" );
+		if ( ! in_array( 'utm_campaign', $have, true ) ) {
+			// The table is not there yet, or the column could not be added.
+			// Leave the flag unset so this is retried on the next upgrade.
+			return;
+		}
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$slugs = $wpdb->get_col( "SELECT utm_campaign FROM {$wpdb->prefix}kivun_campaigns WHERE utm_campaign <> ''" );
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$rows = $wpdb->get_results(
+			"SELECT id, source FROM {$wpdb->prefix}kivun_registrations
+			 WHERE utm_campaign = '' AND source LIKE '%UTM: %'"
+		);
+
+		foreach ( (array) $rows as $row ) {
+			$at = mb_strpos( (string) $row->source, 'UTM: ' );
+			if ( false === $at ) {
+				continue;
+			}
+
+			$parts = array_values(
+				array_filter(
+					array_map( 'trim', explode( '/', mb_substr( (string) $row->source, $at + 5 ) ) ),
+					static function ( $part ) {
+						return '' !== $part;
+					}
+				)
+			);
+			if ( ! $parts ) {
+				continue;
+			}
+
+			$campaign_at = -1;
+			foreach ( $parts as $index => $part ) {
+				if ( in_array( $part, $slugs, true ) ) {
+					$campaign_at = $index;
+					break;
+				}
+			}
+
+			// No known campaign in the label: the first part is still the
+			// source, and the rest cannot be placed with any confidence.
+			$values = array(
+				'utm_source'   => $parts[0],
+				'utm_medium'   => '',
+				'utm_campaign' => '',
+				'utm_content'  => '',
+			);
+
+			if ( $campaign_at >= 0 ) {
+				$values['utm_campaign'] = $parts[ $campaign_at ];
+				$values['utm_source']   = $campaign_at >= 1 ? $parts[0] : '';
+				$values['utm_medium']   = $campaign_at >= 2 ? $parts[1] : '';
+				$values['utm_content']  = $parts[ $campaign_at + 1 ] ?? '';
+			}
+
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$wpdb->update(
+				$wpdb->prefix . 'kivun_registrations',
+				$values,
+				array( 'id' => (int) $row->id ),
+				array( '%s', '%s', '%s', '%s' ),
+				array( '%d' )
+			);
+		}
+
+		update_option( 'kivun_lead_utm_migrated', 1 );
 	}
 
 	/**

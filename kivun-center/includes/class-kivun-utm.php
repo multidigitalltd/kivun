@@ -100,6 +100,28 @@ class Kivun_Utm {
 	}
 
 	/**
+	 * The visitor's UTM values as lead-table columns.
+	 *
+	 * The label above is for reading; these are for counting. A rendered label
+	 * drops empty values, so "a / b / c" cannot say which of source, medium and
+	 * content are present — two different links can render the same string, and
+	 * a campaign counted by that string counts the wrong leads. Stored as their
+	 * own columns, the values stay unambiguous however they are later edited.
+	 *
+	 * @return array<string,string>
+	 */
+	public static function columns(): array {
+		$data = self::data();
+		$out  = array();
+
+		foreach ( array( 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content' ) as $key ) {
+			$out[ $key ] = isset( $data[ $key ] ) ? mb_substr( $data[ $key ], 0, 150 ) : '';
+		}
+
+		return $out;
+	}
+
+	/**
 	 * Fold the UTM label into a record's source string.
 	 *
 	 * @param string $source The existing source label.

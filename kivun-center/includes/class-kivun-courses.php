@@ -89,22 +89,29 @@ class Kivun_Courses {
 			return new \WP_Error( 'kivun_duplicate', __( 'כבר נרשמת לקורס זה.', 'kivun' ) );
 		}
 
-		global $wpdb;
-		$wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-			$wpdb->prefix . 'kivun_registrations',
-			array(
-				'course_id'  => $course_id,
-				'name'       => $name,
-				'email'      => $email,
-				'phone'      => $phone,
-				'city'       => $city,
-				'message'    => $message,
-				'source'     => Kivun_Utm::append_source( (string) get_the_title( $course_id ) ),
-				'status'     => 'pending',
-				'created_at' => current_time( 'mysql' ),
-			),
-			array( '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' )
+		$row = array(
+			'course_id'  => $course_id,
+			'name'       => $name,
+			'email'      => $email,
+			'phone'      => $phone,
+			'city'       => $city,
+			'message'    => $message,
+			'source'     => Kivun_Utm::append_source( (string) get_the_title( $course_id ) ),
+			'status'     => 'pending',
+			'created_at' => current_time( 'mysql' ),
 		);
+		$fmt = array( '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' );
+
+		// The campaign a lead is credited to is read from these columns, not
+		// from the source text above.
+		foreach ( Kivun_Utm::columns() as $column => $value ) {
+			$row[ $column ] = $value;
+			$fmt[]          = '%s';
+		}
+
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$wpdb->insert( $wpdb->prefix . 'kivun_registrations', $row, $fmt );
 
 		Kivun_Mailer::send_course_registration( $course_id, compact( 'name', 'email', 'phone', 'city', 'message' ) );
 		do_action( 'kivun_after_registration', $course_id, compact( 'name', 'email', 'phone', 'city', 'message' ) );

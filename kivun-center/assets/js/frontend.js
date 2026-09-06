@@ -1153,7 +1153,8 @@
 	}
 
 	document.addEventListener('submit', function (e) {
-		// New campaign — the container the links hang from.
+		// A campaign — the container the links hang from. The same form creates
+		// one and edits one; data-id is what tells them apart.
 		var campForm = e.target.closest('.kivun-campaign-form');
 		if (campForm) {
 			e.preventDefault();
@@ -1168,17 +1169,27 @@
 			}
 			if (campErr) { campErr.style.display = 'none'; }
 
+			// Editing exposes the identifier as its own field, so renaming the
+			// campaign does not silently rewrite every link under it.
+			var slugEl = campForm.querySelector('.kivun-camp-slug');
+			var slug = kivunCampClean(slugEl ? slugEl.value : name);
+			if (!slug) {
+				showError(campErr, 'מזהה הקמפיין לא יכול להישאר ריק.');
+				return;
+			}
+
 			kivunCampSubmit(campForm, {
 				action: 'kivun_save_campaign',
 				nonce: kivun.nonce,
+				id: campForm.dataset.id || 0,
 				label: name,
-				utm_campaign: kivunCampClean(name),
+				utm_campaign: slug,
 				target_url: target
 			}, campErr);
 			return;
 		}
 
-		// New link under an existing campaign.
+		// A tracking link under a campaign — added, or edited in place.
 		var linkForm = e.target.closest('.kivun-camplink-form');
 		if (!linkForm) { return; }
 		e.preventDefault();
@@ -1202,6 +1213,7 @@
 		kivunCampSubmit(linkForm, {
 			action: 'kivun_save_campaign_link',
 			nonce: kivun.nonce,
+			id: linkForm.dataset.id || 0,
 			campaign_id: linkForm.dataset.campaign,
 			label: labelEl ? labelEl.value.trim() : '',
 			target_url: preview ? preview.dataset.target : '',
@@ -1210,6 +1222,35 @@
 			utm_content: contentEl ? kivunCampClean(contentEl.value) : '',
 			whatsapp: waEl ? waEl.value : ''
 		}, linkErr);
+	});
+
+	// Reveal an edit form in place, rather than on a screen of its own: the row
+	// being changed stays visible above it.
+	document.addEventListener('click', function (e) {
+		var edit = e.target.closest('.kivun-edit-campaign, .kivun-edit-link');
+		if (!edit) { return; }
+
+		var isCampaign = edit.classList.contains('kivun-edit-campaign');
+
+		// The campaign's button sits inside the <summary>, so a click on it
+		// would otherwise also toggle the panel it is trying to open.
+		e.preventDefault();
+		e.stopPropagation();
+
+		var panel = document.querySelector(
+			(isCampaign ? '[data-campaign-edit="' : '[data-link-edit="') + edit.dataset.id + '"]'
+		);
+		if (!panel) { return; }
+
+		// Editing a campaign is pointless with its links hidden underneath.
+		var card = edit.closest('details');
+		if (isCampaign && card) { card.open = true; }
+
+		panel.hidden = !panel.hidden;
+		if (!panel.hidden) {
+			var first = panel.querySelector('input, textarea, select');
+			if (first) { first.focus(); }
+		}
 	});
 
 	document.addEventListener('click', function (e) {
@@ -1235,9 +1276,13 @@
 			if (res.success) {
 				var selector = isCampaign
 					? '[data-campaign-row="' + del.dataset.id + '"]'
-					: '[data-link-row="' + del.dataset.id + '"]';
-				var row = document.querySelector(selector);
-				if (row) { row.parentNode.removeChild(row); }
+					: '[data-link-row="' + del.dataset.id + '"],[data-link-edit="' + del.dataset.id + '"]';
+				// A link owns two rows — the one on screen and its edit form
+				// below it — and leaving the second behind orphans a form that
+				// saves to a link that no longer exists.
+				document.querySelectorAll(selector).forEach(function (row) {
+					row.parentNode.removeChild(row);
+				});
 			} else {
 				del.disabled = false;
 			}

@@ -77,25 +77,32 @@ class Kivun_Lead_Capture {
 		$page_url = (string) wp_get_referer();
 		$post_id  = '' !== $page_url ? (int) url_to_postid( $page_url ) : 0;
 
-		global $wpdb;
-		$wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-			$wpdb->prefix . 'kivun_registrations',
-			array(
-				'course_id'         => $post_id,
-				'name'              => $data['name'],
-				'email'             => $data['email'],
-				'phone'             => $data['phone'],
-				'city'              => $data['city'],
-				'gender'            => $data['gender'],
-				'marketing_consent' => $data['consent'],
-				'message'           => $data['message'],
-				'source'            => Kivun_Utm::append_source( self::source_label( $form_name, $post_id, $page_url ) ),
-				'status'            => 'new_lead',
-				'type'              => 'form',
-				'created_at'        => current_time( 'mysql' ),
-			),
-			array( '%d', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%s' )
+		$row = array(
+			'course_id'         => $post_id,
+			'name'              => $data['name'],
+			'email'             => $data['email'],
+			'phone'             => $data['phone'],
+			'city'              => $data['city'],
+			'gender'            => $data['gender'],
+			'marketing_consent' => $data['consent'],
+			'message'           => $data['message'],
+			'source'            => Kivun_Utm::append_source( self::source_label( $form_name, $post_id, $page_url ) ),
+			'status'            => 'new_lead',
+			'type'              => 'form',
+			'created_at'        => current_time( 'mysql' ),
 		);
+		$fmt = array( '%d', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%s' );
+
+		// The campaign a lead is credited to is read from these columns, not
+		// from the source text above.
+		foreach ( Kivun_Utm::columns() as $column => $value ) {
+			$row[ $column ] = $value;
+			$fmt[]          = '%s';
+		}
+
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$wpdb->insert( $wpdb->prefix . 'kivun_registrations', $row, $fmt );
 	}
 
 	/**
