@@ -720,6 +720,10 @@ class Kivun_Campaigns {
 
 		$out = array();
 		foreach ( $rows as $row ) {
+			// Cleaned here rather than at each place that shows it. A promo
+			// saved by an earlier release still holds its markup, and a reader
+			// that forgets to strip it is how it reached the screen before.
+			$row->whatsapp                    = self::clean_promo( (string) $row->whatsapp );
 			$out[ (int) $row->campaign_id ][] = $row;
 		}
 		return $out;

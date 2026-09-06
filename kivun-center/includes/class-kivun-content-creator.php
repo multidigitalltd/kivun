@@ -987,7 +987,8 @@ class Kivun_Content_Creator {
 			'cta_t'    => isset( $_POST['cta_title'] ) ? sanitize_text_field( wp_unslash( $_POST['cta_title'] ) ) : '',
 			'cta_c'    => isset( $_POST['cta_content'] ) ? sanitize_textarea_field( wp_unslash( $_POST['cta_content'] ) ) : '',
 			'cta_b'    => isset( $_POST['cta_button'] ) ? sanitize_text_field( wp_unslash( $_POST['cta_button'] ) ) : '',
-			'whatsapp' => isset( $_POST['whatsapp'] ) ? sanitize_textarea_field( wp_unslash( $_POST['whatsapp'] ) ) : '',
+			// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized by clean_promo().
+			'whatsapp' => isset( $_POST['whatsapp'] ) ? Kivun_Campaigns::clean_promo( (string) wp_unslash( $_POST['whatsapp'] ) ) : '',
 			'city'     => isset( $_POST['city'] ) ? sanitize_text_field( wp_unslash( $_POST['city'] ) ) : '',
 			'status'   => $status['status'],
 			'postdate' => $status['postdate'],
@@ -2548,7 +2549,7 @@ class Kivun_Content_Creator {
 								rows="12"
 								dir="rtl"
 								placeholder="<?php esc_attr_e( 'לחצו על "צור הודעה לוואטסאפ" — או כתבו כאן בעצמכם.', 'kivun' ); ?>"
-							><?php echo esc_textarea( $v['whatsapp'] ); ?></textarea>
+							><?php echo esc_textarea( Kivun_Campaigns::clean_promo( (string) $v['whatsapp'] ) ); ?></textarea>
 
 							<div class="kivun-wa-actions">
 								<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost kivun-wa-copy"><?php esc_html_e( 'העתקת ההודעה', 'kivun' ); ?></button>
@@ -3325,7 +3326,7 @@ class Kivun_Content_Creator {
 														// saved by an earlier release still has its markup, and
 														// nobody should have to wait for an upgrade to read it.
 														?>
-														<textarea class="kivun-cc-input kivun-cc-textarea kivun-wa-text" rows="8" dir="rtl"><?php echo esc_textarea( Kivun_Campaigns::clean_promo( (string) $link->whatsapp ) ); ?></textarea>
+														<textarea class="kivun-cc-input kivun-cc-textarea kivun-wa-text" rows="8" dir="rtl"><?php echo esc_textarea( (string) $link->whatsapp ); ?></textarea>
 														<div class="kivun-wa-actions">
 															<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-wa-save" data-id="<?php echo esc_attr( (string) $link->id ); ?>"><?php esc_html_e( 'שמירת ההודעה', 'kivun' ); ?></button>
 															<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost kivun-wa-copy"><?php esc_html_e( 'העתקת ההודעה', 'kivun' ); ?></button>
@@ -3572,7 +3573,7 @@ class Kivun_Content_Creator {
 					rows="10"
 					dir="rtl"
 					placeholder="<?php esc_attr_e( 'אפשר גם לכתוב כאן בעצמכם. ההודעה תישמר יחד עם הקישור.', 'kivun' ); ?>"
-				><?php echo $editing ? esc_textarea( Kivun_Campaigns::clean_promo( (string) $link->whatsapp ) ) : ''; ?></textarea>
+				><?php echo $editing ? esc_textarea( (string) $link->whatsapp ) : ''; ?></textarea>
 			</div>
 
 			<p class="kivun-error kivun-camp-error" style="display:none;color:var(--kivun-error)"></p>

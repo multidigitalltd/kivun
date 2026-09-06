@@ -27,6 +27,8 @@ class Kivun_Installer {
 
 		self::seed_default_terms();
 		flush_rewrite_rules();
+
+		update_option( 'kivun_db_version', KIVUN_VERSION );
 	}
 
 	/**
@@ -57,6 +59,12 @@ class Kivun_Installer {
 			// Rewrite slugs may change between versions (e.g. landing pages) —
 			// flush once after the post types register on `init`.
 			add_action( 'init', 'flush_rewrite_rules', 99 );
+
+			// Marked done only once everything above has run. Stamping the
+			// version earlier — as create_tables() used to — means anything
+			// that fails partway is skipped for good rather than retried on
+			// the next load.
+			update_option( 'kivun_db_version', KIVUN_VERSION );
 		}
 	}
 
@@ -284,8 +292,6 @@ class Kivun_Installer {
 
 		self::migrate_campaign_links();
 		self::align_job_terms();
-
-		update_option( 'kivun_db_version', KIVUN_VERSION );
 	}
 
 	/**
