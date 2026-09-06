@@ -523,7 +523,7 @@ class Kivun_Installer {
 	 * @return void
 	 */
 	private static function clean_stored_promos(): void {
-		if ( get_option( 'kivun_promos_cleaned' ) ) {
+		if ( get_option( 'kivun_promos_cleaned_2' ) ) {
 			return;
 		}
 
@@ -551,7 +551,7 @@ class Kivun_Installer {
 			);
 		}
 
-		update_option( 'kivun_promos_cleaned', 1 );
+		update_option( 'kivun_promos_cleaned_2', 1 );
 	}
 
 	/**

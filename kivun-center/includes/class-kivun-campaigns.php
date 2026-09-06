@@ -146,18 +146,30 @@ class Kivun_Campaigns {
 	/**
 	 * Reduce a promo to the plain text WhatsApp actually sends.
 	 *
-	 * Real tags are removed by sanitize_textarea_field(), but one that arrives
-	 * entity-encoded is invisible to it, and neither belongs in a message. The
-	 * check runs first so that a promo merely mentioning a "<" is left exactly
-	 * as it was written — stripping is for markup, not for punctuation.
+	 * This is the sanitizer for the message, in place of
+	 * sanitize_textarea_field(), which cannot be used on a promo: it deletes
+	 * every percent-encoded sequence it finds, and the tracked link is full of
+	 * them whenever the campaign is named in Hebrew. It would turn
+	 * "utm_campaign=%D7%A7%D7%95%D7%A8%D7%A1" into "utm_campaign=", quietly
+	 * stripping the attribution out of the one link the message exists to
+	 * carry.
+	 *
+	 * Markup is removed in both its forms — a tag that arrives entity-encoded
+	 * is a tag. That step is skipped unless something actually looks like one,
+	 * so a promo merely mentioning a "<" is left exactly as it was written.
 	 *
 	 * @param string $text The submitted or stored message.
 	 * @return string
 	 */
 	public static function clean_promo( string $text ): string {
-		return preg_match( '#</?[a-z][^>]*>|&lt;/?[a-z]#i', $text )
-			? Kivun_AI_Content::plain_text( $text, true )
-			: $text;
+		if ( preg_match( '#</?[a-z][^>]*>|&lt;/?[a-z]#i', $text ) ) {
+			$text = Kivun_AI_Content::plain_text( $text, true );
+		}
+
+		// Control characters, but not the newlines the message is shaped by.
+		$text = (string) preg_replace( '/[\x00-\x08\x0B\x0C\x0E-\x1F]/', '', $text );
+
+		return trim( $text );
 	}
 
 	/**
@@ -375,8 +387,11 @@ class Kivun_Campaigns {
 			wp_send_json_error( array( 'message' => __( 'הקמפיין לא נמצא.', 'kivun' ) ) );
 		}
 
-		$label    = sanitize_text_field( wp_unslash( $_POST['label'] ?? '' ) );
-		$whatsapp = self::clean_promo( sanitize_textarea_field( wp_unslash( $_POST['whatsapp'] ?? '' ) ) );
+		$label = sanitize_text_field( wp_unslash( $_POST['label'] ?? '' ) );
+		// clean_promo() is the sanitizer here; sanitize_textarea_field() would
+		// strip the percent-encoding out of the tracked link.
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized by clean_promo().
+		$whatsapp = self::clean_promo( (string) wp_unslash( $_POST['whatsapp'] ?? '' ) );
 		$target   = esc_url_raw( wp_unslash( $_POST['target_url'] ?? '' ) );
 		if ( ! self::valid_target( $target ) ) {
 			$target = (string) $campaign->target_url;
@@ -477,8 +492,9 @@ class Kivun_Campaigns {
 		self::guard();
 
 		// phpcs:disable WordPress.Security.NonceVerification.Missing -- self::guard() verifies the nonce.
-		$id   = absint( wp_unslash( $_POST['id'] ?? 0 ) );
-		$text = self::clean_promo( sanitize_textarea_field( wp_unslash( $_POST['whatsapp'] ?? '' ) ) );
+		$id = absint( wp_unslash( $_POST['id'] ?? 0 ) );
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized by clean_promo().
+		$text = self::clean_promo( (string) wp_unslash( $_POST['whatsapp'] ?? '' ) );
 		// phpcs:enable WordPress.Security.NonceVerification.Missing
 
 		if ( ! $id ) {
