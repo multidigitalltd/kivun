@@ -229,6 +229,10 @@ class Kivun_Admin_Settings {
 				'mercaz_user'            => sanitize_text_field( wp_unslash( $_POST['mercaz_user'] ?? '' ) ),
 				'mercaz_pass'            => sanitize_text_field( wp_unslash( $_POST['mercaz_pass'] ?? '' ) ),
 				'mercaz_auto'            => ! empty( $_POST['mercaz_auto'] ),
+				'crm_webhook_url'        => esc_url_raw( wp_unslash( $_POST['crm_webhook_url'] ?? '' ) ),
+				'crm_webhook_secret'     => sanitize_text_field( wp_unslash( $_POST['crm_webhook_secret'] ?? '' ) ),
+				'crm_webhook_headers'    => sanitize_textarea_field( wp_unslash( $_POST['crm_webhook_headers'] ?? '' ) ),
+				'crm_webhook_updates'    => ! empty( $_POST['crm_webhook_updates'] ),
 				'ai_image_model'         => sanitize_text_field( wp_unslash( $_POST['ai_image_model'] ?? 'gpt-image-1' ) ),
 				'ai_image_quality'       => sanitize_key( wp_unslash( $_POST['ai_image_quality'] ?? 'medium' ) ),
 				'turnstile_site_key'     => sanitize_text_field( wp_unslash( $_POST['turnstile_site_key'] ?? '' ) ),
@@ -592,11 +596,7 @@ class Kivun_Admin_Settings {
 						</p>
 					</td>
 				</tr>
-				<tr>
-					<th colspan="2" style="padding-top:20px"><h2 style="margin:0"><?php esc_html_e( 'יצירת תמונות AI (תמונה ראשית)', 'kivun' ); ?></h2>
-					<p class="description" style="font-weight:400"><?php esc_html_e( 'מאפשר כפתור "צור תמונה עם AI" בטופס פרסום התוכן. המפתח נשמר בשרת בלבד ואינו נחשף בפרונט.', 'kivun' ); ?></p></th>
-				</tr>
-				<tr><th colspan="2"><h2><?php esc_html_e( 'חיבור למרכז כיוון (Content & Jobs API)', 'kivun' ); ?></h2></th></tr>
+				<tr><th colspan="2" style="padding-top:20px"><h2 style="margin:0"><?php esc_html_e( 'חיבור למרכז כיוון (Content & Jobs API)', 'kivun' ); ?></h2></th></tr>
 				<tr>
 					<th scope="row"><?php esc_html_e( 'כתובת', 'kivun' ); ?></th>
 					<td>
@@ -695,6 +695,107 @@ class Kivun_Admin_Settings {
 					</td>
 				</tr>
 
+				<tr>
+					<th colspan="2" style="padding-top:20px"><h2 style="margin:0"><?php esc_html_e( 'וובהוק משרות ל-CRM', 'kivun' ); ?></h2>
+					<p class="description" style="font-weight:400"><?php esc_html_e( 'בכל פעם שמשרה מתפרסמת באתר, נשלחת בקשת POST אחת בפורמט JSON לכתובת שה-CRM נותן. השליחה רצה ברקע ולא מעכבת את השמירה, וכישלון מנוסה שוב אוטומטית.', 'kivun' ); ?></p></th>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'כתובת הוובהוק', 'kivun' ); ?></th>
+					<td>
+						<input type="url" name="crm_webhook_url" value="<?php echo esc_attr( $o( 'crm_webhook_url' ) ); ?>" class="large-text" dir="ltr" placeholder="https://crm.example.com/hooks/kivun-jobs">
+						<p class="description"><?php esc_html_e( 'הכתובת שקיבלתם מה-CRM. השאירו ריק כדי לכבות את השליחה לגמרי.', 'kivun' ); ?></p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'סוד לחתימה', 'kivun' ); ?></th>
+					<td>
+						<input type="password" name="crm_webhook_secret" value="<?php echo esc_attr( $o( 'crm_webhook_secret' ) ); ?>" class="regular-text" dir="ltr" autocomplete="off">
+						<p class="description">
+							<?php esc_html_e( 'כשממולא, כל בקשה נחתמת ב-HMAC-SHA256 ונשלחת בכותרת X-Kivun-Signature, כדי שה-CRM יוכל לוודא שהבקשה באמת הגיעה מכאן. מוסרים אותו ל-CRM בערוץ נפרד — לא בתוך הבקשה.', 'kivun' ); ?>
+						</p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'כותרות נוספות', 'kivun' ); ?></th>
+					<td>
+						<textarea name="crm_webhook_headers" rows="3" class="large-text" dir="ltr" placeholder="Authorization: Bearer xxxxx&#10;X-Tenant-Id: 42"><?php echo esc_textarea( $o( 'crm_webhook_headers' ) ); ?></textarea>
+						<p class="description"><?php esc_html_e( 'שורה לכל כותרת, בפורמט "שם: ערך". כאן מזינים את אמצעי ההזדהות שה-CRM דורש (טוקן, מפתח API וכדומה). השאירו ריק אם אין.', 'kivun' ); ?></p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'אילו אירועים', 'kivun' ); ?></th>
+					<td>
+						<label>
+							<input type="checkbox" name="crm_webhook_updates" value="1" <?php checked( (bool) $o( 'crm_webhook_updates', true ) ); ?>>
+							<?php esc_html_e( 'לשלוח גם עדכון של משרה שכבר מפורסמת (job.updated)', 'kivun' ); ?>
+						</label>
+						<p class="description"><?php esc_html_e( 'פרסום (job.published) וירידה מהאתר (job.closed) נשלחים תמיד.', 'kivun' ); ?></p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'בדיקה ותיעוד', 'kivun' ); ?></th>
+					<td>
+						<button type="button" class="button kivun-crm-test" data-nonce="<?php echo esc_attr( wp_create_nonce( 'kivun_crm' ) ); ?>">
+							<?php esc_html_e( 'שליחת בקשת בדיקה', 'kivun' ); ?>
+						</button>
+						<a class="button" style="margin-inline-start:6px" href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=kivun_crm_docs' ), 'kivun_crm_docs' ) ); ?>">
+							<?php esc_html_e( 'הורדת תיעוד ל-CRM (JSON)', 'kivun' ); ?>
+						</a>
+						<p class="description"><?php esc_html_e( 'הבדיקה שולחת משרה אמיתית מסומנת test: true. קובץ התיעוד נוצר מהקוד עצמו, כך שהדוגמה שבו היא בדיוק מה שיישלח — אפשר להעביר אותו כמו שהוא למפתחי ה-CRM. שמרו את ההגדרות לפני הבדיקה.', 'kivun' ); ?></p>
+						<div class="kivun-crm-result" style="margin-top:10px"></div>
+						<?php $kivun_crm_last = get_option( 'kivun_crm_last', array() ); ?>
+						<?php if ( is_array( $kivun_crm_last ) && ! empty( $kivun_crm_last['time'] ) ) : ?>
+							<p class="description" style="background:#f6f7f7;border:1px solid #dcdcde;border-radius:6px;padding:8px 10px">
+								<strong><?php esc_html_e( 'שליחה אחרונה:', 'kivun' ); ?></strong>
+								<?php echo esc_html( (string) $kivun_crm_last['time'] ); ?>
+								— <code><?php echo esc_html( (string) ( $kivun_crm_last['event'] ?? '' ) ); ?></code>
+								— <span style="color:<?php echo empty( $kivun_crm_last['ok'] ) ? '#b32d2e' : '#008a20'; ?>"><?php echo esc_html( (string) ( $kivun_crm_last['detail'] ?? '' ) ); ?></span>
+							</p>
+						<?php endif; ?>
+						<script>
+						( function () {
+							var btn = document.querySelector( '.kivun-crm-test' );
+							var box = document.querySelector( '.kivun-crm-result' );
+							if ( ! btn || ! box ) { return; }
+
+							var esc = function ( t ) {
+								var d = document.createElement( 'div' );
+								d.textContent = String( t == null ? '' : t );
+								return d.innerHTML;
+							};
+
+							btn.addEventListener( 'click', function () {
+								btn.disabled = true;
+								box.innerHTML = '<em><?php echo esc_js( __( 'שולח…', 'kivun' ) ); ?></em>';
+
+								var body = new URLSearchParams();
+								body.append( 'action', 'kivun_crm_test' );
+								body.append( 'nonce', btn.dataset.nonce );
+
+								fetch( ajaxurl, { method: 'POST', credentials: 'same-origin', body: body } )
+									.then( function ( r ) { return r.json(); } )
+									.then( function ( res ) {
+										btn.disabled = false;
+										if ( ! res.success ) {
+											box.innerHTML = '<div class="notice notice-error inline"><p>' + esc( res.data && res.data.message ) + '</p></div>';
+											return;
+										}
+										box.innerHTML = '<div class="notice notice-success inline"><p><strong>' + esc( res.data.message ) + '</strong><br>' + esc( res.data.note ) + '</p></div>';
+									} )
+									.catch( function () {
+										btn.disabled = false;
+										box.innerHTML = '<div class="notice notice-error inline"><p><?php echo esc_js( __( 'הבקשה נכשלה.', 'kivun' ) ); ?></p></div>';
+									} );
+							} );
+						} () );
+						</script>
+					</td>
+				</tr>
+
+				<tr>
+					<th colspan="2" style="padding-top:20px"><h2 style="margin:0"><?php esc_html_e( 'יצירת תמונות AI (תמונה ראשית)', 'kivun' ); ?></h2>
+					<p class="description" style="font-weight:400"><?php esc_html_e( 'מאפשר כפתור "צור תמונה עם AI" בטופס פרסום התוכן. המפתח נשמר בשרת בלבד ואינו נחשף בפרונט.', 'kivun' ); ?></p></th>
+				</tr>
 				<tr>
 					<th scope="row"><?php esc_html_e( 'OpenAI API Key', 'kivun' ); ?></th>
 					<td>

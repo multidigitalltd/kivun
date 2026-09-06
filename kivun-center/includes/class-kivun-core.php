@@ -47,6 +47,7 @@ class Kivun_Core {
 		Kivun_Campaigns::init();
 		Kivun_Mercaz::init();
 		Kivun_Mercaz_Sync::init();
+		Kivun_CRM_Webhook::init();
 		Kivun_Phones::init();
 		Kivun_Duplicate::init();
 		Kivun_Thank_You::init();
@@ -117,6 +118,7 @@ class Kivun_Core {
 			'class-kivun-campaigns',
 			'class-kivun-mercaz',
 			'class-kivun-mercaz-sync',
+			'class-kivun-crm-webhook',
 			'class-kivun-phones',
 			'class-kivun-duplicate',
 			'class-kivun-thank-you',
