@@ -144,6 +144,23 @@ class Kivun_Campaigns {
 	}
 
 	/**
+	 * Reduce a promo to the plain text WhatsApp actually sends.
+	 *
+	 * Real tags are removed by sanitize_textarea_field(), but one that arrives
+	 * entity-encoded is invisible to it, and neither belongs in a message. The
+	 * check runs first so that a promo merely mentioning a "<" is left exactly
+	 * as it was written — stripping is for markup, not for punctuation.
+	 *
+	 * @param string $text The submitted or stored message.
+	 * @return string
+	 */
+	public static function clean_promo( string $text ): string {
+		return preg_match( '#</?[a-z][^>]*>|&lt;/?[a-z]#i', $text )
+			? Kivun_AI_Content::plain_text( $text, true )
+			: $text;
+	}
+
+	/**
 	 * A destination only has to be a real http(s) address. wp_http_validate_url()
 	 * is deliberately not used: it vets URLs for outbound server requests and
 	 * rejects private hosts and non-standard ports, which are perfectly valid
@@ -359,7 +376,7 @@ class Kivun_Campaigns {
 		}
 
 		$label    = sanitize_text_field( wp_unslash( $_POST['label'] ?? '' ) );
-		$whatsapp = sanitize_textarea_field( wp_unslash( $_POST['whatsapp'] ?? '' ) );
+		$whatsapp = self::clean_promo( sanitize_textarea_field( wp_unslash( $_POST['whatsapp'] ?? '' ) ) );
 		$target   = esc_url_raw( wp_unslash( $_POST['target_url'] ?? '' ) );
 		if ( ! self::valid_target( $target ) ) {
 			$target = (string) $campaign->target_url;
@@ -461,7 +478,7 @@ class Kivun_Campaigns {
 
 		// phpcs:disable WordPress.Security.NonceVerification.Missing -- self::guard() verifies the nonce.
 		$id   = absint( wp_unslash( $_POST['id'] ?? 0 ) );
-		$text = sanitize_textarea_field( wp_unslash( $_POST['whatsapp'] ?? '' ) );
+		$text = self::clean_promo( sanitize_textarea_field( wp_unslash( $_POST['whatsapp'] ?? '' ) ) );
 		// phpcs:enable WordPress.Security.NonceVerification.Missing
 
 		if ( ! $id ) {
@@ -572,6 +589,16 @@ class Kivun_Campaigns {
 
 		if ( '' === trim( $fields['short'] ) ) {
 			$fields['short'] = (string) get_the_excerpt( $post_id );
+		}
+
+		// These come straight out of rich-text fields and hold markup. A promo
+		// is plain text — WhatsApp has no tags — and the markup does more than
+		// show through: handed to the model as if it were prose, it comes back
+		// imitated, so the message it writes is wrapped in tags of its own.
+		foreach ( $fields as $key => $value ) {
+			if ( 'type' !== $key ) {
+				$fields[ $key ] = Kivun_AI_Content::plain_text( (string) $value );
+			}
 		}
 
 		return $fields;

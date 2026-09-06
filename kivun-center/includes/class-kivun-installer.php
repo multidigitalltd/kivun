@@ -52,6 +52,7 @@ class Kivun_Installer {
 			// Runs after ensure_columns(), which is what creates the columns
 			// it fills.
 			self::migrate_lead_utm();
+			self::clean_stored_promos();
 			self::add_roles();
 			// Rewrite slugs may change between versions (e.g. landing pages) —
 			// flush once after the post types register on `init`.
@@ -508,6 +509,49 @@ class Kivun_Installer {
 		}
 
 		update_option( 'kivun_lead_utm_migrated', 1 );
+	}
+
+	/**
+	 * Strip the markup out of WhatsApp promos already saved.
+	 *
+	 * The per-link promo was written from the destination's rich-text fields
+	 * without reducing them to plain text first, so tags reached the message —
+	 * and, on the model-written path, were imitated throughout it. Both ends
+	 * are fixed, but a promo saved in between is still sitting in the table
+	 * with its tags, and nobody should have to rewrite it by hand.
+	 *
+	 * @return void
+	 */
+	private static function clean_stored_promos(): void {
+		if ( get_option( 'kivun_promos_cleaned' ) ) {
+			return;
+		}
+
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$rows = $wpdb->get_results(
+			"SELECT id, whatsapp FROM {$wpdb->prefix}kivun_campaign_links
+			 WHERE whatsapp LIKE '%<%' OR whatsapp LIKE '%&lt;%'"
+		);
+
+		foreach ( (array) $rows as $row ) {
+			$clean = Kivun_Campaigns::clean_promo( (string) $row->whatsapp );
+			if ( $clean === (string) $row->whatsapp ) {
+				continue;
+			}
+
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$wpdb->update(
+				$wpdb->prefix . 'kivun_campaign_links',
+				array( 'whatsapp' => $clean ),
+				array( 'id' => (int) $row->id ),
+				array( '%s' ),
+				array( '%d' )
+			);
+		}
+
+		update_option( 'kivun_promos_cleaned', 1 );
 	}
 
 	/**

@@ -355,6 +355,15 @@ class Kivun_AI_Content {
 		);
 		$emoji = $hooks[ $f['type'] ] ?? '🚀';
 
+		// The template drops its values straight into a plain-text message, so
+		// it strips them here rather than trusting each caller to have done it.
+		// The URL is left alone: it is the one value that must survive intact.
+		foreach ( $f as $key => $value ) {
+			if ( 'type' !== $key && 'url' !== $key ) {
+				$f[ $key ] = self::plain_text( (string) $value, true );
+			}
+		}
+
 		$out   = array();
 		$out[] = '*' . $emoji . ' ' . $f['title'] . '*';
 		$out[] = '';
