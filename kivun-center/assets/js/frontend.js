@@ -744,6 +744,44 @@
 		return scope ? scope.querySelector('.kivun-wa-text') : null;
 	}
 
+	// A promo is plain text — WhatsApp has no tags — so the box is normalised
+	// on the way in as well as on the way out. The server strips markup when it
+	// reads and when it saves, but that only reaches the screen if the page
+	// itself is fresh; a cached page still carries whatever was rendered when
+	// it was stored. Mirrors Kivun_Campaigns::clean_promo().
+	function kivunStripMarkup(text) {
+		var out = String(text == null ? '' : text);
+		if (!/<\/?[a-z][^>]*>|&lt;\/?[a-z]/i.test(out)) { return out; }
+
+		// Repeats because a tag that arrives entity-encoded needs decoding
+		// before it can be recognised, and decoding is what the parser does.
+		for (var pass = 0; pass < 3; pass++) {
+			var before = out;
+			// A break or a closing paragraph separates lines. Dropping it with
+			// the rest of the markup would run the lines either side together.
+			out = out.replace(/<br\s*\/?>|<\/p>|<\/div>|<\/li>/gi, '\n');
+			// DOMParser neither runs scripts nor fetches anything, unlike
+			// assigning to innerHTML.
+			out = new DOMParser().parseFromString(out, 'text/html').body.textContent || '';
+			if (out === before) { break; }
+		}
+
+		return out.replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
+	}
+
+	function kivunNormaliseWaBoxes() {
+		Array.prototype.forEach.call(document.querySelectorAll('.kivun-wa-text'), function (box) {
+			var clean = kivunStripMarkup(box.value);
+			if (clean !== box.value) { box.value = clean; }
+		});
+	}
+
+	if (document.readyState === 'loading') {
+		document.addEventListener('DOMContentLoaded', kivunNormaliseWaBoxes);
+	} else {
+		kivunNormaliseWaBoxes();
+	}
+
 	document.addEventListener('click', function (e) {
 		var copy = e.target.closest('.kivun-wa-copy');
 		if (!copy) { return; }
