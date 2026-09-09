@@ -3103,8 +3103,13 @@ class Kivun_Content_Creator {
 				<?php endforeach; ?>
 			</datalist>
 
-			<div class="kivun-cc-card">
-				<label class="kivun-cc-label"><?php esc_html_e( 'חיבור למרכזייה', 'kivun' ); ?></label>
+			<?php
+			// Folded away: this is set up once, when the switchboard is
+			// connected, and then never touched again — while the numbers and
+			// their assignments above it are the daily work.
+			?>
+			<details class="kivun-cc-card kivun-phone-setup">
+				<summary class="kivun-camp-summary"><?php esc_html_e( 'חיבור למרכזייה — הגדרה חד-פעמית', 'kivun' ); ?></summary>
 				<p class="kivun-cc-hint">
 					<?php esc_html_e( 'מדביקים את הכתובת בהגדרות הוובהוק של המרכזייה. POST ו-GET שניהם נתמכים, ואין צורך לבחור. די בשליחה בתחילת שיחה — כל המספרים יכולים לשלוח לאותה כתובת, כי המספר שחויג הוא שמזהה את הפרסום.', 'kivun' ); ?>
 				</p>
@@ -3145,7 +3150,7 @@ class Kivun_Content_Creator {
 				<p class="kivun-field-hint">
 					<?php esc_html_e( 'הכתובת מכילה מפתח סודי בסופה — כל מי שמחזיק בה יכול לרשום שיחות. אין לפרסם אותה מחוץ להגדרות המרכזייה. המפתח נמצא בנתיב ולא אחרי סימן השאלה, כדי שמרכזייה שבונה לעצמה שורת פרמטרים לא תמחק אותו. אפשר גם לשלוח אותו בכותרת Authorization.', 'kivun' ); ?>
 				</p>
-			</div>
+			</details>
 		</div>
 		<?php
 	}

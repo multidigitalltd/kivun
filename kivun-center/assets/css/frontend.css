@@ -1437,6 +1437,11 @@
 }
 .kivun-camp-unmapped { margin: 0 0 .7rem; color: #b45309; }
 
+/* One-time setup, folded away from the numbers worked on every day. */
+.kivun-phone-setup { margin-top: 1.1rem; }
+.kivun-phone-setup > summary { margin: 0; }
+.kivun-phone-setup[open] > summary { margin-bottom: .8rem; }
+
 /* Date range filter */
 .kivun-cc-daterange { display: inline-flex; align-items: center; gap: .35rem; }
 .kivun-cc-daterange label { font-size: .8rem; color: var(--kivun-muted); font-weight: 600; }

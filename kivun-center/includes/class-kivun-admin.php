@@ -1145,24 +1145,36 @@ class Kivun_Admin {
 		// — reachable without knowing which page carries the shortcode. They hang
 		// off the Kivun Center menu, which is registered by another class at the
 		// same priority, so this runs later to be sure the parent exists.
+		// Each entry is already gated by the can_manage() check around it, and
+		// the page itself refuses anyone who slips past, so the capability here
+		// only has to not contradict that — 'edit_others_posts' did, hiding the
+		// menu from a leads viewer who is allowed on the page.
 		if ( Kivun_Campaigns::can_manage() ) {
 			add_submenu_page(
 				'kivun-settings',
 				__( 'קמפיינים', 'kivun' ),
 				__( 'קמפיינים', 'kivun' ),
-				'edit_others_posts',
+				'read',
 				'kivun-campaigns',
 				array( 'Kivun_Content_Creator', 'admin_campaigns_page' )
 			);
 		}
+
+		// Call tracking is a screen of its own rather than a page under
+		// Settings: numbers are re-pointed as campaigns come and go, which is
+		// routine work, and burying it two levels down made it feel like
+		// configuration.
 		if ( Kivun_Phones::can_manage() ) {
-			add_submenu_page(
-				'kivun-settings',
+			add_menu_page(
 				__( 'מספרי מעקב', 'kivun' ),
 				__( 'מספרי מעקב', 'kivun' ),
-				'edit_others_posts',
+				'read',
 				'kivun-calls',
-				array( 'Kivun_Content_Creator', 'admin_calls_page' )
+				array( 'Kivun_Content_Creator', 'admin_calls_page' ),
+				'dashicons-phone',
+				// A float keeps it beside the other Kivun menus without
+				// displacing whichever of them already holds that position.
+				4.1
 			);
 		}
 	}
