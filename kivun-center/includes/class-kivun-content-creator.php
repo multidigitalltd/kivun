@@ -3104,9 +3104,9 @@ class Kivun_Content_Creator {
 			</datalist>
 
 			<div class="kivun-cc-card">
-				<label class="kivun-cc-label"><?php esc_html_e( 'חיבור ל-015', 'kivun' ); ?></label>
+				<label class="kivun-cc-label"><?php esc_html_e( 'חיבור למרכזייה', 'kivun' ); ?></label>
 				<p class="kivun-cc-hint">
-					<?php esc_html_e( 'ב-015: Features ← Web Urls Templates ← Create. סמנו "Is Webhooks" = Yes, בחרו Event Filter = Hangup, ושיטת שליחה POST.', 'kivun' ); ?>
+					<?php esc_html_e( 'מדביקים את הכתובת בהגדרות הוובהוק של המרכזייה, בשיטת שליחה POST. די בשליחה בתחילת שיחה — כל המספרים יכולים לשלוח לאותה כתובת, כי המספר שחויג הוא שמזהה את הפרסום.', 'kivun' ); ?>
 				</p>
 
 				<label class="kivun-cc-sub"><?php esc_html_e( 'כתובת (HTTP URL)', 'kivun' ); ?></label>
@@ -3121,14 +3121,29 @@ class Kivun_Content_Creator {
 					<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost kivun-camp-copy"><?php esc_html_e( 'העתקה', 'kivun' ); ?></button>
 				</div>
 
-				<label class="kivun-cc-sub"><?php esc_html_e( 'גוף הבקשה (HTTP body)', 'kivun' ); ?></label>
-				<textarea class="kivun-cc-input kivun-cc-textarea kivun-camp-saved" dir="ltr" rows="8" readonly>{"callid":#callid#,"uniqueid":#uniqueid#,"start":#start#,"status":"#status#","direction":"#direction#","dnumber":"#dnumber#","cnumber":"#cnumber#","extension":"#extension#","callerid":"#callerid_external#","callername":"#callername#","snumber":"#snumber#","totaltime":#totaltime#,"talktime":#talktime#,"recording":"#recording#"}</textarea>
+				<p class="kivun-cc-hint" style="margin-top:.8rem">
+					<?php esc_html_e( 'שני שדות נדרשים: המספר שחויג והמספר של המתקשר. השמות מזוהים לפי המקובל אצל הספקים, ללא תלות באותיות גדולות/קטנות:', 'kivun' ); ?>
+				</p>
+				<ul class="kivun-cc-hint" style="margin:.3rem 0 .6rem 0;padding-inline-start:1.1rem">
+					<li><?php esc_html_e( 'המספר שחויג:', 'kivun' ); ?> <code dir="ltr">Ddi</code> / <code dir="ltr">dnumber</code> / <code dir="ltr">cnumber</code> / <code dir="ltr">extension</code></li>
+					<li><?php esc_html_e( 'המתקשר:', 'kivun' ); ?> <code dir="ltr">Cli</code> / <code dir="ltr">callerid</code> / <code dir="ltr">snumber</code></li>
+					<li><?php esc_html_e( 'מזהה השיחה:', 'kivun' ); ?> <code dir="ltr">Id</code> / <code dir="ltr">callid</code> / <code dir="ltr">uniqueid</code></li>
+				</ul>
+				<p class="kivun-cc-hint">
+					<?php esc_html_e( 'אם המרכזייה שולחת גם בסיום שיחה — שדות משך השיחה (Duration / billsec), שעת ההתחלה (startAt) וקישור להקלטה (dlink) ייקלטו אף הם, ויעדכנו את אותה שורה לפי מזהה השיחה במקום ליצור כפילות.', 'kivun' ); ?>
+				</p>
+
+				<label class="kivun-cc-sub"><?php esc_html_e( 'גוף הבקשה — לספקים שדורשים תבנית (למשל 015)', 'kivun' ); ?></label>
+				<textarea class="kivun-cc-input kivun-cc-textarea kivun-camp-saved" dir="ltr" rows="6" readonly>{"callid":#callid#,"uniqueid":#uniqueid#,"start":#start#,"status":"#status#","direction":"#direction#","dnumber":"#dnumber#","cnumber":"#cnumber#","extension":"#extension#","callerid":"#callerid_external#","callername":"#callername#","snumber":"#snumber#","totaltime":#totaltime#,"talktime":#talktime#,"recording":"#recording#"}</textarea>
 				<div class="kivun-wa-actions">
 					<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost kivun-camp-copy"><?php esc_html_e( 'העתקת גוף הבקשה', 'kivun' ); ?></button>
 				</div>
+				<p class="kivun-field-hint">
+					<?php esc_html_e( 'מרכזייה שיש לה רשימת שדות מוכנה לסימון — אין צורך בתבנית הזו, מספיק לסמן את השדות.', 'kivun' ); ?>
+				</p>
 
 				<p class="kivun-field-hint">
-					<?php esc_html_e( 'הכתובת מכילה מפתח סודי — כל מי שמחזיק בה יכול לרשום שיחות. אין לפרסם אותה מחוץ להגדרות של 015.', 'kivun' ); ?>
+					<?php esc_html_e( 'הכתובת מכילה מפתח סודי — כל מי שמחזיק בה יכול לרשום שיחות. אין לפרסם אותה מחוץ להגדרות המרכזייה. אפשר גם לשלוח את המפתח בכותרת Authorization במקום בכתובת.', 'kivun' ); ?>
 				</p>
 			</div>
 		</div>

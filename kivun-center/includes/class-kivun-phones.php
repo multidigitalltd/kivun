@@ -22,9 +22,34 @@ defined( 'ABSPATH' ) || exit;
 class Kivun_Phones {
 
 	/**
-	 * Where the 015 webhook posts.
+	 * Where the telephony provider's webhook posts.
 	 */
 	const ROUTE_NAMESPACE = 'kivun/v1';
+
+	/**
+	 * What each provider calls the handful of fields that matter here.
+	 *
+	 * Only two are actually needed: the number that was dialled, which says
+	 * which advertisement the call answers, and the caller's number. The rest
+	 * are read when a provider sends them and skipped when it does not, so a
+	 * switchboard configured to report only the start of a call is enough.
+	 *
+	 * Names are matched lower-cased. Adding a provider means adding its names
+	 * here, not another branch in the handler.
+	 *
+	 * @var array<string,array<int,string>>
+	 */
+	const FIELDS = array(
+		'call_id'     => array( 'callid', 'uniqueid', 'id' ),
+		'direction'   => array( 'direction' ),
+		'dialled'     => array( 'ddi', 'dnumber', 'cnumber', 'extension' ),
+		'caller'      => array( 'cli', 'callerid', 'snumber' ),
+		'caller_name' => array( 'callername' ),
+		'talk_time'   => array( 'billsec', 'talktime' ),
+		'total_time'  => array( 'duration', 'totaltime' ),
+		'recording'   => array( 'dlink', 'dlinkdirect', 'recording' ),
+		'started_at'  => array( 'startat', 'start' ),
+	);
 
 	/**
 	 * Register hooks.
@@ -102,7 +127,7 @@ class Kivun_Phones {
 	}
 
 	/**
-	 * The secret 015 must present. Generated once, on first use.
+	 * The secret the provider must present. Generated once, on first use.
 	 *
 	 * @return string
 	 */
@@ -116,7 +141,7 @@ class Kivun_Phones {
 	}
 
 	/**
-	 * The URL to paste into the 015 web-url template.
+	 * The URL to paste into the provider's webhook settings.
 	 *
 	 * @return string
 	 */
@@ -127,7 +152,7 @@ class Kivun_Phones {
 	/**
 	 * Reduce a number to digits so the stored form and the reported form match.
 	 *
-	 * 015 may report a number as 0722345678, 972722345678 or +972-72-234-5678
+	 * A provider may report a number as 0722345678, 972722345678 or +972-72-234-5678
 	 * depending on the route. Comparing only the last nine digits sidesteps the
 	 * country code and the leading zero without guessing which form is in use.
 	 *
@@ -607,7 +632,7 @@ class Kivun_Phones {
 	// ── Webhook ───────────────────────────────────────────────────────────────.
 
 	/**
-	 * Register the endpoint 015 posts each call to.
+	 * Register the endpoint the provider posts each call to.
 	 *
 	 * @return void
 	 */
@@ -631,79 +656,113 @@ class Kivun_Phones {
 	 * @return \WP_REST_Response
 	 */
 	public static function handle_call( \WP_REST_Request $request ): \WP_REST_Response {
+		// The token may travel in the URL or in an Authorization header —
+		// providers differ in what they let you set, and a header keeps the
+		// secret out of access logs where one is offered.
 		$token = (string) $request->get_param( 'token' );
+		if ( '' === $token ) {
+			$auth  = (string) $request->get_header( 'authorization' );
+			$token = trim( (string) preg_replace( '/^Bearer\s+/i', '', $auth ) );
+		}
 		if ( ! hash_equals( self::token(), $token ) ) {
 			return new \WP_REST_Response( array( 'error' => 'forbidden' ), 403 );
 		}
 
-		// The template is ours to define, so both encodings are accepted and
-		// the field names are the ones configured in 015.
-		$p = $request->get_params();
+		$p    = self::normalise_params( $request->get_params() );
+		$pick = static function ( array $names ) use ( $p ): string {
+			foreach ( $names as $name ) {
+				if ( isset( $p[ $name ] ) && ! is_array( $p[ $name ] ) && '' !== trim( (string) $p[ $name ] ) ) {
+					return (string) $p[ $name ];
+				}
+			}
+			return '';
+		};
 
-		$call_id = sanitize_text_field( (string) ( $p['callid'] ?? $p['uniqueid'] ?? '' ) );
+		$call_id = sanitize_text_field( $pick( self::FIELDS['call_id'] ) );
 		if ( '' === $call_id ) {
 			return new \WP_REST_Response( array( 'error' => 'no call id' ), 400 );
 		}
 
 		// Only inbound calls are advertising responses; outbound and internal
-		// legs on the same line are not.
-		$direction = sanitize_text_field( (string) ( $p['direction'] ?? 'inbound' ) );
-		if ( 'inbound' !== $direction && '' !== $direction ) {
+		// legs on the same line are not. A provider that reports no direction
+		// at all is taken at face value: its virtual numbers only ring inwards.
+		$direction = strtolower( sanitize_text_field( $pick( self::FIELDS['direction'] ) ) );
+		if ( '' !== $direction && 'inbound' !== $direction && 'in' !== $direction ) {
 			return new \WP_REST_Response( array( 'ignored' => 'direction' ), 200 );
 		}
 
-		// Which of our numbers was dialled. dnumber is the destination that
-		// triggered the webhook; cnumber is the number as presented. They are
-		// usually the same, but not on every route, so both are tried.
+		// Which of our numbers was dialled. Providers name this differently and
+		// some report it twice — as routed and as presented — so every known
+		// name is tried and the first that matches a number we track wins.
 		$dialled = '';
 		$number  = null;
-		foreach ( array( 'dnumber', 'cnumber', 'extension' ) as $field ) {
-			$candidate = self::tail( (string) ( $p[ $field ] ?? '' ) );
-			if ( '' === $candidate ) {
+		foreach ( self::FIELDS['dialled'] as $field ) {
+			$raw = isset( $p[ $field ] ) && ! is_array( $p[ $field ] ) ? (string) $p[ $field ] : '';
+			if ( '' === trim( $raw ) ) {
 				continue;
 			}
-			$found = self::find_number( $candidate );
+			$found = self::find_number( self::tail( $raw ) );
 			if ( $found ) {
-				$dialled = sanitize_text_field( (string) $p[ $field ] );
+				$dialled = sanitize_text_field( $raw );
 				$number  = $found;
 				break;
 			}
 			if ( '' === $dialled ) {
-				$dialled = sanitize_text_field( (string) $p[ $field ] );
+				$dialled = sanitize_text_field( $raw );
 			}
 		}
 
-		$start = isset( $p['start'] ) ? (int) $p['start'] : 0;
-		$start = $start > 0 ? $start : time();
-		// 015 reports Unix timestamps; the table stores site time.
-		$started_at = wp_date( 'Y-m-d H:i:s', $start );
+		$raw_start  = $pick( self::FIELDS['started_at'] );
+		$started_at = self::call_time( $raw_start );
 
-		$talk = isset( $p['talktime'] ) ? (int) $p['talktime'] : 0;
+		$talk  = (int) $pick( self::FIELDS['talk_time'] );
+		$total = (int) $pick( self::FIELDS['total_time'] );
 
 		$row = array(
 			'number_id'     => $number ? (int) $number->id : 0,
-			'assignment_id' => $number ? self::assignment_on( (int) $number->id, substr( (string) $started_at, 0, 10 ) ) : 0,
+			'assignment_id' => $number ? self::assignment_on( (int) $number->id, substr( $started_at, 0, 10 ) ) : 0,
 			'call_id'       => $call_id,
 			'dialled'       => $dialled,
-			'caller'        => sanitize_text_field( (string) ( $p['callerid'] ?? $p['snumber'] ?? '' ) ),
-			'caller_name'   => sanitize_text_field( (string) ( $p['callername'] ?? '' ) ),
+			'caller'        => sanitize_text_field( $pick( self::FIELDS['caller'] ) ),
+			'caller_name'   => sanitize_text_field( $pick( self::FIELDS['caller_name'] ) ),
 			'answered'      => $talk > 0 ? 1 : 0,
-			'total_time'    => isset( $p['totaltime'] ) ? absint( $p['totaltime'] ) : 0,
+			'total_time'    => max( 0, $total ),
 			'talk_time'     => max( 0, $talk ),
-			'recording'     => esc_url_raw( (string) ( $p['recording'] ?? '' ) ),
+			'recording'     => esc_url_raw( $pick( self::FIELDS['recording'] ) ),
 			'started_at'    => $started_at,
 		);
 
 		global $wpdb;
-		// A call can be reported more than once — several legs, or a retry after
-		// a timeout. call_id is unique, so the second report updates the first
-		// rather than counting the call twice.
+		// A call can be reported more than once — several legs, a start and an
+		// end, or a retry after a timeout. call_id is unique, so a later report
+		// updates the first rather than counting the call twice.
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$existing = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$wpdb->prefix}kivun_calls WHERE call_id = %s", $call_id ) );
 
 		if ( $existing ) {
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-			$wpdb->update( $wpdb->prefix . 'kivun_calls', $row, array( 'id' => (int) $existing ) );
+			// A later report carries less than the first — an end event names
+			// no number and often no start time — so only what it actually
+			// says is written. Otherwise the number dialled, and with it the
+			// advertisement the call is credited to, would be wiped by the
+			// second half of the same call.
+			$update = array_filter(
+				$row,
+				static function ( $value ) {
+					return '' !== $value && 0 !== $value;
+				}
+			);
+			// The start time is what dates the call, and the assignment is
+			// chosen by that date. Neither may be moved by a report that never
+			// mentioned a time — a call beginning at 23:59 would otherwise be
+			// re-credited to whatever the number advertised the next day.
+			if ( '' === $raw_start ) {
+				unset( $update['started_at'], $update['assignment_id'] );
+			}
+
+			if ( $update ) {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+				$wpdb->update( $wpdb->prefix . 'kivun_calls', $update, array( 'id' => (int) $existing ) );
+			}
 		} else {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$wpdb->insert( $wpdb->prefix . 'kivun_calls', $row );
@@ -716,6 +775,51 @@ class Kivun_Phones {
 			),
 			200
 		);
+	}
+
+	/**
+	 * Lower-case every key of the posted payload.
+	 *
+	 * Providers capitalise their fields differently — "Cli", "cli", "CLI" —
+	 * and the operator can often rename them, so nothing is matched on case.
+	 *
+	 * @param array<string,mixed> $params The posted parameters.
+	 * @return array<string,mixed>
+	 */
+	private static function normalise_params( array $params ): array {
+		$out = array();
+		foreach ( $params as $key => $value ) {
+			$out[ strtolower( (string) $key ) ] = $value;
+		}
+		return $out;
+	}
+
+	/**
+	 * A reported call time as the table stores it: site time, 'Y-m-d H:i:s'.
+	 *
+	 * @param string $raw Unix timestamp, or a date the provider formatted.
+	 * @return string
+	 */
+	private static function call_time( string $raw ): string {
+		$raw = trim( $raw );
+		if ( '' === $raw ) {
+			return wp_date( 'Y-m-d H:i:s' );
+		}
+
+		if ( ctype_digit( $raw ) ) {
+			return wp_date( 'Y-m-d H:i:s', (int) $raw );
+		}
+
+		// A written-out time is local to the switchboard. WordPress pins PHP
+		// to UTC, so reading it without saying which zone it is in would date
+		// every call by the offset — three hours, here.
+		try {
+			$when = new \DateTimeImmutable( $raw, wp_timezone() );
+		} catch ( \Exception $e ) {
+			return wp_date( 'Y-m-d H:i:s' );
+		}
+
+		return $when->setTimezone( wp_timezone() )->format( 'Y-m-d H:i:s' );
 	}
 
 	/**
