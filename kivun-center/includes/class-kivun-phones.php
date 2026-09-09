@@ -146,7 +146,7 @@ class Kivun_Phones {
 	 * @return string
 	 */
 	public static function webhook_url(): string {
-		return rest_url( self::ROUTE_NAMESPACE . '/call' ) . '?token=' . rawurlencode( self::token() );
+		return rest_url( self::ROUTE_NAMESPACE . '/call/' . rawurlencode( self::token() ) );
 	}
 
 	/**
@@ -172,6 +172,33 @@ class Kivun_Phones {
 	public static function tail( string $number ): string {
 		$digits = self::normalise( $number );
 		return mb_substr( $digits, -9 );
+	}
+
+	/**
+	 * One number in the single form everything is compared in: national, with
+	 * neither the country code nor the trunk zero.
+	 *
+	 * The last nine digits are not enough. A mobile is ten digits with the
+	 * zero (0521234567) and twelve with the country code (972521234567), so
+	 * both end in the same nine. A landline is only nine with the zero
+	 * (023850887) and eleven with the country code (97223850887) — the nine
+	 * that end them are "023850887" and "223850887", which never match, and
+	 * every Jerusalem number the switchboard reported went uncredited.
+	 *
+	 * @param string $number Any phone number.
+	 * @return string
+	 */
+	public static function canonical( string $number ): string {
+		$digits = self::normalise( $number );
+
+		if ( 0 === strpos( $digits, '972' ) ) {
+			$digits = substr( $digits, 3 );
+		}
+		if ( 0 === strpos( $digits, '0' ) ) {
+			$digits = substr( $digits, 1 );
+		}
+
+		return $digits;
 	}
 
 	// ── Reading ───────────────────────────────────────────────────────────────.
@@ -637,16 +664,21 @@ class Kivun_Phones {
 	 * @return void
 	 */
 	public static function register_route(): void {
-		register_rest_route(
-			self::ROUTE_NAMESPACE,
-			'/call',
-			array(
-				'methods'             => 'POST',
-				'callback'            => array( __CLASS__, 'handle_call' ),
-				// The token is the credential; anyone holding it may post.
-				'permission_callback' => '__return_true',
-			)
+		$route = array(
+			// Switchboards differ: some POST a body, some fetch a URL with the
+			// call's details hung off it as query parameters. Both are the same
+			// report, so both are accepted rather than one of them 404ing.
+			'methods'             => array( 'GET', 'POST' ),
+			'callback'            => array( __CLASS__, 'handle_call' ),
+			// The token is the credential; anyone holding it may report a call.
+			'permission_callback' => '__return_true',
 		);
+
+		// The token rides in the path as well as the query string. A provider
+		// that builds its own query string can drop whatever was already there,
+		// taking the credential with it; a path cannot be lost that way.
+		register_rest_route( self::ROUTE_NAMESPACE, '/call', $route );
+		register_rest_route( self::ROUTE_NAMESPACE, '/call/(?P<token>[A-Za-z0-9]+)', $route );
 	}
 
 	/**
@@ -701,7 +733,7 @@ class Kivun_Phones {
 			if ( '' === trim( $raw ) ) {
 				continue;
 			}
-			$found = self::find_number( self::tail( $raw ) );
+			$found = self::find_number( $raw );
 			if ( $found ) {
 				$dialled = sanitize_text_field( $raw );
 				$number  = $found;
@@ -810,6 +842,18 @@ class Kivun_Phones {
 			return wp_date( 'Y-m-d H:i:s', (int) $raw );
 		}
 
+		// Day-first is how a date reads here, and how the switchboards write
+		// it. PHP reads a slash as the American month-first order, so
+		// "12/09/2026" would become December rather than the 12th of
+		// September — dating a quarter of every month's calls to the wrong
+		// day, and crediting them to whatever the number advertised then.
+		foreach ( array( 'd/m/Y H:i:s', 'd/m/Y H:i', 'd-m-Y H:i:s', 'd.m.Y H:i:s', 'd/m/Y' ) as $format ) {
+			$parsed = \DateTimeImmutable::createFromFormat( $format, $raw, wp_timezone() );
+			if ( $parsed && $parsed->format( $format ) === $raw ) {
+				return $parsed->format( 'Y-m-d H:i:s' );
+			}
+		}
+
 		// A written-out time is local to the switchboard. WordPress pins PHP
 		// to UTC, so reading it without saying which zone it is in would date
 		// every call by the offset — three hours, here.
@@ -823,14 +867,31 @@ class Kivun_Phones {
 	}
 
 	/**
-	 * Find a tracked number by its comparable tail.
+	 * Find a tracked number, however the switchboard wrote it.
 	 *
-	 * @param string $tail Last nine digits.
+	 * @param string $reported The number as the switchboard reported it.
 	 * @return object|null
 	 */
-	private static function find_number( string $tail ) {
-		global $wpdb;
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		return $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$wpdb->prefix}kivun_phone_numbers WHERE RIGHT( number, 9 ) = %s LIMIT 1", $tail ) );
+	private static function find_number( string $reported ) {
+		$wanted = self::canonical( $reported );
+		if ( '' === $wanted ) {
+			return null;
+		}
+
+		// Compared in PHP rather than in SQL: the two forms of a number differ
+		// at the front, not the end, so there is no suffix for SQL to match on.
+		// The pool is a few dozen rows, read once per request.
+		static $numbers = null;
+		if ( null === $numbers ) {
+			$numbers = self::numbers();
+		}
+
+		foreach ( $numbers as $number ) {
+			if ( self::canonical( (string) $number->number ) === $wanted ) {
+				return $number;
+			}
+		}
+
+		return null;
 	}
 }
