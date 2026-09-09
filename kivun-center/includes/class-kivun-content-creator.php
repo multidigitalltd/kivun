@@ -2900,7 +2900,11 @@ class Kivun_Content_Creator {
 		$counts      = Kivun_Phones::call_counts();
 		$media       = Kivun_Phones::media();
 		$campaigns   = Kivun_Campaigns::all();
+		$report      = Kivun_Phones::report();
 		$today       = wp_date( 'Y-m-d' );
+
+		$top_media    = $report['media'][0] ?? null;
+		$top_campaign = $report['campaigns'][0] ?? null;
 		?>
 		<div class="kivun-cc-front">
 			<div class="kivun-cc-head">
@@ -2910,37 +2914,102 @@ class Kivun_Content_Creator {
 				</p>
 			</div>
 
-			<details class="kivun-cc-card kivun-camp-new">
-				<summary class="kivun-camp-summary"><?php esc_html_e( '+ הוספת מספר', 'kivun' ); ?></summary>
-				<form class="kivun-phone-form">
-					<div class="kivun-form-grid">
-						<div class="kivun-form-row">
-							<label><?php esc_html_e( 'מספר הטלפון *', 'kivun' ); ?></label>
-							<input type="text" class="kivun-cc-input kivun-phone-number" dir="ltr" placeholder="072-2345678">
-						</div>
-						<div class="kivun-form-row">
-							<label><?php esc_html_e( 'כינוי (אופציונלי)', 'kivun' ); ?></label>
-							<input type="text" class="kivun-cc-input kivun-phone-label" placeholder="<?php esc_attr_e( 'למשל: מספר 7', 'kivun' ); ?>">
-						</div>
-					</div>
-					<p class="kivun-error kivun-phone-error" style="display:none;color:var(--kivun-error)"></p>
-					<div class="kivun-form-actions">
-						<button type="submit" class="kivun-cc-btn"><?php esc_html_e( 'הוספה', 'kivun' ); ?></button>
-					</div>
-				</form>
-
-				<div class="kivun-phone-import">
-					<label class="kivun-cc-sub"><?php esc_html_e( 'או ייבוא מקובץ CSV', 'kivun' ); ?></label>
-					<p class="kivun-field-hint">
-						<?php esc_html_e( 'עמודה אחת עם המספר, ואם רוצים עמודה נוספת עם כינוי. שורת כותרת, סדר העמודות וקידוד עברית מזוהים לבד. מספרים שכבר קיימים יידלגו.', 'kivun' ); ?>
-					</p>
-					<div class="kivun-camp-out">
-						<input type="file" class="kivun-cc-input kivun-phone-file" accept=".csv,text/csv,text/plain">
-						<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost kivun-phone-import-btn"><?php esc_html_e( 'ייבוא', 'kivun' ); ?></button>
-					</div>
-					<span class="kivun-cc-wa-status kivun-phone-import-status" role="status" aria-live="polite"></span>
+			<?php
+			// Four figures rather than a chart: each is a single current value,
+			// which a tile says plainly and a one-bar chart only decorates.
+			?>
+			<div class="kivun-kpi">
+				<div class="kivun-kpi__tile">
+					<span class="kivun-kpi__label"><?php esc_html_e( 'סך השיחות', 'kivun' ); ?></span>
+					<strong class="kivun-kpi__value"><?php echo esc_html( number_format_i18n( $report['total'] ) ); ?></strong>
+					<span class="kivun-kpi__note"><?php esc_html_e( 'מאז תחילת המעקב', 'kivun' ); ?></span>
 				</div>
-			</details>
+
+				<div class="kivun-kpi__tile">
+					<span class="kivun-kpi__label"><?php esc_html_e( 'שיחות החודש האחרון', 'kivun' ); ?></span>
+					<strong class="kivun-kpi__value"><?php echo esc_html( number_format_i18n( $report['recent'] ) ); ?></strong>
+					<span class="kivun-kpi__note">
+						<?php
+						echo esc_html(
+							sprintf(
+								/* translators: %s: number of days. */
+								__( '%s הימים האחרונים', 'kivun' ),
+								number_format_i18n( $report['days'] )
+							)
+						);
+						?>
+					</span>
+				</div>
+
+				<div class="kivun-kpi__tile">
+					<span class="kivun-kpi__label"><?php esc_html_e( 'המדיה המובילה', 'kivun' ); ?></span>
+					<strong class="kivun-kpi__value kivun-kpi__value--text">
+						<?php echo $top_media ? esc_html( $top_media['name'] ) : '—'; ?>
+					</strong>
+					<span class="kivun-kpi__note">
+						<?php
+						echo $top_media
+							? esc_html(
+								sprintf(
+									/* translators: %s: number of calls. */
+									_n( '%s שיחה', '%s שיחות', $top_media['total'], 'kivun' ),
+									number_format_i18n( $top_media['total'] )
+								)
+							)
+							: esc_html__( 'עדיין אין שיחות משויכות', 'kivun' );
+						?>
+					</span>
+				</div>
+
+				<div class="kivun-kpi__tile">
+					<span class="kivun-kpi__label"><?php esc_html_e( 'הקמפיין המוביל', 'kivun' ); ?></span>
+					<strong class="kivun-kpi__value kivun-kpi__value--text">
+						<?php echo $top_campaign ? esc_html( $top_campaign['name'] ) : '—'; ?>
+					</strong>
+					<span class="kivun-kpi__note">
+						<?php
+						echo $top_campaign
+							? esc_html(
+								sprintf(
+									/* translators: %s: number of calls. */
+									_n( '%s שיחה', '%s שיחות', $top_campaign['total'], 'kivun' ),
+									number_format_i18n( $top_campaign['total'] )
+								)
+							)
+							: esc_html__( 'לא שויך קמפיין למספרים', 'kivun' );
+						?>
+					</span>
+				</div>
+			</div>
+
+			<?php if ( $report['unmatched'] ) : ?>
+				<p class="kivun-field-hint kivun-camp-unmapped">
+					<?php
+					echo esc_html(
+						sprintf(
+							/* translators: %s: number of calls. */
+							_n(
+								'%s שיחה הגיעה למספר שאינו ברשימה — כדאי להוסיף אותו כדי שתיספר.',
+								'%s שיחות הגיעו למספרים שאינם ברשימה — כדאי להוסיף אותם כדי שייספרו.',
+								$report['unmatched'],
+								'kivun'
+							),
+							number_format_i18n( $report['unmatched'] )
+						)
+					);
+					?>
+				</p>
+			<?php endif; ?>
+
+			<?php if ( $report['media'] || $report['campaigns'] ) : ?>
+				<div class="kivun-rank-pair">
+					<?php
+					self::rank_list( __( 'שיחות לפי מדיה', 'kivun' ), $report['media'] );
+					self::rank_list( __( 'שיחות לפי קמפיין', 'kivun' ), $report['campaigns'] );
+					?>
+				</div>
+			<?php endif; ?>
+
 
 			<?php if ( ! $numbers ) : ?>
 				<div class="kivun-cc-note"><?php esc_html_e( 'עדיין לא הוגדרו מספרי מעקב.', 'kivun' ); ?></div>
@@ -3102,6 +3171,38 @@ class Kivun_Content_Creator {
 					<option value="<?php echo esc_attr( $suggestion ); ?>"></option>
 				<?php endforeach; ?>
 			</datalist>
+
+			<details class="kivun-cc-card kivun-camp-new">
+				<summary class="kivun-camp-summary"><?php esc_html_e( '+ הוספת מספר', 'kivun' ); ?></summary>
+				<form class="kivun-phone-form">
+					<div class="kivun-form-grid">
+						<div class="kivun-form-row">
+							<label><?php esc_html_e( 'מספר הטלפון *', 'kivun' ); ?></label>
+							<input type="text" class="kivun-cc-input kivun-phone-number" dir="ltr" placeholder="072-2345678">
+						</div>
+						<div class="kivun-form-row">
+							<label><?php esc_html_e( 'כינוי (אופציונלי)', 'kivun' ); ?></label>
+							<input type="text" class="kivun-cc-input kivun-phone-label" placeholder="<?php esc_attr_e( 'למשל: מספר 7', 'kivun' ); ?>">
+						</div>
+					</div>
+					<p class="kivun-error kivun-phone-error" style="display:none;color:var(--kivun-error)"></p>
+					<div class="kivun-form-actions">
+						<button type="submit" class="kivun-cc-btn"><?php esc_html_e( 'הוספה', 'kivun' ); ?></button>
+					</div>
+				</form>
+
+				<div class="kivun-phone-import">
+					<label class="kivun-cc-sub"><?php esc_html_e( 'או ייבוא מקובץ CSV', 'kivun' ); ?></label>
+					<p class="kivun-field-hint">
+						<?php esc_html_e( 'עמודה אחת עם המספר, ואם רוצים עמודה נוספת עם כינוי. שורת כותרת, סדר העמודות וקידוד עברית מזוהים לבד. מספרים שכבר קיימים יידלגו.', 'kivun' ); ?>
+					</p>
+					<div class="kivun-camp-out">
+						<input type="file" class="kivun-cc-input kivun-phone-file" accept=".csv,text/csv,text/plain">
+						<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost kivun-phone-import-btn"><?php esc_html_e( 'ייבוא', 'kivun' ); ?></button>
+					</div>
+					<span class="kivun-cc-wa-status kivun-phone-import-status" role="status" aria-live="polite"></span>
+				</div>
+			</details>
 
 			<?php
 			// Folded away: this is set up once, when the switchboard is
@@ -3428,6 +3529,45 @@ class Kivun_Content_Creator {
 					<option value="<?php echo esc_attr( $mv ); ?>"><?php echo esc_html( $ml ); ?></option>
 				<?php endforeach; ?>
 			</datalist>
+		</div>
+		<?php
+	}
+
+	/**
+	 * A ranked breakdown: the rows in order, each with a bar as long as its
+	 * share of the largest.
+	 *
+	 * The bar carries the magnitude by its length, so every row wears the same
+	 * one colour — a different hue per row would say the rows are different
+	 * kinds of thing, which they are not, and would be unreadable to a
+	 * colourblind reader at that. The count is written out beside it, so
+	 * nothing here is conveyed by colour alone.
+	 *
+	 * @param string                                  $title The heading.
+	 * @param array<int,array{name:string,total:int}> $rows  Rows, largest first.
+	 * @return void
+	 */
+	private static function rank_list( string $title, array $rows ): void {
+		if ( ! $rows ) {
+			return;
+		}
+
+		$max = max( array_column( $rows, 'total' ) );
+		$max = $max > 0 ? $max : 1;
+		?>
+		<div class="kivun-cc-card kivun-rank">
+			<h3 class="kivun-rank__title"><?php echo esc_html( $title ); ?></h3>
+			<ul class="kivun-rank__list">
+				<?php foreach ( $rows as $row ) : ?>
+					<li class="kivun-rank__row">
+						<span class="kivun-rank__name"><?php echo esc_html( $row['name'] ); ?></span>
+						<span class="kivun-rank__bar" aria-hidden="true">
+							<span class="kivun-rank__fill" style="width:<?php echo esc_attr( (string) round( ( $row['total'] / $max ) * 100 ) ); ?>%"></span>
+						</span>
+						<span class="kivun-rank__count"><?php echo esc_html( number_format_i18n( $row['total'] ) ); ?></span>
+					</li>
+				<?php endforeach; ?>
+			</ul>
 		</div>
 		<?php
 	}

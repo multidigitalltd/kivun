@@ -237,6 +237,76 @@ class Kivun_Phones {
 	}
 
 	/**
+	 * The headline numbers for the call-tracking screen.
+	 *
+	 * Counted through the assignment each call was stamped with, never through
+	 * the number's current one — that is the whole point of dating them. A
+	 * number advertised on a billboard in March and in a newspaper in April
+	 * gives March's calls to the billboard, whatever it carries today.
+	 *
+	 * @param int $days How many days the recent figure covers.
+	 * @return array<string,mixed>
+	 */
+	public static function report( int $days = 30 ): array {
+		global $wpdb;
+
+		$since = wp_date( 'Y-m-d H:i:s', time() - ( $days * DAY_IN_SECONDS ) );
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$totals = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT COUNT(*) AS total,
+				        SUM( CASE WHEN started_at >= %s THEN 1 ELSE 0 END ) AS recent,
+				        SUM( CASE WHEN number_id = 0 THEN 1 ELSE 0 END ) AS unmatched
+				 FROM {$wpdb->prefix}kivun_calls",
+				$since
+			)
+		);
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$media = $wpdb->get_results(
+			"SELECT a.media AS name, COUNT(*) AS total
+			 FROM {$wpdb->prefix}kivun_calls k
+			 INNER JOIN {$wpdb->prefix}kivun_phone_assignments a ON a.id = k.assignment_id
+			 WHERE a.media <> ''
+			 GROUP BY a.media
+			 ORDER BY total DESC, name ASC
+			 LIMIT 6"
+		);
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$campaigns = $wpdb->get_results(
+			"SELECT c.label AS name, COUNT(*) AS total
+			 FROM {$wpdb->prefix}kivun_calls k
+			 INNER JOIN {$wpdb->prefix}kivun_phone_assignments a ON a.id = k.assignment_id
+			 INNER JOIN {$wpdb->prefix}kivun_campaigns c ON c.id = a.campaign_id
+			 GROUP BY c.id
+			 ORDER BY total DESC, name ASC
+			 LIMIT 6"
+		);
+
+		$shape = static function ( $rows, bool $translate ): array {
+			$out = array();
+			foreach ( (array) $rows as $row ) {
+				$out[] = array(
+					'name'  => $translate ? self::media_label( (string) $row->name ) : (string) $row->name,
+					'total' => (int) $row->total,
+				);
+			}
+			return $out;
+		};
+
+		return array(
+			'total'     => (int) ( $totals->total ?? 0 ),
+			'recent'    => (int) ( $totals->recent ?? 0 ),
+			'unmatched' => (int) ( $totals->unmatched ?? 0 ),
+			'days'      => $days,
+			'media'     => $shape( $media, true ),
+			'campaigns' => $shape( $campaigns, false ),
+		);
+	}
+
+	/**
 	 * Call counts per assignment.
 	 *
 	 * @return array<int,array{total:int,answered:int}>
