@@ -1149,21 +1149,24 @@ class Kivun_Admin {
 		// the page itself refuses anyone who slips past, so the capability here
 		// only has to not contradict that — 'edit_others_posts' did, hiding the
 		// menu from a leads viewer who is allowed on the page.
+		// Both are screens of their own rather than pages under Settings:
+		// campaigns are created and numbers re-pointed as the advertising
+		// changes, which is routine work, and burying them two levels down made
+		// them feel like configuration. Campaigns come first — a number is
+		// assigned to a campaign, so the campaign is the thing that exists
+		// first. The positions are floats so neither displaces whichever Kivun
+		// menu already holds that place.
 		if ( Kivun_Campaigns::can_manage() ) {
-			add_submenu_page(
-				'kivun-settings',
+			add_menu_page(
 				__( 'קמפיינים', 'kivun' ),
 				__( 'קמפיינים', 'kivun' ),
 				'read',
 				'kivun-campaigns',
-				array( 'Kivun_Content_Creator', 'admin_campaigns_page' )
+				array( 'Kivun_Content_Creator', 'admin_campaigns_page' ),
+				'dashicons-megaphone',
+				4.1
 			);
 		}
-
-		// Call tracking is a screen of its own rather than a page under
-		// Settings: numbers are re-pointed as campaigns come and go, which is
-		// routine work, and burying it two levels down made it feel like
-		// configuration.
 		if ( Kivun_Phones::can_manage() ) {
 			add_menu_page(
 				__( 'מספרי מעקב', 'kivun' ),
@@ -1172,9 +1175,7 @@ class Kivun_Admin {
 				'kivun-calls',
 				array( 'Kivun_Content_Creator', 'admin_calls_page' ),
 				'dashicons-phone',
-				// A float keeps it beside the other Kivun menus without
-				// displacing whichever of them already holds that position.
-				4.1
+				4.2
 			);
 		}
 	}

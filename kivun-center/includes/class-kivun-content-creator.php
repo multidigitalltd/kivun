@@ -2903,6 +2903,32 @@ class Kivun_Content_Creator {
 		$report      = Kivun_Phones::report();
 		$today       = wp_date( 'Y-m-d' );
 
+		// Offered as destinations when a campaign is created from this screen.
+		$contents = get_posts(
+			array(
+				'post_type'              => array_values( self::type_map() ),
+				'post_status'            => 'publish',
+				'posts_per_page'         => -1,
+				'orderby'                => 'title',
+				'order'                  => 'ASC',
+				'no_found_rows'          => true,
+				'update_post_meta_cache' => false,
+				'update_post_term_cache' => false,
+			)
+		);
+		$pages    = get_posts(
+			array(
+				'post_type'              => 'page',
+				'post_status'            => 'publish',
+				'posts_per_page'         => 100, // phpcs:ignore WordPress.WP.PostsPerPage.posts_per_page_posts_per_page
+				'orderby'                => 'title',
+				'order'                  => 'ASC',
+				'no_found_rows'          => true,
+				'update_post_meta_cache' => false,
+				'update_post_term_cache' => false,
+			)
+		);
+
 		$top_media    = $report['media'][0] ?? null;
 		$top_campaign = $report['campaigns'][0] ?? null;
 		?>
@@ -3139,8 +3165,31 @@ class Kivun_Content_Creator {
 											<?php foreach ( $campaigns as $camp ) : ?>
 												<option value="<?php echo esc_attr( $camp->id ); ?>"><?php echo esc_html( $camp->label ); ?></option>
 											<?php endforeach; ?>
+											<option value="__new__"><?php esc_html_e( '+ קמפיין חדש…', 'kivun' ); ?></option>
 										</select>
 										<p class="kivun-field-hint"><?php esc_html_e( 'אותם קמפיינים של הלשונית "קמפיינים" — כך רואים יחד לידים מהאתר ושיחות טלפון.', 'kivun' ); ?></p>
+
+										<?php
+										// A campaign is often thought of only once the
+										// number is in hand, and leaving the screen to
+										// create one means losing the half-filled
+										// assignment. It is created from here instead,
+										// by the same handler and the same rules.
+										?>
+										<div class="kivun-newcamp" hidden>
+											<label class="kivun-cc-sub"><?php esc_html_e( 'שם הקמפיין החדש', 'kivun' ); ?></label>
+											<input type="text" class="kivun-cc-input kivun-newcamp-name" placeholder="<?php esc_attr_e( 'למשל: כנס הורים 2026', 'kivun' ); ?>">
+
+											<label class="kivun-cc-sub"><?php esc_html_e( 'יעד ברירת מחדל', 'kivun' ); ?></label>
+											<?php self::campaign_target_field( $contents, $pages ); ?>
+											<p class="kivun-field-hint"><?php esc_html_e( 'לאן יגיעו הגולשים מקישורי הקמפיין. נדרש גם כשהקמפיין מתפרסם בטלפון בלבד, כדי שאפשר יהיה להוסיף לו קישורים בהמשך.', 'kivun' ); ?></p>
+
+											<p class="kivun-error kivun-newcamp-error" style="display:none;color:var(--kivun-error)"></p>
+											<div class="kivun-form-actions">
+												<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-newcamp-btn"><?php esc_html_e( 'יצירת הקמפיין', 'kivun' ); ?></button>
+												<span class="kivun-cc-wa-status kivun-newcamp-status" role="status" aria-live="polite"></span>
+											</div>
+										</div>
 									</div>
 									<div class="kivun-form-row">
 										<label><?php esc_html_e( 'פירוט הפרסום', 'kivun' ); ?></label>
@@ -3534,6 +3583,44 @@ class Kivun_Content_Creator {
 	}
 
 	/**
+	 * The destination picker a campaign is created with.
+	 *
+	 * Rendered in two places — the campaigns screen and the shortcut for
+	 * creating a campaign while assigning a phone number — so it lives in one.
+	 *
+	 * @param array<int,\WP_Post> $contents Content posts offered as targets.
+	 * @param array<int,\WP_Post> $pages    Site pages offered as targets.
+	 * @param string              $target   The currently chosen URL.
+	 * @param bool                $custom   Whether that URL is a typed-in one.
+	 * @return void
+	 */
+	private static function campaign_target_field( array $contents, array $pages, string $target = '', bool $custom = false ): void {
+		?>
+		<select class="kivun-cc-input kivun-camp-target">
+			<option value=""><?php esc_html_e( '— בחר/י יעד —', 'kivun' ); ?></option>
+			<?php if ( $contents ) : ?>
+				<optgroup label="<?php esc_attr_e( 'תכנים', 'kivun' ); ?>">
+					<?php foreach ( $contents as $c ) : ?>
+						<?php $c_url = (string) get_permalink( $c->ID ); ?>
+						<option value="<?php echo esc_url( $c_url ); ?>" <?php selected( ! $custom && $c_url === $target ); ?>><?php echo esc_html( $c->post_title ); ?></option>
+					<?php endforeach; ?>
+				</optgroup>
+			<?php endif; ?>
+			<?php if ( $pages ) : ?>
+				<optgroup label="<?php esc_attr_e( 'עמודים באתר', 'kivun' ); ?>">
+					<?php foreach ( $pages as $pg ) : ?>
+						<?php $pg_url = (string) get_permalink( $pg->ID ); ?>
+						<option value="<?php echo esc_url( $pg_url ); ?>" <?php selected( ! $custom && $pg_url === $target ); ?>><?php echo esc_html( $pg->post_title ); ?></option>
+					<?php endforeach; ?>
+				</optgroup>
+			<?php endif; ?>
+			<option value="__custom__" <?php selected( $custom ); ?>><?php esc_html_e( 'כתובת אחרת (הדבקה ידנית)…', 'kivun' ); ?></option>
+		</select>
+		<input type="url" class="kivun-cc-input kivun-camp-custom" dir="ltr" placeholder="https://…" value="<?php echo $custom ? esc_url( $target ) : ''; ?>" <?php echo $custom ? '' : 'hidden'; ?>>
+		<?php
+	}
+
+	/**
 	 * A ranked breakdown: the rows in order, each with a bar as long as its
 	 * share of the largest.
 	 *
@@ -3623,27 +3710,7 @@ class Kivun_Content_Creator {
 
 				<div class="kivun-form-row">
 					<label><?php esc_html_e( 'יעד ברירת מחדל *', 'kivun' ); ?></label>
-					<select class="kivun-cc-input kivun-camp-target">
-						<option value=""><?php esc_html_e( '— בחר/י יעד —', 'kivun' ); ?></option>
-						<?php if ( $contents ) : ?>
-							<optgroup label="<?php esc_attr_e( 'תכנים', 'kivun' ); ?>">
-								<?php foreach ( $contents as $c ) : ?>
-									<?php $c_url = (string) get_permalink( $c->ID ); ?>
-									<option value="<?php echo esc_url( $c_url ); ?>" <?php selected( ! $custom && $c_url === $target ); ?>><?php echo esc_html( $c->post_title ); ?></option>
-								<?php endforeach; ?>
-							</optgroup>
-						<?php endif; ?>
-						<?php if ( $pages ) : ?>
-							<optgroup label="<?php esc_attr_e( 'עמודים באתר', 'kivun' ); ?>">
-								<?php foreach ( $pages as $pg ) : ?>
-									<?php $pg_url = (string) get_permalink( $pg->ID ); ?>
-									<option value="<?php echo esc_url( $pg_url ); ?>" <?php selected( ! $custom && $pg_url === $target ); ?>><?php echo esc_html( $pg->post_title ); ?></option>
-								<?php endforeach; ?>
-							</optgroup>
-						<?php endif; ?>
-						<option value="__custom__" <?php selected( $custom ); ?>><?php esc_html_e( 'כתובת אחרת (הדבקה ידנית)…', 'kivun' ); ?></option>
-					</select>
-					<input type="url" class="kivun-cc-input kivun-camp-custom" dir="ltr" placeholder="https://…" value="<?php echo $custom ? esc_url( $target ) : ''; ?>" <?php echo $custom ? '' : 'hidden'; ?>>
+					<?php self::campaign_target_field( $contents, $pages, $target, $custom ); ?>
 					<p class="kivun-field-hint"><?php esc_html_e( 'לאן יגיעו הגולשים. כל הקישורים בקמפיין מובילים לשם.', 'kivun' ); ?></p>
 				</div>
 			</div>

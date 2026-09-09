@@ -277,7 +277,13 @@ class Kivun_Campaigns {
 				self::rebuild_links( $id, $slug );
 			}
 
-			wp_send_json_success( array( 'message' => __( 'הקמפיין עודכן.', 'kivun' ) ) );
+			wp_send_json_success(
+				array(
+					'message' => __( 'הקמפיין עודכן.', 'kivun' ),
+					'id'      => $id,
+					'label'   => $name,
+				)
+			);
 		}
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
@@ -301,7 +307,16 @@ class Kivun_Campaigns {
 			wp_send_json_error( array( 'message' => __( 'שמירת הקמפיין נכשלה.', 'kivun' ) ) );
 		}
 
-		wp_send_json_success( array( 'message' => __( 'הקמפיין נוצר.', 'kivun' ) ) );
+		// The id and the name go back so a caller that created this campaign
+		// mid-task — assigning a phone number, say — can select it and carry
+		// on, instead of reloading and losing what it had half filled in.
+		wp_send_json_success(
+			array(
+				'message' => __( 'הקמפיין נוצר.', 'kivun' ),
+				'id'      => (int) $wpdb->insert_id,
+				'label'   => $name,
+			)
+		);
 	}
 
 	/**

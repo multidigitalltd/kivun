@@ -1156,18 +1156,97 @@
 		out.value = parts.utm_source ? kivunCampUrl(out.dataset.target, parts) : '';
 	}
 
-	// Choosing "other" as the target reveals the free URL field.
+	// Choosing "other" as the target reveals the free URL field. The picker
+	// appears both in the campaign form and in the shortcut for creating a
+	// campaign while assigning a phone number.
 	document.addEventListener('change', function (e) {
 		var sel = e.target.closest('.kivun-camp-target');
 		if (!sel) { return; }
-		var form = sel.closest('.kivun-campaign-form');
-		if (!form) { return; }
+		var scope = sel.closest('.kivun-campaign-form, .kivun-newcamp');
+		if (!scope) { return; }
 
-		var custom = form.querySelector('.kivun-camp-custom');
+		var custom = scope.querySelector('.kivun-camp-custom');
 		if (custom) {
 			custom.hidden = sel.value !== '__custom__';
 			if (!custom.hidden) { custom.focus(); }
 		}
+	});
+
+	// ── Create a campaign while assigning a phone number ─────────────────────────
+	// Picking "+ new campaign" opens the fields in place; the half-filled
+	// assignment above stays exactly as it was.
+	document.addEventListener('change', function (e) {
+		var sel = e.target.closest('.kivun-as-campaign');
+		if (!sel) { return; }
+		var box = sel.parentNode.querySelector('.kivun-newcamp');
+		if (!box) { return; }
+
+		box.hidden = sel.value !== '__new__';
+		if (!box.hidden) {
+			var name = box.querySelector('.kivun-newcamp-name');
+			if (name) { name.focus(); }
+		}
+	});
+
+	document.addEventListener('click', function (e) {
+		var btn = e.target.closest('.kivun-newcamp-btn');
+		if (!btn) { return; }
+
+		var box = btn.closest('.kivun-newcamp');
+		var sel = box && box.parentNode.querySelector('.kivun-as-campaign');
+		var err = box && box.querySelector('.kivun-newcamp-error');
+		var status = box && box.querySelector('.kivun-newcamp-status');
+		if (!box || !sel) { return; }
+
+		var nameEl = box.querySelector('.kivun-newcamp-name');
+		var name = nameEl ? nameEl.value.trim() : '';
+		var target = kivunCampTarget(box);
+
+		if (!name || !target) {
+			showError(err, 'יש למלא שם קמפיין ולבחור יעד.');
+			return;
+		}
+		if (err) { err.style.display = 'none'; }
+
+		btn.disabled = true;
+		if (status) { status.textContent = kivun.i18n.sending; }
+
+		post(params({
+			action: 'kivun_save_campaign',
+			nonce: kivun.nonce,
+			id: 0,
+			label: name,
+			utm_campaign: kivunCampClean(name),
+			target_url: target
+		})).then(function (res) {
+			btn.disabled = false;
+			if (!res.success || !res.data || !res.data.id) {
+				if (status) { status.textContent = ''; }
+				showError(err, (res.data && res.data.message) || kivun.i18n.error_generic);
+				return;
+			}
+
+			// Every number on the page offers the same list, so the new campaign
+			// is added to all of them — otherwise it would be missing from the
+			// next assignment until the page was reloaded.
+			var id = String(res.data.id);
+			document.querySelectorAll('.kivun-as-campaign').forEach(function (list) {
+				if (list.querySelector('option[value="' + id + '"]')) { return; }
+				var opt = document.createElement('option');
+				opt.value = id;
+				opt.textContent = res.data.label;
+				list.insertBefore(opt, list.querySelector('option[value="__new__"]'));
+			});
+
+			sel.value = id;
+			box.hidden = true;
+			if (nameEl) { nameEl.value = ''; }
+			if (status) { status.textContent = ''; }
+		}).catch(function (ex) {
+			btn.disabled = false;
+			if (status) { status.textContent = ''; }
+			showError(err, failure(ex));
+		});
 	});
 
 	document.addEventListener('input', function (e) {
