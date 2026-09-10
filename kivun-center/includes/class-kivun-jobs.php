@@ -62,7 +62,22 @@ class Kivun_Jobs {
 			&& in_the_loop()
 			&& get_queried_object_id() === (int) $post_id
 			&& apply_filters( 'kivun_single_job_append', self::single_design_enabled() )
-			&& apply_filters( 'kivun_hide_duplicate_job_title', self::single_design_enabled() )
+			/**
+			 * Whether to blank the theme's own job title.
+			 *
+			 * Off by default. It was on, on the reasoning that our hero prints
+			 * the title itself and a second one is clutter — but that only
+			 * holds when our hero is what draws the page. A job page built in
+			 * a page builder never calls our design, so the filter was
+			 * deleting the only title there was and leaving the page nameless.
+			 * A title twice over is untidy; no title at all is broken, so the
+			 * default now errs the other way. Sites running the built-in
+			 * design can turn it back on here.
+			 *
+			 * @param bool $hide    Whether to hide the title. Default false.
+			 * @param int  $post_id The job.
+			 */
+			&& apply_filters( 'kivun_hide_duplicate_job_title', false, (int) $post_id )
 		) {
 			return '';
 		}

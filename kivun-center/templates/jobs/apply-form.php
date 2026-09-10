@@ -31,6 +31,7 @@ $kivun_turnstile_key = Kivun_Admin_Settings::get( 'turnstile_site_key' );
 
 		<fieldset class="kivun-form-row kivun-apply-choice">
 			<legend><?php esc_html_e( 'מגדר *', 'kivun' ); ?></legend>
+			<div class="kivun-apply-choice__opts">
 			<label class="kivun-apply-opt">
 				<input type="radio" name="gender" value="<?php esc_attr_e( 'גבר', 'kivun' ); ?>" required>
 				<span><?php esc_html_e( 'גבר', 'kivun' ); ?></span>
@@ -39,10 +40,12 @@ $kivun_turnstile_key = Kivun_Admin_Settings::get( 'turnstile_site_key' );
 				<input type="radio" name="gender" value="<?php esc_attr_e( 'אישה', 'kivun' ); ?>" required>
 				<span><?php esc_html_e( 'אישה', 'kivun' ); ?></span>
 			</label>
+			</div>
 		</fieldset>
 
 		<fieldset class="kivun-form-row kivun-apply-choice">
 			<legend><?php esc_html_e( 'מתגורר/ת בירושלים והסביבה? *', 'kivun' ); ?></legend>
+			<div class="kivun-apply-choice__opts">
 			<label class="kivun-apply-opt">
 				<input type="radio" name="local_resident" value="yes" required>
 				<span><?php esc_html_e( 'כן', 'kivun' ); ?></span>
@@ -51,30 +54,31 @@ $kivun_turnstile_key = Kivun_Admin_Settings::get( 'turnstile_site_key' );
 				<input type="radio" name="local_resident" value="no" required>
 				<span><?php esc_html_e( 'לא', 'kivun' ); ?></span>
 			</label>
+			</div>
 		</fieldset>
 
 		<?php
 		// Revealed only by answering "no": asking everyone for an address when
 		// most of them live in the city the job is in is a question for nothing.
 		?>
-		<div class="kivun-form-row kivun-apply-address" hidden>
+		<div class="kivun-form-row kivun-apply-full kivun-apply-address" hidden>
 			<label for="kivun-apply-address"><?php esc_html_e( 'כתובת המגורים', 'kivun' ); ?></label>
 			<input type="text" id="kivun-apply-address" name="address" autocomplete="address-level2" placeholder="<?php esc_attr_e( 'עיר / יישוב', 'kivun' ); ?>">
 		</div>
 
-		<div class="kivun-form-row">
+		<div class="kivun-form-row kivun-apply-full">
 			<label for="kivun-apply-message"><?php esc_html_e( 'כמה מילים עליך (אופציונלי)', 'kivun' ); ?></label>
 			<textarea id="kivun-apply-message" name="message" rows="3" placeholder="<?php esc_attr_e( 'ספרו בכמה מילים על עצמכם ולמה אתם מתאימים למשרה', 'kivun' ); ?>"></textarea>
 		</div>
 
-		<div class="kivun-form-row">
+		<div class="kivun-form-row kivun-apply-full">
 			<label for="kivun-apply-cv"><?php esc_html_e( 'קורות חיים (אופציונלי — PDF / Word, עד 5MB)', 'kivun' ); ?></label>
 			<input type="file" id="kivun-apply-cv" name="cv_file" accept=".pdf,.doc,.docx">
 		</div>
 
 		<?php if ( $kivun_turnstile_key ) : ?>
 			<?php wp_enqueue_script( 'kivun-turnstile', 'https://challenges.cloudflare.com/turnstile/v0/api.js', array(), null, true ); // phpcs:ignore WordPress.WP.EnqueuedResourceParameters.MissingVersion, WordPress.WP.EnqueuedResourceParameters.NotInFooter -- External Cloudflare API; no version, loaded async in footer. ?>
-			<div class="kivun-form-row">
+			<div class="kivun-form-row kivun-apply-full">
 				<div class="cf-turnstile" data-sitekey="<?php echo esc_attr( $kivun_turnstile_key ); ?>" data-language="he"></div>
 			</div>
 		<?php endif; ?>

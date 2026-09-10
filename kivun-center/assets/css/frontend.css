@@ -602,7 +602,7 @@
 .kivun-job-content-text { font-size: 17px; line-height: 1.8; color: #555555; }
 .kivun-job-content-text p { margin: 0 0 1em; }
 .kivun-job-content-text p:last-child { margin-bottom: 0; }
-.kivun-job-apply-area { max-width: 760px; margin: 3rem auto 0; }
+.kivun-job-apply-area { max-width: 980px; margin: 3rem auto 0; }
 .kivun-job-apply-area .kivun-job-section-title { text-align: right; }
 
 @media (max-width: 768px) {
@@ -1493,30 +1493,144 @@
 .kivun-apply-choice[hidden],
 .kivun-jobs-more[hidden] { display: none; }
 
-/* Two choices, both on screen: a radio row rather than a dropdown to open. */
-.kivun-apply-choice { border: 0; padding: 0; margin-bottom: 1rem; }
+/* ── Job application form ──────────────────────────────────────────────────
+   Dressed in the single job page's own language: the pink it uses for
+   headings, its greys, its 8–10px corners and its 17px body text. The tokens
+   below are the page's, repeated here so the form cannot drift from it. */
+.kivun-apply-wrap {
+	--ja-pink:   #ef315d;
+	--ja-ink:    #555555;
+	--ja-muted:  #777777;
+	--ja-line:   #e7e7e7;
+	--ja-field:  #fafafa;
+}
+.kivun-apply-form {
+	background: #fff;
+	border: 1px solid var(--ja-line);
+	border-radius: 10px;
+	padding: 30px 34px 34px;
+}
+
+/* Two columns where there is room. The message, the file and the address run
+   the full width — a wide box invites a long answer, a narrow one does not. */
+.kivun-apply-form {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 20px 26px;
+	align-items: start;
+}
+.kivun-apply-form > .kivun-apply-full,
+.kivun-apply-form > .kivun-error,
+.kivun-apply-form > button { grid-column: 1 / -1; }
+
+.kivun-apply-form .kivun-form-row { margin-bottom: 0; gap: .5rem; }
+.kivun-apply-form label,
 .kivun-apply-choice legend {
 	padding: 0;
-	margin-bottom: .45rem;
-	font-size: .87rem;
-	font-weight: 600;
-	color: var(--kivun-text);
+	font-size: 15px;
+	font-weight: 800;
+	color: var(--ja-ink);
 }
-.kivun-apply-choice { display: flex; flex-direction: column; gap: .4rem; }
+.kivun-apply-form input[type="text"],
+.kivun-apply-form input[type="email"],
+.kivun-apply-form input[type="tel"],
+.kivun-apply-form input[type="file"],
+.kivun-apply-form textarea {
+	width: 100%;
+	box-sizing: border-box;
+	padding: 13px 16px;
+	border: 1px solid var(--ja-line);
+	border-radius: 8px;
+	background: var(--ja-field);
+	font: inherit;
+	font-size: 16px;
+	color: var(--ja-ink);
+	transition: border-color .15s, box-shadow .15s, background .15s;
+}
+.kivun-apply-form input::placeholder,
+.kivun-apply-form textarea::placeholder { color: #a6a6a6; }
+.kivun-apply-form input:focus,
+.kivun-apply-form textarea:focus {
+	outline: none;
+	background: #fff;
+	border-color: var(--ja-pink);
+	box-shadow: 0 0 0 3px rgba(239, 49, 93, .12);
+}
+.kivun-apply-form textarea { min-height: 108px; resize: vertical; line-height: 1.7; }
+.kivun-apply-form input[type="file"] { padding: 11px 14px; color: var(--ja-muted); font-size: 15px; }
+
+/* Two choices, both on screen: a pair of buttons rather than a list of radios
+   or a dropdown to open. The radio itself still carries the state, so keyboard
+   and screen readers are unaffected. */
+.kivun-apply-choice {
+	display: flex;
+	flex-direction: column;
+	gap: .5rem;
+	border: 0;
+	margin: 0;
+	padding: 0;
+	min-width: 0;
+}
+.kivun-apply-choice__opts { display: flex; gap: 10px; }
 .kivun-apply-opt {
+	flex: 1 1 0;
 	display: flex;
 	align-items: center;
-	gap: .5rem;
-	font-weight: 400;
+	justify-content: center;
+	gap: .45rem;
+	/* Matches the inputs' padding so a choice sits level with the field beside
+	   it in the two-column grid. */
+	padding: 13px 10px;
+	border: 1px solid var(--ja-line);
+	border-radius: 8px;
+	background: var(--ja-field);
+	font-size: 16px;
+	font-weight: 600;
+	color: var(--ja-muted);
 	cursor: pointer;
+	transition: border-color .15s, color .15s, background .15s;
 }
-/* The radio itself must keep its own size — the form's inputs are full-width. */
+.kivun-apply-opt:hover { border-color: #d9d9d9; background: #fff; }
 .kivun-apply-opt input[type="radio"] {
 	width: auto;
 	min-width: 0;
 	margin: 0;
 	padding: 0;
 	flex: 0 0 auto;
+	accent-color: var(--ja-pink);
+}
+/* The chosen one is named as well as coloured — never colour alone. */
+.kivun-apply-opt:has(input:checked) {
+	border-color: var(--ja-pink);
+	background: #fff;
+	color: var(--ja-pink);
+}
+.kivun-apply-opt:has(input:focus-visible) {
+	box-shadow: 0 0 0 3px rgba(239, 49, 93, .12);
+}
+
+.kivun-apply-form .kivun-error { margin: 0; font-size: 15px; }
+.kivun-apply-form button[type="submit"] {
+	justify-self: start;
+	min-width: 220px;
+	padding: 15px 40px;
+	border: 0;
+	border-radius: 8px;
+	background: var(--ja-pink);
+	color: #fff;
+	font: inherit;
+	font-size: 17px;
+	font-weight: 800;
+	cursor: pointer;
+	transition: background .15s, transform .1s;
+}
+.kivun-apply-form button[type="submit"]:hover { background: #d92450; }
+.kivun-apply-form button[type="submit"]:active { transform: translateY(1px); }
+.kivun-apply-form button[type="submit"][disabled] { opacity: .6; cursor: default; }
+
+@media (max-width: 640px) {
+	.kivun-apply-form { grid-template-columns: 1fr; padding: 22px 20px 26px; }
+	.kivun-apply-form button[type="submit"] { width: 100%; }
 }
 
 /* The rest of the board, a page at a time. */
