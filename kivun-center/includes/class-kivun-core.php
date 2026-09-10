@@ -291,6 +291,34 @@ class Kivun_Core {
 		);
 		wp_script_add_data( 'kivun-frontend', 'defer', true );
 
+		/*
+		 * Keep the stylesheet out of "unused CSS" optimisers.
+		 *
+		 * They build one file per page by scanning that page's HTML and
+		 * discarding every rule they cannot find a match for. Half of this
+		 * plugin's markup does not exist at that moment: the application form
+		 * lives in a popup, the success dialog is created after a submission,
+		 * and rows appear as filters are used. Those rules get thrown away and
+		 * the form arrives unstyled — which is what a scan of the live page
+		 * showed, with .kivun-apply-form, .kivun-apply-opt and .kivun-apply-done
+		 * all missing from the generated file.
+		 *
+		 * data-no-optimize is the convention LiteSpeed and Autoptimize both
+		 * read. An optimiser that does not know it simply ignores the
+		 * attribute, so this costs nothing where it is not needed.
+		 */
+		add_filter(
+			'style_loader_tag',
+			static function ( $tag, $handle ) {
+				if ( 'kivun-frontend' !== $handle ) {
+					return $tag;
+				}
+				return str_replace( '<link ', '<link data-no-optimize="1" data-no-defer="1" ', $tag );
+			},
+			10,
+			2
+		);
+
 		wp_register_script(
 			'kivun-voice',
 			KIVUN_URL . 'assets/js/' . self::asset( 'voice', 'js' ),
