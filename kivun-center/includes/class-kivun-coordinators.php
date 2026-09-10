@@ -80,31 +80,70 @@ class Kivun_Coordinators {
 
 		$out = array();
 		foreach ( preg_split( '/\r\n|\r|\n/', (string) Kivun_Admin_Settings::get( $key, '' ) ) as $line ) {
-			$line = trim( (string) $line );
-			if ( '' === $line ) {
-				continue;
-			}
-
-			$weight = 1;
-			if ( str_contains( $line, '=' ) ) {
-				list( $line, $weight ) = array_map( 'trim', explode( '=', $line, 2 ) );
-
-				// "1/4" is how the share was asked for, and how anyone would
-				// write it; it means one part against the other lines' parts.
-				if ( preg_match( '#^(\d+)\s*/\s*(\d+)$#', (string) $weight, $m ) ) {
-					$weight = (int) $m[1];
-				} else {
-					$weight = (int) $weight;
-				}
-			}
-
-			$email = sanitize_email( $line );
-			if ( is_email( $email ) && $weight > 0 ) {
-				$out[ $email ] = (int) $weight;
+			$record = self::parse_line( (string) $line );
+			if ( $record ) {
+				$out[ $record['email'] ] = $record;
 			}
 		}
 
 		return $out;
+	}
+
+	/**
+	 * Read one line of a roster.
+	 *
+	 * A coordinator is written as their address, and — for the sign-off on the
+	 * letter the candidate receives — optionally their name and phone number,
+	 * separated by commas. The share goes after an "=".
+	 *
+	 *     dasi@kivun.org.il = 3/4
+	 *     דסי, dasi@kivun.org.il, 02-6456222 = 3/4
+	 *
+	 * The parts are told apart by what they look like rather than by their
+	 * position, so the order they are typed in does not matter and the older
+	 * address-only lines keep working untouched.
+	 *
+	 * @param string $line One line of the setting.
+	 * @return array{email:string,weight:int,name:string,phone:string}|null
+	 */
+	private static function parse_line( string $line ): ?array {
+		$line = trim( $line );
+		if ( '' === $line ) {
+			return null;
+		}
+
+		$weight = 1;
+		if ( str_contains( $line, '=' ) ) {
+			list( $line, $share ) = array_map( 'trim', explode( '=', $line, 2 ) );
+
+			// "1/4" is how the share was asked for, and how anyone would write
+			// it; it means one part against the other lines' parts.
+			$weight = preg_match( '#^(\d+)\s*/\s*(\d+)$#', $share, $m ) ? (int) $m[1] : (int) $share;
+		}
+
+		$record = array(
+			'email'  => '',
+			'weight' => $weight,
+			'name'   => '',
+			'phone'  => '',
+		);
+
+		foreach ( preg_split( '/[,|]/', $line ) as $part ) {
+			$part = trim( (string) $part );
+			if ( '' === $part ) {
+				continue;
+			}
+
+			if ( '' === $record['email'] && is_email( $part ) ) {
+				$record['email'] = sanitize_email( $part );
+			} elseif ( '' === $record['phone'] && preg_match( '/^[\d\-+()\s]{7,}$/', $part ) ) {
+				$record['phone'] = sanitize_text_field( $part );
+			} elseif ( '' === $record['name'] ) {
+				$record['name'] = sanitize_text_field( $part );
+			}
+		}
+
+		return ( '' !== $record['email'] && $record['weight'] > 0 ) ? $record : null;
 	}
 
 	/**
@@ -119,10 +158,10 @@ class Kivun_Coordinators {
 	 * @param string $group 'male' or 'female'.
 	 * @return string The chosen address, or '' when the group has no roster.
 	 */
-	public static function next( string $group ): string {
+	public static function next( string $group ): array {
 		$roster = self::roster( $group );
 		if ( ! $roster ) {
-			return '';
+			return array();
 		}
 
 		$state  = get_option( self::STATE, array() );
@@ -133,12 +172,12 @@ class Kivun_Coordinators {
 		// level rather than owed a backlog.
 		$credit = array_intersect_key( $credit, $roster );
 
-		$total  = array_sum( $roster );
+		$total  = array_sum( array_column( $roster, 'weight' ) );
 		$chosen = '';
 		$best   = null;
 
-		foreach ( $roster as $email => $weight ) {
-			$credit[ $email ] = (int) ( $credit[ $email ] ?? 0 ) + $weight;
+		foreach ( $roster as $email => $record ) {
+			$credit[ $email ] = (int) ( $credit[ $email ] ?? 0 ) + $record['weight'];
 			if ( null === $best || $credit[ $email ] > $best ) {
 				$best   = $credit[ $email ];
 				$chosen = $email;
@@ -150,7 +189,24 @@ class Kivun_Coordinators {
 		$state[ $group ] = $credit;
 		update_option( self::STATE, $state, false );
 
-		return $chosen;
+		return $roster[ $chosen ];
+	}
+
+	/**
+	 * The coordinator whose turn it is, given what the candidate said about
+	 * gender — the one who will be sent the application and who signs the
+	 * letter back.
+	 *
+	 * Taking a turn is recorded, so this is called once per submission and the
+	 * answer passed around, never called again for the same one.
+	 *
+	 * @param string $gender The submitted gender value.
+	 * @return array{email:string,weight:int,name:string,phone:string}|array{} Empty when there is no roster for them.
+	 */
+	public static function pick( string $gender ): array {
+		$group = self::group_of( $gender );
+
+		return '' !== $group ? self::next( $group ) : array();
 	}
 
 	/**
@@ -160,13 +216,8 @@ class Kivun_Coordinators {
 	 * @return array<int,string>
 	 */
 	public static function recipients( string $gender ): array {
-		$group = self::group_of( $gender );
-		if ( '' === $group ) {
-			return array();
-		}
+		$coordinator = self::pick( $gender );
 
-		$email = self::next( $group );
-
-		return '' !== $email ? array( $email ) : array();
+		return $coordinator ? array( $coordinator['email'] ) : array();
 	}
 }

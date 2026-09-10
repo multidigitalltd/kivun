@@ -454,16 +454,18 @@ class Kivun_Jobs {
 				'residence' => self::residence_label( $local, $address ),
 			);
 
+		// Whose turn it is, by the gender the candidate gave. Taking a turn is
+		// recorded, so this is decided once and the answer used for both the
+		// notification and the signature on the letter back — the person who
+		// has the application is the person who signs it.
+		$coordinator = Kivun_Coordinators::pick( $gender );
+
 		$employer_email = get_post_meta( $job_id, '_kivun_employer_email', true );
 		if ( $employer_email ) {
 			Kivun_Mailer::send_application( $employer_email, get_the_title( $job_id ), $details );
 		}
-
-		// The coordinator whose turn it is, by the gender the candidate gave.
-		// Nothing is sent when no roster is configured, or when the form was
-		// filled in before the gender field existed.
-		foreach ( Kivun_Coordinators::recipients( $gender ) as $coordinator ) {
-			Kivun_Mailer::send_application( $coordinator, get_the_title( $job_id ), $details );
+		if ( $coordinator ) {
+			Kivun_Mailer::send_application( $coordinator['email'], get_the_title( $job_id ), $details );
 		}
 
 		// Reassure the applicant that their CV arrived. The application is saved
@@ -474,13 +476,18 @@ class Kivun_Jobs {
 			$name,
 			get_the_title( $job_id ),
 			(string) get_post_meta( $job_id, '_kivun_company', true ),
-			(bool) $employer_email
+			(bool) $employer_email,
+			$coordinator
 		);
 		do_action( 'kivun_after_application', $job_id, compact( 'name', 'email', 'phone', 'message' ) + array( 'cv_path' => $cv_path ) );
 
 		wp_send_json_success(
 			array(
 				'message' => __( 'קורות החיים נשלחו בהצלחה למפרסם המשרה', 'kivun' ),
+				// The same words as the letter, built from the same place, so
+				// the screen and the inbox cannot come to say different things.
+				'title'   => __( 'המועמדות נשלחה בהצלחה', 'kivun' ),
+				'lines'   => Kivun_Mailer::confirmation_lines( $name, get_the_title( $job_id ), $coordinator ),
 			)
 		);
 	}

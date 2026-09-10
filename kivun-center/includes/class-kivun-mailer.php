@@ -126,41 +126,80 @@ class Kivun_Mailer {
 	 * @param string $applicant_name  The applicant's name.
 	 * @param string $job_title       The job title applied for.
 	 * @param string $company         Optional company name.
-	 * @param bool   $employer_mailed Whether the publisher was actually notified.
-	 *                                When false the application is still saved
-	 *                                and visible in the dashboard, so the wording
-	 *                                must not claim it was forwarded.
+	 * @param bool   $employer_mailed Unused. Kept so existing callers still fit.
+	 * @param array  $coordinator     The coordinator handling this candidate,
+	 *                                who signs the letter. Empty when the rota
+	 *                                named nobody.
 	 * @return void
 	 */
-	public static function send_application_confirmation( string $applicant_email, string $applicant_name, string $job_title, string $company = '', bool $employer_mailed = true ): void {
+	public static function send_application_confirmation( string $applicant_email, string $applicant_name, string $job_title, string $company = '', bool $employer_mailed = true, array $coordinator = array() ): void {
+		unset( $employer_mailed, $company );
+
 		if ( ! is_email( $applicant_email ) ) {
 			return;
 		}
-
-		$site = get_bloginfo( 'name' );
-
-		$received = $employer_mailed
-			? __( 'התקבלו בהצלחה ונשלחו למפרסם המשרה.', 'kivun' )
-			: __( 'התקבלו בהצלחה ונשמרו במערכת.', 'kivun' );
 
 		wp_mail(
 			$applicant_email,
 			/* translators: %s: job title. */
 			sprintf( __( 'אישור הגשת מועמדות — %s', 'kivun' ), $job_title ),
-			sprintf(
-				/* translators: 1: applicant name, 2: job title, 3: company line, 4: received sentence, 5: site name. */
-				'<p>שלום %1$s,</p>
-				<p>קורות החיים שלך למשרה <strong>%2$s</strong>%3$s %4$s</p>
-				<p>המפרסם יפנה אליך ישירות אם המועמדות תימצא מתאימה. שימו לב שלא כל פנייה מקבלת מענה.</p>
-				<p>בהצלחה!<br>צוות %5$s</p>',
-				esc_html( $applicant_name ),
-				esc_html( $job_title ),
-				$company ? ' ב<strong>' . esc_html( $company ) . '</strong>' : '',
-				esc_html( $received ),
-				esc_html( $site )
-			),
+			self::confirmation_html( $applicant_name, $job_title, $coordinator ),
 			self::headers()
 		);
+	}
+
+	/**
+	 * What a candidate is told once their application is in — as paragraphs,
+	 * so the letter and the message on screen are written once and cannot
+	 * come to say different things.
+	 *
+	 * @param string               $name        The candidate's name.
+	 * @param string               $job_title   The job applied for.
+	 * @param array<string,string> $coordinator The coordinator handling them.
+	 * @return array<int,string> Paragraphs; a line break inside one is "\n".
+	 */
+	public static function confirmation_lines( string $name, string $job_title, array $coordinator = array() ): array {
+		$lines = array(
+			/* translators: %s: the candidate's name. */
+			sprintf( __( 'שלום %s,', 'kivun' ), $name ),
+			/* translators: %s: job title. */
+			sprintf( __( 'קורות החיים שלך למשרה %s התקבלו בהצלחה.', 'kivun' ), $job_title ),
+			__( 'אנו נפנה אליך ישירות אם המועמדות תימצא מתאימה.', 'kivun' ),
+		);
+
+		// The sign-off names the person who actually has the application, so a
+		// candidate with a question knows who to ask. Without a coordinator on
+		// the rota there is no such person, and signing in someone's name we
+		// do not have would be worse than signing as the centre.
+		$sign_off = array( __( 'בברכה,', 'kivun' ) );
+		foreach ( array( 'name', 'phone', 'email' ) as $part ) {
+			if ( '' !== trim( (string) ( $coordinator[ $part ] ?? '' ) ) ) {
+				$sign_off[] = (string) $coordinator[ $part ];
+			}
+		}
+		if ( 1 === count( $sign_off ) ) {
+			$sign_off[] = get_bloginfo( 'name' );
+		}
+
+		$lines[] = implode( "\n", $sign_off );
+
+		return $lines;
+	}
+
+	/**
+	 * The same message as email HTML.
+	 *
+	 * @param string               $name        The candidate's name.
+	 * @param string               $job_title   The job applied for.
+	 * @param array<string,string> $coordinator The coordinator handling them.
+	 * @return string
+	 */
+	public static function confirmation_html( string $name, string $job_title, array $coordinator = array() ): string {
+		$html = '';
+		foreach ( self::confirmation_lines( $name, $job_title, $coordinator ) as $paragraph ) {
+			$html .= '<p>' . nl2br( esc_html( $paragraph ) ) . '</p>';
+		}
+		return $html;
 	}
 
 	/**

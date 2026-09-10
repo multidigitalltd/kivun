@@ -110,6 +110,78 @@
 		if (e.key === 'Escape') { hideThankYou(); }
 	});
 
+	// ── Job application: the confirmation, on screen ─────────────────────────────
+	// The wording arrives from the server — the same lines the letter is built
+	// from — so the two cannot drift apart. Written as text, never as markup.
+	var applyReturnFocus = null;
+
+	function closeApplySuccess() {
+		var box = document.querySelector('.kivun-apply-done');
+		if (!box) { return; }
+		box.parentNode.removeChild(box);
+		document.body.classList.remove('kivun-ty-open');
+		if (applyReturnFocus && document.contains(applyReturnFocus)) { applyReturnFocus.focus(); }
+	}
+
+	function showApplySuccess(data) {
+		if (!data || !data.lines || !data.lines.length) { return; }
+		closeApplySuccess();
+		applyReturnFocus = document.activeElement;
+
+		var box = document.createElement('div');
+		box.className = 'kivun-apply-done';
+		box.setAttribute('role', 'dialog');
+		box.setAttribute('aria-modal', 'true');
+
+		var dialog = document.createElement('div');
+		dialog.className = 'kivun-apply-done__dialog';
+		dialog.tabIndex = -1;
+
+		var close = document.createElement('button');
+		close.type = 'button';
+		close.className = 'kivun-apply-done__close';
+		close.setAttribute('aria-label', 'סגירה');
+		close.textContent = '×';
+		dialog.appendChild(close);
+
+		var mark = document.createElement('div');
+		mark.className = 'kivun-apply-done__mark';
+		mark.setAttribute('aria-hidden', 'true');
+		mark.textContent = '✓';
+		dialog.appendChild(mark);
+
+		if (data.title) {
+			var h = document.createElement('h3');
+			h.className = 'kivun-apply-done__title';
+			h.textContent = data.title;
+			dialog.appendChild(h);
+			box.setAttribute('aria-label', data.title);
+		}
+
+		data.lines.forEach(function (line, i) {
+			var p = document.createElement('p');
+			// The sign-off is several lines in one paragraph, and is the last.
+			p.className = 'kivun-apply-done__line' + (i === data.lines.length - 1 ? ' is-signoff' : '');
+			p.textContent = line;
+			dialog.appendChild(p);
+		});
+
+		box.appendChild(dialog);
+		document.body.appendChild(box);
+		document.body.classList.add('kivun-ty-open');
+		dialog.focus();
+	}
+
+	document.addEventListener('click', function (e) {
+		// The backdrop closes it; a click inside the dialog must not.
+		if (e.target.closest('.kivun-apply-done__close') || e.target.classList.contains('kivun-apply-done')) {
+			closeApplySuccess();
+		}
+	});
+	document.addEventListener('keydown', function (e) {
+		if (e.key === 'Escape') { closeApplySuccess(); }
+	});
+
 	// ── Job application: the address is only asked of those it applies to ────────
 	document.addEventListener('change', function (e) {
 		var opt = e.target.closest('input[name="local_resident"]');
@@ -284,6 +356,7 @@
 			post(data).then(function (res) {
 				if (res.success) {
 					replaceWithSuccess(form, res.data.message);
+					showApplySuccess(res.data);
 				} else {
 					showError(err, res.data.message);
 					if (btn) { btn.disabled = false; btn.textContent = originalText; }

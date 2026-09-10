@@ -506,14 +506,14 @@ class Kivun_Admin_Settings {
 					<th scope="row"><?php esc_html_e( 'רכזים לפניות של גברים', 'kivun' ); ?></th>
 					<td>
 						<textarea name="coordinators_male" rows="3" class="large-text" dir="ltr" placeholder="first@kivun.org.il = 1&#10;second@kivun.org.il = 1"><?php echo esc_textarea( $o( 'coordinators_male' ) ); ?></textarea>
-						<p class="description"><?php esc_html_e( 'שני רכזים עם "= 1" כל אחד נותנים חצי-חצי.', 'kivun' ); ?></p>
+						<p class="description"><?php esc_html_e( 'שני רכזים עם "= 1" כל אחד נותנים חצי-חצי. אפשר להוסיף שם וטלפון, מופרדים בפסיקים — הם יופיעו בחתימה של המייל והחלון שהמועמד מקבל. למשל: יהודה, yehudaf@kivun.org.il, 052-1234567 = 1', 'kivun' ); ?></p>
 					</td>
 				</tr>
 				<tr>
 					<th scope="row"><?php esc_html_e( 'רכזיות לפניות של נשים', 'kivun' ); ?></th>
 					<td>
 						<textarea name="coordinators_female" rows="3" class="large-text" dir="ltr" placeholder="first@kivun.org.il = 1&#10;second@kivun.org.il = 3"><?php echo esc_textarea( $o( 'coordinators_female' ) ); ?></textarea>
-						<p class="description"><?php esc_html_e( '"= 1" ו-"= 3" נותנים רבע ושלושה רבעים. אפשר לכתוב גם 1/4 ו-3/4.', 'kivun' ); ?></p>
+						<p class="description"><?php esc_html_e( '"= 1" ו-"= 3" נותנים רבע ושלושה רבעים. אפשר לכתוב גם 1/4 ו-3/4. גם כאן אפשר שם וטלפון לפני הכתובת, מופרדים בפסיקים.', 'kivun' ); ?></p>
 					</td>
 				</tr>
 				<tr>

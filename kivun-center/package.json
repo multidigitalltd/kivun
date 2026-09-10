@@ -1,6 +1,6 @@
 {
   "name": "kivun-center",
-  "version": "1.92.2",
+  "version": "1.93.0",
   "private": true,
   "description": "Build tooling for Kivun Center plugin assets (minification).",
   "scripts": {
