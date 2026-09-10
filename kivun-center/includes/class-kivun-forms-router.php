@@ -119,7 +119,13 @@ class Kivun_Forms_Router {
 		}
 
 		$webhook = (string) Kivun_Admin_Settings::get( 'forms_router_webhook', '' );
-		if ( '' === trim( $email ) && '' === trim( $webhook ) ) {
+
+		// The coordinator who gets this one. Worked out before the early exit
+		// below, so a site that routes only to coordinators — with no central
+		// address and no webhook — still delivers.
+		$coordinators = Kivun_Coordinators::recipients( self::gender_in( $fields ) );
+
+		if ( '' === trim( $email ) && '' === trim( $webhook ) && ! $coordinators ) {
 			self::record( 'no-destination', '' );
 			return;
 		}
@@ -131,6 +137,14 @@ class Kivun_Forms_Router {
 			$result = self::send_email( $email, $form_name, $fields ) ? 'sent' : 'failed';
 		} elseif ( '' !== trim( $email ) ) {
 			$result = 'invalid-email';
+		}
+
+		foreach ( $coordinators as $coordinator ) {
+			$sent = self::send_email( $coordinator, $form_name, $fields );
+			if ( 'sent' !== $result ) {
+				$result = $sent ? 'sent' : 'failed';
+			}
+			$email = '' !== trim( $email ) ? $email . ', ' . $coordinator : $coordinator;
 		}
 
 		if ( '' !== trim( $webhook ) ) {
@@ -166,6 +180,31 @@ class Kivun_Forms_Router {
 			}
 		}
 		return (string) Kivun_Admin_Settings::get( 'forms_router_email', '' );
+	}
+
+	/**
+	 * The gender a submission gave, whatever the form called that field.
+	 *
+	 * The fields arrive keyed by their label, which is written by whoever
+	 * built the form, so the label is matched rather than assumed.
+	 *
+	 * @param array<string,mixed> $fields Submitted fields (label => value).
+	 * @return string The value, or '' when no such field was submitted.
+	 */
+	private static function gender_in( array $fields ): string {
+		foreach ( $fields as $label => $value ) {
+			if ( is_array( $value ) ) {
+				$value = implode( ', ', $value );
+			}
+			if ( '' === trim( (string) $value ) ) {
+				continue;
+			}
+			if ( preg_match( '/gender|sex|מגדר|מין\b|גבר.?\s*\/?\s*א?י?שה/u', mb_strtolower( (string) $label ) ) ) {
+				return (string) $value;
+			}
+		}
+
+		return '';
 	}
 
 	/**

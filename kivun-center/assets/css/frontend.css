@@ -1487,6 +1487,22 @@
 .kivun-rank__fill { display: block; height: 100%; border-radius: 999px; background: var(--kivun-accent, #de2952); }
 .kivun-rank__count { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--kivun-muted, #6b7280); }
 
+/* The rest of the board, a page at a time. */
+.kivun-jobs-more { display: flex; justify-content: center; margin: 1.4rem 0 .4rem; }
+.kivun-jobs-more__btn {
+	padding: .7rem 1.9rem;
+	border: 1px solid var(--kivun-accent, #de2952);
+	border-radius: 999px;
+	background: #fff;
+	color: var(--kivun-accent, #de2952);
+	font: inherit;
+	font-weight: 700;
+	cursor: pointer;
+	transition: background .15s, color .15s;
+}
+.kivun-jobs-more__btn:hover { background: var(--kivun-accent, #de2952); color: #fff; }
+.kivun-jobs-more__btn[disabled] { opacity: .55; cursor: default; }
+
 /* Creating a campaign without leaving the assignment being filled in. */
 .kivun-newcamp {
 	margin-top: .6rem;

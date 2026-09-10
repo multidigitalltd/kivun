@@ -26,7 +26,7 @@ $fields  = get_terms(
 	)
 );
 ?>
-<div class="kivun-jobs-wrap">
+<div class="kivun-jobs-wrap" data-per-page="<?php echo esc_attr( (string) max( 1, (int) ( $query->query_vars['posts_per_page'] ?? 10 ) ) ); ?>">
 
 	<?php if ( $show_filters ) : ?>
 	<div class="kivun-jobs-filters">
@@ -106,6 +106,20 @@ $fields  = get_terms(
 		<?php else : ?>
 			<p class="kivun-no-results"><?php esc_html_e( 'לא נמצאו משרות.', 'kivun' ); ?></p>
 		<?php endif; ?>
+	</div>
+
+	<?php
+	// Without this the board simply stopped at the first page: the count above
+	// said how many jobs there were, the list showed ten of them, and the rest
+	// were unreachable — which reads as the older ones having been deleted.
+	?>
+	<div class="kivun-jobs-more" <?php echo $query->max_num_pages > 1 ? '' : 'hidden'; ?>>
+		<button
+			type="button"
+			class="kivun-jobs-more__btn"
+			data-paged="1"
+			data-max="<?php echo esc_attr( (string) $query->max_num_pages ); ?>"
+		><?php esc_html_e( 'הצגת משרות נוספות', 'kivun' ); ?></button>
 	</div>
 
 </div>

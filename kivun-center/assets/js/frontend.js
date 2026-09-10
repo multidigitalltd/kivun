@@ -116,11 +116,19 @@
 		return el ? el.value : '';
 	}
 
-	function loadJobs(paged) {
+	// A page beyond the first is added to what is on screen; page one replaces
+	// it. Filtering always starts again from the first page — appending page
+	// two of a different filter to page one of the old one would be nonsense.
+	function loadJobs(paged, append) {
 		var board = document.querySelector('.kivun-jobs-board');
 		if (!board) { return; }
 
+		var wrap = board.closest('.kivun-jobs-wrap');
+		var more = wrap ? wrap.querySelector('.kivun-jobs-more') : null;
+		var btn = more ? more.querySelector('.kivun-jobs-more__btn') : null;
+
 		board.classList.add('kivun-loading');
+		if (btn) { btn.disabled = true; }
 
 		post(params({
 			action: 'kivun_filter_jobs',
@@ -129,18 +137,38 @@
 			region: val('kivun-filter-region'),
 			field: val('kivun-filter-field'),
 			search: val('kivun-filter-search'),
+			per_page: wrap ? (wrap.dataset.perPage || 10) : 10,
 			paged: paged || 1
 		})).then(function (res) {
 			board.classList.remove('kivun-loading');
-			if (res.success) {
+			if (btn) { btn.disabled = false; }
+			if (!res.success) { return; }
+
+			if (append) {
+				board.insertAdjacentHTML('beforeend', res.data.html);
+			} else {
 				board.innerHTML = res.data.html;
-				var count = document.querySelector('.kivun-jobs-count');
-				if (count) { count.textContent = res.data.count; }
+			}
+
+			var count = document.querySelector('.kivun-jobs-count');
+			if (count) { count.textContent = res.data.count; }
+
+			if (btn && more) {
+				btn.dataset.paged = String(res.data.paged);
+				btn.dataset.max = String(res.data.max_pages);
+				more.hidden = res.data.paged >= res.data.max_pages;
 			}
 		}).catch(function () {
 			board.classList.remove('kivun-loading');
+			if (btn) { btn.disabled = false; }
 		});
 	}
+
+	document.addEventListener('click', function (e) {
+		var more = e.target.closest('.kivun-jobs-more__btn');
+		if (!more) { return; }
+		loadJobs(parseInt(more.dataset.paged, 10) + 1, true);
+	});
 
 	document.addEventListener('change', function (e) {
 		if (e.target.closest('#kivun-filter-scope, #kivun-filter-region, #kivun-filter-field')) {

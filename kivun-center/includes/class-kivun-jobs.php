@@ -253,10 +253,17 @@ class Kivun_Jobs {
 		$search = sanitize_text_field( wp_unslash( $_POST['search'] ?? '' ) );
 		$paged  = max( 1, absint( $_POST['paged'] ?? 1 ) );
 
+		// The board's page size is whatever the shortcode was given, and the
+		// filtered results have to page in the same steps — a hard-coded ten
+		// here would silently skip or repeat jobs on a board set to any other
+		// size. Capped so a crafted request cannot ask for every job at once.
+		$per_page = absint( $_POST['per_page'] ?? 10 );
+		$per_page = min( 50, max( 1, $per_page ) );
+
 		$args = array(
 			'post_type'      => 'kivun_job',
 			'post_status'    => 'publish',
-			'posts_per_page' => 10,
+			'posts_per_page' => $per_page,
 			'paged'          => $paged,
 			'orderby'        => 'date',
 			'order'          => 'DESC',

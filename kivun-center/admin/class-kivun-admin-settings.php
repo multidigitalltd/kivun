@@ -222,6 +222,8 @@ class Kivun_Admin_Settings {
 				'webhook_url'            => esc_url_raw( wp_unslash( $_POST['webhook_url'] ?? '' ) ),
 				'forms_router_email'     => sanitize_email( wp_unslash( $_POST['forms_router_email'] ?? '' ) ),
 				'forms_router_webhook'   => esc_url_raw( wp_unslash( $_POST['forms_router_webhook'] ?? '' ) ),
+				'coordinators_male'      => sanitize_textarea_field( wp_unslash( $_POST['coordinators_male'] ?? '' ) ),
+				'coordinators_female'    => sanitize_textarea_field( wp_unslash( $_POST['coordinators_female'] ?? '' ) ),
 				'whatsapp_enabled'       => ! empty( $_POST['whatsapp_enabled'] ),
 				'whatsapp_number'        => sanitize_text_field( wp_unslash( $_POST['whatsapp_number'] ?? '' ) ),
 				'whatsapp_message'       => sanitize_text_field( wp_unslash( $_POST['whatsapp_message'] ?? '' ) ),
@@ -494,6 +496,24 @@ class Kivun_Admin_Settings {
 						<p class="description">
 							<?php esc_html_e( 'POST (JSON) לכל הגשת טופס Elementor. שדות: event, form_name, page_url, site, fields.', 'kivun' ); ?>
 						</p>
+					</td>
+				</tr>
+				<tr>
+					<th colspan="2" style="padding-top:20px"><h2 style="margin:0"><?php esc_html_e( 'חלוקת פניות בין רכזים', 'kivun' ); ?></h2>
+					<p class="description" style="font-weight:400"><?php esc_html_e( 'פנייה שיש בה שדה מגדר מנותבת גם לרכז/ת שתורו הגיע, לפי החלוקה שכאן. שורה לכל רכז, בפורמט "כתובת = חלק". החלוקה נשמרת לאורך זמן ולא מוגרלת — פנייה נשלחת למי שהכי מפגר אחרי המכסה שלו, כך שרצף פניות לא נוחת כולו על אותו שולחן. השאירו ריק כדי לכבות.', 'kivun' ); ?></p></th>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'רכזים לפניות של גברים', 'kivun' ); ?></th>
+					<td>
+						<textarea name="coordinators_male" rows="3" class="large-text" dir="ltr" placeholder="first@kivun.org.il = 1&#10;second@kivun.org.il = 1"><?php echo esc_textarea( $o( 'coordinators_male' ) ); ?></textarea>
+						<p class="description"><?php esc_html_e( 'שני רכזים עם "= 1" כל אחד נותנים חצי-חצי.', 'kivun' ); ?></p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'רכזיות לפניות של נשים', 'kivun' ); ?></th>
+					<td>
+						<textarea name="coordinators_female" rows="3" class="large-text" dir="ltr" placeholder="first@kivun.org.il = 1&#10;second@kivun.org.il = 3"><?php echo esc_textarea( $o( 'coordinators_female' ) ); ?></textarea>
+						<p class="description"><?php esc_html_e( '"= 1" ו-"= 3" נותנים רבע ושלושה רבעים. אפשר לכתוב גם 1/4 ו-3/4.', 'kivun' ); ?></p>
 					</td>
 				</tr>
 				<tr>
