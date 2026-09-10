@@ -13,6 +13,71 @@ defined( 'ABSPATH' ) || exit;
 class Kivun_Jobs {
 
 	/**
+	 * When a job was marked as filled. Its absence means it is still open.
+	 */
+	const FILLED_META = '_kivun_filled_at';
+
+	/**
+	 * How long a filled job stays on the board before it drops off.
+	 *
+	 * It does not vanish the moment it is marked: someone who saw it that
+	 * morning and comes back for the link should find it, and read why it is
+	 * gone rather than wonder where it went.
+	 *
+	 * @return int Days.
+	 */
+	public static function filled_grace_days(): int {
+		return max( 0, (int) apply_filters( 'kivun_filled_job_grace_days', 2 ) );
+	}
+
+	/**
+	 * When a job was marked filled, or '' while it is still open.
+	 *
+	 * @param int $job_id The job.
+	 * @return string 'Y-m-d H:i:s' in site time.
+	 */
+	public static function filled_at( int $job_id ): string {
+		return trim( (string) get_post_meta( $job_id, self::FILLED_META, true ) );
+	}
+
+	/**
+	 * Whether a job has been filled.
+	 *
+	 * @param int $job_id The job.
+	 * @return bool
+	 */
+	public static function is_filled( int $job_id ): bool {
+		return '' !== self::filled_at( $job_id );
+	}
+
+	/**
+	 * Keep filled jobs on the board only for the grace period.
+	 *
+	 * Worked out per query rather than by a scheduled sweep, so a job leaves
+	 * on time on a quiet site too — WP-Cron only runs when somebody visits,
+	 * and a job could sit there for days waiting to be swept.
+	 *
+	 * @return array<mixed> A meta_query.
+	 */
+	public static function board_meta_query(): array {
+		$cutoff = wp_date( 'Y-m-d H:i:s', time() - ( self::filled_grace_days() * DAY_IN_SECONDS ) );
+
+		return array(
+			'relation' => 'OR',
+			array(
+				'key'     => self::FILLED_META,
+				'compare' => 'NOT EXISTS',
+			),
+			array(
+				'key'     => self::FILLED_META,
+				'value'   => $cutoff,
+				'compare' => '>',
+				'type'    => 'DATETIME',
+			),
+		);
+	}
+
+	/**
 	 * Registers AJAX hooks for job filtering and applications.
 	 *
 	 * @return void
@@ -26,6 +91,7 @@ class Kivun_Jobs {
 
 		// Authenticated CV download (logged-in only; permission re-checked).
 		add_action( 'admin_post_kivun_download_cv', array( __CLASS__, 'download_cv' ) );
+		add_action( 'admin_post_kivun_toggle_filled', array( __CLASS__, 'toggle_filled' ) );
 
 		add_filter( 'the_content', array( __CLASS__, 'append_single_job_content' ) );
 		add_filter( 'the_title', array( __CLASS__, 'suppress_duplicate_title' ), 10, 2 );
@@ -82,6 +148,83 @@ class Kivun_Jobs {
 			return '';
 		}
 		return $title;
+	}
+
+	/**
+	 * The link that marks a job filled, or puts it back on the board.
+	 *
+	 * @param int $job_id The job.
+	 * @return string
+	 */
+	public static function filled_url( int $job_id ): string {
+		return wp_nonce_url(
+			add_query_arg(
+				array(
+					'action' => 'kivun_toggle_filled',
+					'job'    => $job_id,
+				),
+				admin_url( 'admin-post.php' )
+			),
+			'kivun_toggle_filled_' . $job_id
+		);
+	}
+
+	/**
+	 * Mark a job as filled, or open it again.
+	 *
+	 * The job itself is left published either way. It stops being offered, but
+	 * it is still there to look at, to report on, and to re-open — which is
+	 * the whole point of marking rather than deleting.
+	 *
+	 * @return void
+	 */
+	public static function toggle_filled(): void {
+		$job_id = absint( $_GET['job'] ?? 0 ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verified immediately below.
+		check_admin_referer( 'kivun_toggle_filled_' . $job_id );
+
+		if ( ! $job_id || 'kivun_job' !== get_post_type( $job_id ) || ! current_user_can( 'edit_post', $job_id ) ) {
+			wp_die( esc_html__( 'אין לך הרשאה לעדכן את המשרה הזו.', 'kivun' ), '', array( 'response' => 403 ) );
+		}
+
+		if ( self::is_filled( $job_id ) ) {
+			delete_post_meta( $job_id, self::FILLED_META );
+		} else {
+			update_post_meta( $job_id, self::FILLED_META, current_time( 'mysql' ) );
+		}
+
+		wp_safe_redirect( wp_get_referer() ? wp_get_referer() : admin_url( 'edit.php?post_type=kivun_job' ) );
+		exit;
+	}
+
+	/**
+	 * How a job's filled state should read, and when it leaves the board.
+	 *
+	 * @param int $job_id The job.
+	 * @return string '' while the job is open.
+	 */
+	public static function filled_label( int $job_id ): string {
+		$at = self::filled_at( $job_id );
+		if ( '' === $at ) {
+			return '';
+		}
+
+		// The stored time is the site's, and WordPress pins PHP to UTC — read
+		// without saying which zone it is in, every job would appear to leave
+		// three hours later than it does.
+		$marked = \DateTimeImmutable::createFromFormat( 'Y-m-d H:i:s', $at, wp_timezone() );
+		if ( ! $marked ) {
+			return __( 'אוישה', 'kivun' );
+		}
+
+		$leaves = $marked->getTimestamp() + ( self::filled_grace_days() * DAY_IN_SECONDS );
+
+		return $leaves > time()
+			? sprintf(
+				/* translators: %s: date and time. */
+				__( 'אוישה — יורדת מהלוח ב-%s', 'kivun' ),
+				wp_date( 'j.n.Y H:i', $leaves )
+			)
+			: __( 'אוישה — ירדה מהלוח', 'kivun' );
 	}
 
 	/**
@@ -282,6 +425,7 @@ class Kivun_Jobs {
 			'paged'          => $paged,
 			'orderby'        => 'date',
 			'order'          => 'DESC',
+			'meta_query'     => self::board_meta_query(), // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 		);
 
 		$tax_query = array();
@@ -399,6 +543,12 @@ class Kivun_Jobs {
 		}
 		if ( get_post_type( $job_id ) !== 'kivun_job' ) {
 			wp_send_json_error( array( 'message' => __( 'משרה לא קיימת.', 'kivun' ) ) );
+		}
+
+		// Checked here as well as in the form: the page carrying that form may
+		// have been cached before the job was filled, or sitting open in a tab.
+		if ( self::is_filled( $job_id ) ) {
+			wp_send_json_error( array( 'message' => __( 'המשרה אוישה ואינה מקבלת עוד מועמדויות.', 'kivun' ) ) );
 		}
 
 		// Duplicate check.

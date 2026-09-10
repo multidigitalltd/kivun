@@ -8,6 +8,16 @@
 defined( 'ABSPATH' ) || exit;
 
 $kivun_turnstile_key = Kivun_Admin_Settings::get( 'turnstile_site_key' );
+
+// Nothing to apply to any more. Saying so is kinder than a form that accepts
+// a CV nobody will read.
+if ( Kivun_Jobs::is_filled( (int) $job_id ) ) {
+	printf(
+		'<div class="kivun-apply-wrap"><p class="kivun-apply-closed">%s</p></div>',
+		esc_html__( 'המשרה אוישה ואינה מקבלת עוד מועמדויות. מוזמנים לעיין בשאר המשרות בלוח.', 'kivun' )
+	);
+	return;
+}
 ?>
 <div class="kivun-apply-wrap">
 	<form class="kivun-apply-form" enctype="multipart/form-data" novalidate>

@@ -1641,6 +1641,29 @@
 	.kivun-apply-form button[type="submit"] { width: 100%; }
 }
 
+/* A job in its last days on the board, and the form it no longer needs. */
+.kivun-jc-filled {
+	display: inline-block;
+	margin-top: 6px;
+	padding: 3px 12px;
+	border-radius: 999px;
+	background: #f1f2f4;
+	color: #6b7280;
+	font-size: 13px;
+	font-weight: 700;
+}
+.kivun-apply-closed {
+	margin: 0;
+	padding: 22px 24px;
+	border: 1px solid var(--ja-line, #e7e7e7);
+	border-radius: 10px;
+	background: #fafafa;
+	color: #777;
+	font-size: 16px;
+	line-height: 1.7;
+	text-align: center;
+}
+
 /* The confirmation a candidate sees once their application is in. */
 .kivun-apply-done {
 	position: fixed;

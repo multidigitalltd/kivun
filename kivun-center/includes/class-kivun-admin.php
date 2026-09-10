@@ -1024,6 +1024,7 @@ class Kivun_Admin {
 			array(
 				'company'  => 'חברה',
 				'deadline' => 'תאריך אחרון',
+				'filled'   => 'איוש',
 			)
 		);
 	}
@@ -1041,6 +1042,23 @@ class Kivun_Admin {
 		}
 		if ( 'deadline' === $col ) {
 			echo esc_html( get_post_meta( $id, '_kivun_deadline', true ) );
+		}
+		if ( 'filled' === $col ) {
+			$filled = Kivun_Jobs::is_filled( $id );
+
+			if ( $filled ) {
+				echo '<strong>' . esc_html( Kivun_Jobs::filled_label( $id ) ) . '</strong><br>';
+			}
+
+			printf(
+				'<a href="%s">%s</a>',
+				esc_url( Kivun_Jobs::filled_url( $id ) ),
+				esc_html(
+					$filled
+						? __( 'החזרה ללוח', 'kivun' )
+						: __( 'סימון שהמשרה אוישה', 'kivun' )
+				)
+			);
 		}
 	}
 

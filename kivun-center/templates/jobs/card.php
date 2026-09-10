@@ -29,6 +29,14 @@ $scope   = ( $scopes && ! is_wp_error( $scopes ) ) ? $scopes[0]->name : '';
 			<h3 class="kivun-jc-title">
 				<a href="<?php echo esc_url( $permalink ); ?>"><?php the_title(); ?></a>
 			</h3>
+			<?php if ( Kivun_Jobs::is_filled( $job_id ) ) : ?>
+				<?php
+				// Said plainly on the card for its last couple of days, so
+				// somebody returning to it learns why rather than applying to
+				// a job that is gone.
+				?>
+				<span class="kivun-jc-filled"><?php esc_html_e( 'המשרה אוישה', 'kivun' ); ?></span>
+			<?php endif; ?>
 		</div>
 
 		<div class="kivun-jc-body">

@@ -266,6 +266,8 @@ class Kivun_Shortcodes {
 			'posts_per_page' => (int) $atts['per_page'],
 			'orderby'        => 'date',
 			'order'          => 'DESC',
+			// A job that has been filled drops off once its grace runs out.
+			'meta_query'     => Kivun_Jobs::board_meta_query(), // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 		);
 
 		$tax_query = array();
