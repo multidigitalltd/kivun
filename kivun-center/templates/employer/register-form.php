@@ -1,4 +1,11 @@
-<?php defined( 'ABSPATH' ) || exit;
+<?php
+/**
+ * Template: employer registration form.
+ *
+ * @package Kivun
+ */
+
+defined( 'ABSPATH' ) || exit;
 
 if ( is_user_logged_in() ) {
 	echo '<p class="kivun-notice">' . esc_html__( 'כבר מחובר/ת. עבור לדשבורד המעסיקים.', 'kivun' ) . '</p>';
