@@ -1503,12 +1503,6 @@
 	--ja-muted:  #777777;
 	--ja-line:   #e7e7e7;
 	--ja-field:  #fafafa;
-
-	/* The form answers to the width of whatever holds it, not to the width of
-	   the window. It is dropped into a popup as often as onto the page, and a
-	   popup is narrow on the widest monitor there is — a viewport query would
-	   read 1100px and keep two columns crushed into 500. */
-	container-type: inline-size;
 }
 .kivun-apply-form {
 	background: #fff;
@@ -1517,11 +1511,15 @@
 	padding: 30px 34px 34px;
 }
 
-/* Two columns where there is room. The message, the file and the address run
-   the full width — a wide box invites a long answer, a narrow one does not. */
+/* Two columns where there is room, one where there is not — measured by the
+   grid itself rather than by asking the window. The form is dropped into a
+   popup as often as onto the page, and a popup is narrow on the widest
+   monitor there is, so a viewport query reads 1100px and crushes two columns
+   into 500. auto-fit fits as many 300px columns as actually go, which is the
+   same question asked of the right box, and it cannot overflow. */
 .kivun-apply-form {
 	display: grid;
-	grid-template-columns: repeat(2, minmax(0, 1fr));
+	grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
 	gap: 20px 26px;
 	align-items: start;
 }
@@ -1618,7 +1616,10 @@
 .kivun-apply-form .kivun-error { margin: 0; font-size: 15px; }
 .kivun-apply-form button[type="submit"] {
 	justify-self: start;
-	min-width: 220px;
+	/* Grows to fill a narrow column, but never stretches across a wide one —
+	   a submit button the width of the whole form reads as a banner. */
+	width: 100%;
+	max-width: 300px;
 	padding: 15px 40px;
 	border: 0;
 	border-radius: 8px;
@@ -1634,24 +1635,10 @@
 .kivun-apply-form button[type="submit"]:active { transform: translateY(1px); }
 .kivun-apply-form button[type="submit"][disabled] { opacity: .6; cursor: default; }
 
-/* Not enough room for two columns — in a popup, in a sidebar, or on a phone. */
-@container (max-width: 620px) {
-	.kivun-apply-form { grid-template-columns: 1fr; gap: 16px; padding: 22px 20px 26px; }
-	.kivun-apply-form button[type="submit"] { width: 100%; min-width: 0; }
-}
-/* In a popup there is rarely room to spare above or below either. */
-@container (max-width: 480px) {
-	.kivun-apply-form { padding: 18px 16px 22px; gap: 14px; }
-	.kivun-apply-form textarea { min-height: 88px; }
-}
-
-/* Browsers without container queries fall back to the window's width, which is
-   right on a phone and merely no worse than before anywhere else. */
-@supports not (container-type: inline-size) {
-	@media (max-width: 640px) {
-		.kivun-apply-form { grid-template-columns: 1fr; padding: 22px 20px 26px; }
-		.kivun-apply-form button[type="submit"] { width: 100%; min-width: 0; }
-	}
+@media (max-width: 640px) {
+	.kivun-apply-form { gap: 16px; padding: 20px 18px 24px; }
+	.kivun-apply-form textarea { min-height: 92px; }
+	.kivun-apply-form button[type="submit"] { width: 100%; }
 }
 
 /* The rest of the board, a page at a time. */
