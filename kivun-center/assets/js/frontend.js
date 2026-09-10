@@ -110,6 +110,25 @@
 		if (e.key === 'Escape') { hideThankYou(); }
 	});
 
+	// ── Job application: the address is only asked of those it applies to ────────
+	document.addEventListener('change', function (e) {
+		var opt = e.target.closest('input[name="local_resident"]');
+		if (!opt) { return; }
+
+		var form = opt.closest('.kivun-apply-form');
+		var row = form && form.querySelector('.kivun-apply-address');
+		if (!row) { return; }
+
+		var outside = opt.value === 'no';
+		row.hidden = !outside;
+
+		var input = row.querySelector('input');
+		if (!input) { return; }
+		// Answering "yes" after typing an address would otherwise submit one
+		// the candidate can no longer see.
+		if (outside) { input.focus(); } else { input.value = ''; }
+	});
+
 	// ── Job board filters ────────────────────────────────────────────────────────
 	function val(id) {
 		var el = document.getElementById(id);

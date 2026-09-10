@@ -29,14 +29,47 @@ $kivun_turnstile_key = Kivun_Admin_Settings::get( 'turnstile_site_key' );
 			<input type="tel" id="kivun-apply-phone" name="applicant_phone" required autocomplete="tel">
 		</div>
 
+		<fieldset class="kivun-form-row kivun-apply-choice">
+			<legend><?php esc_html_e( 'מגדר *', 'kivun' ); ?></legend>
+			<label class="kivun-apply-opt">
+				<input type="radio" name="gender" value="<?php esc_attr_e( 'גבר', 'kivun' ); ?>" required>
+				<span><?php esc_html_e( 'גבר', 'kivun' ); ?></span>
+			</label>
+			<label class="kivun-apply-opt">
+				<input type="radio" name="gender" value="<?php esc_attr_e( 'אישה', 'kivun' ); ?>" required>
+				<span><?php esc_html_e( 'אישה', 'kivun' ); ?></span>
+			</label>
+		</fieldset>
+
+		<fieldset class="kivun-form-row kivun-apply-choice">
+			<legend><?php esc_html_e( 'מתגורר/ת בירושלים והסביבה? *', 'kivun' ); ?></legend>
+			<label class="kivun-apply-opt">
+				<input type="radio" name="local_resident" value="yes" required>
+				<span><?php esc_html_e( 'כן', 'kivun' ); ?></span>
+			</label>
+			<label class="kivun-apply-opt">
+				<input type="radio" name="local_resident" value="no" required>
+				<span><?php esc_html_e( 'לא', 'kivun' ); ?></span>
+			</label>
+		</fieldset>
+
+		<?php
+		// Revealed only by answering "no": asking everyone for an address when
+		// most of them live in the city the job is in is a question for nothing.
+		?>
+		<div class="kivun-form-row kivun-apply-address" hidden>
+			<label for="kivun-apply-address"><?php esc_html_e( 'כתובת המגורים', 'kivun' ); ?></label>
+			<input type="text" id="kivun-apply-address" name="address" autocomplete="address-level2" placeholder="<?php esc_attr_e( 'עיר / יישוב', 'kivun' ); ?>">
+		</div>
+
 		<div class="kivun-form-row">
 			<label for="kivun-apply-message"><?php esc_html_e( 'כמה מילים עליך (אופציונלי)', 'kivun' ); ?></label>
 			<textarea id="kivun-apply-message" name="message" rows="3" placeholder="<?php esc_attr_e( 'ספרו בכמה מילים על עצמכם ולמה אתם מתאימים למשרה', 'kivun' ); ?>"></textarea>
 		</div>
 
 		<div class="kivun-form-row">
-			<label for="kivun-apply-cv"><?php esc_html_e( 'קורות חיים * (PDF / Word, עד 5MB)', 'kivun' ); ?></label>
-			<input type="file" id="kivun-apply-cv" name="cv_file" accept=".pdf,.doc,.docx" required>
+			<label for="kivun-apply-cv"><?php esc_html_e( 'קורות חיים (אופציונלי — PDF / Word, עד 5MB)', 'kivun' ); ?></label>
+			<input type="file" id="kivun-apply-cv" name="cv_file" accept=".pdf,.doc,.docx">
 		</div>
 
 		<?php if ( $kivun_turnstile_key ) : ?>

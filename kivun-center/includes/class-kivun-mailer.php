@@ -227,20 +227,31 @@ class Kivun_Mailer {
 	 * @return string
 	 */
 	private static function application_body( string $job, array $d ): string {
+		// Only what the candidate actually answered. An empty "מגדר:" line
+		// tells the reader nothing and makes the ones that matter harder to see.
+		$rows = '';
+		foreach ( array(
+			'שם'         => (string) ( $d['name'] ?? '' ),
+			'אימייל'     => (string) ( $d['email'] ?? '' ),
+			'טלפון'      => (string) ( $d['phone'] ?? '' ),
+			'מגדר'       => (string) ( $d['gender'] ?? '' ),
+			'מגורים'     => (string) ( $d['residence'] ?? '' ),
+			'מכתב מקדים' => (string) ( $d['message'] ?? '' ),
+		) as $label => $value ) {
+			if ( '' === trim( $value ) ) {
+				continue;
+			}
+			$rows .= sprintf(
+				'<li><strong>%s:</strong> %s</li>',
+				esc_html( $label ),
+				nl2br( esc_html( $value ) )
+			);
+		}
+
 		return sprintf(
-			'<p>קיבלת מועמדות חדשה למשרה <strong>%s</strong></p>
-			<ul>
-				<li><strong>שם:</strong> %s</li>
-				<li><strong>אימייל:</strong> %s</li>
-				<li><strong>טלפון:</strong> %s</li>
-				<li><strong>מכתב מקדים:</strong> %s</li>
-			</ul>
-			<p>%s</p>',
+			'<p>קיבלת מועמדות חדשה למשרה <strong>%s</strong></p><ul>%s</ul><p>%s</p>',
 			esc_html( $job ),
-			esc_html( $d['name'] ),
-			esc_html( $d['email'] ),
-			esc_html( $d['phone'] ),
-			nl2br( esc_html( $d['message'] ) ),
+			$rows,
 			! empty( $d['cv_path'] ) ? 'קו"ח מצורפים.' : 'לא צורפו קו"ח.'
 		);
 	}

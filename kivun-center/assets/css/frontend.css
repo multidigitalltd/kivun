@@ -1487,6 +1487,38 @@
 .kivun-rank__fill { display: block; height: 100%; border-radius: 999px; background: var(--kivun-accent, #de2952); }
 .kivun-rank__count { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--kivun-muted, #6b7280); }
 
+/* These lay out with flex, which outranks the browser's own rule for [hidden]
+   — without this, hiding one of them does nothing at all. */
+.kivun-form-row[hidden],
+.kivun-apply-choice[hidden],
+.kivun-jobs-more[hidden] { display: none; }
+
+/* Two choices, both on screen: a radio row rather than a dropdown to open. */
+.kivun-apply-choice { border: 0; padding: 0; margin-bottom: 1rem; }
+.kivun-apply-choice legend {
+	padding: 0;
+	margin-bottom: .45rem;
+	font-size: .87rem;
+	font-weight: 600;
+	color: var(--kivun-text);
+}
+.kivun-apply-choice { display: flex; flex-direction: column; gap: .4rem; }
+.kivun-apply-opt {
+	display: flex;
+	align-items: center;
+	gap: .5rem;
+	font-weight: 400;
+	cursor: pointer;
+}
+/* The radio itself must keep its own size — the form's inputs are full-width. */
+.kivun-apply-opt input[type="radio"] {
+	width: auto;
+	min-width: 0;
+	margin: 0;
+	padding: 0;
+	flex: 0 0 auto;
+}
+
 /* The rest of the board, a page at a time. */
 .kivun-jobs-more { display: flex; justify-content: center; margin: 1.4rem 0 .4rem; }
 .kivun-jobs-more__btn {

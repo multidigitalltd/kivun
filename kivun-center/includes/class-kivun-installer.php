@@ -89,6 +89,11 @@ class Kivun_Installer {
 				'message'         => 'text',
 				'notes'           => 'text',
 				'status'          => "varchar(20) NOT NULL DEFAULT 'new'",
+				'gender'          => "varchar(20) NOT NULL DEFAULT ''",
+				// 'yes', 'no', or empty for an application made before the
+				// question was asked — which is not the same as "no".
+				'local_resident'  => "varchar(10) NOT NULL DEFAULT ''",
+				'address'         => "varchar(191) NOT NULL DEFAULT ''",
 			),
 			$wpdb->prefix . 'kivun_registrations'  => array(
 				'city'              => "varchar(100) NOT NULL DEFAULT ''",
@@ -178,6 +183,9 @@ class Kivun_Installer {
 				cv_file          varchar(500)        NOT NULL DEFAULT '',
 				message          text,
 				notes            text,
+				gender           varchar(20)         NOT NULL DEFAULT '',
+				local_resident   varchar(10)         NOT NULL DEFAULT '',
+				address          varchar(191)        NOT NULL DEFAULT '',
 				status           varchar(20)         NOT NULL DEFAULT 'new',
 				created_at       datetime            NOT NULL DEFAULT CURRENT_TIMESTAMP,
 				PRIMARY KEY (id),

@@ -331,6 +331,27 @@ class Kivun_Jobs {
 	// ── CV Application ────────────────────────────────────────────────────────.
 
 	/**
+	 * How a candidate's answer about where they live should read.
+	 *
+	 * @param string $local   'yes', 'no', or '' when unanswered.
+	 * @param string $address The address, given only alongside 'no'.
+	 * @return string
+	 */
+	private static function residence_label( string $local, string $address ): string {
+		if ( 'yes' === $local ) {
+			return __( 'מתגורר/ת בירושלים והסביבה', 'kivun' );
+		}
+		if ( 'no' !== $local ) {
+			return '';
+		}
+
+		return '' !== trim( $address )
+			/* translators: %s: the address the candidate gave. */
+			? sprintf( __( 'מחוץ לירושלים והסביבה — %s', 'kivun' ), $address )
+			: __( 'מחוץ לירושלים והסביבה', 'kivun' );
+	}
+
+	/**
 	 * Handles the AJAX request that submits a CV application.
 	 *
 	 * @return void
@@ -347,6 +368,16 @@ class Kivun_Jobs {
 		$email   = sanitize_email( wp_unslash( $_POST['applicant_email'] ?? '' ) );
 		$phone   = sanitize_text_field( wp_unslash( $_POST['applicant_phone'] ?? '' ) );
 		$message = sanitize_textarea_field( wp_unslash( $_POST['message'] ?? '' ) );
+		$gender  = sanitize_text_field( wp_unslash( $_POST['gender'] ?? '' ) );
+		$local   = sanitize_key( wp_unslash( $_POST['local_resident'] ?? '' ) );
+		$address = sanitize_text_field( wp_unslash( $_POST['address'] ?? '' ) );
+
+		$local = in_array( $local, array( 'yes', 'no' ), true ) ? $local : '';
+		// The address is asked for only when the answer is "no", so keeping one
+		// sent alongside "yes" would record a contradiction.
+		if ( 'no' !== $local ) {
+			$address = '';
+		}
 
 		if ( ! $job_id || ! $name || ! $phone || ! is_email( $email ) ) {
 			wp_send_json_error( array( 'message' => __( 'נא למלא שם, טלפון ואימייל תקין.', 'kivun' ) ) );
@@ -360,12 +391,13 @@ class Kivun_Jobs {
 			wp_send_json_error( array( 'message' => __( 'כבר הגשת מועמדות למשרה זו.', 'kivun' ) ) );
 		}
 
+		// A CV is welcome but not demanded: someone reading the board on a phone
+		// rarely has one to hand, and turning them away loses the candidate
+		// rather than gaining the file. A file that was attached and is broken
+		// is still refused — that is a mistake worth telling them about.
 		$cv_path = self::handle_cv_upload();
 		if ( is_wp_error( $cv_path ) ) {
 			wp_send_json_error( array( 'message' => $cv_path->get_error_message() ) );
-		}
-		if ( ! $cv_path ) {
-			wp_send_json_error( array( 'message' => __( 'נא לצרף קובץ קורות חיים.', 'kivun' ) ) );
 		}
 
 		global $wpdb;
@@ -379,10 +411,13 @@ class Kivun_Jobs {
 				'applicant_phone' => $phone,
 				'cv_file'         => $cv_path ?? '',
 				'message'         => $message,
+				'gender'          => $gender,
+				'local_resident'  => $local,
+				'address'         => $address,
 				'status'          => 'new',
 				'created_at'      => current_time( 'mysql' ),
 			),
-			array( '%d', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s' )
+			array( '%d', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' )
 		);
 
 		// Never report success on a failed write (was silently masking errors).
@@ -398,13 +433,22 @@ class Kivun_Jobs {
 			wp_send_json_error( array( 'message' => $message ) );
 		}
 
+		$details = compact( 'name', 'email', 'phone', 'message', 'gender', 'address' )
+			+ array(
+				'cv_path'   => $cv_path,
+				'residence' => self::residence_label( $local, $address ),
+			);
+
 		$employer_email = get_post_meta( $job_id, '_kivun_employer_email', true );
 		if ( $employer_email ) {
-			Kivun_Mailer::send_application(
-				$employer_email,
-				get_the_title( $job_id ),
-				compact( 'name', 'email', 'phone', 'message' ) + array( 'cv_path' => $cv_path )
-			);
+			Kivun_Mailer::send_application( $employer_email, get_the_title( $job_id ), $details );
+		}
+
+		// The coordinator whose turn it is, by the gender the candidate gave.
+		// Nothing is sent when no roster is configured, or when the form was
+		// filled in before the gender field existed.
+		foreach ( Kivun_Coordinators::recipients( $gender ) as $coordinator ) {
+			Kivun_Mailer::send_application( $coordinator, get_the_title( $job_id ), $details );
 		}
 
 		// Reassure the applicant that their CV arrived. The application is saved
