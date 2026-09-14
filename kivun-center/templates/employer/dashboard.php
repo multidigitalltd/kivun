@@ -560,6 +560,16 @@ $kivun_user     = wp_get_current_user();
 							<?php endif; ?>
 						</td>
 						<td>
+							<?php
+							// Marking a job taken belongs where the jobs are managed
+							// from — the board manager works here, not in wp-admin.
+							$kivun_filled = Kivun_Jobs::is_filled( (int) $job->ID );
+							?>
+							<a
+								class="kivun-btn kivun-btn--sm <?php echo $kivun_filled ? '' : 'kivun-btn--outline'; ?>"
+								href="<?php echo esc_url( Kivun_Jobs::filled_url( (int) $job->ID ) ); ?>"
+								title="<?php echo esc_attr( $kivun_filled ? Kivun_Jobs::filled_label( (int) $job->ID ) : __( 'המשרה תרד מהלוח בעוד יומיים', 'kivun' ) ); ?>"
+							><?php echo $kivun_filled ? esc_html__( 'החזרה ללוח', 'kivun' ) : esc_html__( 'אוישה', 'kivun' ); ?></a>
 							<button
 								type="button"
 								class="kivun-btn kivun-btn--sm kivun-btn--outline kivun-edit-job"

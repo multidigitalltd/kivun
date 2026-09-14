@@ -1508,19 +1508,21 @@
 	background: #fff;
 	border: 1px solid var(--ja-line);
 	border-radius: 10px;
-	padding: 30px 34px 34px;
+	/* Tighter than a page form: in a slide-in panel every row of padding is a
+	   row of the form pushed off the bottom. */
+	padding: 24px 26px 26px;
 }
 
-/* Two columns where there is room, one where there is not — measured by the
-   grid itself rather than by asking the window. The form is dropped into a
-   popup as often as onto the page, and a popup is narrow on the widest
-   monitor there is, so a viewport query reads 1100px and crushes two columns
-   into 500. auto-fit fits as many 300px columns as actually go, which is the
-   same question asked of the right box, and it cannot overflow. */
+/* Two fields to a row, wherever it is put.
+   The form is opened in a slide-in panel more often than it is read on the
+   page, and a panel is narrow — so the height is what runs out, not the
+   width. Pairing the short answers halves the form's height and spends the
+   width it does have. minmax(0, 1fr) is what lets a column shrink below its
+   content instead of pushing the panel wider than it is. */
 .kivun-apply-form {
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
-	gap: 20px 26px;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 18px 22px;
 	align-items: start;
 }
 .kivun-apply-form > .kivun-apply-full,
@@ -1560,7 +1562,7 @@
 	border-color: var(--ja-pink);
 	box-shadow: 0 0 0 3px rgba(239, 49, 93, .12);
 }
-.kivun-apply-form textarea { min-height: 108px; resize: vertical; line-height: 1.7; }
+.kivun-apply-form textarea { min-height: 92px; resize: vertical; line-height: 1.6; }
 .kivun-apply-form input[type="file"] { padding: 11px 14px; color: var(--ja-muted); font-size: 15px; }
 
 /* Two choices, both on screen: a pair of buttons rather than a list of radios
@@ -1635,10 +1637,16 @@
 .kivun-apply-form button[type="submit"]:active { transform: translateY(1px); }
 .kivun-apply-form button[type="submit"][disabled] { opacity: .6; cursor: default; }
 
+/* A phone has no room to pair anything. The panel is full width there, so the
+   window's width is the honest measure. */
 @media (max-width: 640px) {
-	.kivun-apply-form { gap: 16px; padding: 20px 18px 24px; }
-	.kivun-apply-form textarea { min-height: 92px; }
-	.kivun-apply-form button[type="submit"] { width: 100%; }
+	.kivun-apply-form {
+		grid-template-columns: 1fr;
+		gap: 14px;
+		padding: 18px 16px 20px;
+	}
+	.kivun-apply-form textarea { min-height: 88px; }
+	.kivun-apply-form button[type="submit"] { width: 100%; max-width: none; }
 }
 
 /* A job in its last days on the board, and the form it no longer needs. */
