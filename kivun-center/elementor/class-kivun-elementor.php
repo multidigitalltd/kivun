@@ -106,6 +106,9 @@ class Kivun_Elementor {
 		require_once KIVUN_DIR . 'elementor/tags/class-kivun-tag-job-salary.php';
 		require_once KIVUN_DIR . 'elementor/tags/class-kivun-tag-job-requirements.php';
 		require_once KIVUN_DIR . 'elementor/tags/class-kivun-tag-job-deadline.php';
+		require_once KIVUN_DIR . 'elementor/tags/class-kivun-tag-job-city.php';
+		require_once KIVUN_DIR . 'elementor/tags/class-kivun-tag-job-work-hours.php';
+		require_once KIVUN_DIR . 'elementor/tags/class-kivun-tag-job-experience.php';
 		require_once KIVUN_DIR . 'elementor/tags/class-kivun-tag-workshop-date.php';
 		require_once KIVUN_DIR . 'elementor/tags/class-kivun-tag-workshop-duration.php';
 		require_once KIVUN_DIR . 'elementor/tags/class-kivun-tag-workshop-location.php';
@@ -133,6 +136,9 @@ class Kivun_Elementor {
 			Kivun_Tag_Job_Salary::class,
 			Kivun_Tag_Job_Requirements::class,
 			Kivun_Tag_Job_Deadline::class,
+			Kivun_Tag_Job_City::class,
+			Kivun_Tag_Job_Work_Hours::class,
+			Kivun_Tag_Job_Experience::class,
 			Kivun_Tag_Workshop_Date::class,
 			Kivun_Tag_Workshop_Duration::class,
 			Kivun_Tag_Workshop_Location::class,
