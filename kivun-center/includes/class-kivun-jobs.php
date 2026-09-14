@@ -92,6 +92,7 @@ class Kivun_Jobs {
 		// Authenticated CV download (logged-in only; permission re-checked).
 		add_action( 'admin_post_kivun_download_cv', array( __CLASS__, 'download_cv' ) );
 		add_action( 'admin_post_kivun_toggle_filled', array( __CLASS__, 'toggle_filled' ) );
+		add_action( 'wp_ajax_kivun_add_application', array( __CLASS__, 'ajax_add_application' ) );
 
 		add_filter( 'the_content', array( __CLASS__, 'append_single_job_content' ) );
 		add_filter( 'the_title', array( __CLASS__, 'suppress_duplicate_title' ), 10, 2 );
@@ -148,6 +149,82 @@ class Kivun_Jobs {
 			return '';
 		}
 		return $title;
+	}
+
+	/**
+	 * AJAX: add a candidate to the applications table by hand.
+	 *
+	 * Candidates arrive by phone and by forwarded email as well as through the
+	 * form, and until now those had nowhere to live — so half the pipeline sat
+	 * in somebody's inbox. Only whoever runs the board may do this: it writes
+	 * against another publisher's job.
+	 *
+	 * Nothing is emailed. The candidate did not fill anything in and would not
+	 * know what a confirmation was about, and the coordinator adding them is
+	 * already holding the application.
+	 *
+	 * @return void
+	 */
+	public static function ajax_add_application(): void {
+		check_ajax_referer( 'kivun_nonce', 'nonce' );
+
+		if ( ! Kivun_Employer::can_manage_all() ) {
+			wp_send_json_error( array( 'message' => __( 'אין לך הרשאה להוסיף מועמדים.', 'kivun' ) ) );
+		}
+
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- Verified above.
+		$job_id  = absint( $_POST['job_id'] ?? 0 );
+		$name    = sanitize_text_field( wp_unslash( $_POST['applicant_name'] ?? '' ) );
+		$email   = sanitize_email( wp_unslash( $_POST['applicant_email'] ?? '' ) );
+		$phone   = sanitize_text_field( wp_unslash( $_POST['applicant_phone'] ?? '' ) );
+		$message = sanitize_textarea_field( wp_unslash( $_POST['message'] ?? '' ) );
+		$gender  = sanitize_text_field( wp_unslash( $_POST['gender'] ?? '' ) );
+		// phpcs:enable WordPress.Security.NonceVerification.Missing
+
+		if ( ! $job_id || 'kivun_job' !== get_post_type( $job_id ) ) {
+			wp_send_json_error( array( 'message' => __( 'יש לבחור משרה.', 'kivun' ) ) );
+		}
+		if ( '' === $name ) {
+			wp_send_json_error( array( 'message' => __( 'יש להזין שם.', 'kivun' ) ) );
+		}
+		// One way to reach them is the point of the record, so one is required —
+		// but which one is up to whoever took the call.
+		if ( '' === $phone && ! is_email( $email ) ) {
+			wp_send_json_error( array( 'message' => __( 'יש להזין טלפון או אימייל תקין.', 'kivun' ) ) );
+		}
+		if ( self::already_applied( $job_id, $email, $phone ) ) {
+			wp_send_json_error( array( 'message' => __( 'המועמד/ת כבר רשום/ה למשרה הזו.', 'kivun' ) ) );
+		}
+
+		$cv_path = self::handle_cv_upload();
+		if ( is_wp_error( $cv_path ) ) {
+			wp_send_json_error( array( 'message' => $cv_path->get_error_message() ) );
+		}
+
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$ok = $wpdb->insert(
+			$wpdb->prefix . 'kivun_applications',
+			array(
+				'job_id'          => $job_id,
+				'user_id'         => 0,
+				'applicant_name'  => $name,
+				'applicant_email' => $email,
+				'applicant_phone' => $phone,
+				'cv_file'         => (string) $cv_path,
+				'message'         => $message,
+				'gender'          => $gender,
+				'status'          => 'new',
+				'created_at'      => current_time( 'mysql' ),
+			),
+			array( '%d', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' )
+		);
+
+		if ( false === $ok ) {
+			wp_send_json_error( array( 'message' => __( 'שמירת המועמדות נכשלה.', 'kivun' ) ) );
+		}
+
+		wp_send_json_success( array( 'message' => __( 'המועמד/ת נוספה לטבלה.', 'kivun' ) ) );
 	}
 
 	/**

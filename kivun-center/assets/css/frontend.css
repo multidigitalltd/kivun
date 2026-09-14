@@ -1649,6 +1649,34 @@
 	.kivun-apply-form button[type="submit"] { width: 100%; max-width: none; }
 }
 
+/* A cover letter, readable in the table it sits in. */
+.kivun-app-letter > summary {
+	cursor: pointer;
+	list-style: none;
+}
+.kivun-app-letter > summary::-webkit-details-marker { display: none; }
+.kivun-app-letter > summary::after {
+	content: " ▾";
+	color: var(--kivun-accent, #de2952);
+	font-weight: 700;
+}
+.kivun-app-letter[open] > summary { color: var(--kivun-muted, #6b7280); }
+.kivun-app-letter[open] > summary::after { content: " ▴"; }
+.kivun-app-letter__full {
+	display: block;
+	margin-top: .4rem;
+	max-height: 340px;
+	overflow-y: auto;
+	line-height: 1.7;
+	white-space: normal;
+}
+.kivun-app-message { min-width: 240px; max-width: 420px; }
+.kivun-app-note { resize: vertical; }
+
+/* Adding a candidate who arrived by phone or forwarded email. */
+.kivun-add-app { margin-bottom: 1rem; }
+.kivun-add-app[open] > .kivun-camp-summary { margin-bottom: .8rem; }
+
 /* A job in its last days on the board, and the form it no longer needs. */
 .kivun-jc-filled {
 	display: inline-block;

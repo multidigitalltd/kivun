@@ -340,6 +340,37 @@
 	document.addEventListener('submit', function (e) {
 		var form = e.target;
 
+		// A candidate added by hand, by whoever runs the board.
+		if (form.matches('.kivun-add-app-form')) {
+			e.preventDefault();
+			var addErr = form.querySelector('.kivun-addapp-error');
+			var addBtn = form.querySelector('[type=submit]');
+			var addLabel = addBtn ? addBtn.textContent : '';
+
+			if (addErr) { addErr.style.display = 'none'; }
+			if (addBtn) { addBtn.disabled = true; addBtn.textContent = kivun.i18n.sending; }
+
+			var addData = new FormData(form);
+			addData.append('action', 'kivun_add_application');
+			addData.append('nonce', kivun.nonce);
+
+			post(addData).then(function (res) {
+				if (res.success) {
+					// Reloaded rather than spliced in: the row belongs in the
+					// table's own order, and its filters and counts above it
+					// have to agree with what is now there.
+					window.location.reload();
+					return;
+				}
+				showError(addErr, (res.data && res.data.message) || kivun.i18n.error_generic);
+				if (addBtn) { addBtn.disabled = false; addBtn.textContent = addLabel; }
+			}).catch(function (ex) {
+				showError(addErr, failure(ex));
+				if (addBtn) { addBtn.disabled = false; addBtn.textContent = addLabel; }
+			});
+			return;
+		}
+
 		// CV application (multipart — includes the file input).
 		if (form.matches('.kivun-apply-form')) {
 			e.preventDefault();

@@ -620,6 +620,65 @@ $kivun_user     = wp_get_current_user();
 				<span class="kivun-stat"><strong><?php echo esc_html( $new_apps ); ?></strong> <?php esc_html_e( 'ממתינות לטיפול', 'kivun' ); ?></span>
 			</div>
 
+			<?php if ( $is_manager ) : ?>
+				<?php
+				// Candidates also arrive by phone and by forwarded email. Without
+				// somewhere to put those, half the pipeline lives in an inbox.
+				?>
+				<details class="kivun-cc-card kivun-add-app">
+					<summary class="kivun-camp-summary"><?php esc_html_e( '+ הוספת מועמד/ת ידנית', 'kivun' ); ?></summary>
+					<form class="kivun-add-app-form" enctype="multipart/form-data">
+						<div class="kivun-form-grid">
+							<div class="kivun-form-row">
+								<label for="kivun-addapp-job"><?php esc_html_e( 'משרה *', 'kivun' ); ?></label>
+								<select id="kivun-addapp-job" name="job_id">
+									<option value=""><?php esc_html_e( '— בחר/י משרה —', 'kivun' ); ?></option>
+									<?php foreach ( $jobs as $job ) : ?>
+										<option value="<?php echo esc_attr( $job->ID ); ?>"><?php echo esc_html( $job->post_title ); ?></option>
+									<?php endforeach; ?>
+								</select>
+							</div>
+							<div class="kivun-form-row">
+								<label for="kivun-addapp-name"><?php esc_html_e( 'שם מלא *', 'kivun' ); ?></label>
+								<input type="text" id="kivun-addapp-name" name="applicant_name">
+							</div>
+							<div class="kivun-form-row">
+								<label for="kivun-addapp-phone"><?php esc_html_e( 'טלפון', 'kivun' ); ?></label>
+								<input type="tel" id="kivun-addapp-phone" name="applicant_phone">
+							</div>
+							<div class="kivun-form-row">
+								<label for="kivun-addapp-email"><?php esc_html_e( 'אימייל', 'kivun' ); ?></label>
+								<input type="email" id="kivun-addapp-email" name="applicant_email">
+							</div>
+							<div class="kivun-form-row">
+								<label for="kivun-addapp-gender"><?php esc_html_e( 'מגדר', 'kivun' ); ?></label>
+								<select id="kivun-addapp-gender" name="gender">
+									<option value=""><?php esc_html_e( '— לא צוין —', 'kivun' ); ?></option>
+									<option value="<?php esc_attr_e( 'גבר', 'kivun' ); ?>"><?php esc_html_e( 'גבר', 'kivun' ); ?></option>
+									<option value="<?php esc_attr_e( 'אישה', 'kivun' ); ?>"><?php esc_html_e( 'אישה', 'kivun' ); ?></option>
+								</select>
+							</div>
+							<div class="kivun-form-row">
+								<label for="kivun-addapp-cv"><?php esc_html_e( 'קורות חיים (אופציונלי)', 'kivun' ); ?></label>
+								<input type="file" id="kivun-addapp-cv" name="cv_file" accept=".pdf,.doc,.docx">
+							</div>
+						</div>
+
+						<div class="kivun-form-row">
+							<label for="kivun-addapp-message"><?php esc_html_e( 'מכתב מקדים / פרטים', 'kivun' ); ?></label>
+							<textarea id="kivun-addapp-message" name="message" rows="3" placeholder="<?php esc_attr_e( 'למשל: פנתה טלפונית, מחפשת משרה חלקית באזור ירושלים', 'kivun' ); ?>"></textarea>
+						</div>
+
+						<p class="kivun-field-hint"><?php esc_html_e( 'טלפון או אימייל — לפחות אחד מהם. לא נשלח דבר למועמד/ת; הרישום נוסף לטבלה בלבד.', 'kivun' ); ?></p>
+						<p class="kivun-error kivun-addapp-error" style="display:none;color:var(--kivun-error)"></p>
+
+						<div class="kivun-form-actions">
+							<button type="submit" class="kivun-btn kivun-btn--primary kivun-btn--sm"><?php esc_html_e( 'הוספה לטבלה', 'kivun' ); ?></button>
+						</div>
+					</form>
+				</details>
+			<?php endif; ?>
+
 			<div class="kivun-apps-filters">
 				<div class="kivun-form-row">
 					<label class="kivun-sr-only" for="kivun-apps-search"><?php esc_html_e( 'חיפוש הגשות', 'kivun' ); ?></label>
@@ -710,10 +769,26 @@ $kivun_user     = wp_get_current_user();
 							<?php endif; ?>
 						</td>
 						<td class="kivun-app-message">
-							<?php if ( $app->message ) : ?>
-								<span title="<?php echo esc_attr( $app->message ); ?>"><?php echo esc_html( wp_trim_words( $app->message, 10 ) ); ?></span>
-							<?php else : ?>
+							<?php
+							$kivun_letter  = (string) $app->message;
+							$kivun_preview = wp_trim_words( $kivun_letter, 10 );
+							?>
+							<?php if ( '' === trim( $kivun_letter ) ) : ?>
 								<span class="kivun-muted" aria-hidden="true">—</span>
+							<?php elseif ( $kivun_preview === $kivun_letter ) : ?>
+								<?php // Short enough to read where it stands. ?>
+								<span class="kivun-app-letter__full"><?php echo nl2br( esc_html( $kivun_letter ) ); ?></span>
+							<?php else : ?>
+								<?php
+								// It used to be cut to ten words with the rest only in a
+								// tooltip — unreachable on a touch screen and awkward
+								// anywhere. It opens in place now, and keeps the line
+								// breaks the candidate wrote.
+								?>
+								<details class="kivun-app-letter">
+									<summary><?php echo esc_html( $kivun_preview ); ?></summary>
+									<div class="kivun-app-letter__full"><?php echo nl2br( esc_html( $kivun_letter ) ); ?></div>
+								</details>
 							<?php endif; ?>
 						</td>
 						<td>
