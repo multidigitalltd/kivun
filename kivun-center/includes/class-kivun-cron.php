@@ -90,7 +90,7 @@ class Kivun_Cron {
 		$site      = get_bloginfo( 'name' );
 		$admin_url = admin_url( 'post.php?post=' . $job_id . '&action=edit' );
 
-		wp_mail(
+		Kivun_Mailer::send(
 			$email,
 			sprintf( '[%s] המשרה "%s" פגה תוקף', $site, $title ),
 			sprintf(
@@ -102,7 +102,7 @@ class Kivun_Cron {
 				esc_url( $admin_url ),
 				esc_html( $site )
 			),
-			array( 'Content-Type: text/html; charset=UTF-8' )
+			__( 'משרה פגת תוקף', 'kivun' )
 		);
 	}
 }

@@ -275,7 +275,9 @@ class Kivun_Forms_Router {
 			}
 		}
 
-		$sent = wp_mail( $to, $subject, $body, $headers );
+		// Wrapped like the rest of our letters: right way round, and in the
+		// site's colours rather than the mail client's defaults.
+		$sent = wp_mail( $to, $subject, Kivun_Mailer::wrap( $body, __( 'הגשת טופס', 'kivun' ) ), $headers );
 		self::log( sprintf( 'wp_mail to %s: %s', $to, $sent ? 'accepted' : 'FAILED' ) );
 		return (bool) $sent;
 	}

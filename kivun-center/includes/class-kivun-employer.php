@@ -470,7 +470,7 @@ class Kivun_Employer {
 
 		// Welcome email.
 		$site = get_bloginfo( 'name' );
-		wp_mail(
+		Kivun_Mailer::send(
 			$email,
 			sprintf( 'ברוך הבא ל%s כמעסיק', $site ),
 			sprintf(
@@ -483,7 +483,7 @@ class Kivun_Employer {
 				esc_html( $email ),
 				esc_html( $site )
 			),
-			array( 'Content-Type: text/html; charset=UTF-8' )
+			__( 'ברוכים הבאים', 'kivun' )
 		);
 
 		wp_send_json_success( array( 'message' => __( 'החשבון נוצר! כעת תוכל/י להתחבר ולפרסם משרות.', 'kivun' ) ) );
@@ -759,7 +759,7 @@ class Kivun_Employer {
 		);
 		$site      = get_bloginfo( 'name' );
 
-		wp_mail(
+		Kivun_Mailer::send(
 			$user->user_email,
 			/* translators: %s: site name. */
 			sprintf( __( 'הוקם עבורך חשבון מפרסם ב%s', 'kivun' ), $site ),
@@ -774,7 +774,7 @@ class Kivun_Employer {
 				esc_url( $reset_url ),
 				esc_html( $user->user_login )
 			),
-			array( 'Content-Type: text/html; charset=UTF-8' )
+			__( 'נפתח עבורך חשבון מפרסם', 'kivun' )
 		);
 	}
 

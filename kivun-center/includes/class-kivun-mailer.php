@@ -26,19 +26,19 @@ class Kivun_Mailer {
 		$site_name    = get_bloginfo( 'name' );
 
 		// To admin.
-		wp_mail(
+		self::send(
 			$admin_email,
 			sprintf( '[%s] הרשמה חדשה לקורס: %s', $site_name, $course_title ),
 			self::course_admin_body( $course_title, $data ),
-			self::headers()
+			__( 'הרשמה חדשה לקורס', 'kivun' )
 		);
 
 		// Confirmation to registrant.
-		wp_mail(
+		self::send(
 			$data['email'],
 			sprintf( 'אישור הרשמה — %s', $course_title ),
 			self::course_confirmation_body( $course_title, $data['name'], $site_name ),
-			self::headers()
+			__( 'אישור הרשמה', 'kivun' )
 		);
 	}
 
@@ -92,7 +92,7 @@ class Kivun_Mailer {
 			nl2br( esc_html( $data['message'] ) )
 		);
 
-		wp_mail( $admin_email, $subject, $body, self::headers() );
+		self::send( $admin_email, $subject, $body, __( 'פנייה חדשה', 'kivun' ) );
 	}
 
 	/**
@@ -109,11 +109,11 @@ class Kivun_Mailer {
 			$attachments[] = $data['cv_path'];
 		}
 
-		wp_mail(
+		self::send(
 			$employer_email,
 			sprintf( 'מועמד/ת חדש/ה למשרה: %s', $job_title ),
 			self::application_body( $job_title, $data ),
-			self::headers(),
+			__( 'מועמדות חדשה', 'kivun' ),
 			$attachments
 		);
 	}
@@ -139,12 +139,12 @@ class Kivun_Mailer {
 			return;
 		}
 
-		wp_mail(
+		self::send(
 			$applicant_email,
 			/* translators: %s: job title. */
 			sprintf( __( 'אישור הגשת מועמדות — %s', 'kivun' ), $job_title ),
 			self::confirmation_html( $applicant_name, $job_title, $coordinator ),
-			self::headers()
+			__( 'המועמדות התקבלה', 'kivun' )
 		);
 	}
 
@@ -195,11 +195,105 @@ class Kivun_Mailer {
 	 * @return string
 	 */
 	public static function confirmation_html( string $name, string $job_title, array $coordinator = array() ): string {
-		$html = '';
-		foreach ( self::confirmation_lines( $name, $job_title, $coordinator ) as $paragraph ) {
-			$html .= '<p>' . nl2br( esc_html( $paragraph ) ) . '</p>';
+		$lines = self::confirmation_lines( $name, $job_title, $coordinator );
+		$last  = count( $lines ) - 1;
+		$html  = '';
+
+		foreach ( $lines as $index => $paragraph ) {
+			// The sign-off is the last one, and is set apart: it carries the
+			// coordinator's name, phone and address on their own lines, and a
+			// reader looking for who to call should find it at a glance.
+			$style = $index === $last
+				? 'margin:24px 0 0;padding-top:16px;border-top:1px solid #eeeeee;color:#777777'
+				: 'margin:0 0 14px';
+
+			$html .= sprintf(
+				'<p style="%s">%s</p>',
+				esc_attr( $style ),
+				nl2br( esc_html( $paragraph ) )
+			);
 		}
+
 		return $html;
+	}
+
+	/**
+	 * Dress a message in the site's colours, right way round.
+	 *
+	 * Our letters went out as bare paragraphs. A mail client has no stylesheet
+	 * and no idea the site is Hebrew, so it laid every one of them out
+	 * left-to-right in its own default face — which is what a candidate saw.
+	 *
+	 * Built as a table with the styles written on each element. That is not
+	 * old-fashioned for its own sake: mail clients drop <style> blocks and
+	 * many ignore flex and grid, so a table with inline styles is the only
+	 * layout that arrives looking the same in all of them.
+	 *
+	 * @param string $body    The message, as HTML.
+	 * @param string $heading Optional heading above it.
+	 * @return string
+	 */
+	public static function wrap( string $body, string $heading = '' ): string {
+		/**
+		 * The brand colour the letters are trimmed in.
+		 *
+		 * @param string $accent A hex colour.
+		 */
+		$accent = (string) apply_filters( 'kivun_email_accent', '#ef315d' );
+		$site   = get_bloginfo( 'name' );
+		$font   = "'Segoe UI',Arial,'Helvetica Neue',Helvetica,sans-serif";
+
+		$head = '' !== trim( $heading )
+			? sprintf(
+				'<h1 style="margin:0 0 18px;font-size:21px;line-height:1.35;font-weight:700;color:%1$s;text-align:right">%2$s</h1>',
+				esc_attr( $accent ),
+				esc_html( $heading )
+			)
+			: '';
+
+		return sprintf(
+			'<div dir="rtl" style="margin:0;padding:24px 12px;background:#f4f5f7;font-family:%1$s">
+				<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%%" style="border-collapse:collapse">
+					<tr><td align="center">
+						<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="width:600px;max-width:100%%;border-collapse:collapse;background:#ffffff;border:1px solid #e7e7e7;border-radius:12px;overflow:hidden">
+							<tr><td style="background:%2$s;padding:18px 28px;text-align:right">
+								<span style="color:#ffffff;font-size:18px;font-weight:700;letter-spacing:.2px">%3$s</span>
+							</td></tr>
+							<tr><td dir="rtl" style="padding:28px 30px;text-align:right;font-size:16px;line-height:1.8;color:#444444">
+								%4$s%5$s
+							</td></tr>
+							<tr><td style="padding:16px 30px 22px;border-top:1px solid #eeeeee;text-align:right;font-size:13px;line-height:1.7;color:#8a8a8a">
+								%6$s
+							</td></tr>
+						</table>
+					</td></tr>
+				</table>
+			</div>',
+			esc_attr( $font ),
+			esc_attr( $accent ),
+			esc_html( $site ),
+			$head,
+			$body,
+			sprintf(
+				'<a href="%1$s" style="color:#8a8a8a;text-decoration:none">%2$s</a>',
+				esc_url( home_url( '/' ) ),
+				esc_html( wp_parse_url( home_url(), PHP_URL_HOST ) )
+			)
+		);
+	}
+
+	/**
+	 * Send one of our letters, wrapped.
+	 *
+	 * @param string            $to          Recipient.
+	 * @param string            $subject     Subject line.
+	 * @param string            $body        The message, as HTML.
+	 * @param string            $heading     Optional heading above it.
+	 * @param array<int,string> $attachments Files to attach.
+	 * @return bool Whether wp_mail accepted it.
+	 */
+	public static function send( string $to, string $subject, string $body, string $heading = '', array $attachments = array() ): bool {
+		return (bool) wp_mail( $to, $subject, self::wrap( $body, $heading ), self::headers(), $attachments );
 	}
 
 	/**
