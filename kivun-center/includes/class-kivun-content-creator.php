@@ -1272,7 +1272,12 @@ class Kivun_Content_Creator {
 		if ( ! is_user_logged_in() ) {
 			return self::front_login_notice();
 		}
-		if ( ! current_user_can( 'edit_posts' ) ) {
+		// The console is a content editor with a leads table in it, and the door
+		// only ever asked about the content half. A leads reader deliberately
+		// holds no editing capability, so the one screen the role exists for
+		// turned them away — everything behind this line already knew to show
+		// them the table and nothing else.
+		if ( ! current_user_can( 'edit_posts' ) && ! self::can_manage_leads() ) {
 			return '<div class="kivun-cc-front"><div class="kivun-cc-note kivun-cc-note--error">'
 				. esc_html__( 'אין לך הרשאה להזין תוכן. פנו למנהל המערכת.', 'kivun' )
 				. '</div></div>';
@@ -1285,8 +1290,11 @@ class Kivun_Content_Creator {
 
 		Kivun_Core::enqueue_frontend_assets();
 		// Voice dictation is for content authors only — load it here (the content
-		// creator page), never on the public lead/registration forms.
-		wp_enqueue_script( 'kivun-voice' );
+		// creator page), never on the public lead/registration forms, and not for
+		// a leads reader, who is never shown a field to dictate into.
+		if ( ! self::is_leads_only() ) {
+			wp_enqueue_script( 'kivun-voice' );
+		}
 
 		// The leads tab reuses the CRM's inline status/notes editing, so it needs
 		// the same script and nonce the wp-admin page uses.
@@ -1667,7 +1675,7 @@ class Kivun_Content_Creator {
 		$page_url   = (string) get_permalink();
 		$page_url   = $page_url ? $page_url : home_url();
 		$can_delete = current_user_can( 'delete_posts' );
-		$stats      = self::console_stats( $show_leads, $show_jobs );
+		$stats      = self::console_stats( $show_leads, $show_jobs, ! $leads_only );
 		$user       = wp_get_current_user();
 
 		$console_tabs = $leads_only ? array() : array(
@@ -1733,14 +1741,16 @@ class Kivun_Content_Creator {
 			</header>
 
 			<div class="kivun-cc-stats">
-				<div class="kivun-cc-stat">
-					<span class="kivun-cc-stat__num"><?php echo esc_html( number_format_i18n( $stats['published'] ) ); ?></span>
-					<span class="kivun-cc-stat__label"><?php esc_html_e( 'פרסומים', 'kivun' ); ?></span>
-				</div>
-				<div class="kivun-cc-stat">
-					<span class="kivun-cc-stat__num"><?php echo esc_html( number_format_i18n( $stats['pending'] ) ); ?></span>
-					<span class="kivun-cc-stat__label"><?php esc_html_e( 'ממתינים לפרסום', 'kivun' ); ?></span>
-				</div>
+				<?php if ( ! $leads_only ) : ?>
+					<div class="kivun-cc-stat">
+						<span class="kivun-cc-stat__num"><?php echo esc_html( number_format_i18n( $stats['published'] ) ); ?></span>
+						<span class="kivun-cc-stat__label"><?php esc_html_e( 'פרסומים', 'kivun' ); ?></span>
+					</div>
+					<div class="kivun-cc-stat">
+						<span class="kivun-cc-stat__num"><?php echo esc_html( number_format_i18n( $stats['pending'] ) ); ?></span>
+						<span class="kivun-cc-stat__label"><?php esc_html_e( 'ממתינים לפרסום', 'kivun' ); ?></span>
+					</div>
+				<?php endif; ?>
 				<?php if ( $show_leads ) : ?>
 					<div class="kivun-cc-stat">
 						<span class="kivun-cc-stat__num"><?php echo esc_html( number_format_i18n( $stats['leads'] ) ); ?></span>
@@ -1759,6 +1769,8 @@ class Kivun_Content_Creator {
 				<?php endif; ?>
 			</div>
 
+			<?php // A leads reader has a single screen and no tabs to switch between, so the bar would be an empty strip above the table. ?>
+			<?php if ( $console_tabs ) : ?>
 			<div class="kivun-tabs kivun-cc-tabs" role="tablist" aria-label="<?php esc_attr_e( 'ניהול תוכן', 'kivun' ); ?>">
 				<?php
 				foreach ( $console_tabs as $tab_key => $tab_meta ) :
@@ -1782,6 +1794,7 @@ class Kivun_Content_Creator {
 					</button>
 				<?php endforeach; ?>
 			</div>
+			<?php endif; ?>
 
 			<?php if ( ! $leads_only ) : ?>
 				<section class="kivun-tab-panel <?php echo 'form' === $tab ? 'is-active' : ''; ?>" data-panel="form" id="kivun-ccpanel-form" role="tabpanel" aria-labelledby="kivun-cctab-form" tabindex="0" <?php echo 'form' === $tab ? '' : 'hidden'; ?>>
@@ -1837,11 +1850,12 @@ class Kivun_Content_Creator {
 	/**
 	 * Headline counts for the console's stat cards.
 	 *
-	 * @param bool $with_leads Whether to count content enquiries.
-	 * @param bool $with_jobs  Whether to count jobs.
+	 * @param bool $with_leads   Whether to count content enquiries.
+	 * @param bool $with_jobs    Whether to count jobs.
+	 * @param bool $with_content Whether to count the content library at all.
 	 * @return array<string,int>
 	 */
-	private static function console_stats( bool $with_leads, bool $with_jobs ): array {
+	private static function console_stats( bool $with_leads, bool $with_jobs, bool $with_content = true ): array {
 		global $wpdb;
 
 		$stats = array(
@@ -1852,6 +1866,13 @@ class Kivun_Content_Creator {
 			'leads_new' => 0,
 			'jobs'      => 0,
 		);
+
+		// A leads reader is shown no content and counts none: the tally would
+		// tell them how much there is across a site they cannot open, and the
+		// query behind it reads every post to work that out.
+		if ( ! $with_content ) {
+			return array_merge( $stats, self::lead_stats( $with_leads, $with_jobs ) );
+		}
 
 		$posts = get_posts(
 			array(
@@ -1882,6 +1903,22 @@ class Kivun_Content_Creator {
 		$stats['published'] = count( $published );
 		// Anything with no live post yet is still waiting to go out.
 		$stats['pending'] = max( 0, $stats['content'] - $stats['published'] );
+
+		return array_merge( $stats, self::lead_stats( $with_leads, $with_jobs ) );
+	}
+
+	/**
+	 * The counts that do not depend on the content library: the leads table and
+	 * the jobs board.
+	 *
+	 * @param bool $with_leads Whether to count leads.
+	 * @param bool $with_jobs  Whether to count jobs.
+	 * @return array<string,int> Only the keys that were asked for.
+	 */
+	private static function lead_stats( bool $with_leads, bool $with_jobs ): array {
+		global $wpdb;
+
+		$stats = array();
 
 		if ( $with_leads ) {
 			// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
