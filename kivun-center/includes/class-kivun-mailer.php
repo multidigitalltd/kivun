@@ -195,26 +195,82 @@ class Kivun_Mailer {
 	 * @return string
 	 */
 	public static function confirmation_html( string $name, string $job_title, array $coordinator = array() ): string {
-		$lines = self::confirmation_lines( $name, $job_title, $coordinator );
-		$last  = count( $lines ) - 1;
-		$html  = '';
+		$accent = (string) apply_filters( 'kivun_email_accent', '#ef315d' );
+		$lines  = self::confirmation_lines( $name, $job_title, $coordinator );
+		$last   = count( $lines ) - 1;
+		$html   = '';
 
 		foreach ( $lines as $index => $paragraph ) {
-			// The sign-off is the last one, and is set apart: it carries the
-			// coordinator's name, phone and address on their own lines, and a
-			// reader looking for who to call should find it at a glance.
-			$style = $index === $last
-				? 'margin:24px 0 0;padding-top:16px;border-top:1px solid #eeeeee;color:#777777'
-				: 'margin:0 0 14px';
+			// Everything but the sign-off reads as ordinary paragraphs; the
+			// greeting is a shade heavier so the letter opens on the reader's
+			// own name.
+			if ( $index !== $last ) {
+				$html .= sprintf(
+					'<p dir="rtl" style="margin:0 0 14px;text-align:right%1$s">%2$s</p>',
+					0 === $index ? ';font-weight:600;color:#222222' : '',
+					nl2br( esc_html( $paragraph ) )
+				);
+				continue;
+			}
+
+			// The sign-off is a card of its own: it carries the coordinator's
+			// name, phone and address, and a candidate with a question should
+			// find who to ask at a glance rather than read for it.
+			$parts   = explode( "\n", $paragraph );
+			$opening = array_shift( $parts );
+
+			$details = '';
+			foreach ( $parts as $line ) {
+				$details .= sprintf(
+					'<div dir="rtl" style="text-align:right;color:#222222;font-weight:600;font-size:15px;line-height:1.7">%s</div>',
+					esc_html( $line )
+				);
+			}
 
 			$html .= sprintf(
-				'<p style="%s">%s</p>',
-				esc_attr( $style ),
-				nl2br( esc_html( $paragraph ) )
+				'<table role="presentation" dir="rtl" cellpadding="0" cellspacing="0" border="0" width="100%%" style="border-collapse:collapse;margin:26px 0 0">
+					<tr><td dir="rtl" align="right" style="padding:16px 18px;background:#fdf3f6;border-right:4px solid %1$s;border-radius:10px;text-align:right">
+						<div dir="rtl" style="text-align:right;color:#8a8a8a;font-size:14px;margin:0 0 6px">%2$s</div>
+						%3$s
+					</td></tr>
+				</table>',
+				esc_attr( $accent ),
+				esc_html( $opening ),
+				$details
 			);
 		}
 
 		return $html;
+	}
+
+	/**
+	 * The centre's logo, as it should appear at the head of a letter.
+	 *
+	 * The site's own logo is used, so the letters follow the site rather than
+	 * a copy of it that would go stale the day the logo is changed. Many
+	 * clients block remote images by default, so the image carries the
+	 * centre's name as its alt text and there is a text fallback behind it.
+	 *
+	 * @return string The logo URL, or '' when the site has none.
+	 */
+	private static function logo_url(): string {
+		$url = '';
+
+		$logo_id = (int) get_theme_mod( 'custom_logo' );
+		if ( $logo_id ) {
+			$url = (string) wp_get_attachment_image_url( $logo_id, 'full' );
+		}
+
+		if ( '' === $url ) {
+			$url = (string) get_site_icon_url( 180 );
+		}
+
+		/**
+		 * The logo shown at the head of the plugin's emails.
+		 *
+		 * @param string $url An absolute image URL, or '' for the site name in text.
+		 */
+		return (string) apply_filters( 'kivun_email_logo', $url );
 	}
 
 	/**
@@ -223,6 +279,11 @@ class Kivun_Mailer {
 	 * Our letters went out as bare paragraphs. A mail client has no stylesheet
 	 * and no idea the site is Hebrew, so it laid every one of them out
 	 * left-to-right in its own default face — which is what a candidate saw.
+	 *
+	 * Sent as a whole `<html dir="rtl">` document rather than a right-aligned
+	 * div: Gmail and Outlook rewrite the markup they are handed, and the
+	 * direction has to survive that. Every table and cell repeats `dir` and
+	 * the old `align` attribute for the same reason.
 	 *
 	 * Built as a table with the styles written on each element. That is not
 	 * old-fashioned for its own sake: mail clients drop <style> blocks and
@@ -242,38 +303,66 @@ class Kivun_Mailer {
 		$accent = (string) apply_filters( 'kivun_email_accent', '#ef315d' );
 		$site   = get_bloginfo( 'name' );
 		$font   = "'Segoe UI',Arial,'Helvetica Neue',Helvetica,sans-serif";
+		$logo   = self::logo_url();
+
+		// The masthead: the logo when the site has one, and the centre's name
+		// in text when it hasn't — or when the client refused to load it.
+		$mast = '' !== $logo
+			? sprintf(
+				'<img src="%1$s" alt="%2$s" height="58" style="display:inline-block;height:58px;max-height:58px;width:auto;max-width:230px;border:0;outline:none;text-decoration:none">',
+				esc_url( $logo ),
+				esc_attr( $site )
+			)
+			: sprintf(
+				'<span style="font-size:20px;font-weight:700;color:%1$s;letter-spacing:.2px">%2$s</span>',
+				esc_attr( $accent ),
+				esc_html( $site )
+			);
 
 		$head = '' !== trim( $heading )
 			? sprintf(
-				'<h1 style="margin:0 0 18px;font-size:21px;line-height:1.35;font-weight:700;color:%1$s;text-align:right">%2$s</h1>',
-				esc_attr( $accent ),
-				esc_html( $heading )
+				'<h1 dir="rtl" style="margin:0 0 6px;font-size:22px;line-height:1.35;font-weight:700;color:#222222;text-align:right">%1$s</h1>
+				<div style="width:54px;height:3px;background:%2$s;border-radius:3px;margin:0 0 20px"></div>',
+				esc_html( $heading ),
+				esc_attr( $accent )
 			)
 			: '';
 
 		return sprintf(
-			'<div dir="rtl" style="margin:0;padding:24px 12px;background:#f4f5f7;font-family:%1$s">
-				<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%%" style="border-collapse:collapse">
-					<tr><td align="center">
-						<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="width:600px;max-width:100%%;border-collapse:collapse;background:#ffffff;border:1px solid #e7e7e7;border-radius:12px;overflow:hidden">
-							<tr><td style="background:%2$s;padding:18px 28px;text-align:right">
-								<span style="color:#ffffff;font-size:18px;font-weight:700;letter-spacing:.2px">%3$s</span>
-							</td></tr>
-							<tr><td dir="rtl" style="padding:28px 30px;text-align:right;font-size:16px;line-height:1.8;color:#444444">
-								%4$s%5$s
-							</td></tr>
-							<tr><td style="padding:16px 30px 22px;border-top:1px solid #eeeeee;text-align:right;font-size:13px;line-height:1.7;color:#8a8a8a">
-								%6$s
-							</td></tr>
-						</table>
-					</td></tr>
-				</table>
-			</div>',
+			'<!DOCTYPE html>
+<html dir="rtl" lang="%1$s"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>%2$s</title>
+</head>
+<body dir="rtl" style="margin:0;padding:0;background:#f4f5f7">
+<div dir="rtl" style="margin:0;padding:26px 12px;background:#f4f5f7;font-family:%3$s">
+	<table role="presentation" dir="rtl" cellpadding="0" cellspacing="0" border="0" width="100%%" style="border-collapse:collapse">
+		<tr><td align="center">
+			<!--[if mso]><table role="presentation" align="center" cellpadding="0" cellspacing="0" border="0" width="600"><tr><td><![endif]-->
+			<table role="presentation" dir="rtl" cellpadding="0" cellspacing="0" border="0" width="100%%" style="width:100%%;max-width:600px;border-collapse:collapse;background:#ffffff;border:1px solid #e9e9ec;border-radius:14px;overflow:hidden">
+				<tr><td style="height:6px;line-height:6px;font-size:0;background:%4$s">&nbsp;</td></tr>
+				<tr><td dir="rtl" align="right" style="padding:20px 30px 12px;text-align:right;border-bottom:1px solid #f0f0f2">%5$s</td></tr>
+				<tr><td dir="rtl" align="right" style="padding:28px 30px 30px;text-align:right;font-size:16px;line-height:1.85;color:#3f3f46">
+					%6$s%7$s
+				</td></tr>
+				<tr><td dir="rtl" align="right" style="padding:18px 30px 22px;background:#fafafb;border-top:1px solid #f0f0f2;text-align:right;font-size:13px;line-height:1.7;color:#8a8a8a">
+					<strong style="color:#6b6b73">%8$s</strong><br>%9$s
+				</td></tr>
+			</table>
+			<!--[if mso]></td></tr></table><![endif]-->
+		</td></tr>
+	</table>
+</div>
+</body></html>',
+			esc_attr( str_replace( '_', '-', (string) get_bloginfo( 'language' ) ) ),
+			esc_html( '' !== trim( $heading ) ? $heading : $site ),
 			esc_attr( $font ),
 			esc_attr( $accent ),
-			esc_html( $site ),
+			$mast,
 			$head,
 			$body,
+			esc_html( $site ),
 			sprintf(
 				'<a href="%1$s" style="color:#8a8a8a;text-decoration:none">%2$s</a>',
 				esc_url( home_url( '/' ) ),
