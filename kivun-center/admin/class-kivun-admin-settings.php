@@ -224,6 +224,7 @@ class Kivun_Admin_Settings {
 				'forms_router_webhook'   => esc_url_raw( wp_unslash( $_POST['forms_router_webhook'] ?? '' ) ),
 				'coordinators_male'      => sanitize_textarea_field( wp_unslash( $_POST['coordinators_male'] ?? '' ) ),
 				'coordinators_female'    => sanitize_textarea_field( wp_unslash( $_POST['coordinators_female'] ?? '' ) ),
+				'coordinators_forms'     => sanitize_textarea_field( wp_unslash( $_POST['coordinators_forms'] ?? '' ) ),
 				'whatsapp_enabled'       => ! empty( $_POST['whatsapp_enabled'] ),
 				'whatsapp_number'        => sanitize_text_field( wp_unslash( $_POST['whatsapp_number'] ?? '' ) ),
 				'whatsapp_message'       => sanitize_text_field( wp_unslash( $_POST['whatsapp_message'] ?? '' ) ),
@@ -500,7 +501,7 @@ class Kivun_Admin_Settings {
 				</tr>
 				<tr>
 					<th colspan="2" style="padding-top:20px"><h2 style="margin:0"><?php esc_html_e( 'חלוקת פניות בין רכזים', 'kivun' ); ?></h2>
-					<p class="description" style="font-weight:400"><?php esc_html_e( 'פנייה שיש בה שדה מגדר מנותבת גם לרכז/ת שתורו הגיע, לפי החלוקה שכאן. שורה לכל רכז, בפורמט "כתובת = חלק". החלוקה נשמרת לאורך זמן ולא מוגרלת — פנייה נשלחת למי שהכי מפגר אחרי המכסה שלו, כך שרצף פניות לא נוחת כולו על אותו שולחן. השאירו ריק כדי לכבות.', 'kivun' ); ?></p></th>
+					<p class="description" style="font-weight:400"><?php esc_html_e( 'חל על לוח המשרות בלבד: הגשות מועמדות, וטפסים שנשלחו מעמוד לוח המשרות או מעמוד של משרה. פנייה שיש בה שדה מגדר מנותבת גם לרכז/ת שתורו הגיע, לפי החלוקה שכאן. שורה לכל רכז, בפורמט "כתובת = חלק". החלוקה נשמרת לאורך זמן ולא מוגרלת — פנייה נשלחת למי שהכי מפגר אחרי המכסה שלו, כך שרצף פניות לא נוחת כולו על אותו שולחן. לידים של קורסים, סדנאות ודפי נחיתה אינם מחולקים בין הרכזים — להם יש "אימייל לקבלת הלידים" משלהם בכל עמוד. השאירו ריק כדי לכבות.', 'kivun' ); ?></p></th>
 				</tr>
 				<tr>
 					<th scope="row"><?php esc_html_e( 'רכזים לפניות של גברים', 'kivun' ); ?></th>
@@ -514,6 +515,17 @@ class Kivun_Admin_Settings {
 					<td>
 						<textarea name="coordinators_female" rows="3" class="large-text" dir="ltr" placeholder="first@kivun.org.il = 1&#10;second@kivun.org.il = 3"><?php echo esc_textarea( $o( 'coordinators_female' ) ); ?></textarea>
 						<p class="description"><?php esc_html_e( '"= 1" ו-"= 3" נותנים רבע ושלושה רבעים. אפשר לכתוב גם 1/4 ו-3/4. גם כאן אפשר שם וטלפון לפני הכתובת, מופרדים בפסיקים.', 'kivun' ); ?></p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'טפסים נוספים לחלוקה', 'kivun' ); ?></th>
+					<td>
+						<textarea name="coordinators_forms" rows="3" class="large-text" dir="ltr" placeholder="35e8f9e&#10;טופס מועמדים"><?php echo esc_textarea( $o( 'coordinators_forms' ) ); ?></textarea>
+						<p class="description">
+							<?php esc_html_e( 'בדרך כלל אין צורך למלא כאן כלום: טפסים שיושבים בעמוד לוח המשרות או בעמוד של משרה מחולקים בין הרכזים ממילא.', 'kivun' ); ?><br>
+							<?php esc_html_e( 'מלאו כאן רק אם טופס המועמדים הועבר לעמוד אחר. שורה לכל טופס — שם הטופס כפי שהוגדר באלמנטור, או המזהה שלו.', 'kivun' ); ?><br>
+							<?php esc_html_e( 'את המזהה מוצאים בעמוד שבו הטופס יושב: לחיצה ימנית על הטופס ← "בדיקת רכיב", ומחפשים את השורה form_id (למשל 35e8f9e).', 'kivun' ); ?>
+						</p>
 					</td>
 				</tr>
 				<tr>

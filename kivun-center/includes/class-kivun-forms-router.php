@@ -74,6 +74,18 @@ class Kivun_Forms_Router {
 			$form_name = (string) $record->get_form_settings( 'form_name' );
 		}
 
+		// Elementor posts the form widget's own id alongside the fields. It is
+		// the one handle that does not change when the form is renamed, so the
+		// allowlist accepts it as well as the name.
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Reading Elementor's own already-verified submission.
+		$form_id = sanitize_text_field( wp_unslash( $_POST['form_id'] ?? '' ) );
+
+		// The post the form was built into. On a theme-builder site that is the
+		// template rather than the page, which is exactly why it is worth
+		// having: it identifies the jobs board even when the referer does not.
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Reading Elementor's own already-verified submission.
+		$posted_id = (int) sanitize_text_field( wp_unslash( $_POST['post_id'] ?? '' ) );
+
 		/**
 		 * Allow skipping the global router for a specific submission.
 		 *
@@ -85,11 +97,22 @@ class Kivun_Forms_Router {
 			return;
 		}
 
-		self::route( self::email_for_post( self::post_from_url( $page_url ) ), $form_name, $fields, $page_url );
+		self::route(
+			self::email_for_post( self::post_from_url( $page_url ) ),
+			$form_name,
+			$fields,
+			$page_url,
+			self::rota_applies( $page_url, $form_name, $form_id, $posted_id )
+		);
 	}
 
 	/**
 	 * Fallback: route a lead/registration captured by the plugin's own pipeline.
+	 *
+	 * Never shared between the jobs coordinators. These are the course, workshop
+	 * and landing-page forms, and they carry a gender field of their own — which
+	 * is the only reason they ever reached the rota. Where such a page should
+	 * reach a particular person, it has its own "אימייל לקבלת הלידים".
 	 *
 	 * @param int   $post_id The course/session/landing post ID.
 	 * @param array $data    Lead data (name, phone, email, city, gender, message).
@@ -101,7 +124,118 @@ class Kivun_Forms_Router {
 		}
 		$data   = is_array( $data ) ? $data : array();
 		$fields = self::fields_from_data( $data );
-		self::route( self::email_for_post( (int) $post_id ), 'Kivun', $fields, (string) get_permalink( (int) $post_id ) );
+		self::route( self::email_for_post( (int) $post_id ), 'Kivun', $fields, (string) get_permalink( (int) $post_id ), false );
+	}
+
+	/**
+	 * Whether this submission is one of the jobs board's, and so belongs to the
+	 * coordinators' rota.
+	 *
+	 * The rota exists for candidates: the jobs board's own form, and the
+	 * applications sent from a job. It used to be consulted for every
+	 * submission that happened to carry a gender field, which swept in the
+	 * landing pages and would have swept in the contact form the day somebody
+	 * added such a field to it.
+	 *
+	 * @param string $page_url  The page the form was submitted from.
+	 * @param string $form_name The Elementor form name.
+	 * @param string $form_id   The Elementor form widget id.
+	 * @param int    $posted_id The post or template the form was built into.
+	 * @return bool
+	 */
+	private static function rota_applies( string $page_url, string $form_name, string $form_id, int $posted_id = 0 ): bool {
+		$applies = self::allowlisted( $form_name, $form_id )
+			|| self::jobs_page( $page_url )
+			|| self::holds_board( $posted_id );
+
+		/**
+		 * Whether a submission is shared between the jobs coordinators.
+		 *
+		 * @param bool   $applies   The decision so far.
+		 * @param string $page_url  The page the form was submitted from.
+		 * @param string $form_name The Elementor form name.
+		 * @param string $form_id   The Elementor form widget id.
+		 */
+		return (bool) apply_filters( 'kivun_coordinators_apply', $applies, $page_url, $form_name, $form_id );
+	}
+
+	/**
+	 * Whether the admin named this form as one to share between coordinators.
+	 *
+	 * Typed in settings as one name or widget id per line, so a form that lives
+	 * somewhere other than the jobs board can still be shared out.
+	 *
+	 * @param string $form_name The Elementor form name.
+	 * @param string $form_id   The Elementor form widget id.
+	 * @return bool
+	 */
+	private static function allowlisted( string $form_name, string $form_id ): bool {
+		$listed = (string) Kivun_Admin_Settings::get( 'coordinators_forms', '' );
+		if ( '' === trim( $listed ) ) {
+			return false;
+		}
+
+		$wanted = array_filter( array_map( 'trim', preg_split( '/\r\n|\r|\n|,/', $listed ) ) );
+		foreach ( $wanted as $entry ) {
+			if ( 0 === strcasecmp( $entry, $form_name ) || 0 === strcasecmp( $entry, $form_id ) ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Whether a URL is the jobs board, or one job on it.
+	 *
+	 * The board may be the post type's own archive or an ordinary page holding
+	 * the shortcode, so both are looked at.
+	 *
+	 * @param string $page_url The page the form was submitted from.
+	 * @return bool
+	 */
+	private static function jobs_page( string $page_url ): bool {
+		if ( '' === trim( $page_url ) ) {
+			return false;
+		}
+
+		$path = (string) wp_parse_url( $page_url, PHP_URL_PATH );
+
+		$archive = (string) get_post_type_archive_link( 'kivun_job' );
+		if ( '' !== $archive && untrailingslashit( (string) wp_parse_url( $archive, PHP_URL_PATH ) ) === untrailingslashit( $path ) ) {
+			return true;
+		}
+
+		$post_id = self::post_from_url( $page_url );
+
+		return $post_id && ( 'kivun_job' === get_post_type( $post_id ) || self::holds_board( $post_id ) );
+	}
+
+	/**
+	 * Whether a post — a page, or the Elementor template behind one — puts the
+	 * jobs board or the application form on the screen.
+	 *
+	 * On an Elementor site the shortcode sits in the builder data rather than
+	 * in the post's content, so both are read.
+	 *
+	 * @param int $post_id The post or template id.
+	 * @return bool
+	 */
+	private static function holds_board( int $post_id ): bool {
+		if ( $post_id <= 0 ) {
+			return false;
+		}
+
+		$haystack = (string) get_post_field( 'post_content', $post_id )
+			. (string) get_post_meta( $post_id, '_elementor_data', true );
+
+		foreach ( array( 'kivun_jobs', 'kivun_apply' ) as $tag ) {
+			if ( has_shortcode( $haystack, $tag ) ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	/**
@@ -111,9 +245,10 @@ class Kivun_Forms_Router {
 	 * @param string $form_name The form name.
 	 * @param array  $fields    Submitted fields (label => value).
 	 * @param string $page_url  The page the form was submitted from.
+	 * @param bool   $use_rota  Whether this one belongs to the coordinators.
 	 * @return void
 	 */
-	private static function route( string $email, string $form_name, array $fields, string $page_url ): void {
+	private static function route( string $email, string $form_name, array $fields, string $page_url, bool $use_rota ): void {
 		if ( self::$routed ) {
 			return;
 		}
@@ -123,7 +258,11 @@ class Kivun_Forms_Router {
 		// The coordinator who gets this one. Worked out before the early exit
 		// below, so a site that routes only to coordinators — with no central
 		// address and no webhook — still delivers.
-		$coordinators = Kivun_Coordinators::recipients( self::gender_in( $fields ) );
+		//
+		// Only asked for when the submission is the coordinators' to take:
+		// taking a turn is recorded, so asking about a lead that is not theirs
+		// would advance the rota and skew the split for the ones that are.
+		$coordinators = $use_rota ? Kivun_Coordinators::recipients( self::gender_in( $fields ) ) : array();
 
 		if ( '' === trim( $email ) && '' === trim( $webhook ) && ! $coordinators ) {
 			self::record( 'no-destination', '' );
@@ -151,7 +290,9 @@ class Kivun_Forms_Router {
 			self::send_webhook( $webhook, $form_name, $fields, $page_url );
 		}
 
-		self::record( $result, $email );
+		// Noted either way, so an admin asking why a coordinator did not get a
+		// particular lead can see that it was never theirs to get.
+		self::record( $use_rota ? $result : $result . ' / no-rota', $email );
 	}
 
 	/**
