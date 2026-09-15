@@ -63,7 +63,7 @@
 		}
 	}
 
-	function replaceWithSuccess(node, message) {
+	function replaceWithSuccess(node, message, ownDialog) {
 		var p = document.createElement('p');
 		p.className = 'kivun-success';
 		p.setAttribute('role', 'status');
@@ -72,7 +72,10 @@
 
 		// The inline line stays as the record of what happened, and the dialog
 		// carries the same news to someone who is not looking at that spot.
-		showThankYou();
+		// A form that brings its own dialog is left alone: an application
+		// answers with the coordinator's name in it, and stacking the generic
+		// thank-you on top of that is two windows saying one thing.
+		if (!ownDialog) { showThankYou(); }
 	}
 
 	// ── Thank-you dialog ─────────────────────────────────────────────────────────
@@ -386,7 +389,7 @@
 
 			post(data).then(function (res) {
 				if (res.success) {
-					replaceWithSuccess(form, res.data.message);
+					replaceWithSuccess(form, res.data.message, true);
 					showApplySuccess(res.data);
 				} else {
 					showError(err, res.data.message);

@@ -29,7 +29,9 @@
 .kivun-my-applications,
 .kivun-apply-wrap,
 .kivun-employer-register,
-.kivun-interest {
+.kivun-interest,
+.kivun-ty,
+.kivun-apply-done {
 	font-family: var(--kivun-font);
 }
 .kivun-jobs-wrap input,
@@ -1920,35 +1922,66 @@
 	height: 56px;
 	margin: 0 auto .9rem;
 	border-radius: 50%;
-	background: #e7f6ec;
-	color: #1a7a40;
+	/* Was a green tick on a green disc and a blue heading — neither colour
+	   appears anywhere else on this site. */
+	background: var(--kivun-accent, #ef315d);
+	color: #fff;
 	font-size: 1.8rem;
 	line-height: 56px;
 	font-weight: 700;
 }
-.kivun-ty__title { margin: 0 0 .5rem; font-size: 1.4rem; font-weight: 800; color: var(--kivun-primary, #1f2937); }
-.kivun-ty__text { margin: 0 0 1.35rem; color: #4b5563; line-height: 1.6; }
-.kivun-ty__btn {
+.kivun-ty__title {
+	margin: 0 0 .5rem;
+	font-size: 1.4rem;
+	font-weight: 800;
+	color: var(--kivun-accent, #ef315d);
+}
+.kivun-ty__text { margin: 0 0 1.35rem; color: #555555; line-height: 1.7; }
+.kivun-ty__dialog .kivun-ty__btn {
 	display: inline-block;
-	padding: .75rem 1.6rem;
+	padding: .8rem 2rem;
 	border-radius: 999px;
-	background: var(--kivun-accent, #d81f4a);
-	color: #fff;
+	background: var(--kivun-accent, #ef315d);
+	color: #fff !important;
+	font-family: inherit;
 	font-weight: 700;
-	text-decoration: none;
+	font-size: 1rem;
+	text-decoration: none !important;
+	transition: background .15s;
 }
-.kivun-ty__btn:hover { filter: brightness(1.07); color: #fff; }
-.kivun-ty__dismiss {
+.kivun-ty__dialog .kivun-ty__btn:hover { background: var(--kivun-dark, #232323); color: #fff !important; }
+.kivun-ty__dialog .kivun-ty__dismiss,
+.kivun-ty__dialog .kivun-ty__close {
+	background: none !important;
+	border: 0 !important;
+	box-shadow: none !important;
+	text-shadow: none !important;
+	font-family: inherit !important;
+	text-transform: none !important;
+	min-height: 0 !important;
+	width: auto !important;
+}
+.kivun-ty__dialog .kivun-ty__dismiss {
 	display: block;
-	margin: .75rem auto 0;
-	background: none;
-	border: 0;
-	color: var(--kivun-muted);
-	font: inherit;
+	margin: .8rem auto 0;
+	padding: .35rem .6rem !important;
+	border-radius: 0 !important;
+	color: #8a8a8a !important;
 	font-size: .88rem;
+	font-weight: 500 !important;
+	line-height: 1.4 !important;
 	cursor: pointer;
-	text-decoration: underline;
+	text-decoration: none !important;
 }
+.kivun-ty__dialog .kivun-ty__dismiss:hover { color: var(--kivun-dark, #232323) !important; }
+.kivun-ty__dialog .kivun-ty__close {
+	padding: .2rem .4rem !important;
+	border-radius: 0 !important;
+	color: #b3b3b3 !important;
+	font-size: 1.6rem;
+	line-height: 1 !important;
+}
+.kivun-ty__dialog .kivun-ty__close:hover { color: var(--kivun-dark, #232323) !important; }
 body.kivun-ty-open { overflow: hidden; }
 
 /* The jobs board shares the console's visual language, both standalone (it
