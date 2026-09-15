@@ -29,6 +29,11 @@ class Kivun_Content_Creator {
 	const GROUP_META = '_kivun_content_group';
 
 	/**
+	 * Where the console was last seen, so invitations can link to it.
+	 */
+	const CONSOLE_URL_OPTION = 'kivun_console_url';
+
+	/**
 	 * Hook menu + save handler.
 	 *
 	 * @return void
@@ -1398,6 +1403,95 @@ class Kivun_Content_Creator {
 	}
 
 	/**
+	 * Where the console lives, so a letter can send somebody to it.
+	 *
+	 * The page is found rather than configured, three ways over: the address it
+	 * was last seen at, the page holding the shortcode, and finally the site's
+	 * front page so a link is never broken. Elementor keeps a shortcode widget
+	 * in the builder data rather than in the content, so both are searched.
+	 *
+	 * @param string $tab Which tab to open on, e.g. 'leads'.
+	 * @return string
+	 */
+	public static function console_url( string $tab = '' ): string {
+		$url = (string) get_option( self::CONSOLE_URL_OPTION, '' );
+
+		if ( '' === $url ) {
+			$url = self::find_console_page();
+		}
+
+		if ( '' === $url ) {
+			$url = home_url( '/' );
+		}
+
+		/**
+		 * The address of the management console.
+		 *
+		 * @param string $url The address worked out so far.
+		 * @param string $tab The tab being linked to.
+		 */
+		$url = (string) apply_filters( 'kivun_console_url', $url, $tab );
+
+		return '' !== $tab ? add_query_arg( 'kivun_tab', $tab, $url ) : $url;
+	}
+
+	/**
+	 * Search the site for the page that renders the console.
+	 *
+	 * @return string The permalink, or '' when no page holds the shortcode.
+	 */
+	private static function find_console_page(): string {
+		global $wpdb;
+
+		$like = '%' . $wpdb->esc_like( '[kivun_content_creator' ) . '%';
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Runs once, then kept in an option.
+		$page_id = (int) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT ID FROM {$wpdb->posts}
+				 WHERE post_type = 'page' AND post_status = 'publish' AND post_content LIKE %s
+				 LIMIT 1",
+				$like
+			)
+		);
+
+		// A page built in Elementor keeps the shortcode in its builder data
+		// rather than in its content.
+		if ( ! $page_id ) {
+			$page_id = (int) $wpdb->get_var(
+				$wpdb->prepare(
+					"SELECT p.ID FROM {$wpdb->posts} p
+					 INNER JOIN {$wpdb->postmeta} m ON m.post_id = p.ID
+					 WHERE p.post_type = 'page' AND p.post_status = 'publish'
+					   AND m.meta_key = '_elementor_data' AND m.meta_value LIKE %s
+					 LIMIT 1",
+					$like
+				)
+			);
+		}
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+
+		return $page_id ? (string) get_permalink( $page_id ) : '';
+	}
+
+	/**
+	 * Remember where the console was just rendered.
+	 *
+	 * Cheaper and surer than searching for it, and it keeps up with the page
+	 * being moved or renamed. Written only when it has actually changed.
+	 *
+	 * @param string $url The permalink of the page rendering the console.
+	 * @return void
+	 */
+	private static function remember_console_url( string $url ): void {
+		if ( '' === trim( $url ) || (string) get_option( self::CONSOLE_URL_OPTION, '' ) === $url ) {
+			return;
+		}
+
+		update_option( self::CONSOLE_URL_OPTION, esc_url_raw( $url ), false );
+	}
+
+	/**
 	 * Who may hand out access to the leads table.
 	 *
 	 * Creating a user account and granting it sight of every enquiry the centre
@@ -1466,11 +1560,19 @@ class Kivun_Content_Creator {
 			}
 
 			$existing->add_role( 'kivun_leads_viewer' );
+
+			// They already have a password; what they do not have is any idea
+			// where the screen is.
+			$sent = self::send_leads_invite( $existing, false );
+
 			wp_send_json_success(
 				array(
 					'message' => sprintf(
-						/* translators: %s: user display name. */
-						__( 'הגישה ניתנה למשתמש הקיים %s.', 'kivun' ),
+						$sent
+							/* translators: %s: user display name. */
+							? __( 'הגישה ניתנה למשתמש הקיים %s, ונשלח אליו מייל עם הקישור.', 'kivun' )
+							/* translators: %s: user display name. */
+							: __( 'הגישה ניתנה למשתמש הקיים %s, אך שליחת המייל נכשלה — יש למסור לו את הקישור ידנית.', 'kivun' ),
 						$existing->display_name
 					),
 				)
@@ -1503,18 +1605,101 @@ class Kivun_Content_Creator {
 			wp_send_json_error( array( 'message' => $user_id->get_error_message() ) );
 		}
 
-		// The password was generated here and never shown, so the invitation
-		// email is the only way in — it carries a set-your-password link.
-		wp_new_user_notification( (int) $user_id, null, 'user' );
+		// One letter, carrying both halves: where the leads are, and the link to
+		// set a password. WordPress's own notification is the fallback rather
+		// than the default — it points at wp-admin, which this role cannot
+		// open, and never names the screen the account was opened for.
+		$user = get_userdata( (int) $user_id );
+		$sent = $user instanceof \WP_User ? self::send_leads_invite( $user, true ) : false;
+
+		if ( ! $sent ) {
+			wp_new_user_notification( (int) $user_id, null, 'user' );
+		}
 
 		wp_send_json_success(
 			array(
 				'message' => sprintf(
 					/* translators: %s: email address. */
-					__( 'נוצר משתמש חדש ונשלחה אליו הזמנה ל-%s.', 'kivun' ),
+					__( 'נוצר משתמש חדש ונשלחה אליו הזמנה ל-%s, עם קישור ישיר לרשימת הלידים.', 'kivun' ),
 					$email
 				),
 			)
+		);
+	}
+
+	/**
+	 * Tell somebody they now have the leads table, and where it is.
+	 *
+	 * WordPress's own invitation says only that an account exists and offers a
+	 * password link into wp-admin — which this role cannot open. It never names
+	 * the one screen the account was made for, so somebody handed it had no way
+	 * of knowing where to go.
+	 *
+	 * @param \WP_User $user   Who is being invited.
+	 * @param bool     $is_new Whether the account was just created, and so still
+	 *                         needs a password set.
+	 * @return bool Whether the letter was accepted for delivery.
+	 */
+	private static function send_leads_invite( \WP_User $user, bool $is_new ): bool {
+		$site    = get_bloginfo( 'name' );
+		$console = self::console_url( 'leads' );
+
+		$name = trim( (string) $user->first_name );
+		if ( '' === $name ) {
+			$name = (string) $user->display_name;
+		}
+
+		$body = sprintf(
+			'<p dir="rtl" style="margin:0 0 14px;text-align:right;font-weight:600;color:#222222">%s</p>',
+			/* translators: %s: the invited person's name. */
+			esc_html( sprintf( __( 'שלום %s,', 'kivun' ), $name ) )
+		);
+
+		$body .= sprintf(
+			'<p dir="rtl" style="margin:0 0 14px;text-align:right">%s</p>',
+			esc_html(
+				sprintf(
+					/* translators: %s: site name. */
+					__( 'ניתנה לך גישה לרשימת הפניות והלידים של %s. בעמוד תוכל/י לראות את כל הפניות שמתקבלות באתר, לסנן אותן ולעדכן את הסטטוס של כל פנייה.', 'kivun' ),
+					$site
+				)
+			)
+		);
+
+		$body .= Kivun_Mailer::button( $console, __( 'מעבר לרשימת הלידים', 'kivun' ) );
+
+		if ( $is_new ) {
+			// The password was generated and never shown, so this link is the
+			// only way in. It goes to the address the account was opened with
+			// and nowhere else.
+			$key = get_password_reset_key( $user );
+			if ( ! is_wp_error( $key ) ) {
+				$reset = network_site_url(
+					'wp-login.php?action=rp&key=' . rawurlencode( (string) $key ) . '&login=' . rawurlencode( $user->user_login ),
+					'login'
+				);
+
+				$body .= sprintf(
+					'<p dir="rtl" style="margin:22px 0 10px;text-align:right">%s</p>%s<p dir="rtl" style="margin:10px 0 0;text-align:right;font-size:14px;color:#8a8a8a">%s</p>',
+					esc_html__( 'נפתח עבורך חשבון באתר. כדי להיכנס בפעם הראשונה יש לבחור סיסמה:', 'kivun' ),
+					Kivun_Mailer::button( $reset, __( 'בחירת סיסמה', 'kivun' ) ),
+					esc_html(
+						sprintf(
+							/* translators: %s: the account's username. */
+							__( 'שם המשתמש שלך: %s', 'kivun' ),
+							$user->user_login
+						)
+					)
+				);
+			}
+		}
+
+		return Kivun_Mailer::send(
+			$user->user_email,
+			/* translators: %s: site name. */
+			sprintf( __( 'גישה לרשימת הלידים — %s', 'kivun' ), $site ),
+			$body,
+			__( 'גישה לרשימת הלידים', 'kivun' )
 		);
 	}
 
@@ -1672,8 +1857,10 @@ class Kivun_Content_Creator {
 			$tab = 'form';
 		}
 
-		$page_url   = (string) get_permalink();
-		$page_url   = $page_url ? $page_url : home_url();
+		$page_url = (string) get_permalink();
+		$page_url = $page_url ? $page_url : home_url();
+		self::remember_console_url( $page_url );
+
 		$can_delete = current_user_can( 'delete_posts' );
 		$stats      = self::console_stats( $show_leads, $show_jobs, ! $leads_only );
 		$user       = wp_get_current_user();
@@ -4045,7 +4232,7 @@ class Kivun_Content_Creator {
 						</div>
 
 						<p class="kivun-field-hint">
-							<?php esc_html_e( 'נוצר משתמש חדש ונשלחת אליו הזמנה במייל לבחירת סיסמה. הוא יראה את טבלת הלידים בלבד ויוכל לעדכן סטטוס — בלי גישה לתוכן, לקמפיינים או לשאר האתר. אם כבר יש לו חשבון, תתווסף לו ההרשאה.', 'kivun' ); ?>
+							<?php esc_html_e( 'נוצר משתמש חדש ונשלח אליו מייל עם קישור ישיר לרשימת הלידים, ולצידו קישור לבחירת סיסמה. הוא יראה את טבלת הלידים בלבד ויוכל לעדכן סטטוס — בלי גישה לתוכן, לקמפיינים או לשאר האתר. אם כבר יש לו חשבון, תתווסף לו ההרשאה והוא יקבל מייל עם הקישור.', 'kivun' ); ?>
 						</p>
 
 						<p class="kivun-error kivun-viewer-error" style="display:none;color:var(--kivun-error)"></p>
@@ -4190,8 +4377,17 @@ class Kivun_Content_Creator {
 							<td><strong><?php echo esc_html( $r->name ); ?></strong></td>
 							<td>
 								<?php
-								$row_title = $r->course_title ? $r->course_title : __( '(נמחק)', 'kivun' );
-								$row_link  = $r->course_id ? (string) get_permalink( (int) $r->course_id ) : '';
+								// A lead with no post was never filed against one — the jobs
+								// board is an archive, so it is named instead. Only a lead
+								// that had a post and lost it is deleted.
+								if ( $r->course_title ) {
+									$row_title = (string) $r->course_title;
+								} elseif ( $r->course_id ) {
+									$row_title = __( '(נמחק)', 'kivun' );
+								} else {
+									$row_title = $type_labels[ $r->type ?? '' ] ?? __( 'לוח משרות', 'kivun' );
+								}
+								$row_link = $r->course_id ? (string) get_permalink( (int) $r->course_id ) : '';
 								if ( $row_link ) :
 									?>
 									<a href="<?php echo esc_url( $row_link ); ?>" target="_blank" rel="noopener"><?php echo esc_html( $row_title ); ?></a>

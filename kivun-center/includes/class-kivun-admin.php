@@ -617,6 +617,7 @@ class Kivun_Admin {
 			'session'      => __( 'סדנה', 'kivun' ),
 			'event'        => __( 'אירוע', 'kivun' ),
 			'form'         => __( 'טופס באתר', 'kivun' ),
+			'jobs_board'   => __( 'לוח משרות', 'kivun' ),
 		);
 	}
 
@@ -1521,8 +1522,11 @@ class Kivun_Admin {
 							<td>
 								<?php if ( $r->course_id && get_post( $r->course_id ) ) : ?>
 									<a href="<?php echo esc_url( (string) get_edit_post_link( $r->course_id ) ); ?>"><?php echo esc_html( $r->course_title ); ?></a>
+								<?php elseif ( $r->course_title ) : ?>
+									<?php echo esc_html( $r->course_title ); ?>
 								<?php else : ?>
-									<?php echo esc_html( $r->course_title ? $r->course_title : __( '(נמחק)', 'kivun' ) ); ?>
+									<?php // A lead with no post was never filed against one — the jobs board is an archive. Only a lead that had one and lost it was deleted. ?>
+									<?php echo esc_html( $r->course_id ? __( '(נמחק)', 'kivun' ) : $type_label ); ?>
 								<?php endif; ?>
 							</td>
 							<td><?php echo esc_html( (string) ( $r->source ?? '' ) ); ?></td>

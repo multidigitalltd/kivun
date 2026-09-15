@@ -71,11 +71,14 @@ class Kivun_Workshops {
 	 * Shared by the built-in AJAX form and the Elementor Forms lead action so
 	 * both paths run the exact same pipeline.
 	 *
-	 * @param int   $post_id The course or landing-page (kivun_workshop) ID.
-	 * @param array $data    Associative data: name, email, phone, message.
+	 * @param int    $post_id The course or landing-page (kivun_workshop) ID.
+	 * @param array  $data    Associative data: name, email, phone, message.
+	 * @param string $context Where the lead came from. 'board' is the jobs
+	 *                        board, which is an archive and not a post, so it
+	 *                        is named rather than pointed at.
 	 * @return true|\WP_Error True on success, WP_Error with a user message on failure.
 	 */
-	public static function save_lead( int $post_id, array $data ) {
+	public static function save_lead( int $post_id, array $data, string $context = '' ) {
 		$name    = sanitize_text_field( $data['name'] ?? '' );
 		$email   = sanitize_email( $data['email'] ?? '' );
 		$phone   = sanitize_text_field( $data['phone'] ?? '' );
@@ -88,8 +91,16 @@ class Kivun_Workshops {
 			return new \WP_Error( 'kivun_invalid', __( 'נא למלא שם וטלפון.', 'kivun' ) );
 		}
 
-		$post_type = get_post_type( $post_id );
-		if ( ! $post_id || ! in_array( $post_type, array( 'kivun_course', 'kivun_workshop', 'kivun_session', 'kivun_event' ), true ) ) {
+		// The jobs board collects general enquiries from people looking for
+		// work. It is the post type's archive, so there is no post to hang the
+		// lead on — and inventing a hidden page to stand in for one would be a
+		// prop, not a source. The lead is filed against the board itself.
+		$is_board = ( 'board' === $context );
+
+		$post_type = $is_board ? '' : get_post_type( $post_id );
+		if ( $is_board ) {
+			$post_id = 0;
+		} elseif ( ! $post_id || ! in_array( $post_type, array( 'kivun_course', 'kivun_workshop', 'kivun_session', 'kivun_event' ), true ) ) {
 			return new \WP_Error( 'kivun_no_post', __( 'לא נמצא הדף לשיוך הפנייה. בדקו את הגדרת "מקור הדף" או את השדה הנסתר.', 'kivun' ) );
 		}
 
@@ -110,13 +121,19 @@ class Kivun_Workshops {
 		}
 
 		$type = 'lead';
-		if ( 'kivun_workshop' === $post_type ) {
+		if ( $is_board ) {
+			$type = 'jobs_board';
+		} elseif ( 'kivun_workshop' === $post_type ) {
 			$type = 'workshop';
 		} elseif ( 'kivun_session' === $post_type ) {
 			$type = 'session';
 		} elseif ( 'kivun_event' === $post_type ) {
 			$type = 'event';
 		}
+
+		// What the lead is filed against, in words, for the source column and
+		// the subject line of the notification.
+		$title = $is_board ? __( 'לוח משרות', 'kivun' ) : (string) get_the_title( $post_id );
 
 		// Mark next-cycle sign-ups so staff can tell them apart in the CRM.
 		$status = $is_next_cycle ? 'next_cycle' : 'new_lead';
@@ -145,7 +162,7 @@ class Kivun_Workshops {
 			'gender'            => $gender,
 			'marketing_consent' => $consent,
 			'message'           => $message,
-			'source'            => Kivun_Utm::append_source( (string) get_the_title( $post_id ) ),
+			'source'            => Kivun_Utm::append_source( $title ),
 			'status'            => $status,
 			'type'              => $type,
 			'created_at'        => current_time( 'mysql' ),
@@ -164,7 +181,7 @@ class Kivun_Workshops {
 
 		$notify               = compact( 'name', 'email', 'phone', 'city', 'gender', 'message' );
 		$notify['next_cycle'] = $is_next_cycle;
-		Kivun_Mailer::send_lead_notification( $post_id, $notify, $type );
+		Kivun_Mailer::send_lead_notification( $post_id, $notify, $type, $title );
 		do_action( 'kivun_after_lead', $post_id, compact( 'name', 'email', 'phone', 'city', 'gender', 'message' ) );
 
 		return true;

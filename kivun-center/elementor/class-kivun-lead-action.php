@@ -56,14 +56,16 @@ class Kivun_Lead_Action extends Action_Base {
 		$widget->add_control(
 			'kivun_lead_source',
 			array(
-				'label'   => __( 'מקור הדף', 'kivun' ),
-				'type'    => Controls_Manager::SELECT,
-				'default' => 'current',
-				'options' => array(
+				'label'       => __( 'מקור הדף', 'kivun' ),
+				'type'        => Controls_Manager::SELECT,
+				'default'     => 'current',
+				'options'     => array(
 					'current' => __( 'הדף הנוכחי (לפי כתובת העמוד)', 'kivun' ),
+					'board'   => __( 'לוח המשרות — לידים כלליים', 'kivun' ),
 					'field'   => __( 'משדה נסתר בטופס (מומלץ לטמפלט יחיד)', 'kivun' ),
 					'manual'  => __( 'מזהה דף ידני', 'kivun' ),
 				),
+				'description' => __( 'בחרו "לוח המשרות" לטופס איסוף לידים שיושב בארכיון המשרות. לוח המשרות הוא ארכיון ולא עמוד, ולכן אין לו מזהה — הפניות יישמרו תחת המקור "לוח משרות".', 'kivun' ),
 			)
 		);
 
@@ -188,6 +190,15 @@ class Kivun_Lead_Action extends Action_Base {
 		// Resolve the target landing page / course.
 		$source  = $settings['kivun_lead_source'] ?? 'current';
 		$post_id = 0;
+
+		// The jobs board is the post type's archive, so there is no post to
+		// resolve and nothing to look for — the lead is filed against the
+		// board itself.
+		if ( 'board' === $source ) {
+			$this->finish( Kivun_Workshops::save_lead( 0, $data, 'board' ), $fields, $ajax_handler );
+			return;
+		}
+
 		if ( 'manual' === $source ) {
 			$post_id = absint( $settings['kivun_lead_post_id'] ?? 0 );
 		} elseif ( 'field' === $source ) {
@@ -205,8 +216,18 @@ class Kivun_Lead_Action extends Action_Base {
 			}
 		}
 
-		$result = Kivun_Workshops::save_lead( $post_id, $data );
+		$this->finish( Kivun_Workshops::save_lead( $post_id, $data ), $fields, $ajax_handler );
+	}
 
+	/**
+	 * Report what the pipeline made of the lead.
+	 *
+	 * @param true|\WP_Error                                   $result       What save_lead returned.
+	 * @param mixed                                            $fields       The submitted fields, for diagnostics.
+	 * @param \ElementorPro\Modules\Forms\Classes\Ajax_Handler $ajax_handler The AJAX response handler.
+	 * @return void
+	 */
+	private function finish( $result, $fields, $ajax_handler ): void {
 		// A duplicate is not a real error — the visitor already registered, so
 		// let the form show its normal success message instead of an error.
 		if ( ! is_wp_error( $result ) || 'kivun_duplicate' === $result->get_error_code() ) {

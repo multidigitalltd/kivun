@@ -48,10 +48,13 @@ class Kivun_Mailer {
 	 * @param int    $post_id Course or workshop ID.
 	 * @param array  $data    Name, email, phone, message.
 	 * @param string $type    Either 'lead' or 'workshop'.
+	 * @param string $label   What the lead is filed against, when that is not a
+	 *                        post — the jobs board has no post to take a title
+	 *                        from, and an untitled notification says nothing.
 	 * @return void
 	 */
-	public static function send_lead_notification( int $post_id, array $data, string $type ): void {
-		$title         = get_the_title( $post_id );
+	public static function send_lead_notification( int $post_id, array $data, string $type, string $label = '' ): void {
+		$title         = '' !== trim( $label ) ? $label : get_the_title( $post_id );
 		$contact_meta  = get_post_meta( $post_id, '_kivun_contact_email', true );
 		$settings_mail = get_option( 'kivun_settings', array() )['admin_email'] ?? '';
 		if ( $contact_meta ) {
@@ -368,6 +371,33 @@ class Kivun_Mailer {
 				esc_url( home_url( '/' ) ),
 				esc_html( wp_parse_url( home_url(), PHP_URL_HOST ) )
 			)
+		);
+	}
+
+	/**
+	 * A call-to-action button, as a table.
+	 *
+	 * A styled <a> is the obvious way and the wrong one: Outlook draws no
+	 * padding or background on a link, so the button arrives as bare blue
+	 * text. A single-cell table with the colour on the cell survives
+	 * everywhere, and the link inside it fills the cell.
+	 *
+	 * @param string $url   Where it goes.
+	 * @param string $label What it says.
+	 * @return string
+	 */
+	public static function button( string $url, string $label ): string {
+		$accent = (string) apply_filters( 'kivun_email_accent', '#ef315d' );
+
+		return sprintf(
+			'<table role="presentation" dir="rtl" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;margin:24px 0 8px">
+				<tr><td align="center" style="background:%1$s;border-radius:10px">
+					<a href="%2$s" style="display:inline-block;padding:13px 30px;color:#ffffff;font-size:16px;font-weight:700;text-decoration:none;border-radius:10px">%3$s</a>
+				</td></tr>
+			</table>',
+			esc_attr( $accent ),
+			esc_url( $url ),
+			esc_html( $label )
 		);
 	}
 
