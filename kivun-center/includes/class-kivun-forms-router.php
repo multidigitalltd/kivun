@@ -109,10 +109,14 @@ class Kivun_Forms_Router {
 	/**
 	 * Fallback: route a lead/registration captured by the plugin's own pipeline.
 	 *
-	 * Never shared between the jobs coordinators. These are the course, workshop
-	 * and landing-page forms, and they carry a gender field of their own — which
-	 * is the only reason they ever reached the rota. Where such a page should
-	 * reach a particular person, it has its own "אימייל לקבלת הלידים".
+	 * Whether the coordinators share this one is asked the same way as for a
+	 * plain Elementor submission, and of the same thing: the page the visitor
+	 * was on. A course or landing page is not the board, so those never reach
+	 * the rota — each has its own "אימייל לקבלת הלידים" for that. But a form on
+	 * the jobs board that files its lead through this pipeline is still the
+	 * board's, and answering otherwise here would quietly switch the split off:
+	 * this path and the Elementor one both claim a submission, and whichever
+	 * gets there first decides.
 	 *
 	 * @param int   $post_id The course/session/landing post ID.
 	 * @param array $data    Lead data (name, phone, email, city, gender, message).
@@ -122,9 +126,25 @@ class Kivun_Forms_Router {
 		if ( self::$routed ) {
 			return;
 		}
+
 		$data   = is_array( $data ) ? $data : array();
 		$fields = self::fields_from_data( $data );
-		self::route( self::email_for_post( (int) $post_id ), 'Kivun', $fields, (string) get_permalink( (int) $post_id ), false );
+
+		// Where the visitor actually was, which is what decides the rota — the
+		// post the lead is filed against may be a landing page that only serves
+		// to collect it.
+		$page_url = (string) wp_get_referer();
+		if ( '' === trim( $page_url ) ) {
+			$page_url = (string) get_permalink( (int) $post_id );
+		}
+
+		self::route(
+			self::email_for_post( (int) $post_id ),
+			'Kivun',
+			$fields,
+			$page_url,
+			self::rota_applies( $page_url, 'Kivun', '', (int) $post_id )
+		);
 	}
 
 	/**
