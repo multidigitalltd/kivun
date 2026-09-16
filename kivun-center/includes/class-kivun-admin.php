@@ -1405,7 +1405,11 @@ class Kivun_Admin {
 
 		$conds = array();
 		if ( $course_filter ) {
-			$conds[] = $wpdb->prepare( 'r.course_id = %d', $course_filter );
+			// A course and the landing page built for it are one piece of
+			// content; the enquiries belong to it, not to whichever of the two
+			// the visitor happened to land on.
+			$group_ids = Kivun_Content_Creator::group_post_ids( $course_filter );
+			$conds[]   = 'r.course_id IN ( ' . implode( ', ', array_map( 'absint', $group_ids ) ) . ' )';
 		}
 		if ( '' !== $type_filter && isset( $type_labels[ $type_filter ] ) ) {
 			$conds[] = $wpdb->prepare( 'r.type = %s', $type_filter );
@@ -1450,10 +1454,15 @@ class Kivun_Admin {
 				'orderby'                => 'title',
 				'order'                  => 'ASC',
 				'no_found_rows'          => true,
-				'update_post_meta_cache' => false,
 				'update_post_term_cache' => false,
 			)
 		);
+
+		// One entry per piece of content: a course listed again for its own
+		// landing page is the same thing twice under the same name, and picking
+		// either showed only part of its enquiries.
+		$course_list     = Kivun_Content_Creator::content_filter_options( $courses );
+		$selected_course = $course_list['rep'][ $course_filter ] ?? $course_filter;
 		?>
 		<div class="wrap">
 			<h1><?php esc_html_e( 'הרשמות, לידים וסדנאות', 'kivun' ); ?></h1>
@@ -1470,8 +1479,8 @@ class Kivun_Admin {
 				<input type="hidden" name="page" value="kivun-registrations">
 				<select name="kivun_course_id">
 					<option value="0"><?php esc_html_e( 'כל הקורסים והסדנאות', 'kivun' ); ?></option>
-					<?php foreach ( $courses as $course ) : ?>
-						<option value="<?php echo esc_attr( $course->ID ); ?>" <?php selected( $course_filter, $course->ID ); ?>><?php echo esc_html( $course->post_title ); ?></option>
+					<?php foreach ( $course_list['options'] as $course_id => $course_title ) : ?>
+						<option value="<?php echo esc_attr( $course_id ); ?>" <?php selected( $selected_course, $course_id ); ?>><?php echo esc_html( $course_title ); ?></option>
 					<?php endforeach; ?>
 				</select>
 				<select name="kivun_type">

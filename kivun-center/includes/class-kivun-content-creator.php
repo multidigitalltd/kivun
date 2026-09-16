@@ -1403,6 +1403,94 @@ class Kivun_Content_Creator {
 	}
 
 	/**
+	 * Every post that belongs to the same piece of content as this one.
+	 *
+	 * A course and the landing page built for it are one thing to whoever made
+	 * them, and one thing to whoever left their details — the visitor saw a
+	 * page, not a post type. They are linked by a shared group meta, which is
+	 * what makes them one thing here too.
+	 *
+	 * @param int $post_id Any post in the group.
+	 * @return array<int,int> The group's post IDs, or just this one when it
+	 *                        belongs to no group.
+	 */
+	public static function group_post_ids( int $post_id ): array {
+		if ( $post_id <= 0 ) {
+			return array();
+		}
+
+		$group = (string) get_post_meta( $post_id, self::GROUP_META, true );
+		if ( '' === $group ) {
+			return array( $post_id );
+		}
+
+		$ids = get_posts(
+			array(
+				'post_type'              => array_values( self::type_map() ),
+				'post_status'            => array( 'publish', 'draft', 'pending', 'private', 'future', 'trash' ),
+				'posts_per_page'         => -1,
+				'fields'                 => 'ids',
+				'no_found_rows'          => true,
+				'update_post_term_cache' => false,
+				'meta_key'               => self::GROUP_META, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+				'meta_value'             => $group, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+			)
+		);
+
+		$ids = array_map( 'absint', (array) $ids );
+
+		// The post asked about is in the list even if it has since been removed
+		// from the query's reach, so a filter never comes back empty-handed.
+		if ( ! in_array( $post_id, $ids, true ) ) {
+			$ids[] = $post_id;
+		}
+
+		return $ids;
+	}
+
+	/**
+	 * The content list for a leads filter: one entry per piece of content, not
+	 * one per post.
+	 *
+	 * A course with a landing page used to appear twice under the same title,
+	 * and picking either showed only half the enquiries — the visitor's half
+	 * depended on which of the two they happened to land on.
+	 *
+	 * @param array<int,\WP_Post> $posts The candidate posts, in display order.
+	 * @return array{options:array<int,string>,rep:array<int,int>} The options as
+	 *         id => title, and a map from any post id to the id that represents
+	 *         its group in that list.
+	 */
+	public static function content_filter_options( array $posts ): array {
+		$options = array();
+		$rep     = array();
+		$first   = array();
+
+		foreach ( $posts as $post ) {
+			$id    = (int) $post->ID;
+			$group = (string) get_post_meta( $id, self::GROUP_META, true );
+
+			if ( '' === $group ) {
+				$options[ $id ] = (string) $post->post_title;
+				$rep[ $id ]     = $id;
+				continue;
+			}
+
+			if ( ! isset( $first[ $group ] ) ) {
+				$first[ $group ] = $id;
+				$options[ $id ]  = (string) $post->post_title;
+			}
+
+			$rep[ $id ] = $first[ $group ];
+		}
+
+		return array(
+			'options' => $options,
+			'rep'     => $rep,
+		);
+	}
+
+	/**
 	 * Where the console lives, so a letter can send somebody to it.
 	 *
 	 * The page is found rather than configured, three ways over: the address it
@@ -4114,7 +4202,11 @@ class Kivun_Content_Creator {
 
 		$conds = array();
 		if ( $content_filter ) {
-			$conds[] = $wpdb->prepare( 'r.course_id = %d', $content_filter );
+			// Everything the visitor could have arrived through: a course and
+			// its landing page are one piece of content, so filtering to one of
+			// them and hiding the rest would answer a question nobody asked.
+			$group_ids = self::group_post_ids( $content_filter );
+			$conds[]   = 'r.course_id IN ( ' . implode( ', ', array_map( 'absint', $group_ids ) ) . ' )';
 		}
 		if ( '' !== $type_filter && isset( $type_labels[ $type_filter ] ) ) {
 			$conds[] = $wpdb->prepare( 'r.type = %s', $type_filter );
@@ -4162,10 +4254,14 @@ class Kivun_Content_Creator {
 				'orderby'                => 'title',
 				'order'                  => 'ASC',
 				'no_found_rows'          => true,
-				'update_post_meta_cache' => false,
 				'update_post_term_cache' => false,
 			)
 		);
+
+		// One entry per piece of content. The group meta is read for each, so
+		// the meta cache is left primed above rather than switched off.
+		$content_list     = self::content_filter_options( $contents );
+		$selected_content = $content_list['rep'][ $content_filter ] ?? $content_filter;
 
 		$can_delete_rows = current_user_can( 'manage_options' );
 		// Notes are internal CRM commentary, so they stay with the editors; the
@@ -4300,8 +4396,8 @@ class Kivun_Content_Creator {
 				<label class="kivun-sr-only" for="kivun-lf-content"><?php esc_html_e( 'סינון לפי תוכן', 'kivun' ); ?></label>
 				<select id="kivun-lf-content" name="kivun_content">
 					<option value="0"><?php esc_html_e( 'כל התכנים', 'kivun' ); ?></option>
-					<?php foreach ( $contents as $c ) : ?>
-						<option value="<?php echo esc_attr( $c->ID ); ?>" <?php selected( $content_filter, $c->ID ); ?>><?php echo esc_html( $c->post_title ); ?></option>
+					<?php foreach ( $content_list['options'] as $c_id => $c_title ) : ?>
+						<option value="<?php echo esc_attr( $c_id ); ?>" <?php selected( $selected_content, $c_id ); ?>><?php echo esc_html( $c_title ); ?></option>
 					<?php endforeach; ?>
 				</select>
 
