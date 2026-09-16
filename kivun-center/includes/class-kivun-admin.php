@@ -646,15 +646,22 @@ class Kivun_Admin {
 	 */
 	public static function ajax_save_note(): void {
 		check_ajax_referer( 'kivun_admin_nonce', 'nonce' );
-		if ( ! current_user_can( 'edit_posts' ) ) {
-			wp_send_json_error();
-		}
 
 		$table = sanitize_key( wp_unslash( $_POST['table'] ?? '' ) );
 		$id    = absint( wp_unslash( $_POST['id'] ?? 0 ) );
 		$note  = sanitize_textarea_field( wp_unslash( $_POST['note'] ?? '' ) );
 
 		if ( ! in_array( $table, array( 'registrations', 'applications' ), true ) || ! $id ) {
+			wp_send_json_error();
+		}
+
+		// Working a lead means writing down what came of it, the same way
+		// marking its status does — so the leads reader keeps a note. That is
+		// as far as it goes: CV applications belong to the jobs board and stay
+		// behind edit_posts.
+		$may_edit = current_user_can( 'edit_posts' )
+			|| ( 'registrations' === $table && Kivun_Content_Creator::can_manage_leads() );
+		if ( ! $may_edit ) {
 			wp_send_json_error();
 		}
 
