@@ -163,9 +163,61 @@
 		});
 	}
 
+	// What the reader asked for, if anything. Kept per browser: it is a
+	// preference about this screen, not data about the leads.
+	// The narrowest a column can be and still be worth reading. It is what
+	// makes putting a column away do something: eleven columns need about
+	// 880px between them, eight need 640, and a table that cannot give its
+	// columns this much is shown as cards instead.
+	var MIN_COLUMN_WIDTH = 80;
+
+	var VIEW_KEY = 'kivun-leads-view';
+	var COLS_KEY = 'kivun-leads-cols';
+
+	function remembered(key) {
+		try {
+			return window.localStorage.getItem(key);
+		} catch (e) {
+			// Private windows and blocked site data throw rather than return
+			// null. A preference that cannot be read is simply not set.
+			return null;
+		}
+	}
+
+	function remember(key, value) {
+		try {
+			window.localStorage.setItem(key, value);
+		} catch (e) {
+			// Nothing to do: the screen still works, it just will not
+			// remember next time.
+		}
+	}
+
+	// Columns the reader has put away, as a list of names.
+	function hiddenColumns() {
+		var stored = remembered(COLS_KEY);
+		if (!stored) { return []; }
+		return stored.split(',').filter(function (name) { return name !== ''; });
+	}
+
+	function applyColumns(table) {
+		var hidden = hiddenColumns();
+
+		Array.prototype.forEach.call(table.querySelectorAll('[data-col]'), function (cell) {
+			cell.classList.toggle('kivun-col-off', hidden.indexOf(cell.dataset.col) !== -1);
+		});
+
+		// Keep the checkboxes saying what is actually on screen.
+		Array.prototype.forEach.call(document.querySelectorAll('[data-col-toggle]'), function (box) {
+			box.checked = hidden.indexOf(box.dataset.colToggle) === -1;
+		});
+	}
+
 	function fitTables() {
 		var tables = document.querySelectorAll('.kivun-cc-tablewrap > .kivun-cc-table');
 		if (!tables.length) { return; }
+
+		var choice = remembered(VIEW_KEY);
 
 		// Measured unstacked, so the reading is of the table's real width and
 		// not of the cards it was turned into last time. Cleared for all of
@@ -173,19 +225,81 @@
 		// per table.
 		Array.prototype.forEach.call(tables, function (table) {
 			labelCells(table);
+			applyColumns(table);
 			table.classList.remove('is-stacked');
 		});
 
 		var verdicts = Array.prototype.map.call(tables, function (table) {
 			var wrap = table.parentNode;
-			// A pixel of slack: sub-pixel widths should not stack a table that fits.
-			return table.scrollWidth > wrap.clientWidth + 1;
+
+			// Two ways a table can fail to fit, and both have to be asked.
+			//
+			// It can overflow — a cell holding a control that will not narrow.
+			// Or it can squeeze: cells wrap, so a table will compress to any
+			// width at all and report that it fits while showing one letter
+			// per line. So a column is also given a floor to stand on, and a
+			// table with less than that each is a stack of cards instead.
+			if (table.scrollWidth > wrap.clientWidth + 1) { return true; }
+
+			var showing = table.querySelectorAll('thead th:not(.kivun-col-off)').length;
+			if (!showing) { return false; }
+
+			return (wrap.clientWidth / showing) < MIN_COLUMN_WIDTH;
 		});
 
 		Array.prototype.forEach.call(tables, function (table, i) {
-			table.classList.toggle('is-stacked', verdicts[i]);
+			var stacked = verdicts[i];
+
+			// A choice made on this screen wins over the measurement. Asking
+			// for the table and being given cards anyway is the complaint
+			// this setting exists to answer.
+			if (table.classList.contains('kivun-cc-leadtable') && choice) {
+				stacked = (choice === 'cards');
+			}
+
+			table.classList.toggle('is-stacked', stacked);
+		});
+
+		// Say which button is the live one — including when nothing was
+		// chosen and the measurement decided.
+		var leads = document.querySelector('.kivun-cc-leadtable');
+		Array.prototype.forEach.call(document.querySelectorAll('.kivun-cc-viewbtn'), function (btn) {
+			var live = leads
+				? (btn.dataset.view === 'cards') === leads.classList.contains('is-stacked')
+				: false;
+			btn.setAttribute('aria-pressed', live ? 'true' : 'false');
+			btn.classList.toggle('is-active', live);
 		});
 	}
+
+	// Choosing a view.
+	document.addEventListener('click', function (e) {
+		var btn = e.target.closest('.kivun-cc-viewbtn');
+		if (!btn) { return; }
+
+		remember(VIEW_KEY, btn.dataset.view);
+		fitTables();
+	});
+
+	// Putting a column away, or bringing it back.
+	document.addEventListener('change', function (e) {
+		var box = e.target.closest('[data-col-toggle]');
+		if (!box) { return; }
+
+		var hidden = hiddenColumns().filter(function (name) { return name !== box.dataset.colToggle; });
+		if (!box.checked) { hidden.push(box.dataset.colToggle); }
+
+		remember(COLS_KEY, hidden.join(','));
+		fitTables();
+	});
+
+	// Back to every column.
+	document.addEventListener('click', function (e) {
+		if (!e.target.closest('.kivun-cc-colpicker__reset')) { return; }
+
+		remember(COLS_KEY, '');
+		fitTables();
+	});
 
 	var fitTimer = null;
 	function fitTablesSoon() {

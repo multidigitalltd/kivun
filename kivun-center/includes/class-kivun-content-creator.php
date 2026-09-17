@@ -3024,9 +3024,9 @@ class Kivun_Content_Creator {
 						<tr>
 							<th scope="col"><?php esc_html_e( 'כותרת', 'kivun' ); ?></th>
 							<th scope="col"><?php esc_html_e( 'סוגים', 'kivun' ); ?></th>
-							<th scope="col"><?php esc_html_e( 'סטטוס', 'kivun' ); ?></th>
+							<th scope="col" data-col="status"><?php esc_html_e( 'סטטוס', 'kivun' ); ?></th>
 							<th scope="col"><?php esc_html_e( 'פניות', 'kivun' ); ?></th>
-							<th scope="col"><?php esc_html_e( 'תאריך', 'kivun' ); ?></th>
+							<th scope="col" data-col="date"><?php esc_html_e( 'תאריך', 'kivun' ); ?></th>
 							<?php if ( Kivun_Mercaz::configured() ) : ?>
 								<th scope="col"><?php esc_html_e( 'מרכז כיוון', 'kivun' ); ?></th>
 							<?php endif; ?>
@@ -4684,30 +4684,77 @@ class Kivun_Content_Creator {
 			<?php if ( ! $rows ) : ?>
 				<div class="kivun-cc-note"><?php esc_html_e( 'לא נמצאו רשומות תואמות.', 'kivun' ); ?></div>
 			<?php else : ?>
+				<?php
+				// How the table is shown is the reader's choice, not the screen's.
+				// Cards are easier on a phone and heavy going at a desk, so neither
+				// can be the answer for everybody. Left alone it picks whichever
+				// fits; once somebody chooses, that choice is remembered.
+				//
+				// And the columns can be put away. Eleven of them is what stopped
+				// the table fitting in the first place, and most of the time three
+				// or four of them are not being read.
+				?>
+				<div class="kivun-cc-viewbar" data-for="leads">
+					<div class="kivun-cc-viewtoggle" role="group" aria-label="<?php esc_attr_e( 'צורת התצוגה', 'kivun' ); ?>">
+						<button type="button" class="kivun-cc-viewbtn" data-view="table" aria-pressed="false">
+							<?php esc_html_e( 'טבלה', 'kivun' ); ?>
+						</button>
+						<button type="button" class="kivun-cc-viewbtn" data-view="cards" aria-pressed="false">
+							<?php esc_html_e( 'כרטיסים', 'kivun' ); ?>
+						</button>
+					</div>
+
+					<details class="kivun-cc-colpicker">
+						<summary class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost"><?php esc_html_e( 'עמודות', 'kivun' ); ?></summary>
+						<div class="kivun-cc-colpicker__menu">
+							<?php
+							foreach ( array(
+								'name'    => __( 'שם', 'kivun' ),
+								'content' => __( 'תוכן', 'kivun' ),
+								'utm'     => __( 'מקור (UTM)', 'kivun' ),
+								'type'    => __( 'סוג', 'kivun' ),
+								'contact' => __( 'יצירת קשר', 'kivun' ),
+								'city'    => __( 'עיר', 'kivun' ),
+								'consent' => __( 'דיוור', 'kivun' ),
+								'notes'   => __( 'הערות', 'kivun' ),
+								'date'    => __( 'תאריך', 'kivun' ),
+								'status'  => __( 'סטטוס', 'kivun' ),
+							) as $kivun_col => $kivun_col_label ) :
+								?>
+								<label class="kivun-cc-colpicker__row">
+									<input type="checkbox" data-col-toggle="<?php echo esc_attr( $kivun_col ); ?>" checked>
+									<?php echo esc_html( $kivun_col_label ); ?>
+								</label>
+							<?php endforeach; ?>
+							<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-colpicker__reset"><?php esc_html_e( 'איפוס', 'kivun' ); ?></button>
+						</div>
+					</details>
+				</div>
+
 				<div class="kivun-cc-tablewrap kivun-cc-tablewrap--stacks">
 				<table class="kivun-cc-table kivun-cc-leadtable">
 					<thead>
 						<tr>
-							<th scope="col"><?php esc_html_e( 'שם', 'kivun' ); ?></th>
-							<th scope="col"><?php esc_html_e( 'תוכן', 'kivun' ); ?></th>
-							<th scope="col"><?php esc_html_e( 'מקור (UTM)', 'kivun' ); ?></th>
-							<th scope="col"><?php esc_html_e( 'סוג', 'kivun' ); ?></th>
-							<th scope="col"><?php esc_html_e( 'יצירת קשר', 'kivun' ); ?></th>
-							<th scope="col"><?php esc_html_e( 'עיר', 'kivun' ); ?></th>
-							<th scope="col"><?php esc_html_e( 'דיוור', 'kivun' ); ?></th>
-							<th scope="col"><?php esc_html_e( 'הערות', 'kivun' ); ?></th>
+							<th scope="col" data-col="name"><?php esc_html_e( 'שם', 'kivun' ); ?></th>
+							<th scope="col" data-col="content"><?php esc_html_e( 'תוכן', 'kivun' ); ?></th>
+							<th scope="col" data-col="utm"><?php esc_html_e( 'מקור (UTM)', 'kivun' ); ?></th>
+							<th scope="col" data-col="type"><?php esc_html_e( 'סוג', 'kivun' ); ?></th>
+							<th scope="col" data-col="contact"><?php esc_html_e( 'יצירת קשר', 'kivun' ); ?></th>
+							<th scope="col" data-col="city"><?php esc_html_e( 'עיר', 'kivun' ); ?></th>
+							<th scope="col" data-col="consent"><?php esc_html_e( 'דיוור', 'kivun' ); ?></th>
+							<th scope="col" data-col="notes"><?php esc_html_e( 'הערות', 'kivun' ); ?></th>
 							<th scope="col"><?php esc_html_e( 'תאריך', 'kivun' ); ?></th>
 							<th scope="col"><?php esc_html_e( 'סטטוס', 'kivun' ); ?></th>
 							<?php if ( $can_delete_rows ) : ?>
-								<th scope="col"><?php esc_html_e( 'מחיקה', 'kivun' ); ?></th>
+								<th scope="col" data-col="delete"><?php esc_html_e( 'מחיקה', 'kivun' ); ?></th>
 							<?php endif; ?>
 						</tr>
 					</thead>
 					<tbody>
 					<?php foreach ( $rows as $r ) : ?>
 						<tr>
-							<td data-label="<?php esc_attr_e( 'שם', 'kivun' ); ?>"><strong><?php echo esc_html( $r->name ); ?></strong></td>
-							<td data-label="<?php esc_attr_e( 'תוכן', 'kivun' ); ?>">
+							<td data-label="<?php esc_attr_e( 'שם', 'kivun' ); ?>" data-col="name"><strong><?php echo esc_html( $r->name ); ?></strong></td>
+							<td data-label="<?php esc_attr_e( 'תוכן', 'kivun' ); ?>" data-col="content">
 								<?php
 								// A lead with no post was never filed against one — the jobs
 								// board is an archive, so it is named instead. Only a lead
@@ -4733,7 +4780,7 @@ class Kivun_Content_Creator {
 									<span class="kivun-cc-source"><?php echo esc_html( $src['origin'] ); ?></span>
 								<?php endif; ?>
 							</td>
-							<td class="kivun-cc-utm" data-label="<?php esc_attr_e( 'מקור (UTM)', 'kivun' ); ?>">
+							<td class="kivun-cc-utm" data-label="<?php esc_attr_e( 'מקור (UTM)', 'kivun' ); ?>" data-col="utm">
 								<?php if ( '' !== $src['source'] ) : ?>
 									<span class="kivun-cc-badge"><?php echo esc_html( $src['source'] ); ?></span>
 									<?php if ( '' !== $src['medium'] ) : ?>
@@ -4749,16 +4796,16 @@ class Kivun_Content_Creator {
 									<span class="kivun-muted" aria-hidden="true">—</span>
 								<?php endif; ?>
 							</td>
-							<td data-label="<?php esc_attr_e( 'סוג', 'kivun' ); ?>"><span class="kivun-cc-badge"><?php echo esc_html( $type_labels[ $r->type ?? 'registration' ] ?? (string) $r->type ); ?></span></td>
-							<td class="kivun-app-contact" data-label="<?php esc_attr_e( 'יצירת קשר', 'kivun' ); ?>">
+							<td data-label="<?php esc_attr_e( 'סוג', 'kivun' ); ?>" data-col="type"><span class="kivun-cc-badge"><?php echo esc_html( $type_labels[ $r->type ?? 'registration' ] ?? (string) $r->type ); ?></span></td>
+							<td class="kivun-app-contact" data-label="<?php esc_attr_e( 'יצירת קשר', 'kivun' ); ?>" data-col="contact">
 								<a href="mailto:<?php echo esc_attr( $r->email ); ?>"><?php echo esc_html( $r->email ); ?></a>
 								<?php if ( $r->phone ) : ?>
 									<a href="tel:<?php echo esc_attr( $r->phone ); ?>"><?php echo esc_html( $r->phone ); ?></a>
 								<?php endif; ?>
 							</td>
-							<td data-label="<?php esc_attr_e( 'עיר', 'kivun' ); ?>"><?php echo esc_html( (string) ( $r->city ?? '' ) ); ?></td>
-							<td data-label="<?php esc_attr_e( 'דיוור', 'kivun' ); ?>"><?php echo esc_html( empty( $r->marketing_consent ) ? '—' : '✓' ); ?></td>
-							<td data-label="<?php esc_attr_e( 'הערות', 'kivun' ); ?>">
+							<td data-label="<?php esc_attr_e( 'עיר', 'kivun' ); ?>" data-col="city"><?php echo esc_html( (string) ( $r->city ?? '' ) ); ?></td>
+							<td data-label="<?php esc_attr_e( 'דיוור', 'kivun' ); ?>" data-col="consent"><?php echo esc_html( empty( $r->marketing_consent ) ? '—' : '✓' ); ?></td>
+							<td data-label="<?php esc_attr_e( 'הערות', 'kivun' ); ?>" data-col="notes">
 								<?php
 								// Working a lead is writing down what came of it,
 								// so everyone who can see the table can keep a
@@ -4768,8 +4815,8 @@ class Kivun_Content_Creator {
 								?>
 								<span class="kivun-saved-indicator" role="status" aria-live="polite" style="display:none"></span>
 							</td>
-							<td class="kivun-cc-date" data-label="<?php esc_attr_e( 'תאריך', 'kivun' ); ?>"><?php echo esc_html( wp_date( 'd/m/Y H:i', strtotime( $r->created_at ) ) ); ?></td>
-							<td data-label="<?php esc_attr_e( 'סטטוס', 'kivun' ); ?>">
+							<td class="kivun-cc-date" data-label="<?php esc_attr_e( 'תאריך', 'kivun' ); ?>" data-col="date"><?php echo esc_html( wp_date( 'd/m/Y H:i', strtotime( $r->created_at ) ) ); ?></td>
+							<td data-label="<?php esc_attr_e( 'סטטוס', 'kivun' ); ?>" data-col="status">
 								<?php
 								// Everyone who can see the leads can move one along;
 								// tracking progress is the point of the table.
@@ -4779,7 +4826,7 @@ class Kivun_Content_Creator {
 								<span class="kivun-saved-indicator" role="status" aria-live="polite" style="display:none"></span>
 							</td>
 							<?php if ( $can_delete_rows ) : ?>
-								<td data-label="<?php esc_attr_e( 'מחיקה', 'kivun' ); ?>">
+								<td data-label="<?php esc_attr_e( 'מחיקה', 'kivun' ); ?>" data-col="delete">
 									<button
 										type="button"
 										class="kivun-cc-iconbtn kivun-cc-iconbtn--danger kivun-delete-row"

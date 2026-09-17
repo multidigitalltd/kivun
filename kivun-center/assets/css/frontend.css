@@ -850,6 +850,12 @@
 .kivun-apps-table thead th { background: #f7f8fa; font-weight: 700; white-space: nowrap; color: var(--kivun-dark); font-size: .8rem; }
 .kivun-apps-table tbody tr:hover { background: #f7f8fa; }
 .kivun-app-contact { display: flex; flex-direction: column; gap: .15rem; font-size: .82rem; }
+/* Both places this is used put it on a <td>, and display:flex takes a cell out
+   of the table's own layout — the browser wraps it in an anonymous cell, the
+   column stops lining up with its heading and the table grows wider than it
+   needs. Kept a cell; the two links stack by being blocks instead. */
+td.kivun-app-contact { display: table-cell; }
+td.kivun-app-contact a { display: block; }
 .kivun-app-contact a { color: var(--kivun-dark); text-decoration: none; }
 .kivun-app-contact a:hover { color: var(--kivun-accent); text-decoration: underline; }
 .kivun-app-message { max-width: 200px; color: var(--kivun-muted); }
@@ -1166,8 +1172,12 @@
 .kivun-cc-leadfilters input[type="search"] { min-width: 210px; flex: 1 1 210px; }
 
 .kivun-cc-leadtable .kivun-notes-input {
+	box-sizing: border-box;
 	width: 100%;
-	min-width: 150px;
+	/* The floor the whole table rests on: every column can be narrowed except
+	   the one holding a control that refuses to. Low enough that the table
+	   fits a laptop, still wide enough to read a line of a note in. */
+	min-width: 90px;
 	padding: .4rem .5rem;
 	border: 1px solid var(--kivun-border);
 	border-radius: 8px;
@@ -1176,7 +1186,9 @@
 	resize: vertical;
 }
 .kivun-cc-leadtable .kivun-status-select {
-	padding: .4rem .5rem;
+	box-sizing: border-box;
+	min-width: 0;
+	padding: .4rem .35rem;
 	border: 1px solid var(--kivun-border);
 	border-radius: 8px;
 	background: #fff;
@@ -2036,6 +2048,79 @@ body.kivun-ty-open { overflow: hidden; }
 	.kivun-cc-leadfilters { flex-direction: column; align-items: stretch; }
 	.kivun-cc-leadfilters input[type="search"] { min-width: 0; }
 }
+
+/* As a table, the cells wrap rather than hold a column open. An address or a
+   campaign name with no spaces in it would otherwise set the width of the
+   whole column, and through it the table. break-word, not anywhere: it breaks
+   a word only when there is no other way, so ordinary text still wraps at its
+   spaces instead of mid-syllable. The date is left alone — a date broken
+   across two lines reads as two numbers. */
+.kivun-cc-leadtable:not(.is-stacked) td { overflow-wrap: break-word; }
+.kivun-cc-leadtable:not(.is-stacked) .kivun-cc-utm,
+.kivun-cc-leadtable:not(.is-stacked) .kivun-app-contact { overflow-wrap: anywhere; }
+
+/* Choosing how the leads are shown, and which columns are worth the width. */
+.kivun-cc-viewbar {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: .5rem;
+	margin: 0 0 .7rem;
+}
+
+.kivun-cc-viewtoggle {
+	display: inline-flex;
+	padding: 3px;
+	background: #f1f5f9;
+	border: 1px solid var(--kivun-border);
+	border-radius: 999px;
+}
+.kivun-cc-viewbtn {
+	padding: .34rem .95rem;
+	border: 0;
+	border-radius: 999px;
+	background: transparent;
+	color: var(--kivun-muted);
+	font: inherit;
+	font-size: .84rem;
+	font-weight: 700;
+	cursor: pointer;
+}
+.kivun-cc-viewbtn.is-active {
+	background: #fff;
+	color: var(--kivun-accent);
+	box-shadow: 0 1px 3px rgba(0, 0, 0, .12);
+}
+.kivun-cc-viewbtn:focus-visible { outline: 2px solid var(--kivun-accent); outline-offset: 2px; }
+
+.kivun-cc-colpicker { position: relative; }
+.kivun-cc-colpicker > summary { list-style: none; cursor: pointer; }
+.kivun-cc-colpicker > summary::-webkit-details-marker { display: none; }
+.kivun-cc-colpicker__menu {
+	position: absolute;
+	z-index: 20;
+	inset-inline-start: 0;
+	margin-top: .35rem;
+	min-width: 12rem;
+	padding: .6rem;
+	background: #fff;
+	border: 1px solid var(--kivun-border);
+	border-radius: 10px;
+	box-shadow: 0 8px 24px rgba(0, 0, 0, .12);
+}
+.kivun-cc-colpicker__row {
+	display: flex;
+	align-items: center;
+	gap: .45rem;
+	padding: .2rem .1rem;
+	font-size: .86rem;
+	cursor: pointer;
+}
+.kivun-cc-colpicker__reset { margin-top: .5rem; width: 100%; }
+
+/* A column the reader has put away. Said with !important because the stacked
+   rules below set display on every cell. */
+.kivun-col-off { display: none !important; }
 
 /* Any console table that does not fit its container becomes a stack of cards,
    one per row, each cell naming its own column. Which tables those are is not
