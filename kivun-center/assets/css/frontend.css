@@ -1126,6 +1126,10 @@
 	.kivun-cc-badge { background: color-mix(in srgb, var(--cc-brand, var(--kivun-accent)) 12%, #fff); }
 	.kivun-cc-console .kivun-cc-table tbody tr:hover { background: color-mix(in srgb, var(--cc-brand) 6%, #fff); }
 }
+/* A call nobody picked up. Stated in its own colour rather than the brand's,
+   because it is the one row state on the calls screen worth chasing. */
+.kivun-cc-badge--warn { color: #b45309; background: #fef3c7; }
+
 .kivun-cc-rowactions { display: flex; flex-wrap: wrap; gap: .3rem; align-items: center; }
 .kivun-cc-rowactions form { display: inline; margin: 0; }
 .kivun-cc-leadlink { font-weight: 700; }

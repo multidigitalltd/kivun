@@ -60,7 +60,74 @@ class Kivun_Export {
 			return;
 		}
 
+		if ( 'calls' === $type ) {
+			// The call screen's own rule: whoever runs the tracking numbers.
+			if ( ! Kivun_Phones::can_manage() ) {
+				wp_die( 'Unauthorized' );
+			}
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Nonce verified via check_admin_referer above.
+			self::export_calls( Kivun_Phones::filters( wp_unslash( $_GET ) ) );
+			return;
+		}
+
 		wp_die( 'Invalid type' );
+	}
+
+	// ── Calls CSV ─────────────────────────────────────────────────────────────.
+
+	/**
+	 * Stream the tracked calls as a CSV download.
+	 *
+	 * Takes the same filters the screen was showing, so what downloads is what
+	 * was on screen — a report of one campaign's calls, not the whole log with
+	 * the filtering left to whoever opens the file.
+	 *
+	 * @param array<string,mixed> $filters From Kivun_Phones::filters().
+	 * @return void
+	 */
+	private static function export_calls( array $filters ): void {
+		// Everything matching, not one page of it — an export that stopped at
+		// the page boundary would quietly under-report.
+		$log = Kivun_Phones::calls( $filters, 200, 1 );
+
+		self::send_headers( 'calls-' . gmdate( 'Ymd' ) . '.csv' );
+
+		$out = fopen( 'php://output', 'w' );
+		// UTF-8 BOM for Excel.
+		fputs( $out, "\xEF\xBB\xBF" ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fputs
+
+		fputcsv( $out, array( 'מועד', 'מתקשר', 'שם המתקשר', 'חייג אל', 'שם המספר', 'קמפיין', 'מדיה', 'נענתה', 'משך שיחה (שניות)', 'זמן דיבור (שניות)' ) );
+
+		$page  = 1;
+		$found = (int) $log['found'];
+		do {
+			foreach ( $log['rows'] as $call ) {
+				fputcsv(
+					$out,
+					array_map(
+						array( __CLASS__, 'csv_safe' ),
+						array(
+							$call->started_at,
+							$call->caller,
+							$call->caller_name,
+							$call->number ? $call->number : $call->dialled,
+							$call->number_label,
+							$call->campaign_label,
+							$call->media ? Kivun_Phones::media_label( (string) $call->media ) : '',
+							empty( $call->answered ) ? 'לא' : 'כן',
+							$call->total_time,
+							$call->talk_time,
+						)
+					)
+				);
+			}
+
+			++$page;
+			$log = ( $page - 1 ) * 200 < $found ? Kivun_Phones::calls( $filters, 200, $page ) : array( 'rows' => array() );
+		} while ( $log['rows'] );
+
+		fclose( $out ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose
+		exit;
 	}
 
 	// ── Registrations CSV ─────────────────────────────────────────────────────.

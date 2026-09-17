@@ -3212,8 +3212,48 @@ class Kivun_Content_Creator {
 		$counts      = Kivun_Phones::call_counts();
 		$media       = Kivun_Phones::media();
 		$campaigns   = Kivun_Campaigns::all();
-		$report      = Kivun_Phones::report();
 		$today       = wp_date( 'Y-m-d' );
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only listing filters.
+		$call_filters = Kivun_Phones::filters( wp_unslash( $_GET ) );
+		$report       = Kivun_Phones::report( 30, $call_filters );
+		$filtering    = (bool) $call_filters;
+
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Read-only listing filters.
+		$call_paged = isset( $_GET['kivun_call_paged'] ) ? max( 1, absint( wp_unslash( $_GET['kivun_call_paged'] ) ) ) : 1;
+		$call_pp    = isset( $_GET['kivun_call_pp'] ) ? absint( wp_unslash( $_GET['kivun_call_pp'] ) ) : 25;
+		// phpcs:enable WordPress.Security.NonceVerification.Recommended
+		if ( ! in_array( $call_pp, array( 25, 50, 100, 200 ), true ) ) {
+			$call_pp = 25;
+		}
+
+		$call_log    = Kivun_Phones::calls( $call_filters, $call_pp, $call_paged );
+		$call_pages  = max( 1, (int) ceil( $call_log['found'] / $call_pp ) );
+		$call_paged  = min( $call_paged, $call_pages );
+		$console_url = self::console_url( 'calls' );
+
+		// Preserved across paging, so a page two of a filtered view stays filtered.
+		$call_args = array( 'kivun_tab' => 'calls' );
+		foreach ( array(
+			'campaign_id' => 'kivun_call_campaign',
+			'number_id'   => 'kivun_call_number',
+			'media'       => 'kivun_call_media',
+			'from'        => 'kivun_call_from',
+			'to'          => 'kivun_call_to',
+			'search'      => 'kivun_call_s',
+		) as $key => $arg ) {
+			if ( ! empty( $call_filters[ $key ] ) ) {
+				$call_args[ $arg ] = $call_filters[ $key ];
+			}
+		}
+		if ( isset( $call_filters['answered'] ) ) {
+			$call_args['kivun_call_answered'] = (string) $call_filters['answered'];
+		}
+		$call_args['kivun_call_pp'] = $call_pp;
+
+		$call_page_link = static function ( int $p ) use ( $call_args, $console_url ): string {
+			return add_query_arg( array_merge( $call_args, array( 'kivun_call_paged' => $p ) ), $console_url );
+		};
 
 		// Offered as destinations when a campaign is created from this screen.
 		$contents = get_posts(
@@ -3253,14 +3293,113 @@ class Kivun_Content_Creator {
 			</div>
 
 			<?php
-			// Four figures rather than a chart: each is a single current value,
+			// The filters drive everything below them — the figures, the two
+			// rankings and the log — so "how many came from this campaign in
+			// March" is one question asked once rather than three read off
+			// separate screens.
+			?>
+			<form class="kivun-cc-leadfilters" method="get" action="<?php echo esc_url( $console_url ); ?>">
+				<input type="hidden" name="kivun_tab" value="calls">
+
+				<label class="kivun-sr-only" for="kivun-cf-campaign"><?php esc_html_e( 'סינון לפי קמפיין', 'kivun' ); ?></label>
+				<select id="kivun-cf-campaign" name="kivun_call_campaign">
+					<option value="0"><?php esc_html_e( 'כל הקמפיינים', 'kivun' ); ?></option>
+					<?php foreach ( $campaigns as $camp ) : ?>
+						<option value="<?php echo esc_attr( $camp->id ); ?>" <?php selected( $call_filters['campaign_id'] ?? 0, (int) $camp->id ); ?>><?php echo esc_html( $camp->label ); ?></option>
+					<?php endforeach; ?>
+				</select>
+
+				<label class="kivun-sr-only" for="kivun-cf-media"><?php esc_html_e( 'סינון לפי מדיה', 'kivun' ); ?></label>
+				<select id="kivun-cf-media" name="kivun_call_media">
+					<option value=""><?php esc_html_e( 'כל המדיות', 'kivun' ); ?></option>
+					<?php foreach ( $media as $mv => $ml ) : ?>
+						<option value="<?php echo esc_attr( $mv ); ?>" <?php selected( $call_filters['media'] ?? '', $mv ); ?>><?php echo esc_html( $ml ); ?></option>
+					<?php endforeach; ?>
+				</select>
+
+				<label class="kivun-sr-only" for="kivun-cf-number"><?php esc_html_e( 'סינון לפי מספר', 'kivun' ); ?></label>
+				<select id="kivun-cf-number" name="kivun_call_number">
+					<option value="0"><?php esc_html_e( 'כל המספרים', 'kivun' ); ?></option>
+					<?php foreach ( $numbers as $opt ) : ?>
+						<option value="<?php echo esc_attr( $opt->id ); ?>" <?php selected( $call_filters['number_id'] ?? 0, (int) $opt->id ); ?>>
+							<?php echo esc_html( $opt->label ? $opt->number . ' — ' . $opt->label : $opt->number ); ?>
+						</option>
+					<?php endforeach; ?>
+				</select>
+
+				<label class="kivun-sr-only" for="kivun-cf-answered"><?php esc_html_e( 'סינון לפי מענה', 'kivun' ); ?></label>
+				<select id="kivun-cf-answered" name="kivun_call_answered">
+					<option value=""><?php esc_html_e( 'נענו ולא נענו', 'kivun' ); ?></option>
+					<option value="1" <?php selected( (string) ( $call_filters['answered'] ?? '' ), '1' ); ?>><?php esc_html_e( 'נענו בלבד', 'kivun' ); ?></option>
+					<option value="0" <?php selected( isset( $call_filters['answered'] ) ? (string) $call_filters['answered'] : '', '0' ); ?>><?php esc_html_e( 'לא נענו בלבד', 'kivun' ); ?></option>
+				</select>
+
+				<span class="kivun-cc-daterange">
+					<label for="kivun-cf-from"><?php esc_html_e( 'מתאריך', 'kivun' ); ?></label>
+					<input type="date" id="kivun-cf-from" name="kivun_call_from" dir="ltr" value="<?php echo esc_attr( $call_filters['from'] ?? '' ); ?>">
+					<label for="kivun-cf-to"><?php esc_html_e( 'עד', 'kivun' ); ?></label>
+					<input type="date" id="kivun-cf-to" name="kivun_call_to" dir="ltr" value="<?php echo esc_attr( $call_filters['to'] ?? '' ); ?>">
+				</span>
+
+				<label class="kivun-sr-only" for="kivun-cf-search"><?php esc_html_e( 'חיפוש', 'kivun' ); ?></label>
+				<input type="search" id="kivun-cf-search" name="kivun_call_s" value="<?php echo esc_attr( $call_filters['search'] ?? '' ); ?>" placeholder="<?php esc_attr_e( 'מספר מתקשר או שם…', 'kivun' ); ?>">
+
+				<select name="kivun_call_pp" aria-label="<?php esc_attr_e( 'שורות בעמוד', 'kivun' ); ?>">
+					<?php foreach ( array( 25, 50, 100, 200 ) as $pp_opt ) : ?>
+						<option value="<?php echo esc_attr( $pp_opt ); ?>" <?php selected( $call_pp, $pp_opt ); ?>><?php echo esc_html( sprintf( /* translators: %s: rows per page. */ __( '%s בעמוד', 'kivun' ), number_format_i18n( $pp_opt ) ) ); ?></option>
+					<?php endforeach; ?>
+				</select>
+
+				<button type="submit" class="kivun-cc-btn kivun-cc-btn--sm"><?php esc_html_e( 'סינון', 'kivun' ); ?></button>
+				<?php if ( $filtering ) : ?>
+					<a class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost" href="<?php echo esc_url( $console_url ); ?>"><?php esc_html_e( 'ניקוי', 'kivun' ); ?></a>
+				<?php endif; ?>
+				<?php
+				// The export carries the filters, so what downloads is what is
+				// on screen rather than the whole log to be sorted out later.
+				$export_url = add_query_arg(
+					array_diff_key( $call_args, array_flip( array( 'kivun_tab', 'kivun_call_pp' ) ) ),
+					Kivun_Export::url( 'calls' )
+				);
+				?>
+				<a class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost" href="<?php echo esc_url( $export_url ); ?>">
+					<?php echo kivun_icon( 'download' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?><?php esc_html_e( 'ייצוא CSV', 'kivun' ); ?>
+				</a>
+			</form>
+
+			<?php
+			// Figures rather than a chart: each is a single current value,
 			// which a tile says plainly and a one-bar chart only decorates.
 			?>
 			<div class="kivun-kpi">
 				<div class="kivun-kpi__tile">
 					<span class="kivun-kpi__label"><?php esc_html_e( 'סך השיחות', 'kivun' ); ?></span>
 					<strong class="kivun-kpi__value"><?php echo esc_html( number_format_i18n( $report['total'] ) ); ?></strong>
-					<span class="kivun-kpi__note"><?php esc_html_e( 'מאז תחילת המעקב', 'kivun' ); ?></span>
+					<span class="kivun-kpi__note">
+						<?php echo esc_html( $filtering ? __( 'בסינון הנוכחי', 'kivun' ) : __( 'מאז תחילת המעקב', 'kivun' ) ); ?>
+					</span>
+				</div>
+
+				<?php
+				// A missed call is a lead that rang and got nobody, which is the
+				// one figure on this screen worth acting on the same day.
+				?>
+				<div class="kivun-kpi__tile">
+					<span class="kivun-kpi__label"><?php esc_html_e( 'שיחות שלא נענו', 'kivun' ); ?></span>
+					<strong class="kivun-kpi__value"><?php echo esc_html( number_format_i18n( $report['missed'] ) ); ?></strong>
+					<span class="kivun-kpi__note">
+						<?php
+						echo $report['total']
+							? esc_html(
+								sprintf(
+									/* translators: %s: percentage of calls answered. */
+									__( '%s%% מהשיחות נענו', 'kivun' ),
+									number_format_i18n( round( $report['answered'] / $report['total'] * 100 ) )
+								)
+							)
+							: esc_html__( 'אין שיחות בסינון הזה', 'kivun' );
+						?>
+					</span>
 				</div>
 
 				<div class="kivun-kpi__tile">
@@ -3347,6 +3486,106 @@ class Kivun_Content_Creator {
 					?>
 				</div>
 			<?php endif; ?>
+
+			<?php
+			// The calls themselves. The figures above say how many; somebody
+			// chasing a particular one needs to see it, and somebody checking
+			// a campaign's numbers needs to be able to look at what they are
+			// counting rather than take the tile's word for it.
+			?>
+			<details class="kivun-cc-card kivun-camp-block" <?php echo $filtering ? 'open' : ''; ?>>
+				<summary class="kivun-camp-head">
+					<div class="kivun-camp-heading">
+						<span class="kivun-camp-caret" aria-hidden="true"></span>
+						<h3 class="kivun-camp-title"><?php esc_html_e( 'יומן שיחות', 'kivun' ); ?></h3>
+					</div>
+					<div class="kivun-camp-metrics">
+						<span class="kivun-cc-badge kivun-camp-total">
+							<?php
+							echo esc_html(
+								sprintf(
+									/* translators: %s: number of calls. */
+									_n( '%s שיחה', '%s שיחות', $call_log['found'], 'kivun' ),
+									number_format_i18n( $call_log['found'] )
+								)
+							);
+							?>
+						</span>
+					</div>
+				</summary>
+
+				<?php if ( ! $call_log['rows'] ) : ?>
+					<div class="kivun-cc-note">
+						<?php echo esc_html( $filtering ? __( 'אין שיחות שעונות על הסינון הזה.', 'kivun' ) : __( 'עדיין לא נרשמו שיחות.', 'kivun' ) ); ?>
+					</div>
+				<?php else : ?>
+					<div class="kivun-cc-tablewrap">
+						<table class="kivun-cc-table">
+							<thead>
+								<tr>
+									<th scope="col"><?php esc_html_e( 'מועד', 'kivun' ); ?></th>
+									<th scope="col"><?php esc_html_e( 'מתקשר', 'kivun' ); ?></th>
+									<th scope="col"><?php esc_html_e( 'חייג אל', 'kivun' ); ?></th>
+									<th scope="col"><?php esc_html_e( 'קמפיין', 'kivun' ); ?></th>
+									<th scope="col"><?php esc_html_e( 'מדיה', 'kivun' ); ?></th>
+									<th scope="col"><?php esc_html_e( 'מענה', 'kivun' ); ?></th>
+								</tr>
+							</thead>
+							<tbody>
+							<?php foreach ( $call_log['rows'] as $call ) : ?>
+								<tr>
+									<td class="kivun-cc-date"><?php echo esc_html( wp_date( 'd/m/Y H:i', strtotime( (string) $call->started_at ) ) ); ?></td>
+									<td dir="ltr">
+										<a href="tel:<?php echo esc_attr( $call->caller ); ?>"><?php echo esc_html( $call->caller ); ?></a>
+										<?php if ( ! empty( $call->caller_name ) ) : ?>
+											<span class="kivun-cc-source"><?php echo esc_html( $call->caller_name ); ?></span>
+										<?php endif; ?>
+									</td>
+									<td dir="ltr">
+										<?php echo esc_html( (string) ( $call->number ? $call->number : $call->dialled ) ); ?>
+										<?php if ( ! empty( $call->number_label ) ) : ?>
+											<span class="kivun-cc-source"><?php echo esc_html( $call->number_label ); ?></span>
+										<?php endif; ?>
+									</td>
+									<td><?php echo esc_html( (string) ( $call->campaign_label ? $call->campaign_label : '—' ) ); ?></td>
+									<td><?php echo esc_html( $call->media ? Kivun_Phones::media_label( (string) $call->media ) : '—' ); ?></td>
+									<td>
+										<?php if ( ! empty( $call->answered ) ) : ?>
+											<span class="kivun-cc-badge"><?php esc_html_e( 'נענתה', 'kivun' ); ?></span>
+										<?php else : ?>
+											<span class="kivun-cc-badge kivun-cc-badge--warn"><?php esc_html_e( 'לא נענתה', 'kivun' ); ?></span>
+										<?php endif; ?>
+									</td>
+								</tr>
+							<?php endforeach; ?>
+							</tbody>
+						</table>
+					</div>
+
+					<?php if ( $call_pages > 1 ) : ?>
+						<div class="kivun-cc-pager">
+							<?php if ( $call_paged > 1 ) : ?>
+								<a class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost" href="<?php echo esc_url( $call_page_link( $call_paged - 1 ) ); ?>"><?php esc_html_e( 'הקודם', 'kivun' ); ?></a>
+							<?php endif; ?>
+							<span class="kivun-cc-source">
+								<?php
+								echo esc_html(
+									sprintf(
+										/* translators: 1: current page, 2: total pages. */
+										__( 'עמוד %1$s מתוך %2$s', 'kivun' ),
+										number_format_i18n( $call_paged ),
+										number_format_i18n( $call_pages )
+									)
+								);
+								?>
+							</span>
+							<?php if ( $call_paged < $call_pages ) : ?>
+								<a class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost" href="<?php echo esc_url( $call_page_link( $call_paged + 1 ) ); ?>"><?php esc_html_e( 'הבא', 'kivun' ); ?></a>
+							<?php endif; ?>
+						</div>
+					<?php endif; ?>
+				<?php endif; ?>
+			</details>
 
 
 			<?php if ( ! $numbers ) : ?>

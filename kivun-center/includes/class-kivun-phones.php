@@ -244,46 +244,57 @@ class Kivun_Phones {
 	 * number advertised on a billboard in March and in a newspaper in April
 	 * gives March's calls to the billboard, whatever it carries today.
 	 *
-	 * @param int $days How many days the recent figure covers.
+	 * @param int                 $days    How many days the recent figure covers.
+	 * @param array<string,mixed> $filters From self::filters(); narrows every
+	 *                                     figure to the same slice the screen
+	 *                                     is showing.
 	 * @return array<string,mixed>
 	 */
-	public static function report( int $days = 30 ): array {
+	public static function report( int $days = 30, array $filters = array() ): array {
 		global $wpdb;
 
 		$since = wp_date( 'Y-m-d H:i:s', time() - ( $days * DAY_IN_SECONDS ) );
+		$where = self::where( $filters );
+		$join  = self::join();
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		$totals = $wpdb->get_row(
 			$wpdb->prepare(
 				"SELECT COUNT(*) AS total,
-				        SUM( CASE WHEN started_at >= %s THEN 1 ELSE 0 END ) AS recent,
-				        SUM( CASE WHEN number_id = 0 THEN 1 ELSE 0 END ) AS unmatched
-				 FROM {$wpdb->prefix}kivun_calls",
+				        SUM( CASE WHEN k.started_at >= %s THEN 1 ELSE 0 END ) AS recent,
+				        SUM( CASE WHEN k.number_id = 0 THEN 1 ELSE 0 END ) AS unmatched,
+				        SUM( CASE WHEN k.answered = 1 THEN 1 ELSE 0 END ) AS answered,
+				        SUM( k.talk_time ) AS talk_time
+				 FROM {$wpdb->prefix}kivun_calls k
+				 $join
+				 $where",
 				$since
 			)
 		);
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$media_where    = self::where( $filters, array( "a.media <> ''" ) );
+		$campaign_where = self::where( $filters, array( 'c.id IS NOT NULL' ) );
+
 		$media = $wpdb->get_results(
 			"SELECT a.media AS name, COUNT(*) AS total
 			 FROM {$wpdb->prefix}kivun_calls k
-			 INNER JOIN {$wpdb->prefix}kivun_phone_assignments a ON a.id = k.assignment_id
-			 WHERE a.media <> ''
+			 $join
+			 $media_where
 			 GROUP BY a.media
 			 ORDER BY total DESC, name ASC
 			 LIMIT 6"
 		);
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$campaigns = $wpdb->get_results(
 			"SELECT c.label AS name, COUNT(*) AS total
 			 FROM {$wpdb->prefix}kivun_calls k
-			 INNER JOIN {$wpdb->prefix}kivun_phone_assignments a ON a.id = k.assignment_id
-			 INNER JOIN {$wpdb->prefix}kivun_campaigns c ON c.id = a.campaign_id
+			 $join
+			 $campaign_where
 			 GROUP BY c.id
 			 ORDER BY total DESC, name ASC
 			 LIMIT 6"
 		);
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
 		$shape = static function ( $rows, bool $translate ): array {
 			$out = array();
@@ -296,13 +307,189 @@ class Kivun_Phones {
 			return $out;
 		};
 
+		$total    = (int) ( $totals->total ?? 0 );
+		$answered = (int) ( $totals->answered ?? 0 );
+
 		return array(
-			'total'     => (int) ( $totals->total ?? 0 ),
+			'total'     => $total,
 			'recent'    => (int) ( $totals->recent ?? 0 ),
 			'unmatched' => (int) ( $totals->unmatched ?? 0 ),
+			'answered'  => $answered,
+			'missed'    => max( 0, $total - $answered ),
+			'talk_time' => (int) ( $totals->talk_time ?? 0 ),
 			'days'      => $days,
 			'media'     => $shape( $media, true ),
 			'campaigns' => $shape( $campaigns, false ),
+		);
+	}
+
+	/**
+	 * The filters the call screen understands, read from a request.
+	 *
+	 * @param array<string,mixed> $raw Usually $_GET.
+	 * @return array<string,mixed> Only the filters actually asked for.
+	 */
+	public static function filters( array $raw ): array {
+		$out = array();
+
+		foreach ( array(
+			'campaign' => 'campaign_id',
+			'number'   => 'number_id',
+		) as $key => $field ) {
+			$value = absint( $raw[ 'kivun_call_' . $key ] ?? 0 );
+			if ( $value ) {
+				$out[ $field ] = $value;
+			}
+		}
+
+		$media = sanitize_text_field( (string) ( $raw['kivun_call_media'] ?? '' ) );
+		if ( '' !== $media && isset( self::media()[ $media ] ) ) {
+			$out['media'] = $media;
+		}
+
+		// Answered is a three-way choice, so '0' has to survive being falsy.
+		$answered = (string) ( $raw['kivun_call_answered'] ?? '' );
+		if ( '1' === $answered || '0' === $answered ) {
+			$out['answered'] = (int) $answered;
+		}
+
+		foreach ( array( 'from', 'to' ) as $key ) {
+			$date = self::valid_date( (string) ( $raw[ 'kivun_call_' . $key ] ?? '' ) );
+			if ( '' !== $date ) {
+				$out[ $key ] = $date;
+			}
+		}
+
+		// A backwards range returns nothing at all, which reads as a bug.
+		if ( isset( $out['from'], $out['to'] ) && $out['from'] > $out['to'] ) {
+			list( $out['from'], $out['to'] ) = array( $out['to'], $out['from'] );
+		}
+
+		$search = sanitize_text_field( (string) ( $raw['kivun_call_s'] ?? '' ) );
+		if ( '' !== $search ) {
+			$out['search'] = $search;
+		}
+
+		return $out;
+	}
+
+	/**
+	 * A date as the filters store it, or '' when it is not one.
+	 *
+	 * @param string $value The submitted value.
+	 * @return string
+	 */
+	private static function valid_date( string $value ): string {
+		$value = trim( $value );
+		if ( '' === $value ) {
+			return '';
+		}
+
+		$date = \DateTimeImmutable::createFromFormat( 'Y-m-d', $value, wp_timezone() );
+
+		return ( $date && $date->format( 'Y-m-d' ) === $value ) ? $value : '';
+	}
+
+	/**
+	 * The joins every call query needs to reach its campaign and media.
+	 *
+	 * Left joins throughout: a call that reached a number with no assignment
+	 * yet is still a call, and dropping it would make the totals disagree with
+	 * the unmatched warning above them.
+	 *
+	 * @return string
+	 */
+	private static function join(): string {
+		global $wpdb;
+
+		return "LEFT JOIN {$wpdb->prefix}kivun_phone_assignments a ON a.id = k.assignment_id
+		        LEFT JOIN {$wpdb->prefix}kivun_campaigns c ON c.id = a.campaign_id
+		        LEFT JOIN {$wpdb->prefix}kivun_phone_numbers n ON n.id = k.number_id";
+	}
+
+	/**
+	 * The WHERE clause for a set of filters.
+	 *
+	 * @param array<string,mixed> $filters From self::filters().
+	 * @param array<int,string>   $extra   Conditions the caller needs as well.
+	 * @return string A complete WHERE clause, or '' when there is nothing to say.
+	 */
+	private static function where( array $filters, array $extra = array() ): string {
+		global $wpdb;
+
+		$conds = $extra;
+
+		if ( ! empty( $filters['campaign_id'] ) ) {
+			$conds[] = $wpdb->prepare( 'a.campaign_id = %d', $filters['campaign_id'] );
+		}
+		if ( ! empty( $filters['number_id'] ) ) {
+			$conds[] = $wpdb->prepare( 'k.number_id = %d', $filters['number_id'] );
+		}
+		if ( ! empty( $filters['media'] ) ) {
+			$conds[] = $wpdb->prepare( 'a.media = %s', $filters['media'] );
+		}
+		if ( isset( $filters['answered'] ) ) {
+			$conds[] = $wpdb->prepare( 'k.answered = %d', $filters['answered'] );
+		}
+		if ( ! empty( $filters['from'] ) ) {
+			$conds[] = $wpdb->prepare( 'k.started_at >= %s', $filters['from'] . ' 00:00:00' );
+		}
+		// Inclusive: "to" covers the whole of that day.
+		if ( ! empty( $filters['to'] ) ) {
+			$conds[] = $wpdb->prepare( 'k.started_at <= %s', $filters['to'] . ' 23:59:59' );
+		}
+		if ( ! empty( $filters['search'] ) ) {
+			$like    = '%' . $wpdb->esc_like( (string) $filters['search'] ) . '%';
+			$conds[] = $wpdb->prepare(
+				'( k.caller LIKE %s OR k.dialled LIKE %s OR k.caller_name LIKE %s OR n.label LIKE %s )',
+				$like,
+				$like,
+				$like,
+				$like
+			);
+		}
+
+		return $conds ? 'WHERE ' . implode( ' AND ', $conds ) : '';
+	}
+
+	/**
+	 * The calls themselves, filtered and paged.
+	 *
+	 * @param array<string,mixed> $filters  From self::filters().
+	 * @param int                 $per_page How many to a page.
+	 * @param int                 $paged    Which page, from 1.
+	 * @return array{rows:array<int,object>,found:int}
+	 */
+	public static function calls( array $filters, int $per_page = 25, int $paged = 1 ): array {
+		global $wpdb;
+
+		$per_page = max( 1, min( 200, $per_page ) );
+		$paged    = max( 1, $paged );
+		$where    = self::where( $filters );
+		$join     = self::join();
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$found = (int) $wpdb->get_var(
+			"SELECT COUNT(*) FROM {$wpdb->prefix}kivun_calls k $join $where"
+		);
+
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT k.*, a.media AS media, c.label AS campaign_label, n.number AS number, n.label AS number_label
+				 FROM {$wpdb->prefix}kivun_calls k
+				 $join
+				 $where
+				 ORDER BY k.started_at DESC, k.id DESC
+				 LIMIT %d OFFSET %d",
+				$per_page,
+				( $paged - 1 ) * $per_page
+			)
+		);
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+
+		return array(
+			'rows'  => (array) $rows,
+			'found' => $found,
 		);
 	}
 
