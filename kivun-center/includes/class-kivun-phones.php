@@ -316,11 +316,30 @@ class Kivun_Phones {
 			'unmatched' => (int) ( $totals->unmatched ?? 0 ),
 			'answered'  => $answered,
 			'missed'    => max( 0, $total - $answered ),
+			'knows'     => self::has_answer_data(),
 			'talk_time' => (int) ( $totals->talk_time ?? 0 ),
 			'days'      => $days,
 			'media'     => $shape( $media, true ),
 			'campaigns' => $shape( $campaigns, false ),
 		);
+	}
+
+	/**
+	 * Whether the switchboard tells us how long anyone actually talked.
+	 *
+	 * "Answered" is not reported; it is worked out from the talk time. A
+	 * switchboard set to post only at the start of a call sends no talk time,
+	 * so every call is stored as unanswered — and a screen that then says "0%
+	 * answered" is not reporting a problem, it is inventing one. Where no call
+	 * has ever carried a talk time, the answer is not known and is not shown.
+	 *
+	 * @return bool
+	 */
+	public static function has_answer_data(): bool {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		return (bool) $wpdb->get_var( "SELECT 1 FROM {$wpdb->prefix}kivun_calls WHERE talk_time > 0 LIMIT 1" );
 	}
 
 	/**
@@ -345,12 +364,6 @@ class Kivun_Phones {
 		$media = sanitize_text_field( (string) ( $raw['kivun_call_media'] ?? '' ) );
 		if ( '' !== $media && isset( self::media()[ $media ] ) ) {
 			$out['media'] = $media;
-		}
-
-		// Answered is a three-way choice, so '0' has to survive being falsy.
-		$answered = (string) ( $raw['kivun_call_answered'] ?? '' );
-		if ( '1' === $answered || '0' === $answered ) {
-			$out['answered'] = (int) $answered;
 		}
 
 		foreach ( array( 'from', 'to' ) as $key ) {
@@ -427,9 +440,6 @@ class Kivun_Phones {
 		}
 		if ( ! empty( $filters['media'] ) ) {
 			$conds[] = $wpdb->prepare( 'a.media = %s', $filters['media'] );
-		}
-		if ( isset( $filters['answered'] ) ) {
-			$conds[] = $wpdb->prepare( 'k.answered = %d', $filters['answered'] );
 		}
 		if ( ! empty( $filters['from'] ) ) {
 			$conds[] = $wpdb->prepare( 'k.started_at >= %s', $filters['from'] . ' 00:00:00' );

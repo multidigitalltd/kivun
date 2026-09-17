@@ -96,30 +96,41 @@ class Kivun_Export {
 		// UTF-8 BOM for Excel.
 		fputs( $out, "\xEF\xBB\xBF" ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fputs
 
-		fputcsv( $out, array( 'מועד', 'מתקשר', 'שם המתקשר', 'חייג אל', 'שם המספר', 'קמפיין', 'מדיה', 'נענתה', 'משך שיחה (שניות)', 'זמן דיבור (שניות)' ) );
+		// The answer columns only where the switchboard reports a talk time. It
+		// is worked out from that, so without it every row would read "לא" and
+		// the file would say something untrue about every call in it.
+		$knows = Kivun_Phones::has_answer_data();
+
+		$headings = array( 'מועד', 'מתקשר', 'שם המתקשר', 'חייג אל', 'שם המספר', 'קמפיין', 'מדיה' );
+		if ( $knows ) {
+			$headings[] = 'נענתה';
+			$headings[] = 'משך שיחה (שניות)';
+			$headings[] = 'זמן דיבור (שניות)';
+		}
+
+		fputcsv( $out, $headings );
 
 		$page  = 1;
 		$found = (int) $log['found'];
 		do {
 			foreach ( $log['rows'] as $call ) {
-				fputcsv(
-					$out,
-					array_map(
-						array( __CLASS__, 'csv_safe' ),
-						array(
-							$call->started_at,
-							$call->caller,
-							$call->caller_name,
-							$call->number ? $call->number : $call->dialled,
-							$call->number_label,
-							$call->campaign_label,
-							$call->media ? Kivun_Phones::media_label( (string) $call->media ) : '',
-							empty( $call->answered ) ? 'לא' : 'כן',
-							$call->total_time,
-							$call->talk_time,
-						)
-					)
+				$line = array(
+					$call->started_at,
+					$call->caller,
+					$call->caller_name,
+					$call->number ? $call->number : $call->dialled,
+					$call->number_label,
+					$call->campaign_label,
+					$call->media ? Kivun_Phones::media_label( (string) $call->media ) : '',
 				);
+
+				if ( $knows ) {
+					$line[] = empty( $call->answered ) ? 'לא' : 'כן';
+					$line[] = $call->total_time;
+					$line[] = $call->talk_time;
+				}
+
+				fputcsv( $out, array_map( array( __CLASS__, 'csv_safe' ), $line ) );
 			}
 
 			++$page;

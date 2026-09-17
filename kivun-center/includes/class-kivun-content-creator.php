@@ -3246,9 +3246,6 @@ class Kivun_Content_Creator {
 				$call_args[ $arg ] = $call_filters[ $key ];
 			}
 		}
-		if ( isset( $call_filters['answered'] ) ) {
-			$call_args['kivun_call_answered'] = (string) $call_filters['answered'];
-		}
 		$call_args['kivun_call_pp'] = $call_pp;
 
 		$call_page_link = static function ( int $p ) use ( $call_args, $console_url ): string {
@@ -3327,13 +3324,6 @@ class Kivun_Content_Creator {
 					<?php endforeach; ?>
 				</select>
 
-				<label class="kivun-sr-only" for="kivun-cf-answered"><?php esc_html_e( 'סינון לפי מענה', 'kivun' ); ?></label>
-				<select id="kivun-cf-answered" name="kivun_call_answered">
-					<option value=""><?php esc_html_e( 'נענו ולא נענו', 'kivun' ); ?></option>
-					<option value="1" <?php selected( (string) ( $call_filters['answered'] ?? '' ), '1' ); ?>><?php esc_html_e( 'נענו בלבד', 'kivun' ); ?></option>
-					<option value="0" <?php selected( isset( $call_filters['answered'] ) ? (string) $call_filters['answered'] : '', '0' ); ?>><?php esc_html_e( 'לא נענו בלבד', 'kivun' ); ?></option>
-				</select>
-
 				<span class="kivun-cc-daterange">
 					<label for="kivun-cf-from"><?php esc_html_e( 'מתאריך', 'kivun' ); ?></label>
 					<input type="date" id="kivun-cf-from" name="kivun_call_from" dir="ltr" value="<?php echo esc_attr( $call_filters['from'] ?? '' ); ?>">
@@ -3382,8 +3372,13 @@ class Kivun_Content_Creator {
 
 				<?php
 				// A missed call is a lead that rang and got nobody, which is the
-				// one figure on this screen worth acting on the same day.
+				// one figure on this screen worth acting on the same day — but
+				// only where the switchboard says how long anyone talked. Set to
+				// report the start of a call and nothing else, it sends no talk
+				// time, every call reads as unanswered, and this tile would
+				// announce a crisis that is only a setting.
 				?>
+				<?php if ( $report['knows'] ) : ?>
 				<div class="kivun-kpi__tile">
 					<span class="kivun-kpi__label"><?php esc_html_e( 'שיחות שלא נענו', 'kivun' ); ?></span>
 					<strong class="kivun-kpi__value"><?php echo esc_html( number_format_i18n( $report['missed'] ) ); ?></strong>
@@ -3401,6 +3396,7 @@ class Kivun_Content_Creator {
 						?>
 					</span>
 				</div>
+				<?php endif; ?>
 
 				<div class="kivun-kpi__tile">
 					<span class="kivun-kpi__label"><?php esc_html_e( 'שיחות החודש האחרון', 'kivun' ); ?></span>
@@ -3528,7 +3524,9 @@ class Kivun_Content_Creator {
 									<th scope="col"><?php esc_html_e( 'חייג אל', 'kivun' ); ?></th>
 									<th scope="col"><?php esc_html_e( 'קמפיין', 'kivun' ); ?></th>
 									<th scope="col"><?php esc_html_e( 'מדיה', 'kivun' ); ?></th>
-									<th scope="col"><?php esc_html_e( 'מענה', 'kivun' ); ?></th>
+									<?php if ( $report['knows'] ) : ?>
+										<th scope="col"><?php esc_html_e( 'מענה', 'kivun' ); ?></th>
+									<?php endif; ?>
 								</tr>
 							</thead>
 							<tbody>
@@ -3549,13 +3547,15 @@ class Kivun_Content_Creator {
 									</td>
 									<td><?php echo esc_html( (string) ( $call->campaign_label ? $call->campaign_label : '—' ) ); ?></td>
 									<td><?php echo esc_html( $call->media ? Kivun_Phones::media_label( (string) $call->media ) : '—' ); ?></td>
-									<td>
-										<?php if ( ! empty( $call->answered ) ) : ?>
-											<span class="kivun-cc-badge"><?php esc_html_e( 'נענתה', 'kivun' ); ?></span>
-										<?php else : ?>
-											<span class="kivun-cc-badge kivun-cc-badge--warn"><?php esc_html_e( 'לא נענתה', 'kivun' ); ?></span>
-										<?php endif; ?>
-									</td>
+									<?php if ( $report['knows'] ) : ?>
+										<td>
+											<?php if ( ! empty( $call->answered ) ) : ?>
+												<span class="kivun-cc-badge"><?php esc_html_e( 'נענתה', 'kivun' ); ?></span>
+											<?php else : ?>
+												<span class="kivun-cc-badge kivun-cc-badge--warn"><?php esc_html_e( 'לא נענתה', 'kivun' ); ?></span>
+											<?php endif; ?>
+										</td>
+									<?php endif; ?>
 								</tr>
 							<?php endforeach; ?>
 							</tbody>
@@ -3649,7 +3649,9 @@ class Kivun_Content_Creator {
 											<th scope="col"><?php esc_html_e( 'מדיה', 'kivun' ); ?></th>
 											<th scope="col"><?php esc_html_e( 'קמפיין', 'kivun' ); ?></th>
 											<th scope="col"><?php esc_html_e( 'שיחות', 'kivun' ); ?></th>
-											<th scope="col"><?php esc_html_e( 'נענו', 'kivun' ); ?></th>
+											<?php if ( $report['knows'] ) : ?>
+												<th scope="col"><?php esc_html_e( 'נענו', 'kivun' ); ?></th>
+											<?php endif; ?>
 											<th scope="col"><?php esc_html_e( 'פעולות', 'kivun' ); ?></th>
 										</tr>
 									</thead>
@@ -3679,7 +3681,9 @@ class Kivun_Content_Creator {
 												<?php endif; ?>
 											</td>
 											<td><strong><?php echo esc_html( number_format_i18n( $stat['total'] ) ); ?></strong></td>
-											<td><?php echo esc_html( number_format_i18n( $stat['answered'] ) ); ?></td>
+											<?php if ( $report['knows'] ) : ?>
+												<td><?php echo esc_html( number_format_i18n( $stat['answered'] ) ); ?></td>
+											<?php endif; ?>
 											<td>
 												<button
 													type="button"

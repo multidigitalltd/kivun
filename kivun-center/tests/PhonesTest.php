@@ -149,25 +149,35 @@ final class PhonesTest extends TestCase {
 	}
 
 	/**
-	 * "Not answered" is the value zero, which is falsy — it has to survive being
-	 * checked, or the filter silently means "everything".
+	 * Answered is not a filter any more, and an old bookmark carrying it must
+	 * not quietly narrow the report it opens.
+	 *
+	 * The switchboard here posts only at the start of a call, so it sends no
+	 * talk time; "answered" is worked out from talk time, and every call was
+	 * therefore filed as unanswered. Filtering on it meant filtering on a
+	 * column that says the same thing about every row.
 	 *
 	 * @return void
 	 */
-	public function test_the_not_answered_filter_survives_being_zero(): void {
-		$filters = Kivun_Phones::filters( array( 'kivun_call_answered' => '0' ) );
-
-		$this->assertArrayHasKey( 'answered', $filters );
-		$this->assertSame( 0, $filters['answered'] );
+	public function test_the_answered_filter_is_gone(): void {
+		$this->assertSame( array(), Kivun_Phones::filters( array( 'kivun_call_answered' => '0' ) ) );
+		$this->assertSame( array(), Kivun_Phones::filters( array( 'kivun_call_answered' => '1' ) ) );
 	}
 
 	/**
-	 * Anything other than yes or no is not a choice at all.
+	 * It is dropped without taking the rest of the request with it.
 	 *
 	 * @return void
 	 */
-	public function test_a_nonsense_answered_filter_is_dropped(): void {
-		$this->assertSame( array(), Kivun_Phones::filters( array( 'kivun_call_answered' => 'maybe' ) ) );
+	public function test_a_stale_answered_argument_leaves_other_filters_alone(): void {
+		$filters = Kivun_Phones::filters(
+			array(
+				'kivun_call_answered' => '0',
+				'kivun_call_campaign' => '10',
+			)
+		);
+
+		$this->assertSame( array( 'campaign_id' => 10 ), $filters );
 	}
 
 	/**
