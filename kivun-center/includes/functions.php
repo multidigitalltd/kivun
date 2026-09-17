@@ -199,6 +199,11 @@ function kivun_icon( string $name, string $classes = '' ): string {
 		'filter'   => '<path d="M3 4h18l-7 8v6l-4 2v-8Z"/>',
 		'phone'    => '<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2Z"/>',
 		'users'    => '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/>',
+		// The two ways a list can be read: as a grid of rows and columns, or as
+		// a card for each row. Drawn to sit beside each other, so the difference
+		// between them is the shape and not the detail.
+		'table'    => '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9.5h18"/><path d="M3 15h18"/><path d="M9.5 9.5V20"/>',
+		'cards'    => '<rect x="3" y="3.5" width="18" height="7" rx="2"/><path d="M7 7h7"/><rect x="3" y="13.5" width="18" height="7" rx="2"/><path d="M7 17h7"/>',
 	);
 
 	if ( ! isset( $paths[ $name ] ) ) {

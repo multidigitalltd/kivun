@@ -4696,12 +4696,26 @@ class Kivun_Content_Creator {
 				?>
 				<div class="kivun-cc-viewbar" data-for="leads">
 					<div class="kivun-cc-viewtoggle" role="group" aria-label="<?php esc_attr_e( 'צורת התצוגה', 'kivun' ); ?>">
-						<button type="button" class="kivun-cc-viewbtn" data-view="table" aria-pressed="false">
-							<?php esc_html_e( 'טבלה', 'kivun' ); ?>
-						</button>
-						<button type="button" class="kivun-cc-viewbtn" data-view="cards" aria-pressed="false">
-							<?php esc_html_e( 'כרטיסים', 'kivun' ); ?>
-						</button>
+						<?php
+						// The shape beside its name. The icon is what the eye picks
+						// out once the control is familiar; the word is what makes it
+						// legible the first time, and neither costs the other
+						// anything at this size.
+						foreach ( array(
+							'table' => __( 'טבלה', 'kivun' ),
+							'cards' => __( 'כרטיסים', 'kivun' ),
+						) as $kivun_view => $kivun_view_label ) :
+							?>
+							<button
+								type="button"
+								class="kivun-cc-viewbtn"
+								data-view="<?php echo esc_attr( $kivun_view ); ?>"
+								aria-pressed="false"
+							>
+								<?php echo kivun_icon( $kivun_view, 'kivun-cc-viewbtn__icon' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?>
+								<?php echo esc_html( $kivun_view_label ); ?>
+							</button>
+						<?php endforeach; ?>
 					</div>
 
 					<details class="kivun-cc-colpicker">

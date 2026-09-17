@@ -2076,7 +2076,10 @@ body.kivun-ty-open { overflow: hidden; }
 	border-radius: 999px;
 }
 .kivun-cc-viewbtn {
-	padding: .34rem .95rem;
+	display: inline-flex;
+	align-items: center;
+	gap: .38rem;
+	padding: .34rem .8rem;
 	border: 0;
 	border-radius: 999px;
 	background: transparent;
@@ -2084,8 +2087,12 @@ body.kivun-ty-open { overflow: hidden; }
 	font: inherit;
 	font-size: .84rem;
 	font-weight: 700;
+	line-height: 1.4;
 	cursor: pointer;
+	transition: background .15s, color .15s;
 }
+.kivun-cc-viewbtn__icon { width: 17px; height: 17px; flex: 0 0 17px; }
+.kivun-cc-viewbtn:hover { color: var(--kivun-dark); }
 .kivun-cc-viewbtn.is-active {
 	background: #fff;
 	color: var(--kivun-accent);
