@@ -36,7 +36,7 @@ jobs:
         run: phpcs -i
 
       - name: Run PHPCS
-        run: phpcs --standard=WordPress --extensions=php --ignore=*/vendor/* kivun-center/
+        run: phpcs --standard=WordPress --extensions=php --ignore=*/vendor/*,*/tests/* kivun-center/
 
   php-syntax:
     name: PHP Syntax Check
@@ -57,3 +57,51 @@ jobs:
 
       - name: Check syntax
         run: find kivun-center -name "*.php" -exec php -l {} \; | grep -v "^No syntax errors" && exit 1 || exit 0
+
+  phpunit:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        php: ['8.0', '8.2', '8.4']
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP ${{ matrix.php }}
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          tools: composer:v2
+          coverage: none
+
+      - name: Install dependencies
+        run: composer install --no-progress --prefer-dist
+        working-directory: kivun-center
+
+      - name: Run tests
+        run: vendor/bin/phpunit
+        working-directory: kivun-center
+
+  assets:
+    name: Built Assets Match Sources
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install build tools
+        run: npm ci
+        working-directory: kivun-center
+
+      # A release once shipped a stylesheet that did not contain the fix it was
+      # released for: the build had failed and the failure was swallowed. The
+      # site loads the minified files, so that shipped nothing at all.
+      - name: Check the minified assets are current
+        run: ./bin/check-assets.sh
+        working-directory: kivun-center

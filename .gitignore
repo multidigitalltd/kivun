@@ -17,3 +17,6 @@ Thumbs.db
 
 # WordPress
 wp-config.php
+
+# Test artefacts
+kivun-center/.phpunit.result.cache

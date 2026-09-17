@@ -8,10 +8,17 @@
   },
   "require-dev": {
     "squizlabs/php_codesniffer": "^3.9",
-    "wp-coding-standards/wpcs": "^3.1"
+    "wp-coding-standards/wpcs": "^3.1",
+    "phpunit/phpunit": "^9.6"
   },
   "scripts": {
-    "lint": "phpcs --standard=WordPress --extensions=php --ignore=vendor/ ."
+    "lint": "phpcs --standard=WordPress --extensions=php --ignore=vendor/,tests/ .",
+    "test": "phpunit",
+    "check": [
+      "@lint",
+      "@test",
+      "./bin/check-assets.sh"
+    ]
   },
   "config": {
     "allow-plugins": {
