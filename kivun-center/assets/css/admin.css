@@ -8,8 +8,16 @@
 .kivun-meta-table input[type=email],
 .kivun-meta-table input[type=number],
 .kivun-meta-table input[type=date],
-.kivun-meta-table textarea { width: 100%; max-width: 500px; }
+.kivun-meta-table input[type=url],
+.kivun-meta-table select,
+.kivun-meta-table textarea { width: 100%; max-width: 500px; box-sizing: border-box; }
+.kivun-meta-table input[type=date] { max-width: 220px; }
 .kivun-meta-table small { display: block; color: #6b7280; margin-top: 3px; font-size: 12px; }
+.kivun-meta-table .description { margin: 4px 0 0; color: #6b7280; font-size: 12px; }
+.kivun-meta-table tr { border-bottom: 1px solid #f0f0f1; }
+.kivun-meta-table tr:last-child { border-bottom: 0; }
+.kivun-meta-table .kivun-ev-media__preview img { border: 1px solid #dcdcde; border-radius: 6px; }
+.kivun-meta-table .kivun-ev-media .button { margin-inline-end: 6px; }
 
 /* ── CRM inner tables ─────────────────────────────────────────────────────── */
 .kivun-inner-table { font-size: 13px; }
@@ -20,6 +28,74 @@
 .kivun-notes-input { font-size: 12px; width: 100%; min-width: 130px; border: 1px solid #ddd; border-radius: 4px; padding: 4px 6px; resize: vertical; background: #fffde7; }
 .kivun-notes-input:focus { border-color: #2563eb; outline: none; }
 .kivun-saved-indicator { font-size: 12px; font-weight: 600; margin-right: 4px; }
+.kivun-delete-row { cursor: pointer; }
+.kivun-delete-row .dashicons { width: 20px; height: 20px; font-size: 20px; line-height: 1; vertical-align: middle; }
+.kivun-delete-row:hover .dashicons { color: #b32d2e; }
+
+/* ── CRM list pages (applications / registrations) ────────────────────────── */
+.kivun-apps-admin-filter { padding: 12px 14px; background: #fff; border: 1px solid #e2e4e7; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,.04); }
+.kivun-apps-admin-filter select,
+.kivun-apps-admin-filter input[type=search] { border-radius: 6px; padding: 5px 10px; border: 1px solid #dcdfe3; min-height: 32px; }
+.kivun-apps-admin-filter input[type=search] { min-width: 240px; }
+.kivun-apps-admin-filter select:focus,
+.kivun-apps-admin-filter input[type=search]:focus { border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37,99,235,.15); outline: none; }
+
+/* ── Landing page builder (dedicated form) ────────────────────────────────── */
+.kivun-lp-admin h1 { margin-bottom: 1rem; }
+.kivun-lp-grid { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 20px; align-items: start; }
+@media (max-width: 960px) { .kivun-lp-grid { grid-template-columns: 1fr; } }
+.kivun-lp-card { background: #fff; border: 1px solid #e2e4e7; border-radius: 12px; padding: 18px 20px; margin-bottom: 18px; box-shadow: 0 1px 3px rgba(0,0,0,.04); }
+.kivun-lp-card.kivun-cc-section[data-type="event"] { border: 2px solid #de2952; background: #fdf5f7; box-shadow: 0 2px 12px rgba(0,0,0,.10); }
+.kivun-lp-card.kivun-cc-section[data-type="event"] h3 { margin-top: 0; color: #de2952; display: flex; align-items: center; gap: 6px; }
+.kivun-lp-label { display: block; font-size: 14px; font-weight: 700; color: #1d2327; margin-bottom: 6px; }
+.kivun-lp-sub { display: block; font-size: 13px; font-weight: 600; color: #3c434a; margin: 12px 0 4px; }
+.kivun-lp-req { color: #d63638; }
+.kivun-lp-hint { font-size: 12.5px; color: #6b7280; margin: 0 0 10px; }
+.kivun-lp-input { width: 100%; padding: 8px 12px; border: 1px solid #dcdfe3; border-radius: 8px; font-size: 14px; box-sizing: border-box; }
+.kivun-lp-input:focus { border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37,99,235,.15); outline: none; }
+.kivun-lp-input--lg { font-size: 18px; font-weight: 600; padding: 12px 14px; }
+.kivun-lp-actions { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
+.kivun-lp-actions .button-hero { width: 100%; text-align: center; justify-content: center; }
+.kivun-lp-media__preview { margin-bottom: 10px; border-radius: 10px; overflow: hidden; border: 1px solid #e2e4e7; }
+.kivun-lp-media__preview img { display: block; width: 100%; height: auto; }
+.kivun-lp-media__remove { color: #d63638; margin-inline-start: 8px; }
+.kivun-lp-media input[type=file] { margin-top: 6px; font-size: 12px; }
+.kivun-lp-admin .wp-editor-wrap { margin-top: 4px; }
+.kivun-cc-check { display: flex; align-items: center; gap: 8px; padding: 7px 0; font-size: 14px; font-weight: 600; color: #1d2327; }
+.kivun-cc-section h3 { margin: 0 0 12px; font-size: 14px; color: #1d2327; border-bottom: 1px solid #e2e4e7; padding-bottom: 8px; }
+.kivun-lp-slug { display: flex; align-items: stretch; border: 1px solid #dcdfe3; border-radius: 8px; overflow: hidden; background: #fff; }
+.kivun-lp-slug__base { display: inline-flex; align-items: center; padding: 0 10px; background: #f1f2f4; color: #6b7280; font-size: 12.5px; white-space: nowrap; border-inline-end: 1px solid #e2e4e7; }
+.kivun-lp-slug .kivun-lp-input { border: 0; border-radius: 0; }
+.kivun-lp-slug .kivun-lp-input:focus { box-shadow: none; }
+.kivun-lp-slug:focus-within { border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37,99,235,.15); }
+
+/* ── Support & service dashboard widget ───────────────────────────────────── */
+#kivun_support_widget .inside { margin: 0; padding: 0; }
+.kivun-support {
+	background: linear-gradient(135deg, #fcbd12 0%, #ee3472 100%);
+	color: #fff;
+	padding: 20px 22px;
+	border-radius: 6px;
+}
+.kivun-support a { color: #fff; }
+.kivun-support__lead { margin: 0 0 16px; font-size: 14px; line-height: 1.65; }
+.kivun-support__lead a { font-weight: 700; text-decoration: underline; }
+.kivun-support__cta {
+	display: inline-block;
+	background: #fff;
+	color: #ee3472 !important;
+	padding: 9px 20px;
+	border-radius: 999px;
+	font-weight: 700;
+	font-size: 14px;
+	text-decoration: none !important;
+	box-shadow: 0 4px 14px rgba(0, 0, 0, .18);
+	transition: transform .15s ease, box-shadow .15s ease;
+}
+.kivun-support__cta:hover { transform: translateY(-1px); box-shadow: 0 7px 18px rgba(0, 0, 0, .24); }
+.kivun-support__sub { margin: 13px 0 0; font-size: 12.5px; opacity: .95; }
+.kivun-support__social { margin: 14px 0 0; font-size: 12.5px; }
+.kivun-support__social a { text-decoration: underline; white-space: nowrap; }
 
 /* ── Settings page ────────────────────────────────────────────────────────── */
 .kivun-settings-wrap .nav-tab-wrapper { margin-bottom: 0; }
@@ -46,3 +122,32 @@
 .kivun-sc-example__label { font-weight: 600; margin-inline-end: .5rem; color: #555; }
 .kivun-sc-example code { cursor: pointer; }
 .kivun-sc-example code:hover { color: #2563eb; }
+
+/* Content creator — AI availability warning. */
+.kivun-cc-ai-warn { margin: .5rem 0; padding: .5rem .7rem; border-radius: 8px; background: #fffbeb; color: #92400e; border: 1px solid #fde68a; font-size: 13px; }
+.kivun-cc-ai-warn a { color: #92400e; }
+
+/* Registrations/leads CRM table — readable columns instead of cramped fixed layout. */
+.kivun-reg-scroll { overflow-x: auto; width: 100%; }
+.kivun-reg-table { table-layout: auto !important; min-width: 1000px; }
+.kivun-reg-table th { white-space: nowrap; }
+.kivun-reg-table td { vertical-align: middle; }
+.kivun-reg-table td .kivun-status-select,
+.kivun-reg-table td textarea { max-width: 100%; }
+
+/* ── Voice dictation mic button ────────────────────────────────────────────── */
+.kivun-mic {
+	display: inline-flex; align-items: center; justify-content: center;
+	width: 32px; height: 32px; margin: 3px 4px 0 0; padding: 0;
+	border: 1px solid #c3c4c7; border-radius: 50%; background: #fff; cursor: pointer;
+	color: #50575e; line-height: 0; vertical-align: middle; transition: background .15s, border-color .15s, color .15s, box-shadow .15s;
+}
+.kivun-mic svg { display: block; width: 16px; height: 16px; }
+.kivun-mic:hover { background: #f0f0f1; border-color: #2271b1; color: #2271b1; }
+.kivun-mic.is-rec { border-color: #d63638; background: #fcebeb; color: #d63638; animation: kivun-mic-pulse 1.1s infinite; }
+.kivun-mic--editor { width: 28px; height: 28px; margin: 4px 6px; }
+@keyframes kivun-mic-pulse {
+	0% { box-shadow: 0 0 0 0 rgba(214, 54, 56, .45); }
+	70% { box-shadow: 0 0 0 7px rgba(214, 54, 56, 0); }
+	100% { box-shadow: 0 0 0 0 rgba(214, 54, 56, 0); }
+}

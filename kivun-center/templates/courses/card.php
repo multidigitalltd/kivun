@@ -1,9 +1,15 @@
 <?php
+/**
+ * Template: single course card.
+ *
+ * @package Kivun
+ */
+
 defined( 'ABSPATH' ) || exit;
 
-$price      = (int) get_post_meta( get_the_ID(), '_kivun_price',    true );
-$schedule   = get_post_meta( get_the_ID(), '_kivun_schedule', true );
-$duration   = get_post_meta( get_the_ID(), '_kivun_duration', true );
+$price    = (int) get_post_meta( get_the_ID(), '_kivun_price', true );
+$schedule = get_post_meta( get_the_ID(), '_kivun_schedule', true );
+$duration = get_post_meta( get_the_ID(), '_kivun_duration', true );
 ?>
 <article class="kivun-course-card" id="course-<?php the_ID(); ?>">
 	<?php if ( has_post_thumbnail() ) : ?>
