@@ -4684,7 +4684,7 @@ class Kivun_Content_Creator {
 			<?php if ( ! $rows ) : ?>
 				<div class="kivun-cc-note"><?php esc_html_e( 'לא נמצאו רשומות תואמות.', 'kivun' ); ?></div>
 			<?php else : ?>
-				<div class="kivun-cc-tablewrap">
+				<div class="kivun-cc-tablewrap kivun-cc-tablewrap--stacks">
 				<table class="kivun-cc-table kivun-cc-leadtable">
 					<thead>
 						<tr>
@@ -4706,8 +4706,8 @@ class Kivun_Content_Creator {
 					<tbody>
 					<?php foreach ( $rows as $r ) : ?>
 						<tr>
-							<td><strong><?php echo esc_html( $r->name ); ?></strong></td>
-							<td>
+							<td data-label="<?php esc_attr_e( 'שם', 'kivun' ); ?>"><strong><?php echo esc_html( $r->name ); ?></strong></td>
+							<td data-label="<?php esc_attr_e( 'תוכן', 'kivun' ); ?>">
 								<?php
 								// A lead with no post was never filed against one — the jobs
 								// board is an archive, so it is named instead. Only a lead
@@ -4733,7 +4733,7 @@ class Kivun_Content_Creator {
 									<span class="kivun-cc-source"><?php echo esc_html( $src['origin'] ); ?></span>
 								<?php endif; ?>
 							</td>
-							<td class="kivun-cc-utm">
+							<td class="kivun-cc-utm" data-label="<?php esc_attr_e( 'מקור (UTM)', 'kivun' ); ?>">
 								<?php if ( '' !== $src['source'] ) : ?>
 									<span class="kivun-cc-badge"><?php echo esc_html( $src['source'] ); ?></span>
 									<?php if ( '' !== $src['medium'] ) : ?>
@@ -4749,16 +4749,16 @@ class Kivun_Content_Creator {
 									<span class="kivun-muted" aria-hidden="true">—</span>
 								<?php endif; ?>
 							</td>
-							<td><span class="kivun-cc-badge"><?php echo esc_html( $type_labels[ $r->type ?? 'registration' ] ?? (string) $r->type ); ?></span></td>
-							<td class="kivun-app-contact">
+							<td data-label="<?php esc_attr_e( 'סוג', 'kivun' ); ?>"><span class="kivun-cc-badge"><?php echo esc_html( $type_labels[ $r->type ?? 'registration' ] ?? (string) $r->type ); ?></span></td>
+							<td class="kivun-app-contact" data-label="<?php esc_attr_e( 'יצירת קשר', 'kivun' ); ?>">
 								<a href="mailto:<?php echo esc_attr( $r->email ); ?>"><?php echo esc_html( $r->email ); ?></a>
 								<?php if ( $r->phone ) : ?>
 									<a href="tel:<?php echo esc_attr( $r->phone ); ?>"><?php echo esc_html( $r->phone ); ?></a>
 								<?php endif; ?>
 							</td>
-							<td><?php echo esc_html( (string) ( $r->city ?? '' ) ); ?></td>
-							<td><?php echo esc_html( empty( $r->marketing_consent ) ? '—' : '✓' ); ?></td>
-							<td>
+							<td data-label="<?php esc_attr_e( 'עיר', 'kivun' ); ?>"><?php echo esc_html( (string) ( $r->city ?? '' ) ); ?></td>
+							<td data-label="<?php esc_attr_e( 'דיוור', 'kivun' ); ?>"><?php echo esc_html( empty( $r->marketing_consent ) ? '—' : '✓' ); ?></td>
+							<td data-label="<?php esc_attr_e( 'הערות', 'kivun' ); ?>">
 								<?php
 								// Working a lead is writing down what came of it,
 								// so everyone who can see the table can keep a
@@ -4768,8 +4768,8 @@ class Kivun_Content_Creator {
 								?>
 								<span class="kivun-saved-indicator" role="status" aria-live="polite" style="display:none"></span>
 							</td>
-							<td class="kivun-cc-date"><?php echo esc_html( wp_date( 'd/m/Y H:i', strtotime( $r->created_at ) ) ); ?></td>
-							<td>
+							<td class="kivun-cc-date" data-label="<?php esc_attr_e( 'תאריך', 'kivun' ); ?>"><?php echo esc_html( wp_date( 'd/m/Y H:i', strtotime( $r->created_at ) ) ); ?></td>
+							<td data-label="<?php esc_attr_e( 'סטטוס', 'kivun' ); ?>">
 								<?php
 								// Everyone who can see the leads can move one along;
 								// tracking progress is the point of the table.
@@ -4779,7 +4779,7 @@ class Kivun_Content_Creator {
 								<span class="kivun-saved-indicator" role="status" aria-live="polite" style="display:none"></span>
 							</td>
 							<?php if ( $can_delete_rows ) : ?>
-								<td>
+								<td data-label="<?php esc_attr_e( 'מחיקה', 'kivun' ); ?>">
 									<button
 										type="button"
 										class="kivun-cc-iconbtn kivun-cc-iconbtn--danger kivun-delete-row"

@@ -645,7 +645,10 @@ class Kivun_Admin {
 	 * @return void
 	 */
 	public static function ajax_save_note(): void {
-		check_ajax_referer( 'kivun_admin_nonce', 'nonce' );
+		// Explained rather than dropped: see ajax_update_status().
+		if ( ! check_ajax_referer( 'kivun_admin_nonce', 'nonce', false ) ) {
+			wp_send_json_error( array( 'message' => __( 'פג תוקף העמוד. רעננו את הדף ונסו שוב.', 'kivun' ) ), 403 );
+		}
 
 		$table = sanitize_key( wp_unslash( $_POST['table'] ?? '' ) );
 		$id    = absint( wp_unslash( $_POST['id'] ?? 0 ) );
@@ -667,13 +670,17 @@ class Kivun_Admin {
 
 		global $wpdb;
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$wpdb->update(
+		$saved = $wpdb->update(
 			$wpdb->prefix . 'kivun_' . $table,
 			array( 'notes' => $note ),
 			array( 'id' => $id ),
 			array( '%s' ),
 			array( '%d' )
 		);
+
+		if ( false === $saved ) {
+			wp_send_json_error( array( 'message' => __( 'השמירה נכשלה. נסו שוב.', 'kivun' ) ), 500 );
+		}
 
 		wp_send_json_success();
 	}
@@ -710,10 +717,20 @@ class Kivun_Admin {
 	/**
 	 * AJAX handler: update the status of a CRM row.
 	 *
+	 * Reports what actually happened. It used to answer "saved" whatever came
+	 * of the write — an unknown status, a row that was not there, a database
+	 * that refused it — so a status that never changed still flashed a tick,
+	 * and the only way to find out was to reload and look.
+	 *
 	 * @return void
 	 */
 	public static function ajax_update_status(): void {
-		check_ajax_referer( 'kivun_admin_nonce', 'nonce' );
+		// Checked without dying, so an expired nonce can be explained. A
+		// console page served from a cache carries a nonce minted for somebody
+		// else, and "-1" on the wire tells the person at the screen nothing.
+		if ( ! check_ajax_referer( 'kivun_admin_nonce', 'nonce', false ) ) {
+			wp_send_json_error( array( 'message' => __( 'פג תוקף העמוד. רעננו את הדף ונסו שוב.', 'kivun' ) ), 403 );
+		}
 
 		$table  = sanitize_key( wp_unslash( $_POST['table'] ?? '' ) );
 		$id     = absint( wp_unslash( $_POST['id'] ?? 0 ) );
@@ -721,7 +738,15 @@ class Kivun_Admin {
 
 		$allowed = array( 'registrations', 'applications' );
 		if ( ! in_array( $table, $allowed, true ) || ! $id || ! $status ) {
-			wp_send_json_error();
+			wp_send_json_error( array( 'message' => __( 'בקשה לא תקינה.', 'kivun' ) ), 400 );
+		}
+
+		// A status the screen does not offer is not a status. Without this the
+		// column would take any word at all, and the row would then show blank
+		// in every list that looks the value up by name.
+		$known = 'registrations' === $table ? self::reg_statuses() : Kivun_Employer::app_statuses();
+		if ( ! isset( $known[ $status ] ) ) {
+			wp_send_json_error( array( 'message' => __( 'סטטוס לא מוכר.', 'kivun' ) ), 400 );
 		}
 
 		// Working a lead means marking where it got to, so the leads reader can
@@ -730,20 +755,41 @@ class Kivun_Admin {
 		$may_edit = current_user_can( 'edit_posts' )
 			|| ( 'registrations' === $table && Kivun_Content_Creator::can_manage_leads() );
 		if ( ! $may_edit ) {
-			wp_send_json_error();
+			wp_send_json_error( array( 'message' => __( 'אין לך הרשאה לעדכן את השורה הזו.', 'kivun' ) ), 403 );
 		}
 
 		global $wpdb;
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$wpdb->update(
-			$wpdb->prefix . 'kivun_' . $table,
+		$name = $wpdb->prefix . 'kivun_' . $table;
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$updated = $wpdb->update(
+			$name,
 			array( 'status' => $status ),
 			array( 'id' => $id ),
 			array( '%s' ),
 			array( '%d' )
 		);
 
-		wp_send_json_success();
+		if ( false === $updated ) {
+			wp_send_json_error( array( 'message' => __( 'השמירה נכשלה. נסו שוב.', 'kivun' ) ), 500 );
+		}
+
+		// Read back rather than assume. An update touching no rows means the
+		// value was already that — or the row is gone, and those are not the
+		// same answer to give.
+		$stored = $wpdb->get_var( $wpdb->prepare( "SELECT status FROM {$name} WHERE id = %d", $id ) );
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+
+		if ( null === $stored ) {
+			wp_send_json_error( array( 'message' => __( 'השורה לא נמצאה — ייתכן שנמחקה.', 'kivun' ) ), 404 );
+		}
+
+		wp_send_json_success(
+			array(
+				'status' => (string) $stored,
+				'label'  => (string) ( $known[ (string) $stored ] ?? $stored ),
+			)
+		);
 	}
 
 	/**

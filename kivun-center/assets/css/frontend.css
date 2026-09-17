@@ -2037,6 +2037,83 @@ body.kivun-ty-open { overflow: hidden; }
 	.kivun-cc-leadfilters input[type="search"] { min-width: 0; }
 }
 
+/* The leads table, wherever it does not fit. Eleven columns need about 1240px
+   of it — measured, not guessed — which is more than a laptop has once the
+   theme's own margins are taken out, so the complaint was never a phone-only
+   one. Side-scrolling a table you are working in means losing the name of the
+   person whose status you are changing. Each row becomes a card instead, with
+   every cell naming its own column, so nothing needs scrolling sideways.
+   Above this width the table genuinely fits, and stays a table. */
+@media (max-width: 1320px) {
+	.kivun-cc-leadtable,
+	.kivun-cc-leadtable tbody,
+	.kivun-cc-leadtable tr,
+	.kivun-cc-leadtable td {
+		display: block;
+		width: auto;
+	}
+
+	/* The header is gone; its words are on each cell instead. Kept reachable
+	   for a screen reader rather than removed outright. */
+	.kivun-cc-leadtable thead {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		margin: -1px;
+		padding: 0;
+		border: 0;
+		overflow: hidden;
+		clip: rect(0 0 0 0);
+		clip-path: inset(50%);
+		white-space: nowrap;
+	}
+
+	.kivun-cc-leadtable tr {
+		margin: 0 0 .85rem;
+		padding: .35rem .2rem;
+		border: 1px solid var(--kivun-border);
+		border-radius: 12px;
+		background: #fff;
+	}
+	.kivun-cc-leadtable tr:last-child { margin-bottom: 0; }
+
+	.kivun-cc-leadtable td {
+		display: grid;
+		grid-template-columns: 6.5rem minmax(0, 1fr);
+		gap: .6rem;
+		align-items: start;
+		padding: .4rem .6rem;
+		border: 0;
+		border-bottom: 1px solid #f1f5f9;
+		text-align: start;
+	}
+	.kivun-cc-leadtable td:last-child { border-bottom: 0; }
+
+	.kivun-cc-leadtable td::before {
+		content: attr(data-label);
+		font-size: .74rem;
+		font-weight: 700;
+		color: var(--kivun-muted);
+		padding-top: .2rem;
+	}
+	/* A cell with no label of its own would collapse the grid's first track. */
+	.kivun-cc-leadtable td:not([data-label])::before { content: ''; }
+
+	/* The controls get the full width of the card rather than a column's share.
+	   Border-box too: at 100% of the track, content-box sizing pushes the
+	   padding and border out past the card's own edge. */
+	.kivun-cc-leadtable .kivun-notes-input,
+	.kivun-cc-leadtable .kivun-status-select {
+		box-sizing: border-box;
+		width: 100%;
+		min-width: 0;
+		max-width: 100%;
+	}
+
+	/* The wrapper's own scrolling is what we are getting rid of. */
+	.kivun-cc-tablewrap--stacks { overflow-x: visible; }
+}
+
 /* Front-end content creator — delete / danger controls. */
 .kivun-cc-btn--danger { background: #dc2626; }
 .kivun-cc-btn--danger:hover { background: #b91c1c; filter: none; }
