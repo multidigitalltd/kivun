@@ -4138,6 +4138,40 @@ class Kivun_Content_Creator {
 	}
 
 	/**
+	 * The campaign targets, sorted into a heading per content type.
+	 *
+	 * @param array<int,\WP_Post> $contents The content posts.
+	 * @return array<string,array<int,\WP_Post>> Heading => its posts, empty
+	 *                                           headings left out.
+	 */
+	private static function target_groups( array $contents ): array {
+		$headings = array(
+			'kivun_course'   => __( 'קורסים', 'kivun' ),
+			'kivun_workshop' => __( 'דפי נחיתה', 'kivun' ),
+			'kivun_session'  => __( 'סדנאות', 'kivun' ),
+			'kivun_event'    => __( 'אירועים', 'kivun' ),
+		);
+
+		$grouped = array();
+		foreach ( $headings as $type => $heading ) {
+			foreach ( $contents as $post ) {
+				if ( $type === $post->post_type ) {
+					$grouped[ $heading ][] = $post;
+				}
+			}
+		}
+
+		// Anything of a type not named above still has to be reachable.
+		foreach ( $contents as $post ) {
+			if ( ! isset( $headings[ $post->post_type ] ) ) {
+				$grouped[ __( 'תכנים', 'kivun' ) ][] = $post;
+			}
+		}
+
+		return $grouped;
+	}
+
+	/**
 	 * The destination picker a campaign is created with.
 	 *
 	 * Rendered in two places — the campaigns screen and the shortcut for
@@ -4153,14 +4187,24 @@ class Kivun_Content_Creator {
 		?>
 		<select class="kivun-cc-input kivun-camp-target">
 			<option value=""><?php esc_html_e( '— בחר/י יעד —', 'kivun' ); ?></option>
-			<?php if ( $contents ) : ?>
-				<optgroup label="<?php esc_attr_e( 'תכנים', 'kivun' ); ?>">
-					<?php foreach ( $contents as $c ) : ?>
+			<?php
+			// Grouped by what the target actually is. A piece of content built
+			// here is often two posts — a course and the landing page made for
+			// it — carrying the same title and two different addresses. Listed
+			// flat they read as the same thing twice, with no way to tell which
+			// link you are about to hand out. They are not duplicates and must
+			// not be merged: pointing a campaign at the landing page rather
+			// than the course is a real choice. So each is shown under its own
+			// heading, and the choice becomes legible.
+			foreach ( self::target_groups( $contents ) as $kivun_group_label => $kivun_group ) :
+				?>
+				<optgroup label="<?php echo esc_attr( $kivun_group_label ); ?>">
+					<?php foreach ( $kivun_group as $c ) : ?>
 						<?php $c_url = (string) get_permalink( $c->ID ); ?>
 						<option value="<?php echo esc_url( $c_url ); ?>" <?php selected( ! $custom && $c_url === $target ); ?>><?php echo esc_html( $c->post_title ); ?></option>
 					<?php endforeach; ?>
 				</optgroup>
-			<?php endif; ?>
+			<?php endforeach; ?>
 			<?php if ( $pages ) : ?>
 				<optgroup label="<?php esc_attr_e( 'עמודים באתר', 'kivun' ); ?>">
 					<?php foreach ( $pages as $pg ) : ?>
