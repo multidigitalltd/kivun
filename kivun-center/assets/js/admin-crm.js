@@ -223,14 +223,23 @@
 		// not of the cards it was turned into last time. Cleared for all of
 		// them first, then measured, then set — two reflows rather than one
 		// per table.
+		var unmeasured = [];
 		Array.prototype.forEach.call(tables, function (table) {
 			labelCells(table);
 			applyColumns(table);
+			if (table.classList.contains('is-stacked')) { unmeasured.push(table); }
 			table.classList.remove('is-stacked');
 		});
 
 		var verdicts = Array.prototype.map.call(tables, function (table) {
 			var wrap = table.parentNode;
+
+			// A table on a tab that is not open has no width at all, and
+			// nothing true can be measured from that. Judging it anyway reads
+			// as "no room for any column" and stacks it — and since nothing
+			// measures again when the tab is opened, it stayed stacked until
+			// the page was reloaded. Left alone until it can be seen.
+			if (!wrap.clientWidth) { return null; }
 
 			// Two ways a table can fail to fit, and both have to be asked.
 			//
@@ -249,6 +258,12 @@
 
 		Array.prototype.forEach.call(tables, function (table, i) {
 			var stacked = verdicts[i];
+
+			// Not measurable: put back what it had and ask again when it shows.
+			if (null === stacked) {
+				table.classList.toggle('is-stacked', unmeasured.indexOf(table) !== -1);
+				return;
+			}
 
 			// A choice made on this screen wins over the measurement. Asking
 			// for the table and being given cards anyway is the complaint
@@ -315,5 +330,11 @@
 	window.addEventListener('resize', fitTablesSoon);
 	// A table inside a <details> has no width until the panel is opened.
 	document.addEventListener('toggle', fitTablesSoon, true);
+	// Nor does one on a tab that was not the open tab. The switch happens in
+	// another script, so this waits for the panel to be shown rather than
+	// assuming which listener runs first.
+	document.addEventListener('click', function (e) {
+		if (e.target.closest('.kivun-tab')) { fitTablesSoon(); }
+	});
 
 }());
