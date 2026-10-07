@@ -289,10 +289,36 @@ $kivun_user     = wp_get_current_user();
 				<input type="hidden" name="job_id" value="">
 
 				<?php if ( $is_manager ) : ?>
+					<?php
+					// Who handles this job's candidates. Named here rather than
+					// shared out by the rota: the rota is for people who arrive
+					// through the board and belong to nobody yet, while a job is
+					// already somebody's — they know the employer.
+					$kivun_coordinators = Kivun_Coordinators::all();
+					?>
+					<?php if ( $kivun_coordinators ) : ?>
+						<div class="kivun-form-row kivun-mgr-only">
+							<label for="kivun-f-coordinator"><?php esc_html_e( 'הרכז/ת שמטפל/ת במשרה *', 'kivun' ); ?></label>
+							<select id="kivun-f-coordinator" name="coordinator" required>
+								<option value=""><?php esc_html_e( '— בחר/י רכז/ת —', 'kivun' ); ?></option>
+								<?php foreach ( $kivun_coordinators as $kivun_c_email => $kivun_c ) : ?>
+									<option value="<?php echo esc_attr( $kivun_c_email ); ?>">
+										<?php echo esc_html( '' !== $kivun_c['name'] ? $kivun_c['name'] . ' — ' . $kivun_c_email : $kivun_c_email ); ?>
+									</option>
+								<?php endforeach; ?>
+							</select>
+							<small class="kivun-hint"><?php esc_html_e( 'המועמדויות למשרה הזו יישלחו ישירות לרכז/ת שנבחר/ה.', 'kivun' ); ?></small>
+						</div>
+					<?php else : ?>
+						<div class="kivun-form-row kivun-mgr-only">
+							<p class="kivun-field-hint"><?php esc_html_e( 'כדי לשייך משרה לרכז/ת, יש להזין את רשימת הרכזים בהגדרות התוסף.', 'kivun' ); ?></p>
+						</div>
+					<?php endif; ?>
+
 					<div class="kivun-form-row kivun-mgr-only" data-default-employer="<?php echo esc_attr( $acting_as ); ?>">
-						<label for="kivun-f-employer"><?php esc_html_e( 'פרסום בשם מפרסם *', 'kivun' ); ?></label>
-						<select id="kivun-f-employer" name="employer_id" required>
-							<option value=""><?php esc_html_e( '— בחר/י מפרסם —', 'kivun' ); ?></option>
+						<label for="kivun-f-employer"><?php esc_html_e( 'פרסום בשם מפרסם (אופציונלי)', 'kivun' ); ?></label>
+						<select id="kivun-f-employer" name="employer_id">
+							<option value=""><?php esc_html_e( '— ללא מפרסם —', 'kivun' ); ?></option>
 							<?php
 							foreach ( $active_employers as $emp ) :
 								$emp_comp  = (string) get_user_meta( $emp->ID, '_kivun_company', true );
@@ -378,8 +404,8 @@ $kivun_user     = wp_get_current_user();
 					</div>
 
 					<div class="kivun-form-row">
-						<label for="kivun-f-salary"><?php esc_html_e( 'שכר (אופציונלי)', 'kivun' ); ?></label>
-						<input type="text" id="kivun-f-salary" name="salary" placeholder="10,000–15,000 ₪">
+						<label for="kivun-f-salary"><?php esc_html_e( 'תנאי העסקה (אופציונלי)', 'kivun' ); ?></label>
+						<input type="text" id="kivun-f-salary" name="salary" placeholder="<?php esc_attr_e( 'למשל: 10,000–15,000 ₪, נסיעות, ארוחות', 'kivun' ); ?>">
 					</div>
 
 					<?php if ( $features && ! is_wp_error( $features ) ) : ?>
@@ -413,11 +439,6 @@ $kivun_user     = wp_get_current_user();
 						<input type="date" id="kivun-f-deadline" name="deadline" dir="ltr" min="<?php echo esc_attr( current_time( 'Y-m-d' ) ); ?>">
 					</div>
 
-					<div class="kivun-field">
-						<label for="kivun-f-experience"><?php esc_html_e( 'שנות ניסיון נדרשות (אופציונלי)', 'kivun' ); ?></label>
-						<input type="number" id="kivun-f-experience" name="experience_years" min="0" max="50" step="1" dir="ltr">
-						<p class="kivun-field-hint"><?php esc_html_e( 'לאחר תאריך זה המשרה תרד מהאתר אוטומטית. ריק = ללא הגבלת זמן.', 'kivun' ); ?></p>
-					</div>
 				</div>
 
 				<div class="kivun-form-row">
@@ -485,6 +506,7 @@ $kivun_user     = wp_get_current_user();
 					<tr
 						data-job-row="<?php echo esc_attr( $job->ID ); ?>"
 						data-employer="<?php echo esc_attr( $job->post_author ); ?>"
+						data-coordinator="<?php echo esc_attr( get_post_meta( $job->ID, '_kivun_coordinator', true ) ); ?>"
 						data-title="<?php echo esc_attr( $job->post_title ); ?>"
 						data-company="<?php echo esc_attr( get_post_meta( $job->ID, '_kivun_company', true ) ); ?>"
 						data-salary="<?php echo esc_attr( get_post_meta( $job->ID, '_kivun_salary', true ) ); ?>"
@@ -496,7 +518,6 @@ $kivun_user     = wp_get_current_user();
 						data-deadline="<?php echo esc_attr( $kivun_deadline ); ?>"
 						data-city="<?php echo esc_attr( get_post_meta( $job->ID, '_kivun_city', true ) ); ?>"
 						data-work-hours="<?php echo esc_attr( get_post_meta( $job->ID, '_kivun_work_hours', true ) ); ?>"
-						data-experience="<?php echo esc_attr( get_post_meta( $job->ID, '_kivun_experience_years', true ) ); ?>"
 						<?php
 						$kivun_feat_t = get_the_terms( $job->ID, 'kivun_job_feature' );
 						$kivun_feat   = ( $kivun_feat_t && ! is_wp_error( $kivun_feat_t ) ) ? wp_list_pluck( $kivun_feat_t, 'name' ) : array();
@@ -568,7 +589,7 @@ $kivun_user     = wp_get_current_user();
 							<a
 								class="kivun-btn kivun-btn--sm <?php echo $kivun_filled ? '' : 'kivun-btn--outline'; ?>"
 								href="<?php echo esc_url( Kivun_Jobs::filled_url( (int) $job->ID ) ); ?>"
-								title="<?php echo esc_attr( $kivun_filled ? Kivun_Jobs::filled_label( (int) $job->ID ) : __( 'המשרה תרד מהלוח בעוד יומיים', 'kivun' ) ); ?>"
+								title="<?php echo esc_attr( $kivun_filled ? Kivun_Jobs::filled_label( (int) $job->ID ) : __( 'המשרה תסומן כאוישה ותישאר בלוח לעיון', 'kivun' ) ); ?>"
 							><?php echo $kivun_filled ? esc_html__( 'החזרה ללוח', 'kivun' ) : esc_html__( 'אוישה', 'kivun' ); ?></a>
 							<button
 								type="button"

@@ -1706,6 +1706,20 @@ td.kivun-app-contact a { display: block; }
 	font-size: 13px;
 	font-weight: 700;
 }
+/* The same mark on the job's own page, where it has to carry further than a
+   chip on a card: it is the one thing a reader must notice before writing a
+   covering letter for a job that is gone. */
+.kivun-job-filled {
+	display: inline-block;
+	margin: 10px 0 0;
+	padding: 6px 16px;
+	border-radius: 999px;
+	background: #f1f2f4;
+	color: #4b5563;
+	font-size: 15px;
+	font-weight: 700;
+}
+
 .kivun-apply-closed {
 	margin: 0;
 	padding: 22px 24px;

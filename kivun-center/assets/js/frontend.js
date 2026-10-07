@@ -682,10 +682,10 @@
 				setField('region', row.dataset.region);
 				setField('field', row.dataset.field);
 				setField('employer_id', row.dataset.employer);
+				setField('coordinator', row.dataset.coordinator);
 				setField('deadline', row.dataset.deadline);
 				setField('city', row.dataset.city);
 				setField('work_hours', row.dataset.workHours);
-				setField('experience_years', row.dataset.experience);
 
 				var chosen = (row.dataset.features || '').split('|').filter(Boolean);
 				form.querySelectorAll('[name="features[]"]').forEach(function (box) {

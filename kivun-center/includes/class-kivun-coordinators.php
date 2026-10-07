@@ -147,6 +147,43 @@ class Kivun_Coordinators {
 	}
 
 	/**
+	 * Everyone on either roster, for a screen that has to offer a choice.
+	 *
+	 * The rota decides who gets a candidate who arrived through the board. A
+	 * job is different: whoever posts it knows which coordinator is handling
+	 * that employer, and says so. This is the list they pick from.
+	 *
+	 * @return array<string,array{email:string,weight:int,name:string,phone:string}>
+	 *         Keyed by address, so somebody on both rosters appears once.
+	 */
+	public static function all(): array {
+		$everyone = array();
+
+		foreach ( array_keys( self::groups() ) as $group ) {
+			foreach ( self::roster( $group ) as $email => $record ) {
+				// A name on one roster and not the other should still be named.
+				if ( ! isset( $everyone[ $email ] ) || '' === $everyone[ $email ]['name'] ) {
+					$everyone[ $email ] = $record;
+				}
+			}
+		}
+
+		return $everyone;
+	}
+
+	/**
+	 * One coordinator by address, or empty when they are on no roster.
+	 *
+	 * @param string $email The address.
+	 * @return array{email:string,weight:int,name:string,phone:string}|array{}
+	 */
+	public static function by_email( string $email ): array {
+		$email = sanitize_email( trim( $email ) );
+
+		return '' !== $email ? ( self::all()[ $email ] ?? array() ) : array();
+	}
+
+	/**
 	 * Choose the coordinator whose turn it is, and record that it was taken.
 	 *
 	 * Smooth weighted round-robin: every coordinator's credit grows by their

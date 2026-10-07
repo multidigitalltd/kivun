@@ -214,7 +214,7 @@ class Kivun_Forms_Router {
 	 * @param string $page_url The page the form was submitted from.
 	 * @return bool
 	 */
-	private static function jobs_page( string $page_url ): bool {
+	public static function jobs_page( string $page_url ): bool {
 		if ( '' === trim( $page_url ) ) {
 			return false;
 		}

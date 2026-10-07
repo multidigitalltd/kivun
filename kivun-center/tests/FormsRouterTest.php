@@ -224,6 +224,21 @@ final class FormsRouterTest extends TestCase {
 	}
 
 	/**
+	 * The lead action leans on this to recognise the board when its own source
+	 * setting resolves to nothing — a form left on "the current page" sits on
+	 * an archive, where there is no page to find. It has to be reachable from
+	 * there, not private to the router.
+	 *
+	 * @return void
+	 */
+	public function test_the_board_test_is_reachable_from_outside(): void {
+		$this->assertTrue( ( new ReflectionMethod( Kivun_Forms_Router::class, 'jobs_page' ) )->isPublic() );
+		$this->assertTrue( Kivun_Forms_Router::jobs_page( 'https://example.test/jobs/' ) );
+		$this->assertFalse( Kivun_Forms_Router::jobs_page( 'https://example.test/landing/course/' ) );
+		$this->assertFalse( Kivun_Forms_Router::jobs_page( '' ) );
+	}
+
+	/**
 	 * A site that wants the question answered differently can say so.
 	 *
 	 * @return void

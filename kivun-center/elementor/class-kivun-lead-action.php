@@ -216,6 +216,16 @@ class Kivun_Lead_Action extends Action_Base {
 			}
 		}
 
+		// Still nothing, and the form is on the jobs board. There is no post
+		// there to find — the board is an archive — so the lead belongs to the
+		// board, whatever the source setting says. Without this a form left on
+		// the default setting fails on every submission, and the visitor, told
+		// something went wrong, sends it again.
+		if ( ! $post_id && Kivun_Forms_Router::jobs_page( (string) wp_get_referer() ) ) {
+			$this->finish( Kivun_Workshops::save_lead( 0, $data, 'board' ), $fields, $ajax_handler );
+			return;
+		}
+
 		$this->finish( Kivun_Workshops::save_lead( $post_id, $data ), $fields, $ajax_handler );
 	}
 
@@ -234,16 +244,54 @@ class Kivun_Lead_Action extends Action_Base {
 			return;
 		}
 
+		$code    = $result->get_error_code();
 		$message = $result->get_error_message();
 
-		// Help admins diagnose a field-ID mapping mismatch: show the IDs the
-		// form actually submitted. Never shown to regular visitors.
-		if ( current_user_can( 'manage_options' ) && is_array( $fields ) ) {
+		// Help an admin diagnose a field-ID mapping mismatch: the IDs the form
+		// actually submitted. Never shown to regular visitors.
+		$diagnosis = ( current_user_can( 'manage_options' ) && is_array( $fields ) )
 			/* translators: %s: comma-separated list of submitted field IDs. */
-			$message .= ' — ' . sprintf( __( '[אבחון למנהל] מזהי השדות שהתקבלו: %s', 'kivun' ), implode( ', ', array_keys( $fields ) ) );
+			? ' — ' . sprintf( __( '[אבחון למנהל] מזהי השדות שהתקבלו: %s', 'kivun' ), implode( ', ', array_keys( $fields ) ) )
+			: '';
+
+		// A fault in how the form was set up is not the visitor's to fix, and
+		// telling them the submission failed is actively harmful: they send it
+		// again, and the form's other actions — the email to the coordinators —
+		// run a second time, so the same person arrives twice. The form is let
+		// through, and the fault is reported where it can be acted on.
+		if ( 'kivun_no_post' === $code ) {
+			self::log( $message . $diagnosis );
+
+			if ( '' !== $diagnosis ) {
+				$ajax_handler->add_error_message( $message . $diagnosis );
+			}
+
+			return;
 		}
 
-		$ajax_handler->add_error_message( $message );
+		$ajax_handler->add_error_message( $message . $diagnosis );
+	}
+
+	/**
+	 * Record a setup fault where somebody running the site can find it.
+	 *
+	 * @param string $message What went wrong.
+	 * @return void
+	 */
+	private static function log( string $message ): void {
+		update_option(
+			'kivun_lead_action_last_error',
+			array(
+				'time'    => current_time( 'mysql' ),
+				'message' => $message,
+			),
+			false
+		);
+
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Opt-in diagnostic logging.
+			error_log( '[Kivun Lead Action] ' . $message );
+		}
 	}
 
 	/**

@@ -211,42 +211,43 @@ class Kivun_Admin_Settings {
 		update_option(
 			self::$option_key,
 			array(
-				'admin_menu_hidden'      => $menu_hidden,
-				'admin_email'            => sanitize_email( wp_unslash( $_POST['admin_email'] ?? '' ) ),
-				'jobs_per_page'          => absint( $_POST['jobs_per_page'] ?? 10 ),
-				'cookie_banner_enabled'  => ! empty( $_POST['cookie_banner_enabled'] ),
-				'cookie_policy_url'      => esc_url_raw( wp_unslash( $_POST['cookie_policy_url'] ?? '' ) ),
-				'landing_builtin_single' => ! empty( $_POST['landing_builtin_single'] ),
-				'allow_cv_upload'        => ! empty( $_POST['allow_cv_upload'] ),
-				'cv_max_size_mb'         => absint( $_POST['cv_max_size_mb'] ?? 5 ),
-				'webhook_url'            => esc_url_raw( wp_unslash( $_POST['webhook_url'] ?? '' ) ),
-				'forms_router_email'     => sanitize_email( wp_unslash( $_POST['forms_router_email'] ?? '' ) ),
-				'forms_router_webhook'   => esc_url_raw( wp_unslash( $_POST['forms_router_webhook'] ?? '' ) ),
-				'coordinators_male'      => sanitize_textarea_field( wp_unslash( $_POST['coordinators_male'] ?? '' ) ),
-				'coordinators_female'    => sanitize_textarea_field( wp_unslash( $_POST['coordinators_female'] ?? '' ) ),
-				'coordinators_forms'     => sanitize_textarea_field( wp_unslash( $_POST['coordinators_forms'] ?? '' ) ),
-				'whatsapp_enabled'       => ! empty( $_POST['whatsapp_enabled'] ),
-				'whatsapp_number'        => sanitize_text_field( wp_unslash( $_POST['whatsapp_number'] ?? '' ) ),
-				'whatsapp_message'       => sanitize_text_field( wp_unslash( $_POST['whatsapp_message'] ?? '' ) ),
-				'openai_api_key'         => sanitize_text_field( wp_unslash( $_POST['openai_api_key'] ?? '' ) ),
-				'mercaz_user'            => sanitize_text_field( wp_unslash( $_POST['mercaz_user'] ?? '' ) ),
-				'mercaz_pass'            => sanitize_text_field( wp_unslash( $_POST['mercaz_pass'] ?? '' ) ),
-				'mercaz_auto'            => ! empty( $_POST['mercaz_auto'] ),
-				'crm_webhook_url'        => esc_url_raw( wp_unslash( $_POST['crm_webhook_url'] ?? '' ) ),
-				'crm_webhook_secret'     => sanitize_text_field( wp_unslash( $_POST['crm_webhook_secret'] ?? '' ) ),
-				'crm_webhook_headers'    => sanitize_textarea_field( wp_unslash( $_POST['crm_webhook_headers'] ?? '' ) ),
-				'crm_webhook_updates'    => ! empty( $_POST['crm_webhook_updates'] ),
-				'ai_image_model'         => sanitize_text_field( wp_unslash( $_POST['ai_image_model'] ?? 'gpt-image-1' ) ),
-				'ai_image_quality'       => sanitize_key( wp_unslash( $_POST['ai_image_quality'] ?? 'medium' ) ),
-				'turnstile_site_key'     => sanitize_text_field( wp_unslash( $_POST['turnstile_site_key'] ?? '' ) ),
-				'turnstile_secret_key'   => sanitize_text_field( wp_unslash( $_POST['turnstile_secret_key'] ?? '' ) ),
-				'thankyou_page_id'       => absint( $_POST['thankyou_page_id'] ?? 0 ),
-				'thankyou_elementor'     => ! empty( $_POST['thankyou_elementor'] ),
-				'thankyou_title'         => sanitize_text_field( wp_unslash( $_POST['thankyou_title'] ?? '' ) ),
-				'thankyou_message'       => sanitize_textarea_field( wp_unslash( $_POST['thankyou_message'] ?? '' ) ),
-				'thankyou_popup'         => ! empty( $_POST['thankyou_popup'] ),
-				'thankyou_btn_label'     => sanitize_text_field( wp_unslash( $_POST['thankyou_btn_label'] ?? '' ) ),
-				'thankyou_btn_url'       => esc_url_raw( wp_unslash( $_POST['thankyou_btn_url'] ?? '' ) ),
+				'admin_menu_hidden'          => $menu_hidden,
+				'admin_email'                => sanitize_email( wp_unslash( $_POST['admin_email'] ?? '' ) ),
+				'jobs_per_page'              => absint( $_POST['jobs_per_page'] ?? 10 ),
+				'cookie_banner_enabled'      => ! empty( $_POST['cookie_banner_enabled'] ),
+				'cookie_policy_url'          => esc_url_raw( wp_unslash( $_POST['cookie_policy_url'] ?? '' ) ),
+				'landing_builtin_single'     => ! empty( $_POST['landing_builtin_single'] ),
+				'allow_cv_upload'            => ! empty( $_POST['allow_cv_upload'] ),
+				'cv_max_size_mb'             => absint( $_POST['cv_max_size_mb'] ?? 5 ),
+				'webhook_url'                => esc_url_raw( wp_unslash( $_POST['webhook_url'] ?? '' ) ),
+				'forms_router_email'         => sanitize_email( wp_unslash( $_POST['forms_router_email'] ?? '' ) ),
+				'forms_router_webhook'       => esc_url_raw( wp_unslash( $_POST['forms_router_webhook'] ?? '' ) ),
+				'coordinators_male'          => sanitize_textarea_field( wp_unslash( $_POST['coordinators_male'] ?? '' ) ),
+				'coordinators_female'        => sanitize_textarea_field( wp_unslash( $_POST['coordinators_female'] ?? '' ) ),
+				'coordinators_forms'         => sanitize_textarea_field( wp_unslash( $_POST['coordinators_forms'] ?? '' ) ),
+				'applications_archive_email' => sanitize_email( wp_unslash( $_POST['applications_archive_email'] ?? '' ) ),
+				'whatsapp_enabled'           => ! empty( $_POST['whatsapp_enabled'] ),
+				'whatsapp_number'            => sanitize_text_field( wp_unslash( $_POST['whatsapp_number'] ?? '' ) ),
+				'whatsapp_message'           => sanitize_text_field( wp_unslash( $_POST['whatsapp_message'] ?? '' ) ),
+				'openai_api_key'             => sanitize_text_field( wp_unslash( $_POST['openai_api_key'] ?? '' ) ),
+				'mercaz_user'                => sanitize_text_field( wp_unslash( $_POST['mercaz_user'] ?? '' ) ),
+				'mercaz_pass'                => sanitize_text_field( wp_unslash( $_POST['mercaz_pass'] ?? '' ) ),
+				'mercaz_auto'                => ! empty( $_POST['mercaz_auto'] ),
+				'crm_webhook_url'            => esc_url_raw( wp_unslash( $_POST['crm_webhook_url'] ?? '' ) ),
+				'crm_webhook_secret'         => sanitize_text_field( wp_unslash( $_POST['crm_webhook_secret'] ?? '' ) ),
+				'crm_webhook_headers'        => sanitize_textarea_field( wp_unslash( $_POST['crm_webhook_headers'] ?? '' ) ),
+				'crm_webhook_updates'        => ! empty( $_POST['crm_webhook_updates'] ),
+				'ai_image_model'             => sanitize_text_field( wp_unslash( $_POST['ai_image_model'] ?? 'gpt-image-1' ) ),
+				'ai_image_quality'           => sanitize_key( wp_unslash( $_POST['ai_image_quality'] ?? 'medium' ) ),
+				'turnstile_site_key'         => sanitize_text_field( wp_unslash( $_POST['turnstile_site_key'] ?? '' ) ),
+				'turnstile_secret_key'       => sanitize_text_field( wp_unslash( $_POST['turnstile_secret_key'] ?? '' ) ),
+				'thankyou_page_id'           => absint( $_POST['thankyou_page_id'] ?? 0 ),
+				'thankyou_elementor'         => ! empty( $_POST['thankyou_elementor'] ),
+				'thankyou_title'             => sanitize_text_field( wp_unslash( $_POST['thankyou_title'] ?? '' ) ),
+				'thankyou_message'           => sanitize_textarea_field( wp_unslash( $_POST['thankyou_message'] ?? '' ) ),
+				'thankyou_popup'             => ! empty( $_POST['thankyou_popup'] ),
+				'thankyou_btn_label'         => sanitize_text_field( wp_unslash( $_POST['thankyou_btn_label'] ?? '' ) ),
+				'thankyou_btn_url'           => esc_url_raw( wp_unslash( $_POST['thankyou_btn_url'] ?? '' ) ),
 			)
 		);
 
@@ -515,6 +516,16 @@ class Kivun_Admin_Settings {
 					<td>
 						<textarea name="coordinators_female" rows="3" class="large-text" dir="ltr" placeholder="first@kivun.org.il = 1&#10;second@kivun.org.il = 3"><?php echo esc_textarea( $o( 'coordinators_female' ) ); ?></textarea>
 						<p class="description"><?php esc_html_e( '"= 1" ו-"= 3" נותנים רבע ושלושה רבעים. אפשר לכתוב גם 1/4 ו-3/4. גם כאן אפשר שם וטלפון לפני הכתובת, מופרדים בפסיקים.', 'kivun' ); ?></p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'עותק של כל ההגשות', 'kivun' ); ?></th>
+					<td>
+						<input type="email" name="applications_archive_email" value="<?php echo esc_attr( $o( 'applications_archive_email' ) ); ?>" class="regular-text" placeholder="archive@example.com">
+						<p class="description">
+							<?php esc_html_e( 'כל הגשת מועמדות תישלח גם לכתובת הזו, בנוסף לרכז/ת שהמשרה שויכה אליו/ה. כך יש לארגון תיעוד מלא במקום אחד, ורכז/ת שנמצא/ת בחופשה לא אומר/ת שקורות חיים לא נראו.', 'kivun' ); ?><br>
+							<?php esc_html_e( 'השאירו ריק כדי לבטל.', 'kivun' ); ?>
+						</p>
 					</td>
 				</tr>
 				<tr>

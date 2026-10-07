@@ -27,7 +27,7 @@ class Kivun_Tag_Job_Salary extends Kivun_Job_Tag_Base {
 	 * @return string The tag title.
 	 */
 	public function get_title(): string {
-		return __( 'משרה — שכר', 'kivun' );
+		return __( 'משרה — תנאי העסקה', 'kivun' );
 	}
 
 	/**

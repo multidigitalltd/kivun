@@ -43,9 +43,6 @@ foreach ( array( 'kivun_job_scope', 'kivun_job_region', 'kivun_job_field' ) as $
 		}
 	}
 }
-if ( $salary ) {
-	$tags[] = $salary;
-}
 
 // Short facts row.
 $info = array();
@@ -83,6 +80,14 @@ if ( $requirements ) {
 		'html'  => wpautop( $requirements ),
 	);
 }
+// Named rather than shown as a bare chip among the taxonomy terms, where a
+// reader had no way of telling what the number referred to.
+if ( $salary ) {
+	$sections[] = array(
+		'title' => __( 'תנאי העסקה', 'kivun' ),
+		'html'  => wpautop( $salary ),
+	);
+}
 ?>
 <section class="kivun-job-page" dir="rtl">
 
@@ -102,6 +107,15 @@ if ( $requirements ) {
 				</div>
 			<?php endif; ?>
 			<h1 class="kivun-job-title"><?php echo esc_html( $job_title ); ?></h1>
+			<?php if ( Kivun_Jobs::is_filled( (int) $job_id ) ) : ?>
+				<?php
+				// A filled job stays on the board on purpose — somebody still
+				// deciding what field to go into reads these to choose. Said
+				// at the top, next to the title, so nobody reads to the bottom
+				// and only then finds they cannot apply.
+				?>
+				<p class="kivun-job-filled"><?php esc_html_e( 'המשרה אוישה', 'kivun' ); ?></p>
+			<?php endif; ?>
 			<div class="kivun-job-meta-top">
 				<span>
 					<?php

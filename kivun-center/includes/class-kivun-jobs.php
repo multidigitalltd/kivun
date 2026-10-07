@@ -18,16 +18,21 @@ class Kivun_Jobs {
 	const FILLED_META = '_kivun_filled_at';
 
 	/**
-	 * How long a filled job stays on the board before it drops off.
+	 * How long a filled job stays on the board.
 	 *
-	 * It does not vanish the moment it is marked: someone who saw it that
-	 * morning and comes back for the link should find it, and read why it is
-	 * gone rather than wonder where it went.
+	 * It stays. Plenty of visitors arrive without having settled on a field,
+	 * and reading the board is how they decide — a filled job still says what
+	 * the work is, what it pays and what it asks for, and taking it away makes
+	 * the board worse at the job it is doing for them. It is marked rather
+	 * than removed, so nobody applies for something that is gone.
 	 *
-	 * @return int Days.
+	 * A site that would rather they expired can say so with the filter: any
+	 * positive number of days restores the old behaviour.
+	 *
+	 * @return int Days, or 0 to keep them indefinitely.
 	 */
 	public static function filled_grace_days(): int {
-		return max( 0, (int) apply_filters( 'kivun_filled_job_grace_days', 2 ) );
+		return max( 0, (int) apply_filters( 'kivun_filled_job_grace_days', 0 ) );
 	}
 
 	/**
@@ -51,16 +56,22 @@ class Kivun_Jobs {
 	}
 
 	/**
-	 * Keep filled jobs on the board only for the grace period.
+	 * Which jobs the board shows.
 	 *
-	 * Worked out per query rather than by a scheduled sweep, so a job leaves
-	 * on time on a quiet site too — WP-Cron only runs when somebody visits,
-	 * and a job could sit there for days waiting to be swept.
+	 * Everything, while filled jobs are kept — which is the default. Where a
+	 * site has set an expiry, worked out per query rather than by a scheduled
+	 * sweep, so a job leaves on time on a quiet site too: WP-Cron only runs
+	 * when somebody visits, and a job could sit there for days waiting.
 	 *
-	 * @return array<mixed> A meta_query.
+	 * @return array<mixed> A meta_query, empty when nothing is being hidden.
 	 */
 	public static function board_meta_query(): array {
-		$cutoff = wp_date( 'Y-m-d H:i:s', time() - ( self::filled_grace_days() * DAY_IN_SECONDS ) );
+		$days = self::filled_grace_days();
+		if ( ! $days ) {
+			return array();
+		}
+
+		$cutoff = wp_date( 'Y-m-d H:i:s', time() - ( $days * DAY_IN_SECONDS ) );
 
 		return array(
 			'relation' => 'OR',
@@ -259,7 +270,14 @@ class Kivun_Jobs {
 		$job_id = absint( $_GET['job'] ?? 0 ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verified immediately below.
 		check_admin_referer( 'kivun_toggle_filled_' . $job_id );
 
-		if ( ! $job_id || 'kivun_job' !== get_post_type( $job_id ) || ! current_user_can( 'edit_post', $job_id ) ) {
+		// Judged the way every other action on the board is judged: the
+		// publisher whose job it is, or whoever runs the board. edit_post was
+		// the wrong question — the jobs-manager role deliberately holds no
+		// WordPress editing capability, so the one person most likely to be
+		// marking a job filled was the one being refused.
+		$owns = get_current_user_id() === (int) get_post_field( 'post_author', $job_id );
+
+		if ( ! $job_id || 'kivun_job' !== get_post_type( $job_id ) || ( ! $owns && ! Kivun_Employer::can_manage_all() ) ) {
 			wp_die( esc_html__( 'אין לך הרשאה לעדכן את המשרה הזו.', 'kivun' ), '', array( 'response' => 403 ) );
 		}
 
@@ -288,12 +306,18 @@ class Kivun_Jobs {
 		// The stored time is the site's, and WordPress pins PHP to UTC — read
 		// without saying which zone it is in, every job would appear to leave
 		// three hours later than it does.
+		// Kept on the board, so there is no leaving date to name.
+		$days = self::filled_grace_days();
+		if ( ! $days ) {
+			return __( 'אוישה', 'kivun' );
+		}
+
 		$marked = \DateTimeImmutable::createFromFormat( 'Y-m-d H:i:s', $at, wp_timezone() );
 		if ( ! $marked ) {
 			return __( 'אוישה', 'kivun' );
 		}
 
-		$leaves = $marked->getTimestamp() + ( self::filled_grace_days() * DAY_IN_SECONDS );
+		$leaves = $marked->getTimestamp() + ( $days * DAY_IN_SECONDS );
 
 		return $leaves > time()
 			? sprintf(
@@ -681,11 +705,19 @@ class Kivun_Jobs {
 				'residence' => self::residence_label( $local, $address ),
 			);
 
-		// Whose turn it is, by the gender the candidate gave. Taking a turn is
-		// recorded, so this is decided once and the answer used for both the
-		// notification and the signature on the letter back — the person who
-		// has the application is the person who signs it.
-		$coordinator = Kivun_Coordinators::pick( $gender );
+		// Whoever the job was given to when it was posted. Somebody chose that
+		// deliberately — they know the employer — so it is not second-guessed
+		// by the rota, which exists for candidates who arrive through the board
+		// belonging to nobody in particular.
+		//
+		// The rota is the fallback, and only for a job nobody was named on: an
+		// application must reach a person either way. Decided once, because
+		// taking a turn is recorded, and the same answer signs the letter back —
+		// the person who has the application is the person who signs it.
+		$coordinator = Kivun_Coordinators::by_email( (string) get_post_meta( $job_id, '_kivun_coordinator', true ) );
+		if ( ! $coordinator ) {
+			$coordinator = Kivun_Coordinators::pick( $gender );
+		}
 
 		$employer_email = get_post_meta( $job_id, '_kivun_employer_email', true );
 		if ( $employer_email ) {
@@ -693,6 +725,14 @@ class Kivun_Jobs {
 		}
 		if ( $coordinator ) {
 			Kivun_Mailer::send_application( $coordinator['email'], get_the_title( $job_id ), $details );
+		}
+
+		// One address that sees every application, whoever it was addressed to,
+		// so the centre has a complete record in one place and a coordinator
+		// being away does not mean a CV nobody saw.
+		$archive = (string) Kivun_Admin_Settings::get( 'applications_archive_email', '' );
+		if ( '' !== trim( $archive ) && is_email( $archive ) && ( ! $coordinator || $archive !== $coordinator['email'] ) ) {
+			Kivun_Mailer::send_application( $archive, get_the_title( $job_id ), $details );
 		}
 
 		// Reassure the applicant that their CV arrived. The application is saved

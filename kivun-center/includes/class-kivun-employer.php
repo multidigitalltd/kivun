@@ -152,10 +152,19 @@ class Kivun_Employer {
 	private static function resolve_job_author( int $current_author = 0 ): WP_User {
 		if ( self::can_manage_all() ) {
 			$employer_id = absint( wp_unslash( $_POST['employer_id'] ?? 0 ) ); // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified by the calling AJAX handler.
-			$employer    = $employer_id ? get_userdata( $employer_id ) : false;
+
+			// The board is run by the centre itself now; publisher accounts are
+			// history. Naming one is optional, and a job posted without one
+			// belongs to whoever posted it — refusing the job instead would
+			// leave a site with no publishers unable to post at all.
+			if ( ! $employer_id ) {
+				return wp_get_current_user();
+			}
+
+			$employer = get_userdata( $employer_id );
 
 			if ( ! $employer || ! in_array( 'kivun_employer', (array) $employer->roles, true ) ) {
-				wp_send_json_error( array( 'message' => __( 'יש לבחור מפרסם עבור המשרה.', 'kivun' ) ) );
+				wp_send_json_error( array( 'message' => __( 'המפרסם שנבחר אינו קיים.', 'kivun' ) ) );
 			}
 			if (
 				$employer->ID !== $current_author &&
@@ -167,6 +176,32 @@ class Kivun_Employer {
 		}
 
 		return wp_get_current_user();
+	}
+
+	/**
+	 * Store which coordinator handles this job's candidates.
+	 *
+	 * Chosen by whoever posts the job, not by the rota: the rota shares out
+	 * people who arrived through the board and belong to nobody in particular,
+	 * while a job is already somebody's — they know the employer and have been
+	 * speaking to them.
+	 *
+	 * Only an address on a roster is accepted, so the field cannot come to hold
+	 * someone who has left and quietly send them applications.
+	 *
+	 * @param int $job_id The job.
+	 * @return void
+	 */
+	private static function save_coordinator( int $job_id ): void {
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified by the calling AJAX handler.
+		$chosen = sanitize_email( wp_unslash( $_POST['coordinator'] ?? '' ) );
+
+		if ( '' === $chosen || ! Kivun_Coordinators::by_email( $chosen ) ) {
+			delete_post_meta( $job_id, '_kivun_coordinator' );
+			return;
+		}
+
+		update_post_meta( $job_id, '_kivun_coordinator', $chosen );
 	}
 
 	// ── Post new job ──────────────────────────────────────────────────────────.
@@ -189,7 +224,6 @@ class Kivun_Employer {
 		// and a job without one is missing from it entirely.
 		$city       = sanitize_text_field( wp_unslash( $_POST['city'] ?? '' ) );
 		$work_hours = sanitize_text_field( wp_unslash( $_POST['work_hours'] ?? '' ) );
-		$experience = sanitize_text_field( wp_unslash( $_POST['experience_years'] ?? '' ) );
 		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized per value.
 		$features = array_filter( array_map( 'sanitize_text_field', (array) wp_unslash( $_POST['features'] ?? array() ) ) );
 		$scope    = sanitize_text_field( wp_unslash( $_POST['scope'] ?? '' ) );
@@ -227,10 +261,10 @@ class Kivun_Employer {
 		update_post_meta( $job_id, '_kivun_description', $description );
 		update_post_meta( $job_id, '_kivun_company', $company );
 		update_post_meta( $job_id, '_kivun_salary', $salary );
+		self::save_coordinator( $job_id );
 		update_post_meta( $job_id, '_kivun_requirements', $requirements );
 		update_post_meta( $job_id, '_kivun_city', $city );
 		update_post_meta( $job_id, '_kivun_work_hours', $work_hours );
-		update_post_meta( $job_id, '_kivun_experience_years', $experience );
 		// Always set, so clearing every box actually clears them.
 		wp_set_object_terms( $job_id, $features ? $features : null, 'kivun_job_feature' );
 		self::save_deadline( $job_id, $deadline );
@@ -276,7 +310,6 @@ class Kivun_Employer {
 		// and a job without one is missing from it entirely.
 		$city       = sanitize_text_field( wp_unslash( $_POST['city'] ?? '' ) );
 		$work_hours = sanitize_text_field( wp_unslash( $_POST['work_hours'] ?? '' ) );
-		$experience = sanitize_text_field( wp_unslash( $_POST['experience_years'] ?? '' ) );
 		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized per value.
 		$features = array_filter( array_map( 'sanitize_text_field', (array) wp_unslash( $_POST['features'] ?? array() ) ) );
 		$scope    = sanitize_text_field( wp_unslash( $_POST['scope'] ?? '' ) );
@@ -305,10 +338,10 @@ class Kivun_Employer {
 		update_post_meta( $job_id, '_kivun_description', $description );
 		update_post_meta( $job_id, '_kivun_company', $company );
 		update_post_meta( $job_id, '_kivun_salary', $salary );
+		self::save_coordinator( $job_id );
 		update_post_meta( $job_id, '_kivun_requirements', $requirements );
 		update_post_meta( $job_id, '_kivun_city', $city );
 		update_post_meta( $job_id, '_kivun_work_hours', $work_hours );
-		update_post_meta( $job_id, '_kivun_experience_years', $experience );
 		// Always set, so clearing every box actually clears them.
 		wp_set_object_terms( $job_id, $features ? $features : null, 'kivun_job_feature' );
 		self::save_deadline( $job_id, self::sanitize_deadline( sanitize_text_field( wp_unslash( $_POST['deadline'] ?? '' ) ) ) );
