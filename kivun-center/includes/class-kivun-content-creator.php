@@ -1883,6 +1883,25 @@ class Kivun_Content_Creator {
 	}
 
 	/**
+	 * Whether the current user should be shown where a lead came from.
+	 *
+	 * Which campaign brought somebody in is a question about the advertising,
+	 * and it is answered on the campaigns screen. A coordinator working the
+	 * leads is doing a different job — they need the person, not the channel —
+	 * so the column is kept off that table for them and the screen stays about
+	 * the work in front of them.
+	 *
+	 * Not the same bar as reading the leads: the leads reader is exactly who
+	 * this hides it from. Whoever runs the content or the site sees it in both
+	 * places.
+	 *
+	 * @return bool
+	 */
+	public static function can_see_lead_source(): bool {
+		return current_user_can( 'manage_options' ) || current_user_can( 'edit_others_posts' );
+	}
+
+	/**
 	 * Whether the current user may read the leads and nothing else.
 	 *
 	 * The console is otherwise a content editor; this role has no business in
@@ -4551,6 +4570,8 @@ class Kivun_Content_Creator {
 		$selected_content = $content_list['rep'][ $content_filter ] ?? $content_filter;
 
 		$can_delete_rows = current_user_can( 'manage_options' );
+		$show_source     = self::can_see_lead_source();
+		$show_source     = self::can_see_lead_source();
 
 		// Base args preserved across filtering and paging.
 		$base_args = array( 'kivun_tab' => 'leads' );
@@ -4770,17 +4791,20 @@ class Kivun_Content_Creator {
 						<summary class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost"><?php esc_html_e( 'עמודות', 'kivun' ); ?></summary>
 						<div class="kivun-cc-colpicker__menu">
 							<?php
-							foreach ( array(
-								'name'    => __( 'שם', 'kivun' ),
-								'content' => __( 'תוכן', 'kivun' ),
-								'utm'     => __( 'מקור (UTM)', 'kivun' ),
-								'type'    => __( 'סוג', 'kivun' ),
-								'contact' => __( 'יצירת קשר', 'kivun' ),
-								'city'    => __( 'עיר', 'kivun' ),
-								'consent' => __( 'דיוור', 'kivun' ),
-								'notes'   => __( 'הערות', 'kivun' ),
-								'date'    => __( 'תאריך', 'kivun' ),
-								'status'  => __( 'סטטוס', 'kivun' ),
+							// A column withheld from this reader is not offered back to them here.
+							foreach ( array_filter(
+								array(
+									'name'    => __( 'שם', 'kivun' ),
+									'content' => __( 'תוכן', 'kivun' ),
+									'utm'     => $show_source ? __( 'מקור (UTM)', 'kivun' ) : '',
+									'type'    => __( 'סוג', 'kivun' ),
+									'contact' => __( 'יצירת קשר', 'kivun' ),
+									'city'    => __( 'עיר', 'kivun' ),
+									'consent' => __( 'דיוור', 'kivun' ),
+									'notes'   => __( 'הערות', 'kivun' ),
+									'date'    => __( 'תאריך', 'kivun' ),
+									'status'  => __( 'סטטוס', 'kivun' ),
+								)
 							) as $kivun_col => $kivun_col_label ) :
 								?>
 								<label class="kivun-cc-colpicker__row">
@@ -4799,7 +4823,11 @@ class Kivun_Content_Creator {
 						<tr>
 							<th scope="col" data-col="name"><?php esc_html_e( 'שם', 'kivun' ); ?></th>
 							<th scope="col" data-col="content"><?php esc_html_e( 'תוכן', 'kivun' ); ?></th>
-							<th scope="col" data-col="utm"><?php esc_html_e( 'מקור (UTM)', 'kivun' ); ?></th>
+							<?php if ( $show_source ) : ?>
+								<?php if ( $show_source ) : ?>
+									<th scope="col" data-col="utm"><?php esc_html_e( 'מקור (UTM)', 'kivun' ); ?></th>
+								<?php endif; ?>
+							<?php endif; ?>
 							<th scope="col" data-col="type"><?php esc_html_e( 'סוג', 'kivun' ); ?></th>
 							<th scope="col" data-col="contact"><?php esc_html_e( 'יצירת קשר', 'kivun' ); ?></th>
 							<th scope="col" data-col="city"><?php esc_html_e( 'עיר', 'kivun' ); ?></th>
@@ -4842,6 +4870,7 @@ class Kivun_Content_Creator {
 									<span class="kivun-cc-source"><?php echo esc_html( $src['origin'] ); ?></span>
 								<?php endif; ?>
 							</td>
+							<?php if ( $show_source ) : ?>
 							<td class="kivun-cc-utm" data-label="<?php esc_attr_e( 'מקור (UTM)', 'kivun' ); ?>" data-col="utm">
 								<?php if ( '' !== $src['source'] ) : ?>
 									<span class="kivun-cc-badge"><?php echo esc_html( $src['source'] ); ?></span>
@@ -4858,6 +4887,7 @@ class Kivun_Content_Creator {
 									<span class="kivun-muted" aria-hidden="true">—</span>
 								<?php endif; ?>
 							</td>
+							<?php endif; ?>
 							<td data-label="<?php esc_attr_e( 'סוג', 'kivun' ); ?>" data-col="type"><span class="kivun-cc-badge"><?php echo esc_html( $type_labels[ $r->type ?? 'registration' ] ?? (string) $r->type ); ?></span></td>
 							<td class="kivun-app-contact" data-label="<?php esc_attr_e( 'יצירת קשר', 'kivun' ); ?>" data-col="contact">
 								<a href="mailto:<?php echo esc_attr( $r->email ); ?>"><?php echo esc_html( $r->email ); ?></a>

@@ -811,6 +811,7 @@ foreach ( array(
 	'class-kivun-mailer',
 	'class-kivun-phones',
 	'class-kivun-forms-router',
+	'class-kivun-content-creator',
 ) as $kivun_test_class ) {
 	require_once KIVUN_DIR . 'includes/' . $kivun_test_class . '.php';
 }

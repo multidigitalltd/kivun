@@ -177,7 +177,18 @@ class Kivun_Export {
 		// UTF-8 BOM for Excel.
 		fputs( $out, "\xEF\xBB\xBF" ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fputs
 
-		fputcsv( $out, array( 'ID', 'קורס / סדנה', 'מקור', 'שם', 'אימייל', 'טלפון', 'עיר', 'מגדר', 'אישור דיוור', 'סוג', 'הערות', 'הערות פנימיות', 'סטטוס', 'תאריך' ) );
+		// Where a lead came from is a question about the advertising, and the
+		// reader who is not shown that column on screen is not handed it in a
+		// spreadsheet either — otherwise the restriction is decoration.
+		$show_source = Kivun_Content_Creator::can_see_lead_source();
+
+		$headings = array( 'ID', 'קורס / סדנה' );
+		if ( $show_source ) {
+			$headings[] = 'מקור';
+		}
+		$headings = array_merge( $headings, array( 'שם', 'אימייל', 'טלפון', 'עיר', 'מגדר', 'אישור דיוור', 'סוג', 'הערות', 'הערות פנימיות', 'סטטוס', 'תאריך' ) );
+
+		fputcsv( $out, $headings );
 
 		$type_labels = array(
 			'registration' => 'הרשמה',
@@ -189,25 +200,30 @@ class Kivun_Export {
 		);
 
 		foreach ( $rows as $r ) {
+			$line = array( $r['id'], $r['post_name'] );
+			if ( $show_source ) {
+				$line[] = $r['source'] ?? '';
+			}
+
 			fputcsv(
 				$out,
 				array_map(
 					array( __CLASS__, 'csv_safe' ),
-					array(
-						$r['id'],
-						$r['post_name'],
-						$r['source'] ?? '',
-						$r['name'],
-						$r['email'],
-						$r['phone'],
-						$r['city'] ?? '',
-						$r['gender'] ?? '',
-						empty( $r['marketing_consent'] ) ? 'לא' : 'כן',
-						$type_labels[ $r['type'] ] ?? $r['type'],
-						$r['message'],
-						$r['notes'],
-						$r['status'],
-						$r['created_at'],
+					array_merge(
+						$line,
+						array(
+							$r['name'],
+							$r['email'],
+							$r['phone'],
+							$r['city'] ?? '',
+							$r['gender'] ?? '',
+							empty( $r['marketing_consent'] ) ? 'לא' : 'כן',
+							$type_labels[ $r['type'] ] ?? $r['type'],
+							$r['message'],
+							$r['notes'],
+							$r['status'],
+							$r['created_at'],
+						)
 					)
 				)
 			);

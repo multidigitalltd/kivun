@@ -1515,6 +1515,7 @@ class Kivun_Admin {
 		// landing page is the same thing twice under the same name, and picking
 		// either showed only part of its enquiries.
 		$course_list     = Kivun_Content_Creator::content_filter_options( $courses );
+		$show_source     = Kivun_Content_Creator::can_see_lead_source();
 		$selected_course = $course_list['rep'][ $course_filter ] ?? $course_filter;
 		?>
 		<div class="wrap">
@@ -1561,7 +1562,9 @@ class Kivun_Admin {
 				<thead><tr>
 					<th style="width:130px"><?php esc_html_e( 'שם', 'kivun' ); ?></th>
 					<th><?php esc_html_e( 'קורס / סדנה', 'kivun' ); ?></th>
-					<th style="width:150px"><?php esc_html_e( 'מקור', 'kivun' ); ?></th>
+					<?php if ( $show_source ) : ?>
+						<th style="width:150px"><?php esc_html_e( 'מקור', 'kivun' ); ?></th>
+					<?php endif; ?>
 					<th style="width:70px"><?php esc_html_e( 'סוג', 'kivun' ); ?></th>
 					<th style="width:150px"><?php esc_html_e( 'אימייל', 'kivun' ); ?></th>
 					<th style="width:105px"><?php esc_html_e( 'טלפון', 'kivun' ); ?></th>
@@ -1591,7 +1594,9 @@ class Kivun_Admin {
 									<?php echo esc_html( $r->course_id ? __( '(נמחק)', 'kivun' ) : $type_label ); ?>
 								<?php endif; ?>
 							</td>
-							<td><?php echo esc_html( (string) ( $r->source ?? '' ) ); ?></td>
+							<?php if ( $show_source ) : ?>
+								<td><?php echo esc_html( (string) ( $r->source ?? '' ) ); ?></td>
+							<?php endif; ?>
 							<td><?php echo esc_html( $type_label ); ?></td>
 							<td><a href="mailto:<?php echo esc_attr( $r->email ); ?>"><?php echo esc_html( $r->email ); ?></a></td>
 							<td><a href="tel:<?php echo esc_attr( $r->phone ); ?>"><?php echo esc_html( $r->phone ); ?></a></td>
