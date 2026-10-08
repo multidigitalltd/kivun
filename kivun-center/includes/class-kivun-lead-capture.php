@@ -112,7 +112,7 @@ class Kivun_Lead_Capture {
 	 * @return array{name:string,phone:string,email:string,city:string,gender:string,consent:int,message:string}
 	 */
 	private static function extract( array $raw ): array {
-		$out      = array(
+		$out = array(
 			'name'    => '',
 			'phone'   => '',
 			'email'   => '',
@@ -121,7 +121,8 @@ class Kivun_Lead_Capture {
 			'consent' => 0,
 			'message' => '',
 		);
-		$fields   = Kivun_Form_Details::fields( $raw );
+		// Existing forms may prefill standard contact fields with hidden values.
+		$fields   = Kivun_Form_Details::fields( $raw, true );
 		$excluded = array();
 		$message  = false;
 
@@ -151,7 +152,8 @@ class Kivun_Lead_Capture {
 			$excluded[] = (string) $id;
 		}
 
-		$out['message'] = Kivun_Form_Details::message( $fields, $excluded, $out['message'] );
+		// Only visible, unmapped answers belong in the appended form details.
+		$out['message'] = Kivun_Form_Details::message( Kivun_Form_Details::fields( $raw ), $excluded, $out['message'] );
 
 		return $out;
 	}

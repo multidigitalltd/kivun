@@ -209,6 +209,35 @@ final class FormSubmissionDetailsTest extends TestCase {
 		$this->assertCount( 1, $GLOBALS['wpdb']->rows, 'Do not insert a second row for forms saved by their Kivun action.' );
 	}
 
+	public function test_generic_capture_keeps_a_lead_with_only_a_hidden_email_contact(): void {
+		$answers = array(
+			'email' => $this->field( 'hidden', 'אימייל', 'sara@example.test' ),
+			'message' => $this->field( 'textarea', 'הערות', 'נא להתקשר בערב' ),
+			'internal_token' => $this->field( 'hidden', 'נתון פנימי', 'hidden-secret' ),
+		);
+		Kivun_Lead_Capture::capture( new Kivun_Form_Test_Record( $answers ), null );
+		$this->assertCount( 1, $GLOBALS['wpdb']->rows );
+		$this->assertSame( 'sara@example.test', $GLOBALS['wpdb']->rows[0]['email'] );
+		$this->assertSame( 'נא להתקשר בערב', $GLOBALS['wpdb']->rows[0]['message'] );
+	}
+
+	public function test_generic_capture_preserves_prefilled_hidden_standard_columns(): void {
+		$answers = $this->answers();
+		foreach ( array( 'phone', 'email', 'city', 'gender', 'consent', 'comment' ) as $id ) {
+			$answers[ $id ]['type'] = 'hidden';
+		}
+		Kivun_Lead_Capture::capture( new Kivun_Form_Test_Record( $answers ), null );
+		$this->assertCount( 1, $GLOBALS['wpdb']->rows );
+		$row = $GLOBALS['wpdb']->rows[0];
+		$this->assertSame( 'שרה', $row['name'] );
+		$this->assertSame( '0501234567', $row['phone'] );
+		$this->assertSame( 'sara@example.test', $row['email'] );
+		$this->assertSame( 'ירושלים', $row['city'] );
+		$this->assertSame( 'אישה', $row['gender'] );
+		$this->assertSame( 1, $row['marketing_consent'] );
+		$this->assertSame( $this->expected_message(), $row['message'] );
+	}
+
 	public function test_free_course_saves_unmapped_answers_and_mails_them(): void {
 		$handler = $this->register_course();
 		$this->assertSame( array(), $handler->errors );

@@ -15,10 +15,11 @@ class Kivun_Form_Details {
 	/**
 	 * Normalize user-facing Elementor fields, retaining every selected value.
 	 *
-	 * @param array $raw Elementor's submitted field records, keyed by field ID.
+	 * @param array $raw            Elementor's submitted field records, keyed by field ID.
+	 * @param bool  $include_hidden Include candidates for standard hidden fields only.
 	 * @return array<string,array{label:string,type:string,value:string}> Safe answers.
 	 */
-	public static function fields( array $raw ): array {
+	public static function fields( array $raw, bool $include_hidden = false ): array {
 		$fields = array();
 		foreach ( $raw as $id => $field ) {
 			if ( ! is_array( $field ) ) {
@@ -28,7 +29,8 @@ class Kivun_Form_Details {
 			$type = sanitize_key( is_scalar( $field['type'] ?? null ) ? $field['type'] : '' );
 			$key  = strtolower( (string) $id );
 			if (
-				in_array( $type, array( 'hidden', 'password', 'html', 'step', 'submit' ), true )
+				( ! $include_hidden && 'hidden' === $type )
+				|| in_array( $type, array( 'password', 'html', 'step', 'submit' ), true )
 				|| preg_match( '/captcha|turnstile|honeypot/', $type . ' ' . $key )
 				|| in_array( $key, array( 'action', 'nonce', '_nonce', '_wpnonce', 'security', 'post_id', 'course_id', 'form_id', 'form_name', 'is_paid', 'password', 'user_pass', 'pwd' ), true )
 			) {
@@ -68,10 +70,7 @@ class Kivun_Form_Details {
 		if ( ! is_array( $field ) ) {
 			return '';
 		}
-		if ( 'hidden' === ( $field['type'] ?? '' ) ) {
-			$field['type'] = 'text';
-		}
-		$fields = self::fields( array( $field_id => $field ) );
+		$fields = self::fields( array( $field_id => $field ), true );
 		return $fields[ $field_id ]['value'] ?? '';
 	}
 
