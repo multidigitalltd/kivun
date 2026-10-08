@@ -37,12 +37,12 @@ final class SubmissionDetailsTest extends TestCase {
 	 *
 	 * @return void
 	 */
-	public function test_complete_multiline_answers_are_read_only_and_collapsed(): void {
+	public function test_complete_multiline_answers_are_read_only_and_open_by_default(): void {
 		$message = "הערות הלקוח: נא לחזור אליי\r\nתחום: מחשבים, הוראה\n" . str_repeat( 'תשובה ארוכה ', 100 );
 		$html    = kivun_submission_details( $message );
 
-		$this->assertStringContainsString( '<details class="kivun-submission-details">', $html );
-		$this->assertStringNotContainsString( ' open', $html );
+		$this->assertStringContainsString( '<details class="kivun-submission-details" open>', $html );
+		$this->assertStringContainsString( ' open>', $html );
 		$this->assertStringNotContainsString( '<textarea', $html );
 		$this->assertStringNotContainsString( '<input', $html );
 		$this->assertSame( 2, substr_count( $html, '<br>' ) );

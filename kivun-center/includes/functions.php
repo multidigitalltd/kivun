@@ -18,7 +18,7 @@ function kivun_submission_details( string $message ): string {
 		return '<span class="kivun-submission-empty" title="' . esc_attr( __( 'לא נמסרו פרטים נוספים.', 'kivun' ) ) . '">—</span>';
 	}
 
-	return '<details class="kivun-submission-details"><summary>'
+	return '<details class="kivun-submission-details" open><summary>'
 		. esc_html__( 'פרטי הפנייה', 'kivun' )
 		. '</summary><div class="kivun-submission-details__body">'
 		. nl2br( esc_html( $message ), false )
