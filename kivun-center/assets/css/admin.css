@@ -135,6 +135,12 @@
 .kivun-reg-table td .kivun-status-select,
 .kivun-reg-table td textarea { max-width: 100%; }
 
+/* Visitor answers stay separate from the editable staff notes. */
+.kivun-submission-details { width: 12rem; max-width: 100%; }
+.kivun-submission-details summary { cursor: pointer; font-weight: 600; }
+.kivun-submission-details__body { margin-top: .5rem; max-height: 20rem; overflow: auto; overflow-wrap: anywhere; line-height: 1.6; }
+.kivun-submission-empty { color: #64748b; }
+
 /* ── Voice dictation mic button ────────────────────────────────────────────── */
 .kivun-mic {
 	display: inline-flex; align-items: center; justify-content: center;

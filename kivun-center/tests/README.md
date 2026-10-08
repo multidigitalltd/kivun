@@ -32,6 +32,8 @@ as a lead on the wrong desk or a campaign that looked quiet.
 | `PhonesTest.php` | Matching a dialled number; reading the switchboard's dates; the call filters. | A landline that did not match filed calls against no number at all. `12/09/2026` read the American way put a call in December. |
 | `FormsRouterTest.php` | Which submissions belong to the jobs coordinators. | The rota was consulted for every form carrying a gender field, which swept in the landing pages and skewed the split for the candidates it was built for. |
 | `MailerTest.php` | That the letters are right-to-left documents, and that the sign-off names the coordinator. | A letter only looks wrong in somebody else's inbox. |
+| `FormSubmissionDetailsTest.php` | Extra answers through generic capture, Kivun leads, and free/paid course registration, including multiple choices and mapped hidden fields. | Form actions saved only their mapped fields, discarding other answers. |
+| `SubmissionDetailsTest.php` | Complete, escaped, read-only visitor details, including existing records and multiline answers. | The lead lists showed staff notes while hiding saved visitor answers. |
 
 ## `bin/check-assets.sh`
 

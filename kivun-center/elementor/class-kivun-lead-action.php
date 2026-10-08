@@ -177,15 +177,24 @@ class Kivun_Lead_Action extends Action_Base {
 			return $fields[ $field_id ]['value'] ?? '';
 		};
 
-		$data = array(
-			'name'              => $get_value( $settings['kivun_lead_field_name'] ?? 'name' ),
-			'phone'             => $get_value( $settings['kivun_lead_field_phone'] ?? 'phone' ),
-			'email'             => $get_value( $settings['kivun_lead_field_email'] ?? 'email' ),
-			'city'              => $get_value( $settings['kivun_lead_field_city'] ?? 'city' ),
-			'gender'            => $get_value( $settings['kivun_lead_field_gender'] ?? 'gender' ),
-			'marketing_consent' => '' !== trim( (string) $get_value( $settings['kivun_lead_field_consent'] ?? 'consent' ) ) ? 1 : 0,
-			'message'           => $get_value( $settings['kivun_lead_field_message'] ?? 'message' ),
+		$mapped  = array(
+			'name'              => trim( (string) ( $settings['kivun_lead_field_name'] ?? 'name' ) ),
+			'phone'             => trim( (string) ( $settings['kivun_lead_field_phone'] ?? 'phone' ) ),
+			'email'             => trim( (string) ( $settings['kivun_lead_field_email'] ?? 'email' ) ),
+			'city'              => trim( (string) ( $settings['kivun_lead_field_city'] ?? 'city' ) ),
+			'gender'            => trim( (string) ( $settings['kivun_lead_field_gender'] ?? 'gender' ) ),
+			'marketing_consent' => trim( (string) ( $settings['kivun_lead_field_consent'] ?? 'consent' ) ),
+			'message'           => trim( (string) ( $settings['kivun_lead_field_message'] ?? 'message' ) ),
 		);
+		$answers = Kivun_Form_Details::fields( is_array( $fields ) ? $fields : array() );
+		$data    = array();
+		foreach ( $mapped as $key => $id ) {
+			$data[ $key ] = Kivun_Form_Details::mapped_value( is_array( $fields ) ? $fields : array(), $id );
+		}
+		$data['marketing_consent'] = '' !== $data['marketing_consent'] ? 1 : 0;
+		$excluded                  = array_values( $mapped );
+		$excluded[]                = trim( (string) ( $settings['kivun_lead_field_post'] ?? 'post_id' ) );
+		$data['message']           = Kivun_Form_Details::message( $answers, $excluded, $data['message'] );
 
 		// Resolve the target landing page / course.
 		$source  = $settings['kivun_lead_source'] ?? 'current';

@@ -112,7 +112,7 @@ class Kivun_Lead_Capture {
 	 * @return array{name:string,phone:string,email:string,city:string,gender:string,consent:int,message:string}
 	 */
 	private static function extract( array $raw ): array {
-		$out   = array(
+		$out      = array(
 			'name'    => '',
 			'phone'   => '',
 			'email'   => '',
@@ -121,25 +121,20 @@ class Kivun_Lead_Capture {
 			'consent' => 0,
 			'message' => '',
 		);
-		$extra = array();
+		$fields   = Kivun_Form_Details::fields( $raw );
+		$excluded = array();
+		$message  = false;
 
-		foreach ( $raw as $id => $field ) {
-			$type  = is_array( $field ) ? (string) ( $field['type'] ?? '' ) : '';
-			$title = is_array( $field ) ? (string) ( $field['title'] ?? $id ) : (string) $id;
-			$value = is_array( $field ) ? ( $field['value'] ?? '' ) : '';
-			$value = is_array( $value ) ? implode( ', ', $value ) : (string) $value;
-			$value = trim( $value );
-			if ( '' === $value ) {
-				continue;
-			}
-
-			$key = mb_strtolower( $id . ' ' . $title );
+		foreach ( $fields as $id => $field ) {
+			$type  = $field['type'];
+			$value = $field['value'];
+			$key   = mb_strtolower( $id . ' ' . $field['label'] );
 
 			if ( '' === $out['email'] && ( 'email' === $type || is_email( $value ) ) ) {
 				$out['email'] = sanitize_email( $value );
 			} elseif ( '' === $out['phone'] && ( 'tel' === $type || preg_match( '/phone|tel|טלפו|נייד|פלאפון|סלולר/u', $key ) ) ) {
 				$out['phone'] = sanitize_text_field( $value );
-			} elseif ( 'acceptance' === $type || preg_match( '/consent|דיוור|הסכמ|אישור קבל/u', $key ) ) {
+			} elseif ( ! $out['consent'] && ( 'acceptance' === $type || preg_match( '/consent|דיוור|הסכמ|אישור קבל/u', $key ) ) ) {
 				$out['consent'] = 1;
 			} elseif ( '' === $out['name'] && preg_match( '/name|שם/u', $key ) ) {
 				$out['name'] = sanitize_text_field( $value );
@@ -147,17 +142,16 @@ class Kivun_Lead_Capture {
 				$out['city'] = sanitize_text_field( $value );
 			} elseif ( '' === $out['gender'] && preg_match( '/gender|מגדר|מין/u', $key ) ) {
 				$out['gender'] = sanitize_text_field( $value );
-			} elseif ( 'textarea' === $type || preg_match( '/message|הודעה|הערות|תוכן|פנייה/u', $key ) ) {
-				$out['message'] .= ( '' !== $out['message'] ? "\n" : '' ) . $value;
+			} elseif ( ! $message && ( 'textarea' === $type || preg_match( '/message|הודעה|הערות|תוכן|פנייה/u', $key ) ) ) {
+				$out['message'] = $value;
+				$message        = true;
 			} else {
-				$extra[] = $title . ': ' . $value;
+				continue;
 			}
+			$excluded[] = (string) $id;
 		}
 
-		if ( $extra ) {
-			$out['message'] = trim( $out['message'] . ( '' !== $out['message'] ? "\n" : '' ) . implode( "\n", $extra ) );
-		}
-		$out['message'] = sanitize_textarea_field( $out['message'] );
+		$out['message'] = Kivun_Form_Details::message( $fields, $excluded, $out['message'] );
 
 		return $out;
 	}

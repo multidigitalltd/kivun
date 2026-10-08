@@ -2073,6 +2073,13 @@ body.kivun-ty-open { overflow: hidden; }
 .kivun-cc-leadtable:not(.is-stacked) .kivun-cc-utm,
 .kivun-cc-leadtable:not(.is-stacked) .kivun-app-contact { overflow-wrap: anywhere; }
 
+/* Visitor answers stay separate from the editable staff notes, in either view. */
+.kivun-submission-details { width: 12rem; max-width: 100%; }
+.kivun-submission-details summary { cursor: pointer; font-weight: 600; }
+.kivun-submission-details__body { margin-top: .5rem; max-height: 20rem; overflow: auto; overflow-wrap: anywhere; line-height: 1.6; }
+.kivun-submission-empty { color: var(--kivun-muted); }
+.kivun-cc-table.is-stacked .kivun-submission-details { flex: 1; min-width: 0; width: auto; }
+
 /* Choosing how the leads are shown, and which columns are worth the width. */
 .kivun-cc-viewbar {
 	display: flex;

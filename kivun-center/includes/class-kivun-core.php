@@ -114,6 +114,7 @@ class Kivun_Core {
 			'class-kivun-cta',
 			'class-kivun-forms-router',
 			'class-kivun-coordinators',
+			'class-kivun-form-details',
 			'class-kivun-lead-capture',
 			'class-kivun-utm',
 			'class-kivun-campaigns',

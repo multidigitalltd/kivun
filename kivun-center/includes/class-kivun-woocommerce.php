@@ -47,6 +47,7 @@ class Kivun_WooCommerce {
 			'name'    => sanitize_text_field( wp_unslash( $_POST['name'] ?? '' ) ),
 			'email'   => sanitize_email( wp_unslash( $_POST['email'] ?? '' ) ),
 			'phone'   => sanitize_text_field( wp_unslash( $_POST['phone'] ?? '' ) ),
+			'city'    => sanitize_text_field( wp_unslash( $_POST['city'] ?? '' ) ),
 			'message' => sanitize_textarea_field( wp_unslash( $_POST['message'] ?? '' ) ),
 		);
 
@@ -86,6 +87,7 @@ class Kivun_WooCommerce {
 		$name    = sanitize_text_field( $data['name'] ?? '' );
 		$email   = sanitize_email( $data['email'] ?? '' );
 		$phone   = sanitize_text_field( $data['phone'] ?? '' );
+		$city    = sanitize_text_field( $data['city'] ?? '' );
 		$message = sanitize_textarea_field( $data['message'] ?? '' );
 
 		if ( ! $course_id || ! $name || ! is_email( $email ) ) {
@@ -117,6 +119,7 @@ class Kivun_WooCommerce {
 				'name'      => $name,
 				'email'     => $email,
 				'phone'     => $phone,
+				'city'      => $city,
 				'message'   => $message,
 			)
 		);
@@ -167,11 +170,12 @@ class Kivun_WooCommerce {
 				'name'       => $reg['name'],
 				'email'      => $reg['email'],
 				'phone'      => $reg['phone'],
+				'city'       => $reg['city'] ?? '',
 				'message'    => $reg['message'] ?? '',
 				'status'     => 'confirmed',
 				'created_at' => current_time( 'mysql' ),
 			),
-			array( '%d', '%s', '%s', '%s', '%s', '%s', '%s' )
+			array( '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s' )
 		);
 
 		Kivun_Mailer::send_course_registration( $reg['course_id'], $reg );

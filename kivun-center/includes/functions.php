@@ -8,6 +8,24 @@
 defined( 'ABSPATH' ) || exit;
 
 /**
+ * Render the visitor's saved message and form answers without making them editable.
+ *
+ * @param string $message Saved submission text, including answers from older leads.
+ * @return string Escaped HTML for a disclosure, or a consistent empty indicator.
+ */
+function kivun_submission_details( string $message ): string {
+	if ( '' === trim( $message ) ) {
+		return '<span class="kivun-submission-empty" title="' . esc_attr( __( 'לא נמסרו פרטים נוספים.', 'kivun' ) ) . '">—</span>';
+	}
+
+	return '<details class="kivun-submission-details"><summary>'
+		. esc_html__( 'פרטי הפנייה', 'kivun' )
+		. '</summary><div class="kivun-submission-details__body">'
+		. nl2br( esc_html( $message ), false )
+		. '</div></details>';
+}
+
+/**
  * Returns the number of remaining spots for a course or workshop.
  *
  * Returns null if no capacity limit is set.

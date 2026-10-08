@@ -1571,14 +1571,15 @@ class Kivun_Admin {
 						<th style="width:90px"><?php esc_html_e( 'עיר', 'kivun' ); ?></th>
 						<th style="width:60px"><?php esc_html_e( 'מגדר', 'kivun' ); ?></th>
 						<th style="width:55px"><?php esc_html_e( 'דיוור', 'kivun' ); ?></th>
-					<th><?php esc_html_e( 'הערות', 'kivun' ); ?></th>
+					<th><?php esc_html_e( 'פרטי הפנייה', 'kivun' ); ?></th>
+					<th><?php esc_html_e( 'הערות פנימיות', 'kivun' ); ?></th>
 					<th style="width:120px"><?php esc_html_e( 'תאריך', 'kivun' ); ?></th>
 					<th style="width:145px"><?php esc_html_e( 'סטטוס', 'kivun' ); ?></th>
 					<th style="width:60px"><?php esc_html_e( 'מחיקה', 'kivun' ); ?></th>
 				</tr></thead>
 				<tbody>
 				<?php if ( ! $rows ) : ?>
-					<tr><td colspan="13"><?php esc_html_e( 'לא נמצאו רשומות.', 'kivun' ); ?></td></tr>
+					<tr><td colspan="<?php echo $show_source ? '14' : '13'; ?>"><?php esc_html_e( 'לא נמצאו רשומות.', 'kivun' ); ?></td></tr>
 				<?php else : ?>
 					<?php foreach ( $rows as $r ) : ?>
 						<?php $type_label = $type_labels[ $r->type ?? 'registration' ] ?? $r->type; ?>
@@ -1603,6 +1604,9 @@ class Kivun_Admin {
 								<td><?php echo esc_html( (string) ( $r->city ?? '' ) ); ?></td>
 								<td><?php echo esc_html( (string) ( $r->gender ?? '' ) ); ?></td>
 								<td><?php echo esc_html( ! empty( $r->marketing_consent ) ? '✓' : '—' ); ?></td>
+							<td>
+								<?php echo kivun_submission_details( (string) ( $r->message ?? '' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Helper escapes the saved text and labels. ?>
+							</td>
 							<td>
 								<?php
 								// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Returns pre-escaped HTML.

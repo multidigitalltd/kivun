@@ -4603,7 +4603,7 @@ class Kivun_Content_Creator {
 			<div class="kivun-cc-head">
 				<h2 class="kivun-cc-title"><?php esc_html_e( 'לידים והרשמות', 'kivun' ); ?></h2>
 				<p class="kivun-cc-lead">
-					<?php esc_html_e( 'פניות שהתקבלו מהתכנים — קורסים, סדנאות, דפי נחיתה ואירועים — וכן פניות מטפסים כלליים באתר (צור קשר וכד׳), המסומנות "טופס באתר". עדכון סטטוס והערות נשמרים אוטומטית.', 'kivun' ); ?>
+					<?php esc_html_e( 'פניות שהתקבלו מהתכנים — קורסים, סדנאות, דפי נחיתה ואירועים — וכן פניות מטפסים כלליים באתר (צור קשר וכד׳), המסומנות "טופס באתר". פרטי הפנייה מציגים את תשובות הלקוח; עדכון סטטוס והערות פנימיות נשמרים אוטומטית.', 'kivun' ); ?>
 					<?php if ( Kivun_Employer::can_manage_all() ) : ?>
 						<br><span class="kivun-cc-sep-note"><?php esc_html_e( 'הגשות מועמדות למשרות (עם קורות חיים) נמצאות בלשונית "לוח משרות" — הן מערכת נפרדת.', 'kivun' ); ?></span>
 					<?php endif; ?>
@@ -4801,7 +4801,8 @@ class Kivun_Content_Creator {
 									'contact' => __( 'יצירת קשר', 'kivun' ),
 									'city'    => __( 'עיר', 'kivun' ),
 									'consent' => __( 'דיוור', 'kivun' ),
-									'notes'   => __( 'הערות', 'kivun' ),
+									'message' => __( 'פרטי הפנייה', 'kivun' ),
+									'notes'   => __( 'הערות פנימיות', 'kivun' ),
 									'date'    => __( 'תאריך', 'kivun' ),
 									'status'  => __( 'סטטוס', 'kivun' ),
 								)
@@ -4832,7 +4833,8 @@ class Kivun_Content_Creator {
 							<th scope="col" data-col="contact"><?php esc_html_e( 'יצירת קשר', 'kivun' ); ?></th>
 							<th scope="col" data-col="city"><?php esc_html_e( 'עיר', 'kivun' ); ?></th>
 							<th scope="col" data-col="consent"><?php esc_html_e( 'דיוור', 'kivun' ); ?></th>
-							<th scope="col" data-col="notes"><?php esc_html_e( 'הערות', 'kivun' ); ?></th>
+							<th scope="col" data-col="message"><?php esc_html_e( 'פרטי הפנייה', 'kivun' ); ?></th>
+							<th scope="col" data-col="notes"><?php esc_html_e( 'הערות פנימיות', 'kivun' ); ?></th>
 							<th scope="col"><?php esc_html_e( 'תאריך', 'kivun' ); ?></th>
 							<th scope="col"><?php esc_html_e( 'סטטוס', 'kivun' ); ?></th>
 							<?php if ( $can_delete_rows ) : ?>
@@ -4897,7 +4899,10 @@ class Kivun_Content_Creator {
 							</td>
 							<td data-label="<?php esc_attr_e( 'עיר', 'kivun' ); ?>" data-col="city"><?php echo esc_html( (string) ( $r->city ?? '' ) ); ?></td>
 							<td data-label="<?php esc_attr_e( 'דיוור', 'kivun' ); ?>" data-col="consent"><?php echo esc_html( empty( $r->marketing_consent ) ? '—' : '✓' ); ?></td>
-							<td data-label="<?php esc_attr_e( 'הערות', 'kivun' ); ?>" data-col="notes">
+							<td data-label="<?php esc_attr_e( 'פרטי הפנייה', 'kivun' ); ?>" data-col="message">
+								<?php echo kivun_submission_details( (string) ( $r->message ?? '' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Helper escapes the saved text and labels. ?>
+							</td>
+							<td data-label="<?php esc_attr_e( 'הערות פנימיות', 'kivun' ); ?>" data-col="notes">
 								<?php
 								// Working a lead is writing down what came of it,
 								// so everyone who can see the table can keep a

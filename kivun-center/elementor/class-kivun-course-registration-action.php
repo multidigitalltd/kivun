@@ -156,13 +156,21 @@ class Kivun_Course_Registration_Action extends Action_Base {
 			return $fields[ $field_id ]['value'] ?? '';
 		};
 
-		$data = array(
-			'name'    => $get_value( $settings['kivun_field_name'] ?? 'name' ),
-			'email'   => $get_value( $settings['kivun_field_email'] ?? 'email' ),
-			'phone'   => $get_value( $settings['kivun_field_phone'] ?? 'phone' ),
-			'city'    => $get_value( $settings['kivun_field_city'] ?? 'city' ),
-			'message' => $get_value( $settings['kivun_field_message'] ?? 'message' ),
+		$mapped  = array(
+			'name'    => trim( (string) ( $settings['kivun_field_name'] ?? 'name' ) ),
+			'email'   => trim( (string) ( $settings['kivun_field_email'] ?? 'email' ) ),
+			'phone'   => trim( (string) ( $settings['kivun_field_phone'] ?? 'phone' ) ),
+			'city'    => trim( (string) ( $settings['kivun_field_city'] ?? 'city' ) ),
+			'message' => trim( (string) ( $settings['kivun_field_message'] ?? 'message' ) ),
 		);
+		$answers = Kivun_Form_Details::fields( is_array( $fields ) ? $fields : array() );
+		$data    = array();
+		foreach ( $mapped as $key => $id ) {
+			$data[ $key ] = Kivun_Form_Details::mapped_value( is_array( $fields ) ? $fields : array(), $id );
+		}
+		$excluded        = array_values( $mapped );
+		$excluded[]      = trim( (string) ( $settings['kivun_field_course'] ?? 'course_id' ) );
+		$data['message'] = Kivun_Form_Details::message( $answers, $excluded, $data['message'] );
 
 		// Resolve the target course.
 		$source    = $settings['kivun_course_source'] ?? 'current';
