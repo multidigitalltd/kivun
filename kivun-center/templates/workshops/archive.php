@@ -1,7 +1,18 @@
-<?php defined( 'ABSPATH' ) || exit; ?>
+<?php
+/**
+ * Template: workshops archive grid.
+ *
+ * @package Kivun
+ */
+
+defined( 'ABSPATH' ) || exit;
+?>
 <div class="kivun-workshops kivun-workshops--cols-<?php echo esc_attr( $columns ); ?>">
 	<?php if ( $query->have_posts() ) : ?>
-		<?php while ( $query->have_posts() ) : $query->the_post(); ?>
+		<?php
+		while ( $query->have_posts() ) :
+			$query->the_post();
+			?>
 			<?php kivun_get_template( 'workshops/card.php' ); ?>
 		<?php endwhile; ?>
 	<?php else : ?>

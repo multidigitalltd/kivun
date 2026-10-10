@@ -1,7 +1,13 @@
 <?php
+/**
+ * Template: single workshop card.
+ *
+ * @package Kivun
+ */
+
 defined( 'ABSPATH' ) || exit;
 
-$date     = get_post_meta( get_the_ID(), '_kivun_ws_date',     true );
+$date     = get_post_meta( get_the_ID(), '_kivun_ws_date', true );
 $duration = get_post_meta( get_the_ID(), '_kivun_ws_duration', true );
 $location = get_post_meta( get_the_ID(), '_kivun_ws_location', true );
 ?>

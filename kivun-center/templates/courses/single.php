@@ -1,4 +1,10 @@
 <?php
+/**
+ * Template: single course view.
+ *
+ * @package Kivun
+ */
+
 defined( 'ABSPATH' ) || exit;
 
 $f = fn( $key ) => get_post_meta( $course_id, $key, true );
@@ -77,7 +83,7 @@ $is_paid  = $price > 0 && $f( '_kivun_wc_product_id' );
 			</div>
 		<?php endif; ?>
 
-		<?php kivun_get_template( 'courses/register-form.php', [ 'course_id' => $course_id ] ); ?>
+		<?php kivun_get_template( 'courses/register-form.php', array( 'course_id' => $course_id ) ); ?>
 
 	</div>
 </article>

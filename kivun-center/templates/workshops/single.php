@@ -1,4 +1,10 @@
 <?php
+/**
+ * Template: single workshop view.
+ *
+ * @package Kivun
+ */
+
 defined( 'ABSPATH' ) || exit;
 
 $f        = fn( $key ) => get_post_meta( $workshop_id, $key, true );
@@ -57,10 +63,15 @@ $capacity = $f( '_kivun_ws_capacity' );
 		<?php endif; ?>
 
 		<!-- Registration / lead form -->
-		<?php kivun_get_template( 'courses/interest-form.php', [
-			'post_id'   => $workshop_id,
-			'post_type' => 'kivun_workshop',
-		] ); ?>
+		<?php
+		kivun_get_template(
+			'courses/interest-form.php',
+			array(
+				'post_id'   => $workshop_id,
+				'post_type' => 'kivun_workshop',
+			)
+		);
+		?>
 
 	</div>
 </article>

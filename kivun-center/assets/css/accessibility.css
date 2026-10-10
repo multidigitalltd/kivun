@@ -1,0 +1,398 @@
+/**
+ * Kivun accessibility layer styles.
+ * RTL toolbar, skip link, and feature modes for WCAG 2.2 AA / ת"י 5568.
+ */
+
+/* ── Screen-reader only helper ──────────────────────────────────────────── */
+.kivun-sr-only {
+	position: absolute !important;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect(0, 0, 0, 0);
+	white-space: nowrap;
+	border: 0;
+}
+
+/* ── Skip link ──────────────────────────────────────────────────────────── */
+.kivun-skip-link {
+	position: absolute;
+	top: -100px;
+	right: 8px;
+	left: auto;
+	z-index: 100001;
+	padding: 12px 20px;
+	background: #000;
+	color: #fff;
+	font-size: 16px;
+	font-weight: 700;
+	text-decoration: underline;
+	border-radius: 0 0 6px 6px;
+}
+
+.kivun-skip-link:focus {
+	top: 0;
+	outline: 3px solid #ff0;
+	outline-offset: 2px;
+}
+
+/* ── Toolbar trigger ────────────────────────────────────────────────────── */
+/* Reset so theme button/list rules can't break the widget layout. */
+.kivun-a11y,
+.kivun-a11y *,
+.kivun-a11y *::before,
+.kivun-a11y *::after {
+	box-sizing: border-box;
+}
+.kivun-a11y {
+	/* Pull the site's font (Ploni via Elementor global) with safe fallbacks. */
+	font-family: var(--e-global-typography-text-font-family, 'ploni'), 'Ploni ML v2 AAA', 'Heebo', 'Assistant', system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+	--kivun-a11y-accent: var(--e-global-color-primary, #de2952);
+}
+.kivun-a11y button {
+	appearance: none;
+	-webkit-appearance: none;
+	margin: 0;
+	font-family: inherit !important;
+	line-height: normal;
+	text-transform: none;
+	box-shadow: none;
+}
+
+.kivun-a11y-toggle {
+	position: fixed;
+	inset-inline-start: 20px;
+	bottom: 20px;
+	z-index: 99999;
+	display: inline-flex !important;
+	align-items: center !important;
+	justify-content: center !important;
+	width: 58px !important;
+	height: 58px !important;
+	min-width: 58px !important;
+	min-height: 58px !important;
+	max-width: 58px;
+	padding: 0 !important;
+	color: #fff;
+	background: #1452d8;
+	border: 3px solid #fff;
+	border-radius: 50% !important;
+	box-shadow: 0 6px 20px rgba(20, 82, 216, 0.45);
+	cursor: pointer;
+	line-height: 1 !important;
+	transition: transform .15s ease, background .15s ease, box-shadow .15s ease;
+}
+
+.kivun-a11y-toggle:hover {
+	background: #0d3ca8;
+	transform: translateY(-2px);
+	box-shadow: 0 8px 26px rgba(20, 82, 216, 0.5);
+}
+.kivun-a11y-icon { width: 30px; height: 30px; }
+
+.kivun-a11y-toggle:focus-visible {
+	outline: 3px solid #ff0;
+	outline-offset: 2px;
+}
+/* On the light panel surfaces a dark ring keeps the focus indicator visible. */
+.kivun-a11y-btn:focus-visible,
+.kivun-a11y-close:focus-visible,
+.kivun-a11y-reset:focus-visible {
+	outline: 3px solid #1452d8;
+	outline-offset: 2px;
+}
+
+.kivun-a11y-icon {
+	display: block;
+}
+
+/* ── Panel — clean white-card style (matches the employer dashboard) ─────── */
+.kivun-a11y-panel {
+	position: fixed;
+	inset-inline-start: 20px;
+	bottom: 88px;
+	z-index: 100000;
+	width: 320px;
+	max-width: calc(100vw - 40px);
+	max-height: 78vh;
+	overflow-y: auto;
+	overflow-x: hidden;
+	padding: 0;
+	color: #232323;
+	background: #fff;
+	border: 1px solid #eceef3;
+	border-radius: 18px;
+	box-shadow: 0 18px 50px rgba(35, 35, 35, 0.14);
+	text-align: right;
+}
+
+.kivun-a11y-panel[hidden] {
+	display: none;
+}
+
+.kivun-a11y-panel__head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin: 0;
+	padding: 18px 20px 6px;
+	background: #fff;
+	border-radius: 18px 18px 0 0;
+}
+
+.kivun-a11y-panel__title {
+	margin: 0;
+	font-size: 18px;
+	font-weight: 700;
+	color: #1a1a1a;
+}
+
+.kivun-a11y-close {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 32px;
+	height: 32px;
+	font-size: 22px;
+	line-height: 1;
+	color: #6b7280;
+	background: transparent;
+	border: none;
+	border-radius: 8px;
+	cursor: pointer;
+	transition: background .15s ease, color .15s ease;
+}
+
+.kivun-a11y-close:hover {
+	background: #f2f3f5;
+	color: #1a1a1a;
+}
+
+/* ── Grouped, icon-based controls (compact) ──────────────────────────────── */
+.kivun-a11y-body {
+	padding: 6px 14px 2px;
+}
+.kivun-a11y-group {
+	margin: 0;
+	padding: 0;
+	border: 0;
+}
+.kivun-a11y-group + .kivun-a11y-group {
+	margin-top: 10px;
+	padding-top: 10px;
+	border-top: 1px solid #eef0f4;
+}
+.kivun-a11y-group__title {
+	margin: 0 0 7px;
+	font-size: 10.5px;
+	font-weight: 700;
+	letter-spacing: .02em;
+	color: #8a93a3;
+}
+
+.kivun-a11y-list {
+	display: grid !important;
+	grid-template-columns: repeat(3, 1fr) !important;
+	gap: 6px !important;
+	margin: 0 !important;
+	padding: 0 !important;
+	list-style: none !important;
+}
+
+.kivun-a11y-list__item {
+	margin: 0 !important;
+	padding: 0 !important;
+	min-width: 0 !important;
+	list-style: none !important;
+}
+.kivun-a11y-list__item::before { content: none !important; }
+
+.kivun-a11y-btn {
+	display: flex !important;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 4px;
+	width: 100% !important;
+	min-width: 0;
+	min-height: 54px;
+	padding: 7px 3px;
+	font-size: 10.5px;
+	font-weight: 500;
+	line-height: 1.2;
+	text-align: center;
+	overflow-wrap: anywhere;
+	color: #4b5563 !important;
+	background: #fbfbfc !important;
+	border: 1px solid #ececf1 !important;
+	border-radius: 14px !important;
+	box-shadow: none !important;
+	cursor: pointer;
+	transition: background .15s ease, border-color .15s ease, color .15s ease, box-shadow .15s ease, transform .12s ease;
+}
+.kivun-a11y-btn__icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 20px;
+	height: 20px;
+	color: #5b6472;
+}
+.kivun-a11y-btn__icon svg { display: block; width: 19px; height: 19px; }
+.kivun-a11y-glyph { font-size: 14px; font-weight: 800; line-height: 1; color: inherit; }
+.kivun-a11y-glyph sup, .kivun-a11y-glyph sub { font-size: 9px; font-weight: 700; }
+.kivun-a11y-btn__label { display: block; }
+
+.kivun-a11y-btn:hover {
+	background: #f4f5f8 !important;
+	border-color: #dcdfe8 !important;
+	color: #2b3240 !important;
+	transform: translateY(-1px);
+	box-shadow: 0 3px 10px rgba(35, 35, 35, .06) !important;
+}
+
+.kivun-a11y-btn[aria-pressed="true"] {
+	color: var(--kivun-a11y-accent, #de2952) !important;
+	background: #fdeef2 !important;
+	border-color: var(--kivun-a11y-accent, #de2952) !important;
+	box-shadow: none !important;
+}
+.kivun-a11y-btn[aria-pressed="true"] .kivun-a11y-btn__icon,
+.kivun-a11y-btn[aria-pressed="true"] .kivun-a11y-glyph { color: var(--kivun-a11y-accent, #de2952) !important; }
+
+.kivun-a11y-panel__foot {
+	margin: 0;
+	padding: 6px 20px 20px;
+}
+
+.kivun-a11y-reset {
+	display: block;
+	width: 100%;
+	min-height: 48px;
+	padding: 12px;
+	font-size: 14.5px;
+	font-weight: 600;
+	color: #fff;
+	background: #1a1a1a;
+	border: 1px solid #1a1a1a;
+	border-radius: 11px;
+	cursor: pointer;
+	transition: background .15s ease, border-color .15s ease;
+}
+
+.kivun-a11y-reset:hover {
+	background: #333;
+	border-color: #333;
+}
+
+/* ── Reading guide ──────────────────────────────────────────────────────── */
+.kivun-a11y-reading-guide {
+	position: fixed;
+	inset-inline: 0;
+	top: 0;
+	z-index: 99998;
+	height: 6px;
+	background: #ffeb00;
+	box-shadow: 0 0 0 1px #000;
+	pointer-events: none;
+}
+
+/* ── Root font scale ────────────────────────────────────────────────────── */
+html {
+	font-size: calc(100% * var(--kivun-a11y-font-scale, 1));
+}
+
+/* ── Feature modes ──────────────────────────────────────────────────────── */
+html.kivun-a11y-contrast,
+html.kivun-a11y-contrast body {
+	background: #000 !important;
+	color: #fff !important;
+}
+
+html.kivun-a11y-contrast a {
+	color: #ff0 !important;
+}
+
+html.kivun-a11y-contrast :is(h1, h2, h3, h4, h5, h6, p, span, li, td, th, label) {
+	color: #fff !important;
+}
+
+html.kivun-a11y-negative {
+	filter: invert(1) hue-rotate(180deg);
+}
+
+html.kivun-a11y-grayscale {
+	filter: grayscale(1);
+}
+
+html.kivun-a11y-negative.kivun-a11y-grayscale {
+	filter: invert(1) hue-rotate(180deg) grayscale(1);
+}
+
+html.kivun-a11y-underline-links a {
+	text-decoration: underline !important;
+}
+
+html.kivun-a11y-readable-font * {
+	font-family: Arial, "Segoe UI", Tahoma, sans-serif !important;
+	letter-spacing: 0.02em !important;
+}
+
+html.kivun-a11y-stop-animations * {
+	animation: none !important;
+	transition: none !important;
+	scroll-behavior: auto !important;
+}
+
+html.kivun-a11y-highlight-headings :is(h1, h2, h3, h4, h5, h6) {
+	outline: 2px dashed #c1440e !important;
+	background: #fff3cd !important;
+	color: #111 !important;
+}
+
+html.kivun-a11y-highlight-links a {
+	outline: 2px solid #0b3d91 !important;
+	background: #fff3cd !important;
+	color: #0b3d91 !important;
+}
+
+html.kivun-a11y-big-cursor * {
+	cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'><path fill='%23000' stroke='%23fff' stroke-width='2' d='M6 4l30 16-13 3-3 13z'/></svg>") 6 4, auto !important;
+}
+
+/* Keep the toolbar usable when inversion/grayscale is on. */
+html.kivun-a11y-negative .kivun-a11y-toggle,
+html.kivun-a11y-negative .kivun-a11y-panel,
+html.kivun-a11y-negative .kivun-skip-link {
+	filter: invert(1) hue-rotate(180deg);
+}
+
+html.kivun-a11y-grayscale .kivun-a11y-toggle,
+html.kivun-a11y-grayscale .kivun-a11y-panel {
+	filter: grayscale(0);
+}
+
+/* ── Statement ──────────────────────────────────────────────────────────── */
+.kivun-a11y-statement {
+	max-width: 760px;
+	margin: 0 auto;
+	line-height: 1.7;
+	text-align: right;
+}
+
+.kivun-a11y-statement__updated {
+	margin-top: 24px;
+	font-style: italic;
+	color: #555;
+}
+
+/* ── Reduced motion ─────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+	.kivun-a11y-toggle,
+	.kivun-a11y-panel,
+	.kivun-a11y-btn {
+		transition: none !important;
+	}
+}
