@@ -133,9 +133,11 @@ class Kivun_Mailer {
 	 * @param array  $coordinator     The coordinator handling this candidate,
 	 *                                who signs the letter. Empty when the rota
 	 *                                named nobody.
+	 * @param bool   $filled          Whether the job was already filled when
+	 *                                they applied.
 	 * @return void
 	 */
-	public static function send_application_confirmation( string $applicant_email, string $applicant_name, string $job_title, string $company = '', bool $employer_mailed = true, array $coordinator = array() ): void {
+	public static function send_application_confirmation( string $applicant_email, string $applicant_name, string $job_title, string $company = '', bool $employer_mailed = true, array $coordinator = array(), bool $filled = false ): void {
 		unset( $employer_mailed, $company );
 
 		if ( ! is_email( $applicant_email ) ) {
@@ -146,7 +148,7 @@ class Kivun_Mailer {
 			$applicant_email,
 			/* translators: %s: job title. */
 			sprintf( __( 'אישור הגשת מועמדות — %s', 'kivun' ), $job_title ),
-			self::confirmation_html( $applicant_name, $job_title, $coordinator ),
+			self::confirmation_html( $applicant_name, $job_title, $coordinator, $filled ),
 			__( 'המועמדות התקבלה', 'kivun' )
 		);
 	}
@@ -159,16 +161,25 @@ class Kivun_Mailer {
 	 * @param string               $name        The candidate's name.
 	 * @param string               $job_title   The job applied for.
 	 * @param array<string,string> $coordinator The coordinator handling them.
+	 * @param bool                 $filled      Whether the job was already
+	 *                                          filled when they applied.
 	 * @return array<int,string> Paragraphs; a line break inside one is "\n".
 	 */
-	public static function confirmation_lines( string $name, string $job_title, array $coordinator = array() ): array {
+	public static function confirmation_lines( string $name, string $job_title, array $coordinator = array(), bool $filled = false ): array {
 		$lines = array(
 			/* translators: %s: the candidate's name. */
 			sprintf( __( 'שלום %s,', 'kivun' ), $name ),
 			/* translators: %s: job title. */
 			sprintf( __( 'קורות החיים שלך למשרה %s התקבלו בהצלחה.', 'kivun' ), $job_title ),
-			__( 'אנו נפנה אליך ישירות אם המועמדות תימצא מתאימה.', 'kivun' ),
 		);
+
+		// Said straight away when the role is gone. A letter that promised to
+		// be in touch "if the application is found suitable" would be reading
+		// as a maybe about a job that has already been filled — and the reason
+		// to have applied at all is the next one, which is worth saying.
+		$lines[] = $filled
+			? __( 'המשרה הזו כבר אוישה, אך קורות החיים שלך נשמרו אצלנו — ונפנה אליך כשתיפתח משרה דומה שמתאימה לך.', 'kivun' )
+			: __( 'אנו נפנה אליך ישירות אם המועמדות תימצא מתאימה.', 'kivun' );
 
 		// The sign-off names the person who actually has the application, so a
 		// candidate with a question knows who to ask. Without a coordinator on
@@ -195,11 +206,13 @@ class Kivun_Mailer {
 	 * @param string               $name        The candidate's name.
 	 * @param string               $job_title   The job applied for.
 	 * @param array<string,string> $coordinator The coordinator handling them.
+	 * @param bool                 $filled      Whether the job was already
+	 *                                          filled when they applied.
 	 * @return string
 	 */
-	public static function confirmation_html( string $name, string $job_title, array $coordinator = array() ): string {
+	public static function confirmation_html( string $name, string $job_title, array $coordinator = array(), bool $filled = false ): string {
 		$accent = (string) apply_filters( 'kivun_email_accent', '#ef315d' );
-		$lines  = self::confirmation_lines( $name, $job_title, $coordinator );
+		$lines  = self::confirmation_lines( $name, $job_title, $coordinator, $filled );
 		$last   = count( $lines ) - 1;
 		$html   = '';
 
@@ -500,9 +513,19 @@ class Kivun_Mailer {
 			);
 		}
 
+		// A job already filled still receives applications, and the person
+		// opening this should know which kind it is before they read it as a
+		// candidate for a vacancy that no longer exists.
+		$opening = ! empty( $d['filled'] )
+			? sprintf(
+				'<p>התקבלה מועמדות למשרה <strong>%s</strong>, שכבר אוישה. קורות החיים נשמרו לקראת משרה דומה.</p>',
+				esc_html( $job )
+			)
+			: sprintf( '<p>קיבלת מועמדות חדשה למשרה <strong>%s</strong></p>', esc_html( $job ) );
+
 		return sprintf(
-			'<p>קיבלת מועמדות חדשה למשרה <strong>%s</strong></p><ul>%s</ul><p>%s</p>',
-			esc_html( $job ),
+			'%s<ul>%s</ul><p>%s</p>',
+			$opening,
 			$rows,
 			! empty( $d['cv_path'] ) ? 'קו"ח מצורפים.' : 'לא צורפו קו"ח.'
 		);

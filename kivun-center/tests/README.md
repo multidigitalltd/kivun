@@ -17,7 +17,10 @@ Individually:
 | `composer test` | The unit tests below. |
 | `./bin/check-assets.sh` | That `*.min.css` / `*.min.js` are the ones built from the sources in this commit. |
 
-All four run in CI on every push and pull request.
+All of them run in CI — but only on a push to `main` or `develop`, or a pull
+request aimed at one of those. A push to a working branch with no pull request
+open starts nothing, so run `composer check` before pushing rather than waiting
+for a run that will not happen.
 
 ## Why these tests and not others
 
@@ -34,6 +37,7 @@ as a lead on the wrong desk or a campaign that looked quiet.
 | `MailerTest.php` | That the letters are right-to-left documents, and that the sign-off names the coordinator. | A letter only looks wrong in somebody else's inbox. |
 | `FormSubmissionDetailsTest.php` | Extra answers through generic capture, Kivun leads, and free/paid course registration, including multiple choices and mapped hidden fields. | Form actions saved only their mapped fields, discarding other answers. |
 | `SubmissionDetailsTest.php` | Complete, escaped, read-only visitor details, including existing records and multiline answers. | The lead lists showed staff notes while hiding saved visitor answers. |
+| `FilledJobTest.php` | That a filled job still shows its form and says why, and that the candidate's letter and the coordinator's notification both know the role was taken. | A filled job closed its form, turning away the people worth calling about the next one like it. Three files have to agree, and a disagreement only shows as a letter promising to be in touch about a job that is gone. |
 
 ## `bin/check-assets.sh`
 

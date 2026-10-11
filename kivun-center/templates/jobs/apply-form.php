@@ -9,17 +9,20 @@ defined( 'ABSPATH' ) || exit;
 
 $kivun_turnstile_key = Kivun_Admin_Settings::get( 'turnstile_site_key' );
 
-// Nothing to apply to any more. Saying so is kinder than a form that accepts
-// a CV nobody will read.
-if ( Kivun_Jobs::is_filled( (int) $job_id ) ) {
-	printf(
-		'<div class="kivun-apply-wrap"><p class="kivun-apply-closed">%s</p></div>',
-		esc_html__( 'המשרה אוישה ואינה מקבלת עוד מועמדויות. מוזמנים לעיין בשאר המשרות בלוח.', 'kivun' )
-	);
-	return;
-}
+// A filled job still takes applications, and says plainly that it is filled.
+// The centre places people rather than one job: a CV arriving now is read for
+// what comes next, and somebody who saw the role and wanted it is exactly who
+// to call about the next one like it. Turning them away threw that away — and
+// said nothing about why they should bother.
+$kivun_job_filled = Kivun_Jobs::is_filled( (int) $job_id );
 ?>
 <div class="kivun-apply-wrap">
+	<?php if ( $kivun_job_filled ) : ?>
+		<p class="kivun-apply-filled">
+			<strong><?php esc_html_e( 'המשרה אוישה.', 'kivun' ); ?></strong>
+			<?php esc_html_e( 'אפשר עדיין להשאיר פרטים וקורות חיים — נשמור אותם ונפנה אליכם כשתיפתח משרה דומה.', 'kivun' ); ?>
+		</p>
+	<?php endif; ?>
 	<form class="kivun-apply-form" enctype="multipart/form-data" novalidate>
 		<?php wp_nonce_field( 'kivun_nonce', '_nonce', false ); ?>
 		<input type="hidden" name="job_id" value="<?php echo esc_attr( $job_id ); ?>">

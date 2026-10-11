@@ -111,8 +111,10 @@ if ( $salary ) {
 				<?php
 				// A filled job stays on the board on purpose — somebody still
 				// deciding what field to go into reads these to choose. Said
-				// at the top, next to the title, so nobody reads to the bottom
-				// and only then finds they cannot apply.
+				// at the top, next to the title, so it is known before the
+				// covering letter is written rather than after. The form below
+				// still accepts an application; the notice above it says why
+				// that is worth doing.
 				?>
 				<p class="kivun-job-filled"><?php esc_html_e( 'המשרה אוישה', 'kivun' ); ?></p>
 			<?php endif; ?>

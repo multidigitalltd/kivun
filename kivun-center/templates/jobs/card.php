@@ -31,9 +31,8 @@ $scope   = ( $scopes && ! is_wp_error( $scopes ) ) ? $scopes[0]->name : '';
 			</h3>
 			<?php if ( Kivun_Jobs::is_filled( $job_id ) ) : ?>
 				<?php
-				// Said plainly on the card for its last couple of days, so
-				// somebody returning to it learns why rather than applying to
-				// a job that is gone.
+				// Said plainly on the card, so somebody scanning the board
+				// knows which of these are still open before clicking in.
 				?>
 				<span class="kivun-jc-filled"><?php esc_html_e( 'המשרה אוישה', 'kivun' ); ?></span>
 			<?php endif; ?>
