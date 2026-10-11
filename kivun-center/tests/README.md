@@ -37,6 +37,7 @@ as a lead on the wrong desk or a campaign that looked quiet.
 | `MailerTest.php` | That the letters are right-to-left documents, and that the sign-off names the coordinator. | A letter only looks wrong in somebody else's inbox. |
 | `FormSubmissionDetailsTest.php` | Extra answers through generic capture, Kivun leads, and free/paid course registration, including multiple choices and mapped hidden fields. | Form actions saved only their mapped fields, discarding other answers. |
 | `SubmissionDetailsTest.php` | Complete, escaped, read-only visitor details, including existing records and multiline answers. | The lead lists showed staff notes while hiding saved visitor answers. |
+| `AiImageSizeTest.php` | The shape a generated cover is saved at: the configured size, the crop that produces it, and the ratio written into the prompt. | A content page renders its hero at the image's own ratio, so a 16:9 cover filled most of the screen before the first line of text. The crop that fixes it fails quietly — a box a few pixels out still produces a picture, just a squashed one. |
 | `FilledJobTest.php` | That a filled job still shows its form and says why, and that the candidate's letter and the coordinator's notification both know the role was taken. | A filled job closed its form, turning away the people worth calling about the next one like it. Three files have to agree, and a disagreement only shows as a letter promising to be in touch about a job that is gone. |
 
 ## `bin/check-assets.sh`
