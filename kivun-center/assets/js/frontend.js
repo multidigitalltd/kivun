@@ -855,6 +855,67 @@
 			});
 	});
 
+	// ── Send every job to Mercaz Kivun ───────────────────────────────────────────
+	// The jobs already on their board went up before any of this was checked,
+	// so they are sitting there without a number, a type or a settlement. Each
+	// one is updated in place, so this cannot make a second copy of anything.
+	document.addEventListener('click', function (e) {
+		var btn = e.target.closest('.kivun-mercaz-push-all');
+		if (!btn) { return; }
+
+		var wrap = btn.closest('.kivun-mercaz-bulk'),
+			out = wrap && wrap.querySelector('.kivun-mercaz-bulk__out');
+
+		btn.disabled = true;
+		if (out) {
+			out.hidden = false;
+			out.className = 'kivun-mercaz-bulk__out';
+			out.textContent = kivun.i18n.sending;
+		}
+
+		post(params({ action: 'kivun_mercaz_push_all', nonce: kivun.nonce }))
+			.then(function (res) {
+				btn.disabled = false;
+				if (!out) { return; }
+
+				if (!res.success) {
+					out.className = 'kivun-mercaz-bulk__out is-error';
+					out.textContent = (res.data && res.data.message) || kivun.i18n.error_generic;
+					return;
+				}
+
+				var problems = (res.data && res.data.problems) || [],
+					unfinished = (res.data && res.data.remaining) || 0;
+
+				out.className = 'kivun-mercaz-bulk__out' +
+					(problems.length || unfinished ? ' is-warn' : ' is-ok');
+				out.textContent = '';
+
+				var line = document.createElement('p');
+				line.textContent = res.data.message;
+				out.appendChild(line);
+
+				// Named one by one: a count sends somebody hunting, while the
+				// title and the missing field is the whole repair.
+				if (problems.length) {
+					var list = document.createElement('ul');
+					problems.forEach(function (text) {
+						var li = document.createElement('li');
+						li.textContent = text;
+						list.appendChild(li);
+					});
+					out.appendChild(list);
+				}
+			})
+			.catch(function (err) {
+				btn.disabled = false;
+				if (out) {
+					out.className = 'kivun-mercaz-bulk__out is-error';
+					out.textContent = failure(err);
+				}
+			});
+	});
+
 	// ── WhatsApp promo generator ─────────────────────────────────────────────────
 	function kivunWaField(form, selector) {
 		var el = form.querySelector(selector);

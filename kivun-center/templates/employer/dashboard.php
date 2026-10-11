@@ -377,8 +377,8 @@ $kivun_user     = wp_get_current_user();
 
 				<div class="kivun-form-grid">
 					<div class="kivun-form-row">
-						<label for="kivun-f-scope"><?php esc_html_e( 'היקף משרה', 'kivun' ); ?></label>
-						<select id="kivun-f-scope" name="scope">
+						<label for="kivun-f-scope"><?php esc_html_e( 'היקף משרה *', 'kivun' ); ?></label>
+						<select id="kivun-f-scope" name="scope" required>
 							<option value=""><?php esc_html_e( 'בחר', 'kivun' ); ?></option>
 							<?php foreach ( $scopes as $t ) : ?>
 								<option value="<?php echo esc_attr( $t->name ); ?>"><?php echo esc_html( $t->name ); ?></option>
@@ -404,6 +404,7 @@ $kivun_user     = wp_get_current_user();
 								<option value="<?php echo esc_attr( $t->name ); ?>"><?php echo esc_html( $t->name ); ?></option>
 							<?php endforeach; ?>
 						</select>
+						<small class="kivun-hint"><?php esc_html_e( 'מומלץ — בלי תחום המשרה לא תופיע בסינון לפי תחום.', 'kivun' ); ?></small>
 					</div>
 
 					<div class="kivun-form-row">
@@ -426,10 +427,10 @@ $kivun_user     = wp_get_current_user();
 					<?php endif; ?>
 
 					<div class="kivun-field">
-						<label for="kivun-f-city"><?php esc_html_e( 'יישוב', 'kivun' ); ?></label>
-						<input type="text" id="kivun-f-city" name="city" list="kivun-city-list" autocomplete="off" placeholder="<?php esc_attr_e( 'למשל: ירושלים', 'kivun' ); ?>">
+						<label for="kivun-f-city"><?php esc_html_e( 'יישוב *', 'kivun' ); ?></label>
+						<input type="text" id="kivun-f-city" name="city" list="kivun-city-list" autocomplete="off" required placeholder="<?php esc_attr_e( 'למשל: ירושלים', 'kivun' ); ?>">
 						<datalist id="kivun-city-list"></datalist>
-						<small class="kivun-hint"><?php esc_html_e( 'היישוב שבו מתבצעת העבודה. משרה ללא יישוב לא תופיע בחיפוש לפי מרחק.', 'kivun' ); ?></small>
+						<small class="kivun-hint"><?php esc_html_e( 'היישוב שבו מתבצעת העבודה. משרה ללא יישוב לא תופיע בחיפוש לפי מרחק באתר מרכז כיוון.', 'kivun' ); ?></small>
 					</div>
 
 					<div class="kivun-field">
@@ -438,8 +439,9 @@ $kivun_user     = wp_get_current_user();
 					</div>
 
 					<div class="kivun-form-row">
-						<label for="kivun-f-deadline"><?php esc_html_e( 'תאריך סגירה (אופציונלי)', 'kivun' ); ?></label>
+						<label for="kivun-f-deadline"><?php esc_html_e( 'תאריך סגירה', 'kivun' ); ?></label>
 						<input type="date" id="kivun-f-deadline" name="deadline" dir="ltr" min="<?php echo esc_attr( current_time( 'Y-m-d' ) ); ?>">
+						<small class="kivun-hint"><?php esc_html_e( 'מומלץ — משרה בלי תאריך עוברת אצלם ל"פג תוקף" 30 יום אחרי הפרסום.', 'kivun' ); ?></small>
 					</div>
 
 				</div>

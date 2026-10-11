@@ -2125,6 +2125,15 @@ class Kivun_Content_Creator {
 							<h2 class="kivun-cc-title"><?php esc_html_e( 'לוח המשרות', 'kivun' ); ?></h2>
 							<p class="kivun-cc-lead"><?php esc_html_e( 'מערכת נפרדת: משרות, מפרסמים והגשות מועמדות עם קורות חיים — לא מעורבב עם פניות התכנים.', 'kivun' ); ?></p>
 						</div>
+						<?php if ( Kivun_Mercaz::configured() && Kivun_Employer::can_manage_all() ) : ?>
+							<div class="kivun-mercaz-bulk">
+								<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-mercaz-push-all">
+									<?php esc_html_e( 'שדר מחדש את כל המשרות', 'kivun' ); ?>
+								</button>
+								<span class="kivun-mercaz-bulk__hint"><?php esc_html_e( 'מעדכן כל משרה במקומה אצל מרכז כיוון — לא יוצר כפילויות — ומפרט מה עדיין חסר.', 'kivun' ); ?></span>
+								<div class="kivun-mercaz-bulk__out" hidden></div>
+							</div>
+						<?php endif; ?>
 					</div>
 					<?php
 					/**

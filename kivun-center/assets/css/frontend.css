@@ -1908,6 +1908,32 @@ td.kivun-app-contact a { display: block; }
 .kivun-mercaz-status.is-ok { color: #15803d; }
 .kivun-mercaz-status.is-error { color: var(--kivun-error); }
 
+/* Sending the whole board again. The report matters more than the button:
+   what comes back is a list of the jobs still missing something, and it is
+   meant to be read and worked through rather than glanced at. */
+.kivun-mercaz-bulk { margin: .75rem 0 0; }
+.kivun-mercaz-bulk__hint {
+	display: block;
+	margin-top: .35rem;
+	font-size: .82rem;
+	color: var(--kivun-muted);
+}
+.kivun-mercaz-bulk__out {
+	margin-top: .6rem;
+	padding: .7rem .9rem;
+	border: 1px solid var(--kivun-line, #e7e7e7);
+	border-radius: 10px;
+	background: #fafafb;
+	font-size: .88rem;
+	line-height: 1.7;
+}
+.kivun-mercaz-bulk__out p { margin: 0; font-weight: 700; }
+.kivun-mercaz-bulk__out ul { margin: .5rem 0 0; padding-inline-start: 1.1rem; }
+.kivun-mercaz-bulk__out li { margin: .2rem 0; font-weight: 400; }
+.kivun-mercaz-bulk__out.is-ok { border-color: #bbf7d0; background: #f0fdf4; color: #15803d; }
+.kivun-mercaz-bulk__out.is-warn { border-color: #fde68a; background: #fffbeb; color: #92400e; }
+.kivun-mercaz-bulk__out.is-error { border-color: var(--kivun-accent); background: #fff5f8; color: var(--kivun-error); }
+
 /* Multi-select job features. */
 .kivun-field--wide { grid-column: 1 / -1; }
 .kivun-field-legend { display: block; font-weight: 600; margin-bottom: .4rem; font-size: .9rem; }
