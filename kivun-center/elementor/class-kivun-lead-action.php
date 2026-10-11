@@ -186,11 +186,45 @@ class Kivun_Lead_Action extends Action_Base {
 			'marketing_consent' => trim( (string) ( $settings['kivun_lead_field_consent'] ?? 'consent' ) ),
 			'message'           => trim( (string) ( $settings['kivun_lead_field_message'] ?? 'message' ) ),
 		);
-		$answers = Kivun_Form_Details::fields( is_array( $fields ) ? $fields : array() );
-		$data    = array();
+		$raw     = is_array( $fields ) ? $fields : array();
+		$answers = Kivun_Form_Details::fields( $raw );
+
+		// Where the form's own type says what a field is for, and nothing was
+		// mapped to it, that is good enough. An Elementor field keeps its
+		// generated id (`field_1112454`) unless somebody renames it, so the
+		// defaults here match almost nothing on a form nobody mapped — and
+		// every submission then failed on "נא למלא שם וטלפון", which blamed
+		// the visitor for a setting.
+		$by_type = array(
+			'phone' => 'tel',
+			'email' => 'email',
+		);
+
+		// Keys the form has no field for at all. Told apart from a field that
+		// is present and empty, because only one of those is the visitor's
+		// doing.
+		$unmapped = array();
+
+		$data = array();
 		foreach ( $mapped as $key => $id ) {
-			$data[ $key ] = Kivun_Form_Details::mapped_value( is_array( $fields ) ? $fields : array(), $id );
+			if ( ! isset( $raw[ $id ] ) ) {
+				$found = isset( $by_type[ $key ] ) ? Kivun_Form_Details::first_of_type( $raw, $by_type[ $key ] ) : '';
+
+				if ( '' === $found ) {
+					$unmapped[]   = $key;
+					$data[ $key ] = '';
+					continue;
+				}
+
+				// Remembered, so the answer is not also repeated into the
+				// message as an unmapped extra.
+				$mapped[ $key ] = $found;
+				$id             = $found;
+			}
+
+			$data[ $key ] = Kivun_Form_Details::mapped_value( $raw, $id );
 		}
+
 		$data['marketing_consent'] = '' !== $data['marketing_consent'] ? 1 : 0;
 		$excluded                  = array_values( $mapped );
 		$excluded[]                = trim( (string) ( $settings['kivun_lead_field_post'] ?? 'post_id' ) );
@@ -204,7 +238,7 @@ class Kivun_Lead_Action extends Action_Base {
 		// resolve and nothing to look for — the lead is filed against the
 		// board itself.
 		if ( 'board' === $source ) {
-			$this->finish( Kivun_Workshops::save_lead( 0, $data, 'board' ), $fields, $ajax_handler );
+			$this->finish( Kivun_Workshops::save_lead( 0, $data, 'board' ), $fields, $ajax_handler, $unmapped );
 			return;
 		}
 
@@ -231,11 +265,11 @@ class Kivun_Lead_Action extends Action_Base {
 		// the default setting fails on every submission, and the visitor, told
 		// something went wrong, sends it again.
 		if ( ! $post_id && Kivun_Forms_Router::jobs_page( (string) wp_get_referer() ) ) {
-			$this->finish( Kivun_Workshops::save_lead( 0, $data, 'board' ), $fields, $ajax_handler );
+			$this->finish( Kivun_Workshops::save_lead( 0, $data, 'board' ), $fields, $ajax_handler, $unmapped );
 			return;
 		}
 
-		$this->finish( Kivun_Workshops::save_lead( $post_id, $data ), $fields, $ajax_handler );
+		$this->finish( Kivun_Workshops::save_lead( $post_id, $data ), $fields, $ajax_handler, $unmapped );
 	}
 
 	/**
@@ -244,9 +278,10 @@ class Kivun_Lead_Action extends Action_Base {
 	 * @param true|\WP_Error                                   $result       What save_lead returned.
 	 * @param mixed                                            $fields       The submitted fields, for diagnostics.
 	 * @param \ElementorPro\Modules\Forms\Classes\Ajax_Handler $ajax_handler The AJAX response handler.
+	 * @param array<int,string>                                $unmapped     Standard fields the form has none of.
 	 * @return void
 	 */
-	private function finish( $result, $fields, $ajax_handler ): void {
+	private function finish( $result, $fields, $ajax_handler, array $unmapped = array() ): void {
 		// A duplicate is not a real error — the visitor already registered, so
 		// let the form show its normal success message instead of an error.
 		if ( ! is_wp_error( $result ) || 'kivun_duplicate' === $result->get_error_code() ) {
@@ -268,6 +303,21 @@ class Kivun_Lead_Action extends Action_Base {
 		// again, and the form's other actions — the email to the coordinators —
 		// run a second time, so the same person arrives twice. The form is let
 		// through, and the fault is reported where it can be acted on.
+		// "Fill in a name and a phone number" is the right thing to say to
+		// somebody who left the box empty, and the wrong thing to say when the
+		// form has no such box for us to read. The second is a setting nobody
+		// visiting the site can do anything about, and telling them the
+		// submission failed only makes them send it again.
+		if ( 'kivun_invalid' === $code && array_intersect( array( 'name', 'phone' ), $unmapped ) ) {
+			$code = 'kivun_no_post';
+
+			$message = sprintf(
+				/* translators: %s: comma-separated list of unmapped standard fields. */
+				__( 'הפנייה לא נשמרה: לטופס אין שדות שתואמים ל-%s. יש לעדכן את מזהי השדות בפעולת "השארת פרטים (ליד)".', 'kivun' ),
+				implode( ', ', array_intersect( array( 'name', 'phone' ), $unmapped ) )
+			);
+		}
+
 		if ( 'kivun_no_post' === $code ) {
 			self::log( $message . $diagnosis );
 
