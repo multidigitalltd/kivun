@@ -19,6 +19,7 @@ class Kivun_Employer {
 	 */
 	public static function init(): void {
 		add_action( 'wp_ajax_kivun_post_job', array( __CLASS__, 'ajax_post_job' ) );
+		add_action( 'wp_ajax_kivun_set_job_coordinator', array( __CLASS__, 'ajax_set_coordinator' ) );
 		add_action( 'wp_ajax_kivun_delete_job', array( __CLASS__, 'ajax_delete_job' ) );
 		add_action( 'wp_ajax_kivun_update_job', array( __CLASS__, 'ajax_update_job' ) );
 		add_action( 'wp_ajax_kivun_renew_job', array( __CLASS__, 'ajax_renew_job' ) );
@@ -176,6 +177,44 @@ class Kivun_Employer {
 		}
 
 		return wp_get_current_user();
+	}
+
+	/**
+	 * AJAX: set which coordinator handles a job, from the jobs table.
+	 *
+	 * The same choice the posting form offers, reachable without opening the
+	 * form: re-assigning a job is a one-field change, and somebody covering a
+	 * colleague's week should not have to walk through the whole job to make
+	 * it.
+	 *
+	 * @return void
+	 */
+	public static function ajax_set_coordinator(): void {
+		if ( ! check_ajax_referer( 'kivun_nonce', 'nonce', false ) ) {
+			wp_send_json_error( array( 'message' => __( 'פג תוקף העמוד. רעננו את הדף ונסו שוב.', 'kivun' ) ), 403 );
+		}
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Verified above.
+		$job_id = absint( wp_unslash( $_POST['job_id'] ?? 0 ) );
+		self::verify_job_owner( $job_id );
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Verified above.
+		$chosen = sanitize_email( wp_unslash( $_POST['coordinator'] ?? '' ) );
+
+		// Clearing it is a real choice — the job falls back to the rota.
+		if ( '' === $chosen ) {
+			delete_post_meta( $job_id, '_kivun_coordinator' );
+			wp_send_json_success( array( 'coordinator' => '' ) );
+		}
+
+		$coordinator = Kivun_Coordinators::by_email( $chosen );
+		if ( ! $coordinator ) {
+			wp_send_json_error( array( 'message' => __( 'הרכז/ת לא נמצא/ה ברשימת הרכזים בהגדרות.', 'kivun' ) ), 400 );
+		}
+
+		update_post_meta( $job_id, '_kivun_coordinator', $coordinator['email'] );
+
+		wp_send_json_success( array( 'coordinator' => $coordinator['email'] ) );
 	}
 
 	/**

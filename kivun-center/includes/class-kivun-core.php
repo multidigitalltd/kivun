@@ -174,9 +174,16 @@ class Kivun_Core {
 			return;
 		}
 
+		// The builder's data as well as the content. A page built in Elementor
+		// keeps its shortcode in `_elementor_data`, so looking only at
+		// post_content found nothing on exactly the pages this site uses — the
+		// screen was then cached, and a job posted a minute ago was missing
+		// from a copy taken before it existed.
+		$haystack = (string) $post->post_content . (string) get_post_meta( $post->ID, '_elementor_data', true );
+
 		$found = false;
 		foreach ( self::management_shortcodes() as $tag ) {
-			if ( has_shortcode( (string) $post->post_content, $tag ) ) {
+			if ( has_shortcode( $haystack, $tag ) ) {
 				$found = true;
 				break;
 			}
