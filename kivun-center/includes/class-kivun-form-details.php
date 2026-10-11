@@ -75,6 +75,32 @@ class Kivun_Form_Details {
 	}
 
 	/**
+	 * The first answered field the form itself declares to be of this type.
+	 *
+	 * A standard field is normally found by the id an admin typed into the
+	 * action's settings. When that id is not in the submission at all — the
+	 * usual cause being an Elementor field left on its generated id, like
+	 * `field_1112454` — the form's own type is better evidence than nothing:
+	 * a field Elementor calls a telephone number is the telephone number.
+	 *
+	 * Only used as a fallback, and only for types that mean one thing. It
+	 * never overrides an id that was configured and found.
+	 *
+	 * @param array  $raw  Elementor's submitted field records.
+	 * @param string $type The Elementor field type, e.g. 'tel' or 'email'.
+	 * @return string The field id, or '' when the form has no answered field of that type.
+	 */
+	public static function first_of_type( array $raw, string $type ): string {
+		foreach ( self::fields( $raw ) as $id => $field ) {
+			if ( $field['type'] === $type ) {
+				return (string) $id;
+			}
+		}
+
+		return '';
+	}
+
+	/**
 	 * Append unmapped answers to a visitor's message exactly once.
 	 *
 	 * @param array  $fields   Normalized answers returned by fields().

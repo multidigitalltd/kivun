@@ -1695,42 +1695,54 @@ td.kivun-app-contact a { display: block; }
 .kivun-add-app { margin-bottom: 1rem; }
 .kivun-add-app[open] > .kivun-camp-summary { margin-bottom: .8rem; }
 
-/* A job in its last days on the board, and the form it no longer needs. */
+/* A job that has been filled: the mark on the card, the mark on its own page,
+   and the notice above the form it still carries.
+
+   A filled job stays on the board, so the mark has to carry: in grey beside a
+   title it read as a disabled control rather than as a fact about the job.
+   The site's own accent, which is the colour everything else that matters here
+   is in. */
 .kivun-jc-filled {
 	display: inline-block;
 	margin-top: 6px;
-	padding: 3px 12px;
+	padding: 4px 14px;
 	border-radius: 999px;
-	background: #f1f2f4;
-	color: #6b7280;
+	background: var(--kivun-accent);
+	color: #fff;
 	font-size: 13px;
-	font-weight: 700;
+	font-weight: 800;
+	letter-spacing: .2px;
 }
 /* The same mark on the job's own page, where it has to carry further than a
-   chip on a card: it is the one thing a reader must notice before writing a
-   covering letter for a job that is gone. */
+   chip on a card: it is the first thing a reader should take in before
+   deciding what to write. */
 .kivun-job-filled {
 	display: inline-block;
 	margin: 10px 0 0;
-	padding: 6px 16px;
+	padding: 7px 18px;
 	border-radius: 999px;
-	background: #f1f2f4;
-	color: #4b5563;
+	background: var(--kivun-accent);
+	color: #fff;
 	font-size: 15px;
-	font-weight: 700;
+	font-weight: 800;
+	letter-spacing: .2px;
 }
 
-.kivun-apply-closed {
-	margin: 0;
-	padding: 22px 24px;
-	border: 1px solid var(--ja-line, #e7e7e7);
-	border-radius: 10px;
-	background: #fafafa;
-	color: #777;
-	font-size: 16px;
+/* Above the form on a filled job: not a warning to be dismissed but the reason
+   to fill it in anyway, so it is stated in the brand's own tint rather than in
+   the grey of something switched off. */
+.kivun-apply-filled {
+	margin: 0 0 18px;
+	padding: 14px 18px;
+	border: 1px solid var(--kivun-accent);
+	border-inline-start: 4px solid var(--kivun-accent);
+	border-radius: 12px;
+	background: #fff5f8;
+	color: var(--kivun-text);
+	font-size: 15px;
 	line-height: 1.7;
-	text-align: center;
 }
+.kivun-apply-filled strong { color: var(--kivun-accent); }
 
 /* The confirmation a candidate sees once their application is in. */
 .kivun-apply-done {

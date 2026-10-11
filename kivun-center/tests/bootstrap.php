@@ -296,6 +296,28 @@ function esc_html__( string $text, string $domain = 'default' ): string {
 }
 
 /**
+ * Translate, escape and print — the template form of esc_html__().
+ *
+ * @param string $text   The text.
+ * @param string $domain The text domain.
+ * @return void
+ */
+function esc_html_e( string $text, string $domain = 'default' ): void {
+	echo esc_html__( $text, $domain );
+}
+
+/**
+ * Translate, escape for an attribute and print.
+ *
+ * @param string $text   The text.
+ * @param string $domain The text domain.
+ * @return void
+ */
+function esc_attr_e( string $text, string $domain = 'default' ): void {
+	echo esc_attr( __( $text, $domain ) );
+}
+
+/**
  * Pick a singular or plural form.
  *
  * @param string $single The singular.
@@ -720,6 +742,32 @@ function get_site_icon_url( int $size = 512 ): string {
 function wp_mail( $to, string $subject, string $message, $headers = '', array $attachments = array() ): bool {
 	Kivun_Test_State::$mail[] = compact( 'to', 'subject', 'message', 'headers', 'attachments' );
 	return true;
+}
+
+// ── Templates ─────────────────────────────────────────────────────────────────
+
+/**
+ * Print a nonce field. The value is of no interest to a rendering test; that
+ * the field is there, named, is.
+ *
+ * @param string $action  The action the nonce is for.
+ * @param string $name    The field name.
+ * @param bool   $referer Whether to add the referer field too.
+ * @return void
+ */
+function wp_nonce_field( string $action = '-1', string $name = '_wpnonce', bool $referer = true ): void {
+	unset( $action, $referer );
+	printf( '<input type="hidden" name="%s" value="testnonce">', esc_attr( $name ) );
+}
+
+/**
+ * Register a script. Nothing is rendered, as in WordPress.
+ *
+ * @param mixed ...$args Whatever the caller passes.
+ * @return void
+ */
+function wp_enqueue_script( ...$args ): void {
+	unset( $args );
 }
 
 // ── Miscellaneous ─────────────────────────────────────────────────────────────

@@ -646,11 +646,11 @@ class Kivun_Jobs {
 			wp_send_json_error( array( 'message' => __( 'משרה לא קיימת.', 'kivun' ) ) );
 		}
 
-		// Checked here as well as in the form: the page carrying that form may
-		// have been cached before the job was filled, or sitting open in a tab.
-		if ( self::is_filled( $job_id ) ) {
-			wp_send_json_error( array( 'message' => __( 'המשרה אוישה ואינה מקבלת עוד מועמדויות.', 'kivun' ) ) );
-		}
+		// A filled job is not closed to applicants — the centre places people
+		// rather than one job, and a CV arriving after the role is taken is
+		// read for the next one like it. Noted so the coordinator and the
+		// letter back both know which kind of application this is.
+		$filled = self::is_filled( $job_id );
 
 		// Duplicate check.
 		if ( self::already_applied( $job_id, $email, $phone ) ) {
@@ -703,6 +703,10 @@ class Kivun_Jobs {
 			+ array(
 				'cv_path'   => $cv_path,
 				'residence' => self::residence_label( $local, $address ),
+				// So the coordinator opening it knows at a glance that this
+				// one is for the next role, not a candidate for a job that is
+				// already taken.
+				'filled'    => $filled,
 			);
 
 		// Whoever the job was given to when it was posted. Somebody chose that
@@ -744,17 +748,20 @@ class Kivun_Jobs {
 			get_the_title( $job_id ),
 			(string) get_post_meta( $job_id, '_kivun_company', true ),
 			(bool) $employer_email,
-			$coordinator
+			$coordinator,
+			$filled
 		);
 		do_action( 'kivun_after_application', $job_id, compact( 'name', 'email', 'phone', 'message' ) + array( 'cv_path' => $cv_path ) );
 
 		wp_send_json_success(
 			array(
-				'message' => __( 'קורות החיים נשלחו בהצלחה למפרסם המשרה', 'kivun' ),
+				'message' => $filled
+					? __( 'קורות החיים התקבלו ונשמרו אצלנו למשרות דומות', 'kivun' )
+					: __( 'קורות החיים נשלחו בהצלחה למפרסם המשרה', 'kivun' ),
 				// The same words as the letter, built from the same place, so
 				// the screen and the inbox cannot come to say different things.
 				'title'   => __( 'המועמדות נשלחה בהצלחה', 'kivun' ),
-				'lines'   => Kivun_Mailer::confirmation_lines( $name, get_the_title( $job_id ), $coordinator ),
+				'lines'   => Kivun_Mailer::confirmation_lines( $name, get_the_title( $job_id ), $coordinator, $filled ),
 			)
 		);
 	}

@@ -543,6 +543,12 @@ class Kivun_Shortcodes {
 	 * @return string Rendered HTML markup.
 	 */
 	public static function render_my_applications(): string {
+		// Said again here, as the console does. The check on template_redirect
+		// can miss a page whose shortcode a builder keeps out of the content,
+		// and this screen shows live data behind a nonce: a cached copy is
+		// both stale and unusable.
+		Kivun_Core::no_cache();
+
 		ob_start();
 		kivun_get_template( 'applicant/my-applications.php' );
 		return ob_get_clean();
@@ -570,6 +576,12 @@ class Kivun_Shortcodes {
 	 * @return string Rendered HTML markup.
 	 */
 	public static function render_employer_dashboard( array $atts ): string { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- Shortcode callback signature.
+		// Said again here, as the console does. The check on template_redirect
+		// can miss a page whose shortcode a builder keeps out of the content,
+		// and this screen shows live data behind a nonce: a cached copy is
+		// both stale and unusable.
+		Kivun_Core::no_cache();
+
 		ob_start();
 		kivun_get_template( 'employer/dashboard.php' );
 		return ob_get_clean();

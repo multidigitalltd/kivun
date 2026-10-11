@@ -47,6 +47,10 @@ if ( ! Kivun_Employer::can_manage_all() && get_user_meta( get_current_user_id(),
 $user_id    = get_current_user_id();
 $is_manager = Kivun_Employer::can_manage_all();
 
+// Who a job's candidates can be handed to. Offered by the posting form and
+// by the jobs table, so it is resolved once here.
+$kivun_coordinators = Kivun_Coordinators::all();
+
 // Which publisher the manager is currently acting on behalf of (0 = whole
 // board). Read-only view scoping — no state change, so no nonce needed.
 // phpcs:ignore WordPress.Security.NonceVerification.Recommended
@@ -294,7 +298,6 @@ $kivun_user     = wp_get_current_user();
 					// shared out by the rota: the rota is for people who arrive
 					// through the board and belong to nobody yet, while a job is
 					// already somebody's — they know the employer.
-					$kivun_coordinators = Kivun_Coordinators::all();
 					?>
 					<?php if ( $kivun_coordinators ) : ?>
 						<div class="kivun-form-row kivun-mgr-only">
@@ -483,6 +486,9 @@ $kivun_user     = wp_get_current_user();
 						<th scope="col"><?php esc_html_e( 'כותרת', 'kivun' ); ?></th>
 						<th scope="col"><?php esc_html_e( 'סטטוס', 'kivun' ); ?></th>
 						<th scope="col"><?php esc_html_e( 'הגשות', 'kivun' ); ?></th>
+						<?php if ( $is_manager && $kivun_coordinators ) : ?>
+							<th scope="col"><?php esc_html_e( 'רכז/ת', 'kivun' ); ?></th>
+						<?php endif; ?>
 						<th scope="col"><?php esc_html_e( 'תאריך', 'kivun' ); ?></th>
 						<th scope="col"><?php esc_html_e( 'סגירה', 'kivun' ); ?></th>
 						<th scope="col"><?php esc_html_e( 'פעולות', 'kivun' ); ?></th>
@@ -567,6 +573,25 @@ $kivun_user     = wp_get_current_user();
 								<span class="kivun-muted" aria-hidden="true">—</span>
 							<?php endif; ?>
 						</td>
+						<?php if ( $is_manager && $kivun_coordinators ) : ?>
+							<?php
+							// Changed from the table, because re-assigning a job is a one-field
+							// change and somebody covering a colleague's week should not have to
+							// open the whole job to make it.
+							$kivun_job_coord = (string) get_post_meta( $job->ID, '_kivun_coordinator', true );
+							?>
+							<td>
+								<select class="kivun-job-coordinator" data-job="<?php echo esc_attr( $job->ID ); ?>" aria-label="<?php esc_attr_e( 'הרכז/ת שמטפל/ת במשרה', 'kivun' ); ?>">
+									<option value=""><?php esc_html_e( '— לפי התור —', 'kivun' ); ?></option>
+									<?php foreach ( $kivun_coordinators as $kivun_c_email => $kivun_c ) : ?>
+										<option value="<?php echo esc_attr( $kivun_c_email ); ?>" <?php selected( $kivun_job_coord, $kivun_c_email ); ?>>
+											<?php echo esc_html( '' !== $kivun_c['name'] ? $kivun_c['name'] : $kivun_c_email ); ?>
+										</option>
+									<?php endforeach; ?>
+								</select>
+								<span class="kivun-saved-indicator" role="status" aria-live="polite" style="display:none"></span>
+							</td>
+						<?php endif; ?>
 						<td><?php echo esc_html( get_the_date( 'd/m/Y', $job->ID ) ); ?></td>
 						<td class="kivun-job-deadline">
 							<?php if ( $kivun_deadline ) : ?>

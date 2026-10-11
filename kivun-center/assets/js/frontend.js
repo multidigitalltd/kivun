@@ -463,6 +463,52 @@
 		}
 	});
 
+	// ── Jobs table — hand a job to a coordinator ─────────────────────────────────
+	document.addEventListener('change', function (e) {
+		var select = e.target.closest('.kivun-job-coordinator');
+		if (!select) { return; }
+
+		var mark = select.parentNode.querySelector('.kivun-saved-indicator');
+		// The value the row actually holds, so a save that fails can go back
+		// to it rather than leave a reassignment on screen that never happened.
+		var previous = typeof select.dataset.prev !== 'undefined'
+			? select.dataset.prev
+			: (select.querySelector('option[selected]') || {}).value || '';
+		var wanted = select.value;
+
+		function say(ok, text) {
+			if (!mark) { return; }
+			mark.textContent = ok ? '✓ נשמר' : (text || 'שגיאה');
+			mark.style.color = ok ? '#16a34a' : '#dc2626';
+			mark.style.display = 'inline';
+			if (ok) { setTimeout(function () { mark.style.display = 'none'; }, 1700); }
+		}
+
+		if (mark) { mark.style.display = 'none'; }
+
+		fetch(kivun.ajax_url, {
+			method: 'POST',
+			credentials: 'same-origin',
+			body: new URLSearchParams({
+				action: 'kivun_set_job_coordinator',
+				nonce: kivun.nonce,
+				job_id: select.dataset.job,
+				coordinator: wanted
+			})
+		}).then(function (r) { return r.json(); }).then(function (res) {
+			if (!res || !res.success) {
+				select.value = previous;
+				say(false, (res && res.data && res.data.message) ? res.data.message : '');
+				return;
+			}
+			select.dataset.prev = wanted;
+			say(true);
+		}).catch(function () {
+			select.value = previous;
+			say(false, 'אין חיבור');
+		});
+	});
+
 	// ── Manager dashboard — act-as switcher + add-publisher toggle ────────────────
 	document.addEventListener('change', function (e) {
 		var asSel = e.target.closest('#kivun-as-select');
