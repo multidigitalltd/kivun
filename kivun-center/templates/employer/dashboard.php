@@ -318,6 +318,16 @@ $kivun_user     = wp_get_current_user();
 						</div>
 					<?php endif; ?>
 
+					<?php
+					// Not offered inside the content console. A job posted
+					// from there is the centre's own, handled by the
+					// coordinator chosen just above — naming a publisher as
+					// well asks the same question twice and sends the
+					// applications somewhere else than the answer above says
+					// they are going. On the site itself the field stays:
+					// that is where somebody posts on an employer's behalf.
+					if ( ! $kivun_embedded ) :
+						?>
 					<div class="kivun-form-row kivun-mgr-only" data-default-employer="<?php echo esc_attr( $acting_as ); ?>">
 						<label for="kivun-f-employer"><?php esc_html_e( 'פרסום בשם מפרסם (אופציונלי)', 'kivun' ); ?></label>
 						<select id="kivun-f-employer" name="employer_id">
@@ -346,6 +356,7 @@ $kivun_user     = wp_get_current_user();
 						</select>
 						<p class="kivun-field-hint"><?php esc_html_e( 'המשרה תשויך למפרסם זה, וההגשות יישלחו לכתובת המייל שלו.', 'kivun' ); ?></p>
 					</div>
+					<?php endif; ?>
 				<?php endif; ?>
 
 				<div class="kivun-form-row">

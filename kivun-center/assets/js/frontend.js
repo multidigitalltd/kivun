@@ -680,7 +680,11 @@
 		kivunSetEditor('kivunjobdesc', '');
 		kivunSetEditor('kivunjobreq', '');
 		// Manager selector: default to the publisher currently being acted-as.
-		var empRow = form.querySelector('.kivun-mgr-only');
+		// Found by the attribute that carries the value rather than by the
+		// manager-only class, which the coordinator row above shares and
+		// matches first — so this was reading defaultEmployer off an element
+		// that has none, and resetting the publisher to nobody every time.
+		var empRow = form.querySelector('[data-default-employer]');
 		var empSel = form.querySelector('[name="employer_id"]');
 		if (empRow && empSel) { empSel.value = empRow.dataset.defaultEmployer || ''; }
 		var err = form.querySelector('.kivun-error');
