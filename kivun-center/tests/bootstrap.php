@@ -876,6 +876,40 @@ class Kivun_Test_Wpdb {
 	public int $insert_id = 0;
 
 	/**
+	 * Interpolate a query. Faithful enough for the fragments under test: %s
+	 * is quoted, %d is cast, and nothing else is claimed.
+	 *
+	 * @param string $sql     The query with placeholders.
+	 * @param mixed  ...$args The values.
+	 * @return string
+	 */
+	public function prepare( string $sql, ...$args ): string {
+		if ( isset( $args[0] ) && is_array( $args[0] ) ) {
+			$args = $args[0];
+		}
+
+		foreach ( $args as $value ) {
+			$replacement = is_int( $value ) || is_float( $value )
+				? (string) $value
+				: "'" . str_replace( "'", "\\'", (string) $value ) . "'";
+
+			$sql = preg_replace( '/%[sdf]/', $replacement, $sql, 1 );
+		}
+
+		return (string) $sql;
+	}
+
+	/**
+	 * Escape the wildcards LIKE would otherwise read as patterns.
+	 *
+	 * @param string $text The text.
+	 * @return string
+	 */
+	public function esc_like( string $text ): string {
+		return addcslashes( $text, '_%\\' );
+	}
+
+	/**
 	 * Record an update.
 	 *
 	 * @param string              $table         The table.

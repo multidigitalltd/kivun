@@ -64,16 +64,89 @@ class Kivun_Coordinators {
 			return '';
 		}
 
-		// Checked before the male words: "אישה" and "בת" contain none of them,
-		// but a form may well offer "בן/בת" as one label.
-		if ( preg_match( '/female|woman|girl|אישה|אשה|נקבה|בחורה|נערה|בת/u', $gender ) ) {
-			return 'female';
-		}
-		if ( preg_match( '/male|man|boy|גבר|זכר|בחור|נער|בן/u', $gender ) ) {
-			return 'male';
+		// Female first, and the order is load-bearing rather than tidy:
+		// "male" is inside "female", "man" inside "woman", and "נער" inside
+		// "נערה". Every one of those would file a woman as a man if the male
+		// words were tried first.
+		foreach ( array( 'female', 'male' ) as $group ) {
+			foreach ( self::gender_words( $group ) as $word ) {
+				if ( false !== mb_strpos( $gender, $word ) ) {
+					return $group;
+				}
+			}
 		}
 
 		return '';
+	}
+
+	/**
+	 * The words that put a submitted gender in a group.
+	 *
+	 * Forms word this differently and keep changing it, so what arrives is
+	 * matched on the words people actually pick. Kept in one place because
+	 * two readers of it have to agree: the rota that splits the candidates,
+	 * and the filter that shows afterwards how they were split.
+	 *
+	 * @param string $group 'male' or 'female'.
+	 * @return array<int,string>
+	 */
+	public static function gender_words( string $group ): array {
+		$words = array(
+			'female' => array( 'female', 'woman', 'girl', 'אישה', 'אשה', 'נקבה', 'בחורה', 'נערה', 'בת' ),
+			'male'   => array( 'male', 'man', 'boy', 'גבר', 'זכר', 'בחור', 'נער', 'בן' ),
+		);
+
+		return $words[ $group ] ?? array();
+	}
+
+	/**
+	 * A WHERE fragment selecting the rows whose gender falls in a group.
+	 *
+	 * Built from the same words as group_of(), and with the same precedence:
+	 * matching a male word is not enough, because "female" contains "male"
+	 * and "נערה" contains "נער". A row only counts as male when no female
+	 * word matches it either — otherwise filtering to men would list women.
+	 *
+	 * @param string $group  'male', 'female', or 'none' for no answer at all.
+	 * @param string $column The column, optionally table-qualified.
+	 * @return string The SQL, or '' when the group is not one of those.
+	 */
+	public static function gender_where( string $group, string $column = 'gender' ): string {
+		global $wpdb;
+
+		// A column name cannot be a placeholder, so it is interpolated — and
+		// therefore checked rather than trusted. Every caller passes a
+		// literal today; this is here for the one that someday passes
+		// something it read.
+		if ( ! preg_match( '/^[a-z_]+(\.[a-z_]+)?$/', $column ) ) {
+			return '';
+		}
+
+		if ( 'none' === $group ) {
+			return "TRIM( {$column} ) = ''";
+		}
+
+		$words = self::gender_words( $group );
+		if ( ! $words ) {
+			return '';
+		}
+
+		$matches = static function ( array $words ) use ( $wpdb, $column ): string {
+			$parts = array();
+			foreach ( $words as $word ) {
+				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $column is matched against an identifier pattern above; the value is a placeholder.
+				$parts[] = $wpdb->prepare( "{$column} LIKE %s", '%' . $wpdb->esc_like( $word ) . '%' );
+			}
+			return '( ' . implode( ' OR ', $parts ) . ' )';
+		};
+
+		$sql = $matches( $words );
+
+		if ( 'male' === $group ) {
+			$sql .= ' AND NOT ' . $matches( self::gender_words( 'female' ) );
+		}
+
+		return $sql;
 	}
 
 	/**
