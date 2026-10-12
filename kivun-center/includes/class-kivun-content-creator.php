@@ -4809,6 +4809,8 @@ class Kivun_Content_Creator {
 									'type'    => __( 'סוג', 'kivun' ),
 									'contact' => __( 'יצירת קשר', 'kivun' ),
 									'city'    => __( 'עיר', 'kivun' ),
+									'gender'  => __( 'מגדר', 'kivun' ),
+									'handler' => __( 'רכז/ת מטפל/ת', 'kivun' ),
 									'consent' => __( 'דיוור', 'kivun' ),
 									'message' => __( 'פרטי הפנייה', 'kivun' ),
 									'notes'   => __( 'הערות פנימיות', 'kivun' ),
@@ -4841,6 +4843,8 @@ class Kivun_Content_Creator {
 							<th scope="col" data-col="type"><?php esc_html_e( 'סוג', 'kivun' ); ?></th>
 							<th scope="col" data-col="contact"><?php esc_html_e( 'יצירת קשר', 'kivun' ); ?></th>
 							<th scope="col" data-col="city"><?php esc_html_e( 'עיר', 'kivun' ); ?></th>
+							<th scope="col" data-col="gender"><?php esc_html_e( 'מגדר', 'kivun' ); ?></th>
+							<th scope="col" data-col="handler"><?php esc_html_e( 'רכז/ת מטפל/ת', 'kivun' ); ?></th>
 							<th scope="col" data-col="consent"><?php esc_html_e( 'דיוור', 'kivun' ); ?></th>
 							<th scope="col" data-col="message"><?php esc_html_e( 'פרטי הפנייה', 'kivun' ); ?></th>
 							<th scope="col" data-col="notes"><?php esc_html_e( 'הערות פנימיות', 'kivun' ); ?></th>
@@ -4907,6 +4911,24 @@ class Kivun_Content_Creator {
 								<?php endif; ?>
 							</td>
 							<td data-label="<?php esc_attr_e( 'עיר', 'kivun' ); ?>" data-col="city"><?php echo esc_html( (string) ( $r->city ?? '' ) ); ?></td>
+							<td data-label="<?php esc_attr_e( 'מגדר', 'kivun' ); ?>" data-col="gender"><?php echo esc_html( '' !== trim( (string) ( $r->gender ?? '' ) ) ? (string) $r->gender : '—' ); ?></td>
+							<?php
+							// An empty cell here would read as "nobody handled
+							// it". The reason matters: a lead the rota was
+							// never asked about is not the same as one it was
+							// asked about and could not place, and only the
+							// second is a fault to go and fix.
+							$kivun_handler = Kivun_Coordinators::label_for( (string) ( $r->coordinator ?? '' ) );
+							?>
+							<td data-label="<?php esc_attr_e( 'רכז/ת מטפל/ת', 'kivun' ); ?>" data-col="handler">
+								<?php if ( '' !== $kivun_handler ) : ?>
+									<?php echo esc_html( $kivun_handler ); ?>
+								<?php elseif ( '' === trim( (string) ( $r->gender ?? '' ) ) ) : ?>
+									<span class="kivun-muted" title="<?php esc_attr_e( 'הפנייה הגיעה בלי מגדר, ולכן לא נבחר רכז', 'kivun' ); ?>"><?php esc_html_e( 'אין מגדר', 'kivun' ); ?></span>
+								<?php else : ?>
+									<span class="kivun-muted">—</span>
+								<?php endif; ?>
+							</td>
 							<td data-label="<?php esc_attr_e( 'דיוור', 'kivun' ); ?>" data-col="consent"><?php echo esc_html( empty( $r->marketing_consent ) ? '—' : '✓' ); ?></td>
 							<td data-label="<?php esc_attr_e( 'פרטי הפנייה', 'kivun' ); ?>" data-col="message">
 								<?php echo kivun_submission_details( (string) ( $r->message ?? '' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Helper escapes the saved text and labels. ?>

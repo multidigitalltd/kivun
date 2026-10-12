@@ -84,6 +84,11 @@ class Kivun_Lead_Capture {
 			'phone'             => $data['phone'],
 			'city'              => $data['city'],
 			'gender'            => $data['gender'],
+			// The router picks the coordinator at priority 20 and this runs
+			// at 30, so by now the choice is made and can simply be read.
+			// Read, never made here: choosing would take a turn on the rota
+			// for a lead that may not even be the coordinators' to share.
+			'coordinator'       => (string) ( Kivun_Coordinators::current()['email'] ?? '' ),
 			'marketing_consent' => $data['consent'],
 			'message'           => $data['message'],
 			'source'            => Kivun_Utm::append_source( self::source_label( $form_name, $post_id, $page_url ) ),
@@ -91,7 +96,15 @@ class Kivun_Lead_Capture {
 			'type'              => 'form',
 			'created_at'        => current_time( 'mysql' ),
 		);
-		$fmt = array( '%d', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%s' );
+		// Positional, and matched to $row above by order alone: a column added
+		// in the middle without a placeholder beside it shifts every format
+		// after it onto the wrong value, which $wpdb then writes without
+		// complaint. Built from the keys so the two cannot come apart.
+		$integers = array( 'course_id', 'marketing_consent' );
+		$fmt      = array();
+		foreach ( array_keys( $row ) as $column ) {
+			$fmt[] = in_array( $column, $integers, true ) ? '%d' : '%s';
+		}
 
 		// The campaign a lead is credited to is read from these columns, not
 		// from the source text above.

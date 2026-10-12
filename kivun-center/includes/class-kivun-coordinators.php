@@ -24,6 +24,13 @@ class Kivun_Coordinators {
 	const STATE = 'kivun_coordinator_state';
 
 	/**
+	 * The coordinator chosen for the submission being handled right now.
+	 *
+	 * @var array{email:string,weight:int,name:string,phone:string}|array{}
+	 */
+	private static array $current = array();
+
+	/**
 	 * The gender groups, and the setting each one's roster is stored under.
 	 *
 	 * @return array<string,string>
@@ -243,7 +250,64 @@ class Kivun_Coordinators {
 	public static function pick( string $gender ): array {
 		$group = self::group_of( $gender );
 
-		return '' !== $group ? self::next( $group ) : array();
+		$chosen = '' !== $group ? self::next( $group ) : array();
+
+		// Remembered for the rest of the request. One submission travels
+		// through several hands — the router sends the mail, the lead is
+		// filed afterwards — and each of them wants to know who got it.
+		// Asking the rota a second time would answer with the *next* person
+		// and record a turn nobody took, so the answer is kept instead.
+		if ( $chosen ) {
+			self::$current = $chosen;
+		}
+
+		return $chosen;
+	}
+
+	/**
+	 * The coordinator already chosen for the submission being handled, or an
+	 * empty array when none was.
+	 *
+	 * For whoever comes after the choice and needs to record it. It never
+	 * makes a choice of its own, so calling it cannot move the rota.
+	 *
+	 * @return array{email:string,weight:int,name:string,phone:string}|array{}
+	 */
+	public static function current(): array {
+		return self::$current;
+	}
+
+	/**
+	 * Forget the choice. For tests, and for anything handling more than one
+	 * submission in a single request.
+	 *
+	 * @return void
+	 */
+	public static function forget_current(): void {
+		self::$current = array();
+	}
+
+	/**
+	 * How to show a stored coordinator address on screen.
+	 *
+	 * Their name when the roster gives one, and the address otherwise — an
+	 * address is still an answer to "who got this", which is the question
+	 * being asked. Somebody since taken off the roster still shows, because
+	 * they did handle the lead and that is a matter of record.
+	 *
+	 * @param string $email The stored address.
+	 * @return string The label, or '' when nothing was stored.
+	 */
+	public static function label_for( string $email ): string {
+		$email = trim( $email );
+		if ( '' === $email ) {
+			return '';
+		}
+
+		$known = self::by_email( $email );
+		$name  = trim( (string) ( $known['name'] ?? '' ) );
+
+		return '' !== $name ? $name : $email;
 	}
 
 	/**

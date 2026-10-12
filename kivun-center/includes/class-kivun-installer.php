@@ -98,6 +98,10 @@ class Kivun_Installer {
 			$wpdb->prefix . 'kivun_registrations'  => array(
 				'city'              => "varchar(100) NOT NULL DEFAULT ''",
 				'gender'            => "varchar(20) NOT NULL DEFAULT ''",
+				// Who the rota handed this one to. Kept on the lead rather
+				// than only in the mail that went out, because a split nobody
+				// can see afterwards cannot be checked or argued with.
+				'coordinator'       => "varchar(100) NOT NULL DEFAULT ''",
 				'marketing_consent' => 'tinyint(1) NOT NULL DEFAULT 0',
 				'message'           => 'text',
 				'notes'             => 'text',
@@ -151,6 +155,7 @@ class Kivun_Installer {
 				phone       varchar(30)         NOT NULL DEFAULT '',
 				city        varchar(100)        NOT NULL DEFAULT '',
 				gender      varchar(20)         NOT NULL DEFAULT '',
+				coordinator varchar(100)        NOT NULL DEFAULT '',
 				marketing_consent tinyint(1)    NOT NULL DEFAULT 0,
 				message     text,
 				notes       text,
