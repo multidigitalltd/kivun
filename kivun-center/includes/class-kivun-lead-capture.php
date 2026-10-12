@@ -84,11 +84,6 @@ class Kivun_Lead_Capture {
 			'phone'             => $data['phone'],
 			'city'              => $data['city'],
 			'gender'            => $data['gender'],
-			// The router picks the coordinator at priority 20 and this runs
-			// at 30, so by now the choice is made and can simply be read.
-			// Read, never made here: choosing would take a turn on the rota
-			// for a lead that may not even be the coordinators' to share.
-			'coordinator'       => (string) ( Kivun_Coordinators::current()['email'] ?? '' ),
 			'marketing_consent' => $data['consent'],
 			'message'           => $data['message'],
 			'source'            => Kivun_Utm::append_source( self::source_label( $form_name, $post_id, $page_url ) ),
@@ -116,6 +111,11 @@ class Kivun_Lead_Capture {
 		global $wpdb;
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$wpdb->insert( $wpdb->prefix . 'kivun_registrations', $row, $fmt );
+
+		// Which coordinator this one reached. Stamped through the same call
+		// as the other path that files a lead, so it does not matter whether
+		// the rota was consulted before this point or is reached after it.
+		Kivun_Coordinators::attach_to_lead( (int) $wpdb->insert_id );
 	}
 
 	/**

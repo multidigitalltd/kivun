@@ -167,14 +167,88 @@ final class LeadHandlerTest extends TestCase {
 	 * @return void
 	 */
 	public function test_every_column_written_has_a_placeholder(): void {
-		$source = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-lead-capture.php' );
+		foreach ( array( 'class-kivun-lead-capture.php', 'class-kivun-workshops.php' ) as $file ) {
+			$source = (string) file_get_contents( KIVUN_DIR . 'includes/' . $file );
 
-		$this->assertStringNotContainsString(
-			"\$fmt = array( '%d'",
-			$source,
-			'the placeholder list is hand-written again, and will drift from the row the next time a column is added'
+			$this->assertStringNotContainsString(
+				"\$fmt = array( '%d'",
+				$source,
+				"{$file} writes the placeholder list by hand, and it will drift from the row the next time a column is added"
+			);
+			$this->assertStringContainsString( 'foreach ( array_keys( $row ) as $column )', $source, $file );
+		}
+	}
+
+	// ── Whichever order the two halves run in ─────────────────────────────────
+
+	/**
+	 * Both paths that file a lead report it the same way, so neither is left
+	 * without a coordinator because it happens to run on the other side of
+	 * the router. Assuming one order is what shipped a release where the
+	 * column stayed empty on the only form that mattered.
+	 *
+	 * @return void
+	 */
+	public function test_both_paths_that_file_a_lead_report_it(): void {
+		foreach ( array( 'class-kivun-lead-capture.php', 'class-kivun-workshops.php' ) as $file ) {
+			$this->assertStringContainsString(
+				'Kivun_Coordinators::attach_to_lead(',
+				(string) file_get_contents( KIVUN_DIR . 'includes/' . $file ),
+				"{$file} files a lead without saying which coordinator took it"
+			);
+		}
+	}
+
+	/**
+	 * The lead filed first, the coordinator chosen after — the Elementor form
+	 * action's order, and the one that was broken.
+	 *
+	 * @return void
+	 */
+	public function test_a_lead_filed_before_the_choice_is_stamped(): void {
+		Kivun_Coordinators::attach_to_lead( 77 );
+		$chosen = Kivun_Coordinators::pick( 'אשה' );
+
+		$this->assertSame(
+			array(
+				'table' => 'wp_kivun_registrations',
+				'data'  => array( 'coordinator' => $chosen['email'] ),
+				'where' => array( 'id' => 77 ),
+			),
+			end( Kivun_Test_State::$updates )
 		);
-		$this->assertStringContainsString( 'foreach ( array_keys( $row ) as $column )', $source );
-		$this->assertStringContainsString( "'coordinator'", $source );
+	}
+
+	/**
+	 * And the other way round — the plugin's own capture, which runs after
+	 * the router.
+	 *
+	 * @return void
+	 */
+	public function test_a_lead_filed_after_the_choice_is_stamped(): void {
+		$chosen = Kivun_Coordinators::pick( 'גבר' );
+		Kivun_Coordinators::attach_to_lead( 88 );
+
+		$this->assertSame(
+			array(
+				'table' => 'wp_kivun_registrations',
+				'data'  => array( 'coordinator' => $chosen['email'] ),
+				'where' => array( 'id' => 88 ),
+			),
+			end( Kivun_Test_State::$updates )
+		);
+	}
+
+	/**
+	 * A lead the rota placed nobody for is left alone rather than stamped
+	 * with an empty string, so "never asked" stays distinguishable.
+	 *
+	 * @return void
+	 */
+	public function test_a_lead_with_no_coordinator_is_not_touched(): void {
+		Kivun_Coordinators::attach_to_lead( 99 );
+		Kivun_Coordinators::pick( '' );
+
+		$this->assertSame( array(), Kivun_Test_State::$updates );
 	}
 }

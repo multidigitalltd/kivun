@@ -167,17 +167,29 @@ class Kivun_Workshops {
 			'type'              => $type,
 			'created_at'        => current_time( 'mysql' ),
 		);
-		$fmt = array( '%d', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%s' );
-
 		// The campaign a lead is credited to is read from these columns, not
 		// from the source text above.
 		foreach ( Kivun_Utm::columns() as $column => $value ) {
 			$row[ $column ] = $value;
-			$fmt[]          = '%s';
+		}
+
+		// Positional, and matched to $row by order alone: a column added in
+		// the middle without a placeholder beside it shifts every format
+		// after it onto the wrong value, which $wpdb writes without
+		// complaint. Built from the keys so the two cannot come apart.
+		$integers = array( 'course_id', 'marketing_consent' );
+		$fmt      = array();
+		foreach ( array_keys( $row ) as $column ) {
+			$fmt[] = in_array( $column, $integers, true ) ? '%d' : '%s';
 		}
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$wpdb->insert( $wpdb->prefix . 'kivun_registrations', $row, $fmt );
+
+		// Which coordinator this one reached. Recorded here rather than put
+		// in the row above, because this path files the lead before the rota
+		// is consulted — the choice does not exist yet at this point.
+		Kivun_Coordinators::attach_to_lead( (int) $wpdb->insert_id );
 
 		$notify               = compact( 'name', 'email', 'phone', 'city', 'gender', 'message' );
 		$notify['next_cycle'] = $is_next_cycle;

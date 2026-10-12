@@ -31,6 +31,13 @@ class Kivun_Coordinators {
 	private static array $current = array();
 
 	/**
+	 * The lead row filed for the submission being handled, or 0 before one is.
+	 *
+	 * @var int
+	 */
+	private static int $lead_id = 0;
+
+	/**
 	 * The gender groups, and the setting each one's roster is stored under.
 	 *
 	 * @return array<string,string>
@@ -259,9 +266,63 @@ class Kivun_Coordinators {
 		// and record a turn nobody took, so the answer is kept instead.
 		if ( $chosen ) {
 			self::$current = $chosen;
+
+			// The lead may already be on disk: a form action files it before
+			// the router is reached, while the plugin's own capture runs
+			// after. Neither order is wrong, so both are handled rather than
+			// one of them assumed — assuming cost a release already.
+			if ( self::$lead_id ) {
+				self::write_handler( self::$lead_id, (string) $chosen['email'] );
+			}
 		}
 
 		return $chosen;
+	}
+
+	/**
+	 * Tie a freshly filed lead to the coordinator handling this submission.
+	 *
+	 * Called by whoever writes the lead row, with the id it was given. When
+	 * the choice has already been made it is stamped on at once; when it has
+	 * not, the id is held and pick() stamps it a moment later.
+	 *
+	 * @param int $lead_id The row id in kivun_registrations.
+	 * @return void
+	 */
+	public static function attach_to_lead( int $lead_id ): void {
+		if ( $lead_id <= 0 ) {
+			return;
+		}
+
+		self::$lead_id = $lead_id;
+
+		if ( self::$current ) {
+			self::write_handler( $lead_id, (string) self::$current['email'] );
+		}
+	}
+
+	/**
+	 * Write the handling coordinator onto a lead row.
+	 *
+	 * @param int    $lead_id The row id.
+	 * @param string $email   The coordinator's address.
+	 * @return void
+	 */
+	private static function write_handler( int $lead_id, string $email ): void {
+		if ( '' === trim( $email ) ) {
+			return;
+		}
+
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$wpdb->update(
+			$wpdb->prefix . 'kivun_registrations',
+			array( 'coordinator' => $email ),
+			array( 'id' => $lead_id ),
+			array( '%s' ),
+			array( '%d' )
+		);
 	}
 
 	/**
@@ -285,6 +346,7 @@ class Kivun_Coordinators {
 	 */
 	public static function forget_current(): void {
 		self::$current = array();
+		self::$lead_id = 0;
 	}
 
 	/**

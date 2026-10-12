@@ -21,6 +21,9 @@ require_once KIVUN_DIR . 'elementor/class-kivun-course-registration-action.php';
 final class Kivun_Form_Test_Database {
 	public string $prefix = 'wp_';
 	public array $rows = array();
+	/** Set by insert(), as $wpdb does — the caller needs the new row's id. */
+	public int $insert_id = 0;
+	public array $updates = array();
 
 	public function prepare( string $sql, ...$args ): string {
 		return $sql;
@@ -31,7 +34,13 @@ final class Kivun_Form_Test_Database {
 	}
 
 	public function insert( string $table, array $row, array $formats ): int {
-		$this->rows[] = $row;
+		$this->rows[]    = $row;
+		$this->insert_id = count( $this->rows );
+		return 1;
+	}
+
+	public function update( string $table, array $data, array $where, array $formats = array(), array $where_formats = array() ): int {
+		$this->updates[] = compact( 'table', 'data', 'where' );
 		return 1;
 	}
 }
