@@ -4058,6 +4058,25 @@ class Kivun_Content_Creator {
 												<?php endif; ?>
 											</td>
 											<td class="kivun-camp-cell">
+												<?php $kivun_short = Kivun_Short_Links::url_for( (string) ( $link->slug ?? '' ) ); ?>
+												<?php if ( '' !== $kivun_short ) : ?>
+													<?php
+													// First, and the one the copy button takes: this is
+													// the link that gets pasted into a message. The full
+													// one is underneath for anyone who needs to read the
+													// parameters, which is a different job.
+													?>
+													<div class="kivun-camp-cell__row">
+														<input type="text" class="kivun-cc-input kivun-camp-saved kivun-camp-short" dir="ltr" readonly value="<?php echo esc_url( $kivun_short ); ?>">
+														<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-camp-copy"><?php esc_html_e( 'העתקה', 'kivun' ); ?></button>
+														<span class="kivun-camp-clicks" title="<?php esc_attr_e( 'כניסות דרך הקישור הקצר', 'kivun' ); ?>">
+															<?php
+															/* translators: %s: number of clicks. */
+															echo esc_html( sprintf( __( '%s כניסות', 'kivun' ), number_format_i18n( (int) ( $link->clicks ?? 0 ) ) ) );
+															?>
+														</span>
+													</div>
+												<?php endif; ?>
 												<div class="kivun-camp-cell__row">
 													<input type="text" class="kivun-cc-input kivun-camp-saved" dir="ltr" readonly value="<?php echo esc_url( $link->final_url ); ?>">
 													<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost kivun-camp-copy"><?php esc_html_e( 'העתקה', 'kivun' ); ?></button>
@@ -4402,7 +4421,37 @@ class Kivun_Content_Creator {
 				</p>
 			<?php endif; ?>
 
-			<label class="kivun-cc-sub"><?php esc_html_e( 'הקישור המוכן', 'kivun' ); ?></label>
+			<?php $kivun_edit_short = $editing ? Kivun_Short_Links::url_for( (string) ( $link->slug ?? '' ) ) : ''; ?>
+
+			<label class="kivun-cc-sub" for="kivun-short-slug-<?php echo esc_attr( (string) $camp->id ); ?>"><?php esc_html_e( 'הקישור הקצר', 'kivun' ); ?></label>
+			<?php if ( '' !== $kivun_edit_short ) : ?>
+				<div class="kivun-camp-out">
+					<input type="text" class="kivun-cc-input kivun-camp-short" dir="ltr" readonly value="<?php echo esc_url( $kivun_edit_short ); ?>">
+					<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-camp-copy"><?php esc_html_e( 'העתקה', 'kivun' ); ?></button>
+				</div>
+			<?php endif; ?>
+			<div class="kivun-camp-out">
+				<span class="kivun-short-slug__base" dir="ltr"><?php echo esc_html( home_url( '/' . Kivun_Short_Links::BASE . '/' ) ); ?></span>
+				<input
+					type="text"
+					id="kivun-short-slug-<?php echo esc_attr( (string) $camp->id ); ?>"
+					class="kivun-cc-input kivun-short-slug"
+					name="slug"
+					dir="ltr"
+					value="<?php echo esc_attr( $editing ? (string) ( $link->slug ?? '' ) : '' ); ?>"
+					placeholder="<?php esc_attr_e( 'יווצר אוטומטית', 'kivun' ); ?>"
+				>
+			</div>
+			<p class="kivun-field-hint">
+				<?php esc_html_e( 'אפשר להשאיר ריק ותיווצר כתובת קצרה אוטומטית, או לכתוב משהו שאפשר להגיד בטלפון — אותיות באנגלית, ספרות ומקפים בלבד.', 'kivun' ); ?>
+				<?php if ( $editing ) : ?>
+					<br><strong><?php esc_html_e( 'שימו לב:', 'kivun' ); ?></strong>
+					<?php esc_html_e( 'שינוי הקוד מבטל את הקישור הקצר הקודם — מי שכבר קיבל אותו יגיע לשגיאה.', 'kivun' ); ?>
+				<?php endif; ?>
+			</p>
+
+			<label class="kivun-cc-sub"><?php esc_html_e( 'הקישור המלא', 'kivun' ); ?></label>
+			<p class="kivun-field-hint"><?php esc_html_e( 'זה מה שהקישור הקצר פותח, וזה מה שגוגל אנליטיקס רואה. אין צורך לשתף אותו.', 'kivun' ); ?></p>
 			<div class="kivun-camp-out">
 				<input type="text" class="kivun-cc-input kivun-camp-result" dir="ltr" readonly data-target="<?php echo esc_url( $target ); ?>" value="<?php echo $editing ? esc_url( (string) $link->final_url ) : ''; ?>" placeholder="<?php esc_attr_e( 'מלאו מקור…', 'kivun' ); ?>">
 				<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost kivun-camp-copy"><?php esc_html_e( 'העתקה', 'kivun' ); ?></button>

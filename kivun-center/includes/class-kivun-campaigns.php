@@ -408,6 +408,9 @@ class Kivun_Campaigns {
 		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized by clean_promo().
 		$whatsapp = self::clean_promo( (string) wp_unslash( $_POST['whatsapp'] ?? '' ) );
 		$target   = esc_url_raw( wp_unslash( $_POST['target_url'] ?? '' ) );
+		// What the short link should be called. Blank is the normal case —
+		// a code is generated rather than demanded.
+		$wanted_slug = sanitize_text_field( wp_unslash( $_POST['slug'] ?? '' ) );
 		if ( ! self::valid_target( $target ) ) {
 			$target = (string) $campaign->target_url;
 		}
@@ -458,8 +461,12 @@ class Kivun_Campaigns {
 			'utm_content' => $utm['content'],
 			'utm_label'   => $utm_label,
 			'whatsapp'    => $whatsapp,
+			// Settled here rather than at display time: the code is what gets
+			// shared, and a link whose code changed between two viewings of
+			// the same screen would be a link somebody already sent out.
+			'slug'        => Kivun_Short_Links::slug_for_save( $wanted_slug, $id ),
 		);
-		$format = array( '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' );
+		$format = array( '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' );
 
 		if ( $id ) {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching

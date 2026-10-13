@@ -883,6 +883,25 @@ class Kivun_Test_Wpdb {
 	public int $insert_id = 0;
 
 	/**
+	 * Answers single-value reads. A test sets this to a callable taking the
+	 * interpolated SQL, so it can say what the database would hold without
+	 * this stub pretending to be one.
+	 *
+	 * @var callable|null
+	 */
+	public $var_handler = null;
+
+	/**
+	 * Read one value.
+	 *
+	 * @param string $sql The query.
+	 * @return mixed
+	 */
+	public function get_var( string $sql ) {
+		return is_callable( $this->var_handler ) ? call_user_func( $this->var_handler, $sql ) : null;
+	}
+
+	/**
 	 * Interpolate a query. Faithful enough for the fragments under test: %s
 	 * is quoted, %d is cast, and nothing else is claimed.
 	 *

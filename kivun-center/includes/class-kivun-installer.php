@@ -81,6 +81,8 @@ class Kivun_Installer {
 		$tables = array(
 			$wpdb->prefix . 'kivun_campaign_links' => array(
 				'whatsapp' => 'text',
+				'slug'     => 'varchar(64) DEFAULT NULL',
+				'clicks'   => 'bigint(20) UNSIGNED NOT NULL DEFAULT 0',
 			),
 			$wpdb->prefix . 'kivun_applications'   => array(
 				'user_id'         => 'bigint(20) UNSIGNED NOT NULL DEFAULT 0',
@@ -130,6 +132,48 @@ class Kivun_Installer {
 					// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared
 					$wpdb->query( "ALTER TABLE `{$table}` ADD COLUMN `{$column}` {$definition}" );
 				}
+			}
+		}
+
+		self::ensure_indexes();
+	}
+
+	/**
+	 * Indexes a table added before its CREATE TABLE carried them.
+	 *
+	 * Columns are added above by ALTER TABLE, which brings no index with it,
+	 * so a site that already had the table would get the column and not the
+	 * guarantee. For the short-link code that guarantee is the point: without
+	 * it two links saved at the same moment can take the same code, and one
+	 * of them then sends its visitors to the other's page.
+	 *
+	 * @return void
+	 */
+	private static function ensure_indexes(): void {
+		global $wpdb;
+
+		$indexes = array(
+			$wpdb->prefix . 'kivun_campaign_links' => array(
+				'slug' => 'ADD UNIQUE KEY `slug` (`slug`)',
+			),
+		);
+
+		foreach ( $indexes as $table => $wanted ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) );
+			if ( ! $exists ) {
+				continue;
+			}
+
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			$have = (array) $wpdb->get_col( "SHOW INDEX FROM `{$table}`", 2 );
+
+			foreach ( $wanted as $name => $clause ) {
+				if ( in_array( $name, $have, true ) ) {
+					continue;
+				}
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared
+				$wpdb->query( "ALTER TABLE `{$table}` {$clause}" );
 			}
 		}
 	}
@@ -235,11 +279,18 @@ class Kivun_Installer {
 				utm_content varchar(150)        NOT NULL DEFAULT '',
 				utm_label   varchar(400)        NOT NULL DEFAULT '',
 				whatsapp    text,
+				slug        varchar(64)         DEFAULT NULL,
+				clicks      bigint(20) UNSIGNED NOT NULL DEFAULT 0,
 				created_by  bigint(20) UNSIGNED NOT NULL DEFAULT 0,
 				created_at  datetime            NOT NULL DEFAULT CURRENT_TIMESTAMP,
 				PRIMARY KEY (id),
 				KEY campaign_id (campaign_id),
-				KEY utm_label (utm_label)
+				KEY utm_label (utm_label),
+				-- NULL rather than '' for a link with no short code: MySQL
+				-- lets a unique index hold any number of NULLs, so the index
+				-- can guarantee no two codes collide while most rows have
+				-- none. Two people saving at once cannot both win a code.
+				UNIQUE KEY slug (slug)
 			) $collate;
 		"
 		);

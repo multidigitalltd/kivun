@@ -45,6 +45,7 @@ class Kivun_Core {
 		Kivun_Lead_Capture::init();
 		Kivun_Utm::init();
 		Kivun_Campaigns::init();
+		Kivun_Short_Links::init();
 		Kivun_Mercaz::init();
 		Kivun_Mercaz_Sync::init();
 		Kivun_CRM_Webhook::init();
@@ -118,6 +119,7 @@ class Kivun_Core {
 			'class-kivun-lead-capture',
 			'class-kivun-utm',
 			'class-kivun-campaigns',
+			'class-kivun-short-links',
 			'class-kivun-mercaz',
 			'class-kivun-mercaz-sync',
 			'class-kivun-crm-webhook',
