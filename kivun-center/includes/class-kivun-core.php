@@ -333,11 +333,19 @@ class Kivun_Core {
 		 * data-no-optimize is the convention LiteSpeed and Autoptimize both
 		 * read. An optimiser that does not know it simply ignores the
 		 * attribute, so this costs nothing where it is not needed.
+		 *
+		 * Every stylesheet of ours that a page may need is listed, not just
+		 * the main one. The picker is the clearest case there is: its markup
+		 * is built by script after the page loads, so a scan of the HTML
+		 * finds not one of its classes and an optimiser drops the file
+		 * whole — leaving a bare text input beside a native select.
 		 */
+		$kivun_unoptimised = array( 'kivun-frontend', 'kivun-picker' );
+
 		add_filter(
 			'style_loader_tag',
-			static function ( $tag, $handle ) {
-				if ( 'kivun-frontend' !== $handle ) {
+			static function ( $tag, $handle ) use ( $kivun_unoptimised ) {
+				if ( ! in_array( $handle, $kivun_unoptimised, true ) ) {
 					return $tag;
 				}
 				return str_replace( '<link ', '<link data-no-optimize="1" data-no-defer="1" ', $tag );
