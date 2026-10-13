@@ -1374,6 +1374,27 @@ td.kivun-app-contact a { display: block; }
 }
 .kivun-camp-cell { min-width: 320px; }
 .kivun-camp-cell__row { display: flex; gap: .4rem; align-items: center; flex-wrap: wrap; }
+.kivun-camp-cell__row + .kivun-camp-cell__row { margin-top: .4rem; }
+
+/* The short link is the one to hand to somebody, so it reads as the answer
+   and the full URL beneath it as the reference it is. */
+.kivun-camp-short {
+	font-weight: 700;
+	border-color: var(--kivun-accent);
+	background: #fff5f8;
+}
+.kivun-camp-clicks {
+	font-size: .78rem;
+	color: var(--kivun-muted);
+	white-space: nowrap;
+}
+.kivun-short-slug__base {
+	font-size: .82rem;
+	color: var(--kivun-muted);
+	white-space: nowrap;
+	direction: ltr;
+}
+.kivun-short-slug { max-width: 16rem; }
 .kivun-camp-saved {
 	flex: 1 1 auto;
 	background: #f8fafc;

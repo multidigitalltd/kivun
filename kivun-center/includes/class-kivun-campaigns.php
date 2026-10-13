@@ -408,6 +408,9 @@ class Kivun_Campaigns {
 		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized by clean_promo().
 		$whatsapp = self::clean_promo( (string) wp_unslash( $_POST['whatsapp'] ?? '' ) );
 		$target   = esc_url_raw( wp_unslash( $_POST['target_url'] ?? '' ) );
+		// What the short link should be called. Blank is the normal case —
+		// a code is generated rather than demanded.
+		$wanted_slug = sanitize_text_field( wp_unslash( $_POST['slug'] ?? '' ) );
 		if ( ! self::valid_target( $target ) ) {
 			$target = (string) $campaign->target_url;
 		}
@@ -447,7 +450,7 @@ class Kivun_Campaigns {
 			);
 		}
 
-		$data   = array(
+		$data = array(
 			'campaign_id' => $campaign_id,
 			'label'       => '' !== $label ? $label : $utm['source'],
 			'target_url'  => $target,
@@ -458,8 +461,23 @@ class Kivun_Campaigns {
 			'utm_content' => $utm['content'],
 			'utm_label'   => $utm_label,
 			'whatsapp'    => $whatsapp,
+			// Settled here rather than at display time: the code is what gets
+			// shared, and a link whose code changed between two viewings of
+			// the same screen would be a link somebody already sent out.
+			'slug'        => Kivun_Short_Links::slug_for_save( $wanted_slug, $id ),
 		);
-		$format = array( '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' );
+
+		// The promo message is written before the link is saved, so it was
+		// built around the long URL. Copying that message is how these links
+		// are actually shared — which would have left the whole feature
+		// doing nothing where it matters most. The long address is swapped
+		// for the short one here, in the copy that gets stored.
+		$data['whatsapp'] = self::shorten_in_text(
+			$whatsapp,
+			Kivun_Short_Links::url_for( $data['slug'] ),
+			array( $data['final_url'], $id ? self::final_url_of( $id ) : '' )
+		);
+		$format           = array( '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' );
 
 		if ( $id ) {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
@@ -495,6 +513,47 @@ class Kivun_Campaigns {
 	}
 
 	/**
+	 * Put the short link into a message written around the long one.
+	 *
+	 * Only exact addresses are swapped — the one just built, and the one the
+	 * link had before an edit changed its parameters. Nothing is guessed at
+	 * by pattern: a message is somebody's own writing, and a regular
+	 * expression loose enough to catch a URL it had not been given is loose
+	 * enough to eat a sentence.
+	 *
+	 * @param string            $text  The message.
+	 * @param string            $short The short link, or '' when there is none.
+	 * @param array<int,string> $long  Addresses to replace.
+	 * @return string
+	 */
+	public static function shorten_in_text( string $text, string $short, array $long ): string {
+		if ( '' === trim( $text ) || '' === trim( $short ) ) {
+			return $text;
+		}
+
+		foreach ( array_unique( array_filter( array_map( 'trim', $long ) ) ) as $address ) {
+			$text = str_replace( $address, $short, $text );
+		}
+
+		return $text;
+	}
+
+	/**
+	 * The full address a link had before this save.
+	 *
+	 * @param int $id The link.
+	 * @return string
+	 */
+	private static function final_url_of( int $id ): string {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		return (string) $wpdb->get_var(
+			$wpdb->prepare( "SELECT final_url FROM {$wpdb->prefix}kivun_campaign_links WHERE id = %d", $id )
+		);
+	}
+
+	/**
 	 * Save just the WhatsApp message of one link.
 	 *
 	 * Rewording a promo is the most frequent change of all, and it changes
@@ -515,6 +574,15 @@ class Kivun_Campaigns {
 		if ( ! $id ) {
 			wp_send_json_error( array( 'message' => __( 'הקישור לא נמצא.', 'kivun' ) ) );
 		}
+
+		// Rewording a promo is the most frequent change there is, and the
+		// reworded copy is built around the long URL just as the first one
+		// was — so the swap happens here too, not only on the full save.
+		$text = self::shorten_in_text(
+			$text,
+			Kivun_Short_Links::url_for( Kivun_Short_Links::slug_of( $id ) ),
+			array( self::final_url_of( $id ) )
+		);
 
 		global $wpdb;
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching

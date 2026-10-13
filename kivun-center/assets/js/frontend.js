@@ -1628,6 +1628,11 @@
 		var preview = linkForm.querySelector('.kivun-camp-result');
 
 		var waEl = linkForm.querySelector('.kivun-link-wa-text');
+		// The short link's code. Sent as typed and tidied on the server, which
+		// is the side that can also tell whether it is already taken. Left
+		// blank on an edit it keeps the code the link already has, so a
+		// reworded message does not break a link somebody already shared.
+		var shortEl = linkForm.querySelector('.kivun-short-slug');
 
 		kivunCampSubmit(linkForm, {
 			action: 'kivun_save_campaign_link',
@@ -1639,6 +1644,7 @@
 			utm_source: source,
 			utm_medium: mediumEl ? kivunCampClean(mediumEl.value) : '',
 			utm_content: contentEl ? kivunCampClean(contentEl.value) : '',
+			slug: shortEl ? shortEl.value.trim() : '',
 			whatsapp: waEl ? waEl.value : ''
 		}, linkErr);
 	});
