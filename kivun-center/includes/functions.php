@@ -234,3 +234,38 @@ function kivun_icon( string $name, string $classes = '' ): string {
 		$paths[ $name ]
 	);
 }
+
+/**
+ * Show a date or time this site stored, in this site's own clock.
+ *
+ * Every datetime the plugin writes is local wall-clock — `current_time()` and
+ * `wp_date()` both produce the site's time, not UTC — and it goes into the
+ * column exactly as written, with no zone attached to say so.
+ *
+ * Reading one back with strtotime() therefore gets it wrong, and in a way
+ * that looks almost right: WordPress sets PHP's own timezone to UTC, so a
+ * naive string is taken as UTC, and wp_date() then renders that instant in
+ * Jerusalem — three hours later than the thing that happened. A call placed
+ * at 22:24 was shown as 01:24 the following day, which is how this was
+ * finally noticed. By day alone it hid for much longer: only the hours after
+ * nine in the evening cross midnight, so most of the day looked fine.
+ *
+ * So the stored string is read as what it is — a local reading — before it
+ * is formatted.
+ *
+ * @param string $stored A datetime as stored, e.g. '2026-10-13 22:24:00'.
+ * @param string $format Any date() format.
+ * @return string The formatted date, or '' when there is nothing to show.
+ */
+function kivun_local_date( string $stored, string $format = 'd/m/Y H:i' ): string {
+	$stored = trim( $stored );
+
+	// MySQL's zero date is "no value", not the year nothing.
+	if ( '' === $stored || 0 === strncmp( $stored, '0000-00-00', 10 ) ) {
+		return '';
+	}
+
+	$when = date_create_immutable( $stored, wp_timezone() );
+
+	return $when ? wp_date( $format, $when->getTimestamp() ) : '';
+}

@@ -3138,7 +3138,7 @@ class Kivun_Content_Creator {
 										if ( $kivun_failed ) {
 											echo esc_html( $kivun_failed );
 										} elseif ( $kivun_synced ) {
-											echo esc_html( sprintf( /* translators: %s: date and time. */ __( 'נשלח ב-%s', 'kivun' ), wp_date( 'd/m/Y H:i', strtotime( $kivun_synced ) ) ) );
+											echo esc_html( sprintf( /* translators: %s: date and time. */ __( 'נשלח ב-%s', 'kivun' ), kivun_local_date( (string) $kivun_synced ) ) );
 										}
 										?>
 									</span>
@@ -3561,7 +3561,7 @@ class Kivun_Content_Creator {
 							<tbody>
 							<?php foreach ( $call_log['rows'] as $call ) : ?>
 								<tr>
-									<td class="kivun-cc-date"><?php echo esc_html( wp_date( 'd/m/Y H:i', strtotime( (string) $call->started_at ) ) ); ?></td>
+									<td class="kivun-cc-date"><?php echo esc_html( kivun_local_date( (string) $call->started_at ) ); ?></td>
 									<td dir="ltr">
 										<a href="tel:<?php echo esc_attr( $call->caller ); ?>"><?php echo esc_html( $call->caller ); ?></a>
 										<?php if ( ! empty( $call->caller_name ) ) : ?>
@@ -3694,11 +3694,11 @@ class Kivun_Content_Creator {
 										?>
 										<tr data-assignment-row="<?php echo esc_attr( $row->id ); ?>">
 											<td class="kivun-cc-date">
-												<?php echo esc_html( wp_date( 'd/m/Y', strtotime( $row->starts_on ) ) ); ?>
+												<?php echo esc_html( kivun_local_date( (string) $row->starts_on, 'd/m/Y' ) ); ?>
 												—
 												<?php
 												echo $row->ends_on
-													? esc_html( wp_date( 'd/m/Y', strtotime( $row->ends_on ) ) )
+													? esc_html( kivun_local_date( (string) $row->ends_on, 'd/m/Y' ) )
 													: esc_html__( 'פעיל', 'kivun' );
 												?>
 											</td>
@@ -4998,7 +4998,7 @@ class Kivun_Content_Creator {
 								?>
 								<span class="kivun-saved-indicator" role="status" aria-live="polite" style="display:none"></span>
 							</td>
-							<td class="kivun-cc-date" data-label="<?php esc_attr_e( 'תאריך', 'kivun' ); ?>" data-col="date"><?php echo esc_html( wp_date( 'd/m/Y H:i', strtotime( $r->created_at ) ) ); ?></td>
+							<td class="kivun-cc-date" data-label="<?php esc_attr_e( 'תאריך', 'kivun' ); ?>" data-col="date"><?php echo esc_html( kivun_local_date( (string) $r->created_at ) ); ?></td>
 							<td data-label="<?php esc_attr_e( 'סטטוס', 'kivun' ); ?>" data-col="status">
 								<?php
 								// Everyone who can see the leads can move one along;

@@ -609,7 +609,7 @@ $kivun_user     = wp_get_current_user();
 						<td class="kivun-job-deadline">
 							<?php if ( $kivun_deadline ) : ?>
 								<span class="<?php echo $kivun_expired ? 'kivun-deadline-past' : ''; ?>">
-									<?php echo esc_html( wp_date( 'd/m/Y', strtotime( $kivun_deadline ) ) ); ?>
+									<?php echo esc_html( kivun_local_date( $kivun_deadline, 'd/m/Y' ) ); ?>
 								</span>
 								<?php if ( $kivun_expired ) : ?>
 									<span class="kivun-expired-tag"><?php esc_html_e( 'פג תוקף', 'kivun' ); ?></span>
@@ -878,7 +878,7 @@ $kivun_user     = wp_get_current_user();
 								placeholder="<?php esc_attr_e( 'הערה פנימית…', 'kivun' ); ?>"
 							><?php echo esc_textarea( $app->notes ?? '' ); ?></textarea>
 						</td>
-						<td class="kivun-app-date"><?php echo esc_html( wp_date( 'd/m/Y', strtotime( $app->created_at ) ) ); ?></td>
+						<td class="kivun-app-date"><?php echo esc_html( kivun_local_date( (string) $app->created_at, 'd/m/Y' ) ); ?></td>
 						<td>
 							<label class="kivun-sr-only" for="kivun-status-<?php echo esc_attr( $app->id ); ?>">
 								<?php

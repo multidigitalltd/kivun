@@ -14,6 +14,13 @@
 
 declare(strict_types=1);
 
+// WordPress does this in wp-settings.php, and it is the reason a stored
+// datetime read with strtotime() comes out three hours late here: PHP takes
+// the naive string as UTC, and the site then renders it in Jerusalem. Without
+// it these tests would run in whatever zone the machine happens to be in, and
+// a date bug that is real on the site would pass.
+date_default_timezone_set( 'UTC' ); // phpcs:ignore WordPress.DateTime.RestrictedFunctions.timezone_change_date_default_timezone_set -- Reproducing what WordPress itself does.
+
 define( 'ABSPATH', __DIR__ . '/' );
 define( 'KIVUN_VERSION', 'test' );
 define( 'KIVUN_DIR', dirname( __DIR__ ) . '/' );
