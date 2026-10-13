@@ -493,7 +493,7 @@ class Kivun_Admin {
 				esc_attr( $r->message ?? '' ),
 				esc_html( wp_trim_words( $r->message ?? '', 8 ) ),
 				self::notes_input( 'registrations', (int) $r->id, $r->notes ?? '' ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built from escaped parts in notes_input.
-				esc_html( wp_date( 'd/m/Y H:i', strtotime( $r->created_at ) ) ),
+				esc_html( kivun_local_date( (string) $r->created_at ) ),
 				self::status_select( 'registrations', (int) $r->id, $r->status, $reg_statuses ) // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built from escaped parts in status_select.
 			);
 		}
@@ -577,7 +577,7 @@ class Kivun_Admin {
 				esc_html( wp_trim_words( $r->message ?? '', 8 ) ),
 				self::notes_input( 'applications', (int) $r->id, $r->notes ?? '' ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built from escaped parts in notes_input.
 				$cv_html, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $cv_html is built with esc_url above.
-				esc_html( wp_date( 'd/m/Y H:i', strtotime( $r->created_at ) ) ),
+				esc_html( kivun_local_date( (string) $r->created_at ) ),
 				self::status_select( 'applications', (int) $r->id, $r->status, $app_statuses ) // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built from escaped parts in status_select.
 			);
 		}
@@ -1410,7 +1410,7 @@ class Kivun_Admin {
 								?>
 								<span class="kivun-saved-indicator" style="display:none"></span>
 							</td>
-							<td style="font-size:12px"><?php echo esc_html( wp_date( 'd/m/Y H:i', strtotime( $r->created_at ) ) ); ?></td>
+							<td style="font-size:12px"><?php echo esc_html( kivun_local_date( (string) $r->created_at ) ); ?></td>
 							<td>
 								<?php
 								// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Returns pre-escaped HTML.
@@ -1614,7 +1614,7 @@ class Kivun_Admin {
 								?>
 								<span class="kivun-saved-indicator" style="display:none"></span>
 							</td>
-							<td style="font-size:12px"><?php echo esc_html( wp_date( 'd/m/Y H:i', strtotime( $r->created_at ) ) ); ?></td>
+							<td style="font-size:12px"><?php echo esc_html( kivun_local_date( (string) $r->created_at ) ); ?></td>
 							<td>
 								<?php
 								// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Returns pre-escaped HTML.

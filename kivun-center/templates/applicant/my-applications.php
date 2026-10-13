@@ -90,7 +90,7 @@ $status_labels = array(
 							<small class="kivun-muted"><?php esc_html_e( '(הוסרה)', 'kivun' ); ?></small>
 						<?php endif; ?>
 					</td>
-					<td><?php echo esc_html( wp_date( 'd/m/Y', strtotime( $r->created_at ) ) ); ?></td>
+					<td><?php echo esc_html( kivun_local_date( (string) $r->created_at, 'd/m/Y' ) ); ?></td>
 					<td>
 						<?php if ( $cv_url ) : ?>
 							<a href="<?php echo esc_url( $cv_url ); ?>" target="_blank"><?php esc_html_e( 'הורד', 'kivun' ); ?></a>

@@ -641,7 +641,7 @@ class Kivun_CRM_Webhook {
 		if ( '' !== $error ) {
 			echo '<span style="color:#b32d2e">' . esc_html( $error ) . '</span><br>';
 		} elseif ( '' !== $sent ) {
-			echo esc_html( sprintf( /* translators: %s: date and time. */ __( 'נשלח ב-%s', 'kivun' ), wp_date( 'd/m/Y H:i', strtotime( $sent ) ) ) ) . '<br>';
+			echo esc_html( sprintf( /* translators: %s: date and time. */ __( 'נשלח ב-%s', 'kivun' ), kivun_local_date( (string) $sent ) ) ) . '<br>';
 		} else {
 			echo '<span class="description">' . esc_html__( 'טרם נשלח', 'kivun' ) . '</span><br>';
 		}
