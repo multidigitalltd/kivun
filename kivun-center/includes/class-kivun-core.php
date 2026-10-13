@@ -299,6 +299,25 @@ class Kivun_Core {
 		);
 		wp_script_add_data( 'kivun-frontend', 'defer', true );
 
+		// The searchable filter dropdowns. Their own pair rather than part of
+		// the bundle above, because the same control is wanted in wp-admin,
+		// which loads none of this. Registered as a dependency so the two
+		// always arrive together and in order.
+		wp_register_style(
+			'kivun-picker',
+			KIVUN_URL . 'assets/css/' . self::asset( 'picker', 'css' ),
+			array(),
+			KIVUN_VERSION
+		);
+		wp_register_script(
+			'kivun-picker',
+			KIVUN_URL . 'assets/js/' . self::asset( 'picker', 'js' ),
+			array(),
+			KIVUN_VERSION,
+			true
+		);
+		wp_script_add_data( 'kivun-picker', 'defer', true );
+
 		/*
 		 * Keep the stylesheet out of "unused CSS" optimisers.
 		 *
@@ -314,11 +333,19 @@ class Kivun_Core {
 		 * data-no-optimize is the convention LiteSpeed and Autoptimize both
 		 * read. An optimiser that does not know it simply ignores the
 		 * attribute, so this costs nothing where it is not needed.
+		 *
+		 * Every stylesheet of ours that a page may need is listed, not just
+		 * the main one. The picker is the clearest case there is: its markup
+		 * is built by script after the page loads, so a scan of the HTML
+		 * finds not one of its classes and an optimiser drops the file
+		 * whole — leaving a bare text input beside a native select.
 		 */
+		$kivun_unoptimised = array( 'kivun-frontend', 'kivun-picker' );
+
 		add_filter(
 			'style_loader_tag',
-			static function ( $tag, $handle ) {
-				if ( 'kivun-frontend' !== $handle ) {
+			static function ( $tag, $handle ) use ( $kivun_unoptimised ) {
+				if ( ! in_array( $handle, $kivun_unoptimised, true ) ) {
 					return $tag;
 				}
 				return str_replace( '<link ', '<link data-no-optimize="1" data-no-defer="1" ', $tag );
@@ -344,7 +371,6 @@ class Kivun_Core {
 				'nonce'    => wp_create_nonce( 'kivun_nonce' ),
 				'i18n'     => array(
 					'sending'                   => __( 'שולח...', 'kivun' ),
-					'pick_none'                 => __( 'אין התאמה', 'kivun' ),
 					'submit'                    => __( 'שלח', 'kivun' ),
 					'confirm_delete'            => __( 'האם למחוק משרה זו?', 'kivun' ),
 					'error_generic'             => __( 'אירעה שגיאה, נסה שוב.', 'kivun' ),
@@ -382,6 +408,8 @@ class Kivun_Core {
 	public static function enqueue_frontend_assets(): void {
 		wp_enqueue_style( 'kivun-frontend' );
 		wp_enqueue_script( 'kivun-frontend' );
+		wp_enqueue_style( 'kivun-picker' );
+		wp_enqueue_script( 'kivun-picker' );
 	}
 
 	/**
