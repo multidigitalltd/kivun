@@ -344,6 +344,7 @@ class Kivun_Core {
 				'nonce'    => wp_create_nonce( 'kivun_nonce' ),
 				'i18n'     => array(
 					'sending'                   => __( 'שולח...', 'kivun' ),
+					'pick_none'                 => __( 'אין התאמה', 'kivun' ),
 					'submit'                    => __( 'שלח', 'kivun' ),
 					'confirm_delete'            => __( 'האם למחוק משרה זו?', 'kivun' ),
 					'error_generic'             => __( 'אירעה שגיאה, נסה שוב.', 'kivun' ),
