@@ -25,7 +25,7 @@ trap 'rm -rf "$scratch"' EXIT
 
 stale=0
 
-for name in frontend admin accessibility cookies whatsapp; do
+for name in frontend admin accessibility cookies whatsapp picker; do
 	src="assets/css/${name}.css"
 	min="assets/css/${name}.min.css"
 	[ -f "$src" ] || continue
@@ -38,7 +38,7 @@ for name in frontend admin accessibility cookies whatsapp; do
 	fi
 done
 
-for name in frontend admin-crm accessibility cookies voice; do
+for name in frontend admin-crm accessibility cookies voice picker; do
 	src="assets/js/${name}.js"
 	min="assets/js/${name}.min.js"
 	[ -f "$src" ] || continue

@@ -3184,7 +3184,6 @@ class Kivun_Content_Creator {
 				'nonce'    => wp_create_nonce( 'kivun_nonce' ),
 				'i18n'     => array(
 					'sending'                   => __( 'שולח...', 'kivun' ),
-					'pick_none'                 => __( 'אין התאמה', 'kivun' ),
 					'saved'                     => __( '✓ נשמר', 'kivun' ),
 					'error_generic'             => __( 'אירעה שגיאה, נסה שוב.', 'kivun' ),
 					'confirm_delete_campaign'   => __( 'למחוק את הקמפיין וכל הקישורים שתחתיו? הפניות שהגיעו דרכם יישמרו.', 'kivun' ),
@@ -4740,7 +4739,7 @@ class Kivun_Content_Creator {
 				<input type="hidden" name="kivun_tab" value="leads">
 
 				<label class="kivun-sr-only" for="kivun-lf-content"><?php esc_html_e( 'סינון לפי תוכן', 'kivun' ); ?></label>
-				<select id="kivun-lf-content" name="kivun_content" class="kivun-pick-src" data-pick-label="סינון לפי תוכן">
+				<select id="kivun-lf-content" name="kivun_content" class="kivun-pick-src" data-pick-label="סינון לפי תוכן" data-pick-empty="<?php esc_attr_e( 'אין התאמה', 'kivun' ); ?>">
 					<option value="0"><?php esc_html_e( 'כל התכנים', 'kivun' ); ?></option>
 					<?php foreach ( $content_list['options'] as $c_id => $c_title ) : ?>
 						<option value="<?php echo esc_attr( $c_id ); ?>" <?php selected( $selected_content, $c_id ); ?>><?php echo esc_html( $c_title ); ?></option>
@@ -4748,7 +4747,7 @@ class Kivun_Content_Creator {
 				</select>
 
 				<label class="kivun-sr-only" for="kivun-lf-type"><?php esc_html_e( 'סינון לפי סוג', 'kivun' ); ?></label>
-				<select id="kivun-lf-type" name="kivun_ltype" class="kivun-pick-src" data-pick-label="סינון לפי סוג">
+				<select id="kivun-lf-type" name="kivun_ltype" class="kivun-pick-src" data-pick-label="סינון לפי סוג" data-pick-empty="<?php esc_attr_e( 'אין התאמה', 'kivun' ); ?>">
 					<option value=""><?php esc_html_e( 'כל הסוגים', 'kivun' ); ?></option>
 					<?php foreach ( $type_labels as $tv => $tl ) : ?>
 						<option value="<?php echo esc_attr( $tv ); ?>" <?php selected( $type_filter, $tv ); ?>><?php echo esc_html( $tl ); ?></option>
@@ -4756,7 +4755,7 @@ class Kivun_Content_Creator {
 				</select>
 
 				<label class="kivun-sr-only" for="kivun-lf-status"><?php esc_html_e( 'סינון לפי סטטוס', 'kivun' ); ?></label>
-				<select id="kivun-lf-status" name="kivun_lstatus" class="kivun-pick-src" data-pick-label="סינון לפי סטטוס">
+				<select id="kivun-lf-status" name="kivun_lstatus" class="kivun-pick-src" data-pick-label="סינון לפי סטטוס" data-pick-empty="<?php esc_attr_e( 'אין התאמה', 'kivun' ); ?>">
 					<option value=""><?php esc_html_e( 'כל הסטטוסים', 'kivun' ); ?></option>
 					<?php foreach ( $statuses as $sv => $sl ) : ?>
 						<option value="<?php echo esc_attr( $sv ); ?>" <?php selected( $status_filter, $sv ); ?>><?php echo esc_html( $sl ); ?></option>
@@ -4764,7 +4763,7 @@ class Kivun_Content_Creator {
 				</select>
 
 				<label class="kivun-sr-only" for="kivun-lf-gender"><?php esc_html_e( 'סינון לפי מגדר', 'kivun' ); ?></label>
-				<select id="kivun-lf-gender" name="kivun_lgender" class="kivun-pick-src" data-pick-label="סינון לפי מגדר">
+				<select id="kivun-lf-gender" name="kivun_lgender" class="kivun-pick-src" data-pick-label="סינון לפי מגדר" data-pick-empty="<?php esc_attr_e( 'אין התאמה', 'kivun' ); ?>">
 					<option value=""><?php esc_html_e( 'כל המגדרים', 'kivun' ); ?></option>
 					<option value="male" <?php selected( $gender_filter, 'male' ); ?>><?php esc_html_e( 'גברים', 'kivun' ); ?></option>
 					<option value="female" <?php selected( $gender_filter, 'female' ); ?>><?php esc_html_e( 'נשים', 'kivun' ); ?></option>
@@ -4778,7 +4777,7 @@ class Kivun_Content_Creator {
 
 				<?php if ( $city_list ) : ?>
 					<label class="kivun-sr-only" for="kivun-lf-city"><?php esc_html_e( 'סינון לפי עיר', 'kivun' ); ?></label>
-					<select id="kivun-lf-city" name="kivun_lcity" class="kivun-pick-src" data-pick-label="סינון לפי עיר">
+					<select id="kivun-lf-city" name="kivun_lcity" class="kivun-pick-src" data-pick-label="סינון לפי עיר" data-pick-empty="<?php esc_attr_e( 'אין התאמה', 'kivun' ); ?>">
 						<option value=""><?php esc_html_e( 'כל הערים', 'kivun' ); ?></option>
 						<?php foreach ( $city_list as $kivun_city ) : ?>
 							<option value="<?php echo esc_attr( $kivun_city ); ?>" <?php selected( $city_filter, $kivun_city ); ?>><?php echo esc_html( $kivun_city ); ?></option>

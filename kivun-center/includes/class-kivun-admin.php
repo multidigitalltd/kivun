@@ -1295,6 +1295,12 @@ class Kivun_Admin {
 		// Inline status/notes editing assets for this page.
 		wp_enqueue_style( 'kivun-admin', KIVUN_URL . 'assets/css/' . Kivun_Core::asset( 'admin', 'css' ), array(), KIVUN_VERSION );
 		wp_enqueue_script( 'kivun-admin-crm', KIVUN_URL . 'assets/js/' . Kivun_Core::asset( 'admin-crm', 'js' ), array(), KIVUN_VERSION, true );
+		// The course list on these screens runs to hundreds of entries, and a
+		// native select only jumps to the first letter. Same control as the
+		// content console's, in its own pair precisely so it can be loaded
+		// here where none of the frontend bundle is.
+		wp_enqueue_style( 'kivun-picker', KIVUN_URL . 'assets/css/' . Kivun_Core::asset( 'picker', 'css' ), array(), KIVUN_VERSION );
+		wp_enqueue_script( 'kivun-picker', KIVUN_URL . 'assets/js/' . Kivun_Core::asset( 'picker', 'js' ), array(), KIVUN_VERSION, true );
 		wp_localize_script(
 			'kivun-admin-crm',
 			'kivunCrm',
@@ -1359,7 +1365,7 @@ class Kivun_Admin {
 			<form method="get" class="kivun-apps-admin-filter" style="margin:1rem 0;display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
 				<input type="hidden" name="post_type" value="kivun_job">
 				<input type="hidden" name="page" value="kivun-applications">
-				<select name="kivun_job_id">
+				<select name="kivun_job_id" class="kivun-pick-src" data-pick-label="<?php esc_attr_e( 'סינון לפי משרה', 'kivun' ); ?>" data-pick-empty="<?php esc_attr_e( 'אין התאמה', 'kivun' ); ?>">
 					<option value="0"><?php esc_html_e( 'כל המשרות', 'kivun' ); ?></option>
 					<?php foreach ( $jobs as $job ) : ?>
 						<option value="<?php echo esc_attr( $job->ID ); ?>" <?php selected( $job_filter, $job->ID ); ?>><?php echo esc_html( $job->post_title ); ?></option>
@@ -1437,6 +1443,12 @@ class Kivun_Admin {
 		// Inline status/notes editing assets for this page.
 		wp_enqueue_style( 'kivun-admin', KIVUN_URL . 'assets/css/' . Kivun_Core::asset( 'admin', 'css' ), array(), KIVUN_VERSION );
 		wp_enqueue_script( 'kivun-admin-crm', KIVUN_URL . 'assets/js/' . Kivun_Core::asset( 'admin-crm', 'js' ), array(), KIVUN_VERSION, true );
+		// The course list on these screens runs to hundreds of entries, and a
+		// native select only jumps to the first letter. Same control as the
+		// content console's, in its own pair precisely so it can be loaded
+		// here where none of the frontend bundle is.
+		wp_enqueue_style( 'kivun-picker', KIVUN_URL . 'assets/css/' . Kivun_Core::asset( 'picker', 'css' ), array(), KIVUN_VERSION );
+		wp_enqueue_script( 'kivun-picker', KIVUN_URL . 'assets/js/' . Kivun_Core::asset( 'picker', 'js' ), array(), KIVUN_VERSION, true );
 		wp_localize_script(
 			'kivun-admin-crm',
 			'kivunCrm',
@@ -1531,13 +1543,13 @@ class Kivun_Admin {
 			<form method="get" class="kivun-apps-admin-filter" style="margin:1rem 0;display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
 				<input type="hidden" name="post_type" value="kivun_course">
 				<input type="hidden" name="page" value="kivun-registrations">
-				<select name="kivun_course_id">
+				<select name="kivun_course_id" class="kivun-pick-src" data-pick-label="<?php esc_attr_e( 'סינון לפי קורס או סדנה', 'kivun' ); ?>" data-pick-empty="<?php esc_attr_e( 'אין התאמה', 'kivun' ); ?>">
 					<option value="0"><?php esc_html_e( 'כל הקורסים והסדנאות', 'kivun' ); ?></option>
 					<?php foreach ( $course_list['options'] as $course_id => $course_title ) : ?>
 						<option value="<?php echo esc_attr( $course_id ); ?>" <?php selected( $selected_course, $course_id ); ?>><?php echo esc_html( $course_title ); ?></option>
 					<?php endforeach; ?>
 				</select>
-				<select name="kivun_type">
+				<select name="kivun_type" class="kivun-pick-src" data-pick-label="<?php esc_attr_e( 'סינון לפי סוג', 'kivun' ); ?>" data-pick-empty="<?php esc_attr_e( 'אין התאמה', 'kivun' ); ?>">
 					<option value=""><?php esc_html_e( 'כל הסוגים', 'kivun' ); ?></option>
 					<?php foreach ( $type_labels as $type_val => $type_label ) : ?>
 						<option value="<?php echo esc_attr( $type_val ); ?>" <?php selected( $type_filter, $type_val ); ?>><?php echo esc_html( $type_label ); ?></option>

@@ -299,6 +299,25 @@ class Kivun_Core {
 		);
 		wp_script_add_data( 'kivun-frontend', 'defer', true );
 
+		// The searchable filter dropdowns. Their own pair rather than part of
+		// the bundle above, because the same control is wanted in wp-admin,
+		// which loads none of this. Registered as a dependency so the two
+		// always arrive together and in order.
+		wp_register_style(
+			'kivun-picker',
+			KIVUN_URL . 'assets/css/' . self::asset( 'picker', 'css' ),
+			array(),
+			KIVUN_VERSION
+		);
+		wp_register_script(
+			'kivun-picker',
+			KIVUN_URL . 'assets/js/' . self::asset( 'picker', 'js' ),
+			array(),
+			KIVUN_VERSION,
+			true
+		);
+		wp_script_add_data( 'kivun-picker', 'defer', true );
+
 		/*
 		 * Keep the stylesheet out of "unused CSS" optimisers.
 		 *
@@ -344,7 +363,6 @@ class Kivun_Core {
 				'nonce'    => wp_create_nonce( 'kivun_nonce' ),
 				'i18n'     => array(
 					'sending'                   => __( 'שולח...', 'kivun' ),
-					'pick_none'                 => __( 'אין התאמה', 'kivun' ),
 					'submit'                    => __( 'שלח', 'kivun' ),
 					'confirm_delete'            => __( 'האם למחוק משרה זו?', 'kivun' ),
 					'error_generic'             => __( 'אירעה שגיאה, נסה שוב.', 'kivun' ),
@@ -382,6 +400,8 @@ class Kivun_Core {
 	public static function enqueue_frontend_assets(): void {
 		wp_enqueue_style( 'kivun-frontend' );
 		wp_enqueue_script( 'kivun-frontend' );
+		wp_enqueue_style( 'kivun-picker' );
+		wp_enqueue_script( 'kivun-picker' );
 	}
 
 	/**
