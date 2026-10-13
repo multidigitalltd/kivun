@@ -239,6 +239,8 @@ class Kivun_Admin_Settings {
 				'crm_webhook_updates'        => ! empty( $_POST['crm_webhook_updates'] ),
 				'ai_image_model'             => sanitize_text_field( wp_unslash( $_POST['ai_image_model'] ?? 'gpt-image-1' ) ),
 				'ai_image_quality'           => sanitize_key( wp_unslash( $_POST['ai_image_quality'] ?? 'medium' ) ),
+				'ai_image_width'             => absint( $_POST['ai_image_width'] ?? Kivun_AI_Image::DEFAULT_WIDTH ),
+				'ai_image_height'            => absint( $_POST['ai_image_height'] ?? Kivun_AI_Image::DEFAULT_HEIGHT ),
 				'turnstile_site_key'         => sanitize_text_field( wp_unslash( $_POST['turnstile_site_key'] ?? '' ) ),
 				'turnstile_secret_key'       => sanitize_text_field( wp_unslash( $_POST['turnstile_secret_key'] ?? '' ) ),
 				'thankyou_page_id'           => absint( $_POST['thankyou_page_id'] ?? 0 ),
@@ -876,8 +878,38 @@ class Kivun_Admin_Settings {
 							<option value="high" <?php selected( $o( 'ai_image_quality', 'medium' ), 'high' ); ?>><?php esc_html_e( 'גבוהה (יקר)', 'kivun' ); ?></option>
 						</select>
 						<p class="description">
-							<?php esc_html_e( 'ב-dall-e-3: בינונית=standard, גבוהה=HD.', 'kivun' ); ?><br>
-							<?php esc_html_e( 'כל תמונה נחתכת אוטומטית ליחס 16:9 לרוחב ונדחסת לכל היותר 300KB.', 'kivun' ); ?>
+							<?php esc_html_e( 'ב-dall-e-3: בינונית=standard, גבוהה=HD.', 'kivun' ); ?>
+						</p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'גודל התמונה באתר', 'kivun' ); ?></th>
+					<td>
+						<?php
+						$kivun_img_w = (int) $o( 'ai_image_width', Kivun_AI_Image::DEFAULT_WIDTH );
+						$kivun_img_h = (int) $o( 'ai_image_height', Kivun_AI_Image::DEFAULT_HEIGHT );
+						?>
+						<label>
+							<?php esc_html_e( 'רוחב', 'kivun' ); ?>
+							<input type="number" name="ai_image_width" value="<?php echo esc_attr( (string) ( $kivun_img_w ? $kivun_img_w : Kivun_AI_Image::DEFAULT_WIDTH ) ); ?>" min="<?php echo esc_attr( (string) Kivun_AI_Image::MIN_EDGE ); ?>" max="<?php echo esc_attr( (string) Kivun_AI_Image::MAX_EDGE ); ?>" step="10" class="small-text">
+						</label>
+						&times;
+						<label>
+							<?php esc_html_e( 'גובה', 'kivun' ); ?>
+							<input type="number" name="ai_image_height" value="<?php echo esc_attr( (string) ( $kivun_img_h ? $kivun_img_h : Kivun_AI_Image::DEFAULT_HEIGHT ) ); ?>" min="<?php echo esc_attr( (string) Kivun_AI_Image::MIN_EDGE ); ?>" max="<?php echo esc_attr( (string) Kivun_AI_Image::MAX_EDGE ); ?>" step="10" class="small-text">
+						</label>
+						<?php esc_html_e( 'פיקסלים', 'kivun' ); ?>
+						<p class="description">
+							<?php
+							printf(
+								/* translators: 1: default width, 2: default height. */
+								esc_html__( 'ברירת המחדל %1$d×%2$d — רצועה רחבה. התמונה בעמוד תוכן מוצגת ביחס שלה, כך שתמונה מרובעת יותר תופסת חלק גדול מהמסך לפני שמגיעים לטקסט.', 'kivun' ),
+								(int) Kivun_AI_Image::DEFAULT_WIDTH,
+								(int) Kivun_AI_Image::DEFAULT_HEIGHT
+							);
+							?>
+							<br>
+							<?php esc_html_e( 'כל תמונה נחתכת אוטומטית מהמרכז ליחס הזה ונדחסת לכל היותר 300KB.', 'kivun' ); ?>
 						</p>
 					</td>
 				</tr>

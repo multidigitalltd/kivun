@@ -24,6 +24,20 @@ class Kivun_Coordinators {
 	const STATE = 'kivun_coordinator_state';
 
 	/**
+	 * The coordinator chosen for the submission being handled right now.
+	 *
+	 * @var array{email:string,weight:int,name:string,phone:string}|array{}
+	 */
+	private static array $current = array();
+
+	/**
+	 * The lead row filed for the submission being handled, or 0 before one is.
+	 *
+	 * @var int
+	 */
+	private static int $lead_id = 0;
+
+	/**
 	 * The gender groups, and the setting each one's roster is stored under.
 	 *
 	 * @return array<string,string>
@@ -50,16 +64,89 @@ class Kivun_Coordinators {
 			return '';
 		}
 
-		// Checked before the male words: "אישה" and "בת" contain none of them,
-		// but a form may well offer "בן/בת" as one label.
-		if ( preg_match( '/female|woman|girl|אישה|אשה|נקבה|בחורה|נערה|בת/u', $gender ) ) {
-			return 'female';
-		}
-		if ( preg_match( '/male|man|boy|גבר|זכר|בחור|נער|בן/u', $gender ) ) {
-			return 'male';
+		// Female first, and the order is load-bearing rather than tidy:
+		// "male" is inside "female", "man" inside "woman", and "נער" inside
+		// "נערה". Every one of those would file a woman as a man if the male
+		// words were tried first.
+		foreach ( array( 'female', 'male' ) as $group ) {
+			foreach ( self::gender_words( $group ) as $word ) {
+				if ( false !== mb_strpos( $gender, $word ) ) {
+					return $group;
+				}
+			}
 		}
 
 		return '';
+	}
+
+	/**
+	 * The words that put a submitted gender in a group.
+	 *
+	 * Forms word this differently and keep changing it, so what arrives is
+	 * matched on the words people actually pick. Kept in one place because
+	 * two readers of it have to agree: the rota that splits the candidates,
+	 * and the filter that shows afterwards how they were split.
+	 *
+	 * @param string $group 'male' or 'female'.
+	 * @return array<int,string>
+	 */
+	public static function gender_words( string $group ): array {
+		$words = array(
+			'female' => array( 'female', 'woman', 'girl', 'אישה', 'אשה', 'נקבה', 'בחורה', 'נערה', 'בת' ),
+			'male'   => array( 'male', 'man', 'boy', 'גבר', 'זכר', 'בחור', 'נער', 'בן' ),
+		);
+
+		return $words[ $group ] ?? array();
+	}
+
+	/**
+	 * A WHERE fragment selecting the rows whose gender falls in a group.
+	 *
+	 * Built from the same words as group_of(), and with the same precedence:
+	 * matching a male word is not enough, because "female" contains "male"
+	 * and "נערה" contains "נער". A row only counts as male when no female
+	 * word matches it either — otherwise filtering to men would list women.
+	 *
+	 * @param string $group  'male', 'female', or 'none' for no answer at all.
+	 * @param string $column The column, optionally table-qualified.
+	 * @return string The SQL, or '' when the group is not one of those.
+	 */
+	public static function gender_where( string $group, string $column = 'gender' ): string {
+		global $wpdb;
+
+		// A column name cannot be a placeholder, so it is interpolated — and
+		// therefore checked rather than trusted. Every caller passes a
+		// literal today; this is here for the one that someday passes
+		// something it read.
+		if ( ! preg_match( '/^[a-z_]+(\.[a-z_]+)?$/', $column ) ) {
+			return '';
+		}
+
+		if ( 'none' === $group ) {
+			return "TRIM( {$column} ) = ''";
+		}
+
+		$words = self::gender_words( $group );
+		if ( ! $words ) {
+			return '';
+		}
+
+		$matches = static function ( array $words ) use ( $wpdb, $column ): string {
+			$parts = array();
+			foreach ( $words as $word ) {
+				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $column is matched against an identifier pattern above; the value is a placeholder.
+				$parts[] = $wpdb->prepare( "{$column} LIKE %s", '%' . $wpdb->esc_like( $word ) . '%' );
+			}
+			return '( ' . implode( ' OR ', $parts ) . ' )';
+		};
+
+		$sql = $matches( $words );
+
+		if ( 'male' === $group ) {
+			$sql .= ' AND NOT ' . $matches( self::gender_words( 'female' ) );
+		}
+
+		return $sql;
 	}
 
 	/**
@@ -243,7 +330,119 @@ class Kivun_Coordinators {
 	public static function pick( string $gender ): array {
 		$group = self::group_of( $gender );
 
-		return '' !== $group ? self::next( $group ) : array();
+		$chosen = '' !== $group ? self::next( $group ) : array();
+
+		// Remembered for the rest of the request. One submission travels
+		// through several hands — the router sends the mail, the lead is
+		// filed afterwards — and each of them wants to know who got it.
+		// Asking the rota a second time would answer with the *next* person
+		// and record a turn nobody took, so the answer is kept instead.
+		if ( $chosen ) {
+			self::$current = $chosen;
+
+			// The lead may already be on disk: a form action files it before
+			// the router is reached, while the plugin's own capture runs
+			// after. Neither order is wrong, so both are handled rather than
+			// one of them assumed — assuming cost a release already.
+			if ( self::$lead_id ) {
+				self::write_handler( self::$lead_id, (string) $chosen['email'] );
+			}
+		}
+
+		return $chosen;
+	}
+
+	/**
+	 * Tie a freshly filed lead to the coordinator handling this submission.
+	 *
+	 * Called by whoever writes the lead row, with the id it was given. When
+	 * the choice has already been made it is stamped on at once; when it has
+	 * not, the id is held and pick() stamps it a moment later.
+	 *
+	 * @param int $lead_id The row id in kivun_registrations.
+	 * @return void
+	 */
+	public static function attach_to_lead( int $lead_id ): void {
+		if ( $lead_id <= 0 ) {
+			return;
+		}
+
+		self::$lead_id = $lead_id;
+
+		if ( self::$current ) {
+			self::write_handler( $lead_id, (string) self::$current['email'] );
+		}
+	}
+
+	/**
+	 * Write the handling coordinator onto a lead row.
+	 *
+	 * @param int    $lead_id The row id.
+	 * @param string $email   The coordinator's address.
+	 * @return void
+	 */
+	private static function write_handler( int $lead_id, string $email ): void {
+		if ( '' === trim( $email ) ) {
+			return;
+		}
+
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$wpdb->update(
+			$wpdb->prefix . 'kivun_registrations',
+			array( 'coordinator' => $email ),
+			array( 'id' => $lead_id ),
+			array( '%s' ),
+			array( '%d' )
+		);
+	}
+
+	/**
+	 * The coordinator already chosen for the submission being handled, or an
+	 * empty array when none was.
+	 *
+	 * For whoever comes after the choice and needs to record it. It never
+	 * makes a choice of its own, so calling it cannot move the rota.
+	 *
+	 * @return array{email:string,weight:int,name:string,phone:string}|array{}
+	 */
+	public static function current(): array {
+		return self::$current;
+	}
+
+	/**
+	 * Forget the choice. For tests, and for anything handling more than one
+	 * submission in a single request.
+	 *
+	 * @return void
+	 */
+	public static function forget_current(): void {
+		self::$current = array();
+		self::$lead_id = 0;
+	}
+
+	/**
+	 * How to show a stored coordinator address on screen.
+	 *
+	 * Their name when the roster gives one, and the address otherwise — an
+	 * address is still an answer to "who got this", which is the question
+	 * being asked. Somebody since taken off the roster still shows, because
+	 * they did handle the lead and that is a matter of record.
+	 *
+	 * @param string $email The stored address.
+	 * @return string The label, or '' when nothing was stored.
+	 */
+	public static function label_for( string $email ): string {
+		$email = trim( $email );
+		if ( '' === $email ) {
+			return '';
+		}
+
+		$known = self::by_email( $email );
+		$name  = trim( (string) ( $known['name'] ?? '' ) );
+
+		return '' !== $name ? $name : $email;
 	}
 
 	/**

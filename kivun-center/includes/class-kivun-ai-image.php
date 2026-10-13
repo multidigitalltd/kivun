@@ -4,7 +4,7 @@
  *
  * Generates a suitable cover image from the content's title/description and
  * saves it to the media library, ready to be used as the featured image. The
- * OpenAI API key, model, orientation and quality are configured under
+ * OpenAI API key, model, quality and output size are configured under
  * Kivun Center → Settings and never exposed to the front end.
  *
  * @package Kivun
@@ -21,6 +21,25 @@ class Kivun_AI_Image {
 	 * OpenAI image-generation endpoint.
 	 */
 	const ENDPOINT = 'https://api.openai.com/v1/images/generations';
+
+	/**
+	 * The cover's default shape: a wide strip rather than a 16:9 block.
+	 *
+	 * The hero on a content page is rendered at its own ratio — the stylesheet
+	 * sets `width:100%; height:auto` and nothing else — so the ratio of the
+	 * file decides how much of the screen is a picture before a reader reaches
+	 * a word of the page. At 16:9 in a 1100px column that is some 620 pixels
+	 * of it. A 3:1 strip is around 370, which is a header rather than a wall.
+	 */
+	const DEFAULT_WIDTH  = 1200;
+	const DEFAULT_HEIGHT = 400;
+
+	/**
+	 * Bounds for the configured size, so a typo cannot ask for a 20px cover or
+	 * a four-megapixel one.
+	 */
+	const MIN_EDGE = 200;
+	const MAX_EDGE = 2400;
 
 	/**
 	 * Register the AJAX handler (logged-in users only).
@@ -154,8 +173,8 @@ class Kivun_AI_Image {
 	}
 
 	/**
-	 * Crop the raw image to a fixed 16:9 landscape, compress it to at most
-	 * 300 KB, and save it as a media attachment.
+	 * Crop the raw image to the configured landscape shape, compress it to at
+	 * most 300 KB, and save it as a media attachment.
 	 *
 	 * @param string $bytes The image bytes.
 	 * @param string $title Title used for the attachment.
@@ -178,21 +197,22 @@ class Kivun_AI_Image {
 			return $editor;
 		}
 
-		// Center-crop to exactly 16:9, then scale down to 1280×720.
-		$size  = $editor->get_size();
-		$width = (int) ( $size['width'] ?? 0 );
-		$hgt   = (int) ( $size['height'] ?? 0 );
-		$ratio = 16 / 9;
-		if ( $width > 0 && $hgt > 0 ) {
-			if ( $width / $hgt > $ratio ) {
-				$crop_w = (int) round( $hgt * $ratio );
-				$editor->crop( (int) round( ( $width - $crop_w ) / 2 ), 0, $crop_w, $hgt );
-			} else {
-				$crop_h = (int) round( $width / $ratio );
-				$editor->crop( 0, (int) round( ( $hgt - $crop_h ) / 2 ), $width, $crop_h );
-			}
+		// Centre-crop to the shape the cover is saved at, then scale down to
+		// it. The crop is what fixes the ratio; the resize only shrinks, so a
+		// size asking for more pixels than the model gave back yields a
+		// smaller file of the right shape rather than a blown-up one.
+		list( $out_w, $out_h ) = self::output_size();
+
+		$size = $editor->get_size();
+		$crop = self::crop_box(
+			(int) ( $size['width'] ?? 0 ),
+			(int) ( $size['height'] ?? 0 ),
+			$out_w / $out_h
+		);
+		if ( $crop ) {
+			$editor->crop( $crop[0], $crop[1], $crop[2], $crop[3] );
 		}
-		$editor->resize( 1280, 720, true );
+		$editor->resize( $out_w, $out_h, true );
 
 		$uploads = wp_upload_dir();
 		if ( ! empty( $uploads['error'] ) ) {
@@ -286,7 +306,7 @@ class Kivun_AI_Image {
 	 * @param string $custom Optional free-text subject.
 	 * @return string
 	 */
-	private static function build_prompt( string $title, string $desc, string $type, string $style, string $custom ): string {
+	public static function build_prompt( string $title, string $desc, string $type, string $style, string $custom ): string {
 		if ( '' !== trim( $custom ) ) {
 			$subject = trim( $custom );
 		} else {
@@ -304,10 +324,18 @@ class Kivun_AI_Image {
 			);
 		}
 
+		// The generated image is centre-cropped to a wide strip, which for a
+		// 3:1 cover throws away most of its height. Asking for that framing up
+		// front is the difference between a banner and a beheading: without
+		// it the model centres a subject in a 3:2 frame and the crop takes the
+		// top of it away.
+		list( $out_w, $out_h ) = self::output_size();
+
 		$prompt = sprintf(
-			'%1$s. A clean, modern cover image for %2$s. Bright, welcoming and high quality, suitable as a website hero / featured image. Do not include any text, letters or words in the image.',
+			'%1$s. A clean, modern cover image for %2$s. Composed as a wide horizontal banner of roughly %3$s, with the subject centred and generous empty space above and below it, so the image can be cropped to a wide strip without losing anything. Bright, welcoming and high quality, suitable as a website hero / featured image. Do not include any text, letters or words in the image.',
 			self::style_fragment( $style ),
-			$subject
+			$subject,
+			self::ratio_label( $out_w, $out_h )
 		);
 
 		/**
@@ -321,6 +349,42 @@ class Kivun_AI_Image {
 		 * @param string $custom Free-text subject.
 		 */
 		return (string) apply_filters( 'kivun_ai_image_prompt', $prompt, $title, $desc, $type, $style, $custom );
+	}
+
+	/**
+	 * A ratio written the way a prompt should carry it — "3:1" where it comes
+	 * out whole, and the decimal form otherwise, since "1200:401" reads as a
+	 * pixel size and invites the model to render one.
+	 *
+	 * @param int $width  The cover's width.
+	 * @param int $height Its height.
+	 * @return string
+	 */
+	public static function ratio_label( int $width, int $height ): string {
+		if ( $width < 1 || $height < 1 ) {
+			return '3:1';
+		}
+
+		$divisor = (int) self::gcd( $width, $height );
+		$w_part  = (int) ( $width / $divisor );
+		$h_part  = (int) ( $height / $divisor );
+
+		if ( $w_part <= 32 && $h_part <= 32 ) {
+			return $w_part . ':' . $h_part;
+		}
+
+		return rtrim( rtrim( number_format( $width / $height, 2, '.', '' ), '0' ), '.' ) . ':1';
+	}
+
+	/**
+	 * Greatest common divisor.
+	 *
+	 * @param int $a First number.
+	 * @param int $b Second number.
+	 * @return int
+	 */
+	private static function gcd( int $a, int $b ): int {
+		return $b ? self::gcd( $b, $a % $b ) : max( 1, $a );
 	}
 
 	/**
@@ -349,6 +413,66 @@ class Kivun_AI_Image {
 	 */
 	private static function size_for( string $model ): string {
 		return 'dall-e-3' === $model ? '1792x1024' : '1536x1024';
+	}
+
+	/**
+	 * The size a finished cover is saved at.
+	 *
+	 * Configurable, because the right shape is a judgement about how the page
+	 * looks rather than something the code can know, and the alternative is a
+	 * plugin release every time somebody wants it a little shorter.
+	 *
+	 * @return array{0:int,1:int} Width and height in pixels.
+	 */
+	public static function output_size(): array {
+		$width  = (int) Kivun_Admin_Settings::get( 'ai_image_width', self::DEFAULT_WIDTH );
+		$height = (int) Kivun_Admin_Settings::get( 'ai_image_height', self::DEFAULT_HEIGHT );
+
+		$width  = $width ? min( self::MAX_EDGE, max( self::MIN_EDGE, $width ) ) : self::DEFAULT_WIDTH;
+		$height = $height ? min( self::MAX_EDGE, max( self::MIN_EDGE, $height ) ) : self::DEFAULT_HEIGHT;
+
+		/**
+		 * Filter the size a generated cover is saved at.
+		 *
+		 * @param array{0:int,1:int} $size Width and height in pixels.
+		 */
+		$size = (array) apply_filters( 'kivun_ai_image_size', array( $width, $height ) );
+
+		return array( (int) ( $size[0] ?? $width ), (int) ( $size[1] ?? $height ) );
+	}
+
+	/**
+	 * The slice of a generated image to keep, centred, so what is left has the
+	 * ratio the cover is saved at.
+	 *
+	 * Kept apart from the image editor because it is the part that can be
+	 * wrong quietly: a box a few pixels out still produces a picture, just one
+	 * squeezed or with a head missing, and nobody checks a cover with a ruler.
+	 *
+	 * @param int   $width  The generated image's width.
+	 * @param int   $height Its height.
+	 * @param float $ratio  The ratio to crop to, width ÷ height.
+	 * @return array{0:int,1:int,2:int,3:int}|null x, y, width, height — or null
+	 *                                             when it is already that shape.
+	 */
+	public static function crop_box( int $width, int $height, float $ratio ): ?array {
+		if ( $width < 1 || $height < 1 || $ratio <= 0 ) {
+			return null;
+		}
+
+		if ( $width / $height > $ratio ) {
+			$keep = (int) round( $height * $ratio );
+			if ( $keep >= $width ) {
+				return null;
+			}
+			return array( (int) round( ( $width - $keep ) / 2 ), 0, $keep, $height );
+		}
+
+		$keep = (int) round( $width / $ratio );
+		if ( $keep >= $height ) {
+			return null;
+		}
+		return array( 0, (int) round( ( $height - $keep ) / 2 ), $width, $keep );
 	}
 
 	/**

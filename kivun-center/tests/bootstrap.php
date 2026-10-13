@@ -67,6 +67,13 @@ final class Kivun_Test_State {
 	public static array $mail = array();
 
 	/**
+	 * Rows written by $wpdb->update(), newest last.
+	 *
+	 * @var array<int,array<string,mixed>>
+	 */
+	public static array $updates = array();
+
+	/**
 	 * The site's timezone for the run.
 	 */
 	public static string $timezone = 'Asia/Jerusalem';
@@ -82,6 +89,7 @@ final class Kivun_Test_State {
 		self::$posts    = array();
 		self::$caps     = array();
 		self::$mail     = array();
+		self::$updates  = array();
 		self::$timezone = 'Asia/Jerusalem';
 	}
 }
@@ -848,6 +856,77 @@ class WP_Error {
 		return $this->message;
 	}
 }
+
+// ── The database ──────────────────────────────────────────────────────────────
+
+/**
+ * Only as much of $wpdb as the units under test touch. Writes are recorded
+ * rather than performed; nothing here pretends to be a database.
+ */
+class Kivun_Test_Wpdb {
+
+	/**
+	 * The table prefix.
+	 */
+	public string $prefix = 'wp_';
+
+	/**
+	 * The id the last insert would have produced.
+	 */
+	public int $insert_id = 0;
+
+	/**
+	 * Interpolate a query. Faithful enough for the fragments under test: %s
+	 * is quoted, %d is cast, and nothing else is claimed.
+	 *
+	 * @param string $sql     The query with placeholders.
+	 * @param mixed  ...$args The values.
+	 * @return string
+	 */
+	public function prepare( string $sql, ...$args ): string {
+		if ( isset( $args[0] ) && is_array( $args[0] ) ) {
+			$args = $args[0];
+		}
+
+		foreach ( $args as $value ) {
+			$replacement = is_int( $value ) || is_float( $value )
+				? (string) $value
+				: "'" . str_replace( "'", "\\'", (string) $value ) . "'";
+
+			$sql = preg_replace( '/%[sdf]/', $replacement, $sql, 1 );
+		}
+
+		return (string) $sql;
+	}
+
+	/**
+	 * Escape the wildcards LIKE would otherwise read as patterns.
+	 *
+	 * @param string $text The text.
+	 * @return string
+	 */
+	public function esc_like( string $text ): string {
+		return addcslashes( $text, '_%\\' );
+	}
+
+	/**
+	 * Record an update.
+	 *
+	 * @param string              $table         The table.
+	 * @param array<string,mixed> $data          Columns to set.
+	 * @param array<string,mixed> $where         Which rows.
+	 * @param array<int,string>   $format        Value formats.
+	 * @param array<int,string>   $where_format  Where formats.
+	 * @return int
+	 */
+	public function update( string $table, array $data, array $where, array $format = array(), array $where_format = array() ): int {
+		unset( $format, $where_format );
+		Kivun_Test_State::$updates[] = compact( 'table', 'data', 'where' );
+		return 1;
+	}
+}
+
+$GLOBALS['wpdb'] = new Kivun_Test_Wpdb();
 
 // ── The plugin ────────────────────────────────────────────────────────────────
 

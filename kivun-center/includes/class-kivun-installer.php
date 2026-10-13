@@ -98,6 +98,10 @@ class Kivun_Installer {
 			$wpdb->prefix . 'kivun_registrations'  => array(
 				'city'              => "varchar(100) NOT NULL DEFAULT ''",
 				'gender'            => "varchar(20) NOT NULL DEFAULT ''",
+				// Who the rota handed this one to. Kept on the lead rather
+				// than only in the mail that went out, because a split nobody
+				// can see afterwards cannot be checked or argued with.
+				'coordinator'       => "varchar(100) NOT NULL DEFAULT ''",
 				'marketing_consent' => 'tinyint(1) NOT NULL DEFAULT 0',
 				'message'           => 'text',
 				'notes'             => 'text',
@@ -151,6 +155,7 @@ class Kivun_Installer {
 				phone       varchar(30)         NOT NULL DEFAULT '',
 				city        varchar(100)        NOT NULL DEFAULT '',
 				gender      varchar(20)         NOT NULL DEFAULT '',
+				coordinator varchar(100)        NOT NULL DEFAULT '',
 				marketing_consent tinyint(1)    NOT NULL DEFAULT 0,
 				message     text,
 				notes       text,
@@ -313,7 +318,12 @@ class Kivun_Installer {
 	 * @return void
 	 */
 	private static function align_job_terms(): void {
-		if ( get_option( 'kivun_job_terms_aligned' ) ) {
+		// Versioned, because the first pass left a term behind: the alignment
+		// ran, and the list it ran with had its own typo in it. A new key is
+		// how a site that already ran it gets the correction — the renames
+		// themselves only fire where the old name is still there, so running
+		// the whole set again costs nothing.
+		if ( get_option( 'kivun_job_terms_aligned_2' ) ) {
 			return;
 		}
 
@@ -323,6 +333,10 @@ class Kivun_Installer {
 				'משרה חלקית' => 'חלקית',
 			),
 			'kivun_job_field' => array(
+				// Ours was misspelt — the letters of אדריכלות transposed —
+				// so it matched nothing in their vocabulary and every job in
+				// the category was sent without one, silently.
+				'אדרכילות/בנייה'         => 'אדריכלות/בנייה',
 				'חינוך והוראה'           => 'חינוך',
 				'מכירות ושיווק'          => 'מכירות',
 				'טכנולוגיה ומחשבים'      => 'הייטק',
@@ -369,6 +383,7 @@ class Kivun_Installer {
 		self::seed_default_terms();
 
 		update_option( 'kivun_job_terms_aligned', 1 );
+		update_option( 'kivun_job_terms_aligned_2', 1 );
 	}
 
 	/**
@@ -629,7 +644,11 @@ class Kivun_Installer {
 				'סטודנט',
 				'משרת אם',
 				'משרה לאקדמאים',
-				'התנדבות',
+				// No 'התנדבות': Mercaz Kivun has no such job type, so a job
+				// marked with it is sent with no type at all and lands where
+				// nobody filtering by type will find it. Existing terms are
+				// left alone — a site using it should see the broadcast say
+				// so rather than have its jobs relabelled from under it.
 			),
 			'kivun_job_region'  => array(
 				'מרכז',
@@ -647,7 +666,7 @@ class Kivun_Installer {
 			'kivun_job_field'   => array(
 				'אבטחה',
 				'אדמיניסטרציה',
-				'אדרכילות/בנייה',
+				'אדריכלות/בנייה',
 				'אחזקה ולוגיסטיקה',
 				'ביטוח',
 				'ביטחון',

@@ -2125,6 +2125,15 @@ class Kivun_Content_Creator {
 							<h2 class="kivun-cc-title"><?php esc_html_e( 'לוח המשרות', 'kivun' ); ?></h2>
 							<p class="kivun-cc-lead"><?php esc_html_e( 'מערכת נפרדת: משרות, מפרסמים והגשות מועמדות עם קורות חיים — לא מעורבב עם פניות התכנים.', 'kivun' ); ?></p>
 						</div>
+						<?php if ( Kivun_Mercaz::configured() && Kivun_Employer::can_manage_all() ) : ?>
+							<div class="kivun-mercaz-bulk">
+								<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-mercaz-push-all">
+									<?php esc_html_e( 'שדר מחדש את כל המשרות', 'kivun' ); ?>
+								</button>
+								<span class="kivun-mercaz-bulk__hint"><?php esc_html_e( 'מעדכן כל משרה במקומה אצל מרכז כיוון — לא יוצר כפילויות — ומפרט מה עדיין חסר.', 'kivun' ); ?></span>
+								<div class="kivun-mercaz-bulk__out" hidden></div>
+							</div>
+						<?php endif; ?>
 					</div>
 					<?php
 					/**
@@ -3175,6 +3184,7 @@ class Kivun_Content_Creator {
 				'nonce'    => wp_create_nonce( 'kivun_nonce' ),
 				'i18n'     => array(
 					'sending'                   => __( 'שולח...', 'kivun' ),
+					'pick_none'                 => __( 'אין התאמה', 'kivun' ),
 					'saved'                     => __( '✓ נשמר', 'kivun' ),
 					'error_generic'             => __( 'אירעה שגיאה, נסה שוב.', 'kivun' ),
 					'confirm_delete_campaign'   => __( 'למחוק את הקמפיין וכל הקישורים שתחתיו? הפניות שהגיעו דרכם יישמרו.', 'kivun' ),
@@ -4487,6 +4497,8 @@ class Kivun_Content_Creator {
 		$content_filter = isset( $_GET['kivun_content'] ) ? absint( wp_unslash( $_GET['kivun_content'] ) ) : 0;
 		$type_filter    = isset( $_GET['kivun_ltype'] ) ? sanitize_text_field( wp_unslash( $_GET['kivun_ltype'] ) ) : '';
 		$status_filter  = isset( $_GET['kivun_lstatus'] ) ? sanitize_key( wp_unslash( $_GET['kivun_lstatus'] ) ) : '';
+		$gender_filter  = isset( $_GET['kivun_lgender'] ) ? sanitize_key( wp_unslash( $_GET['kivun_lgender'] ) ) : '';
+		$city_filter    = isset( $_GET['kivun_lcity'] ) ? sanitize_text_field( wp_unslash( $_GET['kivun_lcity'] ) ) : '';
 		$search         = isset( $_GET['kivun_ls'] ) ? sanitize_text_field( wp_unslash( $_GET['kivun_ls'] ) ) : '';
 		$per_page       = isset( $_GET['kivun_lpp'] ) ? absint( wp_unslash( $_GET['kivun_lpp'] ) ) : 25;
 		$paged          = isset( $_GET['kivun_lpaged'] ) ? max( 1, absint( wp_unslash( $_GET['kivun_lpaged'] ) ) ) : 1;
@@ -4519,6 +4531,19 @@ class Kivun_Content_Creator {
 		}
 		if ( '' !== $status_filter && isset( $statuses[ $status_filter ] ) ) {
 			$conds[] = $wpdb->prepare( 'r.status = %s', $status_filter );
+		}
+		if ( in_array( $gender_filter, array( 'male', 'female', 'none' ), true ) ) {
+			// Matched on the words rather than on an exact string: the value
+			// is whatever the form offered, and the forms do not agree with
+			// each other. The same words the rota splits by, so the filter
+			// and the split cannot disagree about who is who.
+			$gender_sql = Kivun_Coordinators::gender_where( $gender_filter, 'r.gender' );
+			if ( '' !== $gender_sql ) {
+				$conds[] = '( ' . $gender_sql . ' )';
+			}
+		}
+		if ( '' !== $city_filter ) {
+			$conds[] = $wpdb->prepare( 'r.city = %s', $city_filter );
 		}
 		if ( '' !== $search ) {
 			$like = '%' . $wpdb->esc_like( $search ) . '%';
@@ -4569,6 +4594,16 @@ class Kivun_Content_Creator {
 		$content_list     = self::content_filter_options( $contents );
 		$selected_content = $content_list['rep'][ $content_filter ] ?? $content_filter;
 
+		// Only the settlements that actually occur, so the list is short and
+		// nothing in it returns an empty table. Not filtered by the other
+		// choices on purpose: a list that shrinks as you use it hides the
+		// option you were reaching for.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$city_list = $wpdb->get_col(
+			"SELECT DISTINCT city FROM {$wpdb->prefix}kivun_registrations
+			 WHERE TRIM( city ) <> '' ORDER BY city ASC"
+		);
+
 		$can_delete_rows = current_user_can( 'manage_options' );
 		$show_source     = self::can_see_lead_source();
 		$show_source     = self::can_see_lead_source();
@@ -4583,6 +4618,12 @@ class Kivun_Content_Creator {
 		}
 		if ( '' !== $status_filter ) {
 			$base_args['kivun_lstatus'] = $status_filter;
+		}
+		if ( '' !== $gender_filter ) {
+			$base_args['kivun_lgender'] = $gender_filter;
+		}
+		if ( '' !== $city_filter ) {
+			$base_args['kivun_lcity'] = $city_filter;
 		}
 		if ( '' !== $search ) {
 			$base_args['kivun_ls'] = $search;
@@ -4699,7 +4740,7 @@ class Kivun_Content_Creator {
 				<input type="hidden" name="kivun_tab" value="leads">
 
 				<label class="kivun-sr-only" for="kivun-lf-content"><?php esc_html_e( 'סינון לפי תוכן', 'kivun' ); ?></label>
-				<select id="kivun-lf-content" name="kivun_content">
+				<select id="kivun-lf-content" name="kivun_content" class="kivun-pick-src" data-pick-label="סינון לפי תוכן">
 					<option value="0"><?php esc_html_e( 'כל התכנים', 'kivun' ); ?></option>
 					<?php foreach ( $content_list['options'] as $c_id => $c_title ) : ?>
 						<option value="<?php echo esc_attr( $c_id ); ?>" <?php selected( $selected_content, $c_id ); ?>><?php echo esc_html( $c_title ); ?></option>
@@ -4707,7 +4748,7 @@ class Kivun_Content_Creator {
 				</select>
 
 				<label class="kivun-sr-only" for="kivun-lf-type"><?php esc_html_e( 'סינון לפי סוג', 'kivun' ); ?></label>
-				<select id="kivun-lf-type" name="kivun_ltype">
+				<select id="kivun-lf-type" name="kivun_ltype" class="kivun-pick-src" data-pick-label="סינון לפי סוג">
 					<option value=""><?php esc_html_e( 'כל הסוגים', 'kivun' ); ?></option>
 					<?php foreach ( $type_labels as $tv => $tl ) : ?>
 						<option value="<?php echo esc_attr( $tv ); ?>" <?php selected( $type_filter, $tv ); ?>><?php echo esc_html( $tl ); ?></option>
@@ -4715,12 +4756,35 @@ class Kivun_Content_Creator {
 				</select>
 
 				<label class="kivun-sr-only" for="kivun-lf-status"><?php esc_html_e( 'סינון לפי סטטוס', 'kivun' ); ?></label>
-				<select id="kivun-lf-status" name="kivun_lstatus">
+				<select id="kivun-lf-status" name="kivun_lstatus" class="kivun-pick-src" data-pick-label="סינון לפי סטטוס">
 					<option value=""><?php esc_html_e( 'כל הסטטוסים', 'kivun' ); ?></option>
 					<?php foreach ( $statuses as $sv => $sl ) : ?>
 						<option value="<?php echo esc_attr( $sv ); ?>" <?php selected( $status_filter, $sv ); ?>><?php echo esc_html( $sl ); ?></option>
 					<?php endforeach; ?>
 				</select>
+
+				<label class="kivun-sr-only" for="kivun-lf-gender"><?php esc_html_e( 'סינון לפי מגדר', 'kivun' ); ?></label>
+				<select id="kivun-lf-gender" name="kivun_lgender" class="kivun-pick-src" data-pick-label="סינון לפי מגדר">
+					<option value=""><?php esc_html_e( 'כל המגדרים', 'kivun' ); ?></option>
+					<option value="male" <?php selected( $gender_filter, 'male' ); ?>><?php esc_html_e( 'גברים', 'kivun' ); ?></option>
+					<option value="female" <?php selected( $gender_filter, 'female' ); ?>><?php esc_html_e( 'נשים', 'kivun' ); ?></option>
+					<?php
+					// Worth having its own entry: a lead with no gender is one
+					// the rota could not place, so this lists exactly the ones
+					// that never reached a coordinator.
+					?>
+					<option value="none" <?php selected( $gender_filter, 'none' ); ?>><?php esc_html_e( 'ללא מגדר', 'kivun' ); ?></option>
+				</select>
+
+				<?php if ( $city_list ) : ?>
+					<label class="kivun-sr-only" for="kivun-lf-city"><?php esc_html_e( 'סינון לפי עיר', 'kivun' ); ?></label>
+					<select id="kivun-lf-city" name="kivun_lcity" class="kivun-pick-src" data-pick-label="סינון לפי עיר">
+						<option value=""><?php esc_html_e( 'כל הערים', 'kivun' ); ?></option>
+						<?php foreach ( $city_list as $kivun_city ) : ?>
+							<option value="<?php echo esc_attr( $kivun_city ); ?>" <?php selected( $city_filter, $kivun_city ); ?>><?php echo esc_html( $kivun_city ); ?></option>
+						<?php endforeach; ?>
+					</select>
+				<?php endif; ?>
 
 				<label class="kivun-sr-only" for="kivun-lf-search"><?php esc_html_e( 'חיפוש', 'kivun' ); ?></label>
 				<input type="search" id="kivun-lf-search" name="kivun_ls" value="<?php echo esc_attr( $search ); ?>" placeholder="<?php esc_attr_e( 'שם, אימייל, טלפון או מקור…', 'kivun' ); ?>">
@@ -4745,7 +4809,7 @@ class Kivun_Content_Creator {
 				</select>
 
 				<button type="submit" class="kivun-cc-btn kivun-cc-btn--sm"><?php echo kivun_icon( 'filter' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?><?php esc_html_e( 'סינון', 'kivun' ); ?></button>
-				<?php if ( $content_filter || '' !== $type_filter || '' !== $status_filter || '' !== $search || '' !== $date_from || '' !== $date_to ) : ?>
+				<?php if ( $content_filter || '' !== $type_filter || '' !== $status_filter || '' !== $gender_filter || '' !== $city_filter || '' !== $search || '' !== $date_from || '' !== $date_to ) : ?>
 					<a class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost" href="<?php echo esc_url( add_query_arg( 'kivun_tab', 'leads', $page_url ) ); ?>"><?php esc_html_e( 'ניקוי', 'kivun' ); ?></a>
 				<?php endif; ?>
 			</form>
@@ -4800,6 +4864,8 @@ class Kivun_Content_Creator {
 									'type'    => __( 'סוג', 'kivun' ),
 									'contact' => __( 'יצירת קשר', 'kivun' ),
 									'city'    => __( 'עיר', 'kivun' ),
+									'gender'  => __( 'מגדר', 'kivun' ),
+									'handler' => __( 'רכז/ת מטפל/ת', 'kivun' ),
 									'consent' => __( 'דיוור', 'kivun' ),
 									'message' => __( 'פרטי הפנייה', 'kivun' ),
 									'notes'   => __( 'הערות פנימיות', 'kivun' ),
@@ -4832,6 +4898,8 @@ class Kivun_Content_Creator {
 							<th scope="col" data-col="type"><?php esc_html_e( 'סוג', 'kivun' ); ?></th>
 							<th scope="col" data-col="contact"><?php esc_html_e( 'יצירת קשר', 'kivun' ); ?></th>
 							<th scope="col" data-col="city"><?php esc_html_e( 'עיר', 'kivun' ); ?></th>
+							<th scope="col" data-col="gender"><?php esc_html_e( 'מגדר', 'kivun' ); ?></th>
+							<th scope="col" data-col="handler"><?php esc_html_e( 'רכז/ת מטפל/ת', 'kivun' ); ?></th>
 							<th scope="col" data-col="consent"><?php esc_html_e( 'דיוור', 'kivun' ); ?></th>
 							<th scope="col" data-col="message"><?php esc_html_e( 'פרטי הפנייה', 'kivun' ); ?></th>
 							<th scope="col" data-col="notes"><?php esc_html_e( 'הערות פנימיות', 'kivun' ); ?></th>
@@ -4898,6 +4966,24 @@ class Kivun_Content_Creator {
 								<?php endif; ?>
 							</td>
 							<td data-label="<?php esc_attr_e( 'עיר', 'kivun' ); ?>" data-col="city"><?php echo esc_html( (string) ( $r->city ?? '' ) ); ?></td>
+							<td data-label="<?php esc_attr_e( 'מגדר', 'kivun' ); ?>" data-col="gender"><?php echo esc_html( '' !== trim( (string) ( $r->gender ?? '' ) ) ? (string) $r->gender : '—' ); ?></td>
+							<?php
+							// An empty cell here would read as "nobody handled
+							// it". The reason matters: a lead the rota was
+							// never asked about is not the same as one it was
+							// asked about and could not place, and only the
+							// second is a fault to go and fix.
+							$kivun_handler = Kivun_Coordinators::label_for( (string) ( $r->coordinator ?? '' ) );
+							?>
+							<td data-label="<?php esc_attr_e( 'רכז/ת מטפל/ת', 'kivun' ); ?>" data-col="handler">
+								<?php if ( '' !== $kivun_handler ) : ?>
+									<?php echo esc_html( $kivun_handler ); ?>
+								<?php elseif ( '' === trim( (string) ( $r->gender ?? '' ) ) ) : ?>
+									<span class="kivun-muted" title="<?php esc_attr_e( 'הפנייה הגיעה בלי מגדר, ולכן לא נבחר רכז', 'kivun' ); ?>"><?php esc_html_e( 'אין מגדר', 'kivun' ); ?></span>
+								<?php else : ?>
+									<span class="kivun-muted">—</span>
+								<?php endif; ?>
+							</td>
 							<td data-label="<?php esc_attr_e( 'דיוור', 'kivun' ); ?>" data-col="consent"><?php echo esc_html( empty( $r->marketing_consent ) ? '—' : '✓' ); ?></td>
 							<td data-label="<?php esc_attr_e( 'פרטי הפנייה', 'kivun' ); ?>" data-col="message">
 								<?php echo kivun_submission_details( (string) ( $r->message ?? '' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Helper escapes the saved text and labels. ?>

@@ -91,7 +91,15 @@ class Kivun_Lead_Capture {
 			'type'              => 'form',
 			'created_at'        => current_time( 'mysql' ),
 		);
-		$fmt = array( '%d', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%s' );
+		// Positional, and matched to $row above by order alone: a column added
+		// in the middle without a placeholder beside it shifts every format
+		// after it onto the wrong value, which $wpdb then writes without
+		// complaint. Built from the keys so the two cannot come apart.
+		$integers = array( 'course_id', 'marketing_consent' );
+		$fmt      = array();
+		foreach ( array_keys( $row ) as $column ) {
+			$fmt[] = in_array( $column, $integers, true ) ? '%d' : '%s';
+		}
 
 		// The campaign a lead is credited to is read from these columns, not
 		// from the source text above.
@@ -103,6 +111,11 @@ class Kivun_Lead_Capture {
 		global $wpdb;
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$wpdb->insert( $wpdb->prefix . 'kivun_registrations', $row, $fmt );
+
+		// Which coordinator this one reached. Stamped through the same call
+		// as the other path that files a lead, so it does not matter whether
+		// the rota was consulted before this point or is reached after it.
+		Kivun_Coordinators::attach_to_lead( (int) $wpdb->insert_id );
 	}
 
 	/**

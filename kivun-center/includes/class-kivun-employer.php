@@ -243,6 +243,49 @@ class Kivun_Employer {
 		update_post_meta( $job_id, '_kivun_coordinator', $chosen );
 	}
 
+	/**
+	 * What a job is missing before it can be broadcast, as a sentence to show,
+	 * or '' when it has everything.
+	 *
+	 * Checked on the server as well as marked in the form: `required` in the
+	 * markup is a convenience for somebody filling the form in, not a rule —
+	 * it is absent from an older cached copy of the page and from anything
+	 * that posts to the endpoint directly. The fields are the ones Mercaz
+	 * Kivun needs to file a job where it can be found; their API accepts a job
+	 * without them and quietly makes it invisible, which is how 23 jobs ended
+	 * up on their board findable by nobody.
+	 *
+	 * @param string $title       The job title.
+	 * @param string $description The description.
+	 * @param string $city        The settlement.
+	 * @param string $scope       The job type.
+	 * @return string
+	 */
+	public static function missing_for_broadcast( string $title, string $description, string $city, string $scope ): string {
+		$missing = array();
+
+		foreach ( array(
+			__( 'כותרת', 'kivun' )    => $title,
+			__( 'תיאור', 'kivun' )    => $description,
+			__( 'עיר', 'kivun' )      => $city,
+			__( 'סוג משרה', 'kivun' ) => $scope,
+		) as $label => $value ) {
+			if ( '' === trim( $value ) ) {
+				$missing[] = $label;
+			}
+		}
+
+		if ( ! $missing ) {
+			return '';
+		}
+
+		return sprintf(
+			/* translators: %s: comma-separated field names. */
+			__( 'חסרים שדות חובה: %s. בלעדיהם המשרה לא תימצא בחיפוש באתר מרכז כיוון.', 'kivun' ),
+			implode( ', ', $missing )
+		);
+	}
+
 	// ── Post new job ──────────────────────────────────────────────────────────.
 
 	/**
@@ -270,8 +313,9 @@ class Kivun_Employer {
 		$field    = sanitize_text_field( wp_unslash( $_POST['field'] ?? '' ) );
 		$deadline = self::sanitize_deadline( sanitize_text_field( wp_unslash( $_POST['deadline'] ?? '' ) ) );
 
-		if ( ! $title || ! $description ) {
-			wp_send_json_error( array( 'message' => __( 'כותרת ותיאור הם שדות חובה.', 'kivun' ) ) );
+		$incomplete = self::missing_for_broadcast( $title, $description, $city, $scope );
+		if ( $incomplete ) {
+			wp_send_json_error( array( 'message' => $incomplete ) );
 		}
 
 		// A manager publishes on behalf of a chosen publisher, so the job is
@@ -355,8 +399,9 @@ class Kivun_Employer {
 		$region   = sanitize_text_field( wp_unslash( $_POST['region'] ?? '' ) );
 		$field    = sanitize_text_field( wp_unslash( $_POST['field'] ?? '' ) );
 
-		if ( ! $title || ! $description ) {
-			wp_send_json_error( array( 'message' => __( 'כותרת ותיאור הם שדות חובה.', 'kivun' ) ) );
+		$incomplete = self::missing_for_broadcast( $title, $description, $city, $scope );
+		if ( $incomplete ) {
+			wp_send_json_error( array( 'message' => $incomplete ) );
 		}
 
 		$post_update = array(

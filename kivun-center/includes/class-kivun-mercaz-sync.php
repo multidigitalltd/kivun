@@ -57,6 +57,7 @@ class Kivun_Mercaz_Sync {
 	 */
 	public static function init(): void {
 		add_action( 'wp_ajax_kivun_mercaz_push', array( __CLASS__, 'ajax_push' ) );
+		add_action( 'wp_ajax_kivun_mercaz_push_all', array( __CLASS__, 'ajax_push_all' ) );
 		add_action( 'wp_ajax_kivun_city_search', array( __CLASS__, 'ajax_city_search' ) );
 
 		// Pushing happens on a scheduled tick rather than inline: a save should
@@ -409,12 +410,20 @@ class Kivun_Mercaz_Sync {
 
 				$body['content'] = self::as_html( '' !== $get( '_kivun_description' ) ? $get( '_kivun_description' ) : $post->post_content );
 				$body['meta']    = array(
+					// Their side shows an internal number of their own, which
+					// tells nobody here which job it is. This is the number
+					// that identifies it in our system, so a question about a
+					// job can be traced back to the record it came from. The
+					// post id is already that number, already unique, and
+					// needs nobody to type it.
+					'job_number'       => (string) $post->ID,
 					'employer_email'   => $get( '_kivun_employer_email' ),
 					'expires_at'       => self::as_date( $get( '_kivun_deadline' ) ),
 					'salary_min'       => $salary['min'],
 					'salary_max'       => $salary['max'],
 					'work_hours'       => $get( '_kivun_work_hours' ),
 					'experience_years' => $get( '_kivun_experience_years' ),
+					'mefarsem'         => $get( '_kivun_company' ),
 					'requirements'     => self::to_repeater( $get( '_kivun_requirements' ) ),
 				);
 
@@ -461,6 +470,78 @@ class Kivun_Mercaz_Sync {
 		return $body;
 	}
 
+	// ── What a job must carry ─────────────────────────────────────────────────.
+
+	/**
+	 * The fields a job has to arrive with, and what to call them to somebody
+	 * who has to go and fill one in.
+	 *
+	 * Their API accepts a job without any of these — it answers 201 and files
+	 * it — but a job missing one is not findable: no settlement means it is
+	 * absent from every search by place, and no type or field means it is
+	 * absent from both filters. Of the 23 jobs already sent, all 23 arrived
+	 * without a type and 17 without a settlement, and nothing said so at
+	 * either end. So the check belongs here, before the request.
+	 *
+	 * @return array<string,string> Body key => Hebrew label.
+	 */
+	public static function job_required(): array {
+		return array(
+			'title'      => __( 'שם המשרה', 'kivun' ),
+			'content'    => __( 'תיאור המשרה', 'kivun' ),
+			'city'       => __( 'עיר', 'kivun' ),
+			'job-type'   => __( 'סוג משרה', 'kivun' ),
+			'job_number' => __( 'מספר משרה', 'kivun' ),
+		);
+	}
+
+	/**
+	 * The ones the site would like a job to carry. Not refused without them,
+	 * because the client posts jobs the centre did not write and a blocked
+	 * posting helps nobody, but worth saying out loud.
+	 *
+	 * @return array<string,string> Body key => Hebrew label.
+	 */
+	public static function job_recommended(): array {
+		return array(
+			'job_cat'    => __( 'תחום', 'kivun' ),
+			'expires_at' => __( 'תאריך הסרה', 'kivun' ),
+		);
+	}
+
+	/**
+	 * Which required fields a built body is missing.
+	 *
+	 * Read off the body rather than the post, so a value that was filled in
+	 * locally but did not survive the mapping counts as missing — a settlement
+	 * whose name does not exist in their vocabulary resolves to nothing and is
+	 * dropped, and from the post alone that looks fine.
+	 *
+	 * @param array<string,mixed>  $body    The mapped request body.
+	 * @param array<string,string> $fields Key => label; defaults to the
+	 *                                     required set.
+	 * @return array<int,string> The labels of what is missing.
+	 */
+	public static function missing_fields( array $body, array $fields = array() ): array {
+		$fields = $fields ? $fields : self::job_required();
+		$meta   = isset( $body['meta'] ) && is_array( $body['meta'] ) ? $body['meta'] : array();
+		$absent = array();
+
+		foreach ( $fields as $key => $label ) {
+			// A taxonomy arrives as an array of remote term ids, everything
+			// else as a string; both are missing when they are empty, and the
+			// mapping drops an empty meta value altogether.
+			$value   = $body[ $key ] ?? ( $meta[ $key ] ?? null );
+			$present = is_array( $value ) ? (bool) $value : '' !== trim( (string) $value );
+
+			if ( ! $present ) {
+				$absent[] = $label;
+			}
+		}
+
+		return $absent;
+	}
+
 	// ── Push ──────────────────────────────────────────────────────────────────.
 
 	/**
@@ -486,8 +567,27 @@ class Kivun_Mercaz_Sync {
 		}
 
 		$remote_type = $types[ $post->post_type ];
-		$remote_id   = (int) get_post_meta( $post_id, self::REMOTE_ID, true );
-		$path        = $remote_id ? $remote_type . '/' . $remote_id : $remote_type;
+
+		// Refused here rather than sent and lost. Their API would take this
+		// and answer 201, and the job would sit on their board findable by
+		// nobody — which is how 23 of them got there.
+		if ( 'jobs' === $remote_type ) {
+			$missing = self::missing_fields( $body );
+			if ( $missing ) {
+				$error = new \WP_Error(
+					'kivun_mercaz_incomplete',
+					sprintf(
+						/* translators: %s: comma-separated field names. */
+						__( 'המשרה לא שודרה — חסר: %s. משרה בלי השדות האלה נקלטת אצלם אבל לא נמצאת בחיפוש.', 'kivun' ),
+						implode( ', ', $missing )
+					)
+				);
+				update_post_meta( $post_id, self::LAST_ERROR, $error->get_error_message() );
+				return $error;
+			}
+		}
+		$remote_id = (int) get_post_meta( $post_id, self::REMOTE_ID, true );
+		$path      = $remote_id ? $remote_type . '/' . $remote_id : $remote_type;
 
 		$result = Kivun_Mercaz::request( 'POST', $path, array(), $body, $remote_type );
 
@@ -509,13 +609,61 @@ class Kivun_Mercaz_Sync {
 			update_post_meta( $post_id, self::REMOTE_ID, $new_id );
 		}
 		update_post_meta( $post_id, self::SYNCED_AT, current_time( 'mysql' ) );
-		delete_post_meta( $post_id, self::LAST_ERROR );
+
+		// A 201 does not mean everything in the body was kept. Their API
+		// returns the fields it could not accept in ckvn_warnings, and a push
+		// that reported success while a field fell on the floor is the whole
+		// reason this had to be audited by hand.
+		$warnings = self::warnings( $result['data'] ?? array() );
+		if ( $warnings ) {
+			update_post_meta(
+				$post_id,
+				self::LAST_ERROR,
+				sprintf(
+					/* translators: %s: comma-separated field names returned by the API. */
+					__( 'נשלח, אך השדות האלה לא נקלטו אצלם: %s', 'kivun' ),
+					implode( ', ', $warnings )
+				)
+			);
+		} else {
+			delete_post_meta( $post_id, self::LAST_ERROR );
+		}
 
 		return array(
 			'remote_id' => $new_id,
 			'link'      => (string) ( $result['data']['link'] ?? '' ),
 			'created'   => ! $remote_id,
+			'warnings'  => $warnings,
 		);
+	}
+
+	/**
+	 * The field names their API reports it could not accept.
+	 *
+	 * Documented as ckvn_warnings on a job response: an empty array means
+	 * everything was kept. The shape is not promised beyond that, so a list of
+	 * strings and a map of field => reason are both read.
+	 *
+	 * @param mixed $data The decoded response body.
+	 * @return array<int,string>
+	 */
+	public static function warnings( $data ): array {
+		if ( ! is_array( $data ) || empty( $data['ckvn_warnings'] ) || ! is_array( $data['ckvn_warnings'] ) ) {
+			return array();
+		}
+
+		$out = array();
+		foreach ( $data['ckvn_warnings'] as $key => $value ) {
+			if ( is_string( $value ) && ! is_numeric( $key ) ) {
+				$out[] = $key . ' (' . $value . ')';
+			} elseif ( is_scalar( $value ) ) {
+				$out[] = (string) $value;
+			} else {
+				$out[] = (string) $key;
+			}
+		}
+
+		return $out;
 	}
 
 	/**
@@ -541,12 +689,148 @@ class Kivun_Mercaz_Sync {
 			wp_send_json_error( array( 'message' => $result->get_error_message() ) );
 		}
 
+		if ( ! empty( $result['warnings'] ) ) {
+			wp_send_json_error(
+				array(
+					'message' => sprintf(
+						/* translators: %s: comma-separated field names. */
+						__( 'נשלח, אך השדות האלה לא נקלטו אצלם: %s', 'kivun' ),
+						implode( ', ', $result['warnings'] )
+					),
+				)
+			);
+		}
+
 		wp_send_json_success(
 			array(
 				'message' => $result['created']
 					? __( 'נשלח ונוצר במרכז כיוון.', 'kivun' )
 					: __( 'עודכן במרכז כיוון.', 'kivun' ),
 				'link'    => $result['link'],
+			)
+		);
+	}
+
+	// ── Sending the backlog ───────────────────────────────────────────────────.
+
+	/**
+	 * Send every job again.
+	 *
+	 * The jobs already on their board went up before any of this was checked,
+	 * so they are sitting there without a number, a type or a settlement.
+	 * Re-sending updates each in place — the remote id is remembered — rather
+	 * than making a second copy of anything.
+	 *
+	 * Stops on a time budget rather than running until PHP kills it, and says
+	 * how many it did not reach so a second press carries on.
+	 *
+	 * @return array{sent:int,failed:int,skipped:int,remaining:int,problems:array<int,string>}
+	 */
+	public static function push_all_jobs(): array {
+		$jobs = get_posts(
+			array(
+				'post_type'        => 'kivun_job',
+				'post_status'      => array( 'publish', 'draft', 'pending', 'private' ),
+				'numberposts'      => -1,
+				'fields'           => 'ids',
+				'suppress_filters' => false,
+			)
+		);
+
+		$report = array(
+			'sent'      => 0,
+			'failed'    => 0,
+			'skipped'   => 0,
+			'remaining' => 0,
+			'problems'  => array(),
+		);
+
+		// Each job is at least one request to their server, and a slow reply
+		// multiplies across the board. Rather than let PHP cut the run off
+		// somewhere in the middle — which looks like a failure and hides how
+		// much did go — it stops on its own and says how many are left. The
+		// remote id is already saved for everything sent, so running it again
+		// carries on from there instead of starting over.
+		$started = microtime( true );
+		$budget  = (float) apply_filters( 'kivun_mercaz_bulk_seconds', 45.0 );
+		$jobs    = array_values( (array) $jobs );
+
+		foreach ( $jobs as $index => $job_id ) {
+			if ( $index && microtime( true ) - $started > $budget ) {
+				$report['remaining'] = count( $jobs ) - $index;
+				break;
+			}
+
+			$result = self::push( (int) $job_id );
+
+			if ( is_wp_error( $result ) ) {
+				++$report['failed'];
+				// Named one by one: "12 failed" sends somebody hunting, while
+				// the title and the missing field is the whole repair.
+				$report['problems'][] = sprintf(
+					'%s — %s',
+					get_the_title( (int) $job_id ),
+					$result->get_error_message()
+				);
+				continue;
+			}
+
+			if ( ! empty( $result['warnings'] ) ) {
+				++$report['skipped'];
+				$report['problems'][] = sprintf(
+					/* translators: 1: job title, 2: comma-separated field names. */
+					__( '%1$s — נשלחה, אך לא נקלטו: %2$s', 'kivun' ),
+					get_the_title( (int) $job_id ),
+					implode( ', ', $result['warnings'] )
+				);
+				continue;
+			}
+
+			++$report['sent'];
+		}
+
+		return $report;
+	}
+
+	/**
+	 * AJAX: re-send every job.
+	 *
+	 * @return void
+	 */
+	public static function ajax_push_all(): void {
+		check_ajax_referer( 'kivun_nonce', 'nonce' );
+
+		// A loop over every job on the board is not something an employer who
+		// can edit their own posting should be able to set off.
+		if ( ! current_user_can( 'manage_options' ) && ! Kivun_Employer::can_manage_all() ) {
+			wp_send_json_error( array( 'message' => __( 'אין לך הרשאה לשדר את כל המשרות.', 'kivun' ) ) );
+		}
+		if ( ! Kivun_Mercaz::configured() ) {
+			wp_send_json_error( array( 'message' => __( 'החיבור למרכז כיוון לא הוגדר. השלימו את הפרטים בהגדרות.', 'kivun' ) ) );
+		}
+
+		$report = self::push_all_jobs();
+
+		$message = sprintf(
+			/* translators: 1: number sent, 2: number with problems. */
+			__( 'שודרו %1$d משרות. %2$d דורשות טיפול.', 'kivun' ),
+			(int) $report['sent'],
+			(int) $report['failed'] + (int) $report['skipped']
+		);
+
+		if ( $report['remaining'] ) {
+			$message .= ' ' . sprintf(
+				/* translators: %d: number of jobs not reached. */
+				__( 'נותרו %d שלא נשלחו הפעם — לחצו שוב כדי להמשיך מהן.', 'kivun' ),
+				(int) $report['remaining']
+			);
+		}
+
+		wp_send_json_success(
+			array(
+				'message'   => $message,
+				'remaining' => (int) $report['remaining'],
+				'problems'  => $report['problems'],
 			)
 		);
 	}
