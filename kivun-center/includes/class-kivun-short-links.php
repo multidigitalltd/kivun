@@ -265,9 +265,7 @@ class Kivun_Short_Links {
 		$destination = $link ? trim( (string) ( $link->final_url ? $link->final_url : $link->target_url ) ) : '';
 
 		if ( '' === $destination ) {
-			// A code that leads nowhere is a 404, not a silent trip to the
-			// front page: somebody shared a link that is wrong, and they
-			// should be able to find that out.
+			self::not_found();
 			return;
 		}
 
@@ -286,6 +284,29 @@ class Kivun_Short_Links {
 		// justified it — with no way to tell the browser otherwise.
 		wp_redirect( $destination, 302, 'Kivun' ); // phpcs:ignore WordPress.Security.SafeRedirect.wp_redirect_wp_redirect -- The destination is a campaign URL set by staff, and may legitimately be off-site.
 		exit;
+	}
+
+	/**
+	 * Answer a code that leads nowhere with a real 404.
+	 *
+	 * Returning from template_redirect is not enough. The rewrite has already
+	 * turned the URL into index.php?kivun_go=…, and that query variable asks
+	 * for no content of its own, so WordPress goes on to render the front
+	 * page and answers 200 — a mistyped or retired code would quietly look
+	 * like the home page rather than like a broken link, and a crawler would
+	 * file it as a duplicate of the front page.
+	 *
+	 * @return void
+	 */
+	private static function not_found(): void {
+		global $wp_query;
+
+		if ( $wp_query instanceof WP_Query ) {
+			$wp_query->set_404();
+		}
+
+		status_header( 404 );
+		nocache_headers();
 	}
 
 	/**

@@ -26,6 +26,17 @@ class Kivun_Installer {
 		Kivun_Post_Types::register();
 
 		self::seed_default_terms();
+
+		// Activation happens after `init` has already fired, so nothing that
+		// merely hooks `init` has registered its rules yet — and the flush
+		// below would then write a rule set without them. The version is
+		// stamped at the end of this method, which stops maybe_upgrade()
+		// from ever scheduling a second flush, so a route missed here is
+		// missed until somebody saves permalinks by hand. Registered
+		// explicitly, in the same breath as the flush that records it.
+		require_once KIVUN_DIR . 'includes/class-kivun-short-links.php';
+		Kivun_Short_Links::add_route();
+
 		flush_rewrite_rules();
 
 		update_option( 'kivun_db_version', KIVUN_VERSION );

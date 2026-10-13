@@ -298,4 +298,46 @@ final class ShortLinkTest extends TestCase {
 
 		$this->assertMatchesRegularExpression( '/^[a-z0-9]{5}$/', Kivun_Short_Links::slug_for_save( '', 42 ) );
 	}
+
+	// ── That the route survives activation ────────────────────────────────────
+
+	/**
+	 * Activation registers the route before it flushes.
+	 *
+	 * Activation runs after `init` has fired, so nothing that merely hooks
+	 * `init` has registered its rules yet, and the flush would write a rule
+	 * set without them. The version is stamped at the end of the same
+	 * method, which stops the upgrade path from ever scheduling a second
+	 * flush — so a route missed there is missed until somebody saves
+	 * permalinks by hand, and every short link 404s in the meantime.
+	 *
+	 * @return void
+	 */
+	public function test_activation_registers_the_route_before_flushing(): void {
+		$source = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-installer.php' );
+
+		$start = strpos( $source, 'public static function activate()' );
+		$this->assertNotFalse( $start );
+
+		$body  = substr( $source, $start, (int) strpos( $source, 'public static function deactivate()' ) - $start );
+		$route = strpos( $body, 'Kivun_Short_Links::add_route()' );
+		$flush = strpos( $body, 'flush_rewrite_rules()' );
+
+		$this->assertNotFalse( $route, 'activation flushes the rules without registering the short-link route' );
+		$this->assertNotFalse( $flush );
+		$this->assertLessThan( $flush, $route, 'the route is registered after the flush that was meant to record it' );
+	}
+
+	/**
+	 * A code that leads nowhere is answered as a 404 rather than left to
+	 * render the front page with a 200.
+	 *
+	 * @return void
+	 */
+	public function test_an_unknown_code_is_a_real_404(): void {
+		$source = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-short-links.php' );
+
+		$this->assertStringContainsString( 'set_404()', $source );
+		$this->assertStringContainsString( 'status_header( 404 )', $source );
+	}
 }
