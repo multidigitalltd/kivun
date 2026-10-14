@@ -145,7 +145,18 @@
 				// them" over two ticked rows contradicts the list right
 				// underneath it — but a search in progress is left alone.
 				render(term);
-				if ('' === term) { input.value = chosenLabel(); }
+
+				// The labels go back in the box, and are selected: the field
+				// still has focus with the caret at the end, so without this
+				// the next thing typed lands after them and becomes the
+				// search term — "ירושלים, בית שמשעיל" matches nothing, and
+				// the list empties for no reason the reader can see. A term
+				// already being typed is left as it is, since the next pick
+				// is usually from the same search.
+				if ('' === term) {
+					input.value = chosenLabel();
+					input.select();
+				}
 				return;
 			}
 
