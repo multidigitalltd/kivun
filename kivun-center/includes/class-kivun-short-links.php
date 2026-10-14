@@ -52,6 +52,7 @@ class Kivun_Short_Links {
 	 */
 	public static function init(): void {
 		add_action( 'init', array( __CLASS__, 'add_route' ) );
+		add_action( 'wp_ajax_kivun_short_preview', array( __CLASS__, 'ajax_preview' ) );
 		add_filter( 'query_vars', array( __CLASS__, 'add_query_var' ) );
 		// Early, and before anything renders: this request has no page of its
 		// own, and a theme that got as far as sending output would make the
@@ -223,6 +224,47 @@ class Kivun_Short_Links {
 			$wpdb->prepare(
 				"SELECT slug FROM {$wpdb->prefix}kivun_campaign_links WHERE id = %d",
 				$link_id
+			)
+		);
+	}
+
+	/**
+	 * AJAX: what code this link would actually get, without taking it.
+	 *
+	 * The preview is only worth showing if it is true, and the browser
+	 * cannot know whether a code is already spoken for. Asked here, so a
+	 * code somebody has used elsewhere shows as the suffixed one that will
+	 * really be stored rather than as the one they typed — and they are
+	 * told, which is more use than discovering it after saving.
+	 *
+	 * Reserves nothing: two people typing the same code at the same moment
+	 * are still settled by the unique index at save. This only stops the
+	 * screen promising an address it is not going to produce.
+	 *
+	 * @return void
+	 */
+	public static function ajax_preview(): void {
+		check_ajax_referer( 'kivun_nonce', 'nonce' );
+
+		if ( ! current_user_can( 'edit_posts' ) ) {
+			wp_send_json_error();
+		}
+
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- Verified above.
+		$wanted  = sanitize_text_field( wp_unslash( $_POST['slug'] ?? '' ) );
+		$link_id = absint( wp_unslash( $_POST['link_id'] ?? 0 ) );
+		// phpcs:enable WordPress.Security.NonceVerification.Missing
+
+		$asked  = self::clean_slug( $wanted );
+		$actual = '' === $asked ? '' : self::resolve_slug( $asked, $link_id );
+
+		wp_send_json_success(
+			array(
+				'slug'  => $actual,
+				'url'   => self::url_for( $actual ),
+				// So the form can say so rather than quietly showing
+				// something other than what was typed.
+				'taken' => ( '' !== $asked && $actual !== $asked ),
 			)
 		);
 	}
