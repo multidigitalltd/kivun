@@ -53,10 +53,28 @@
 			return { value: o.value, label: o.text };
 		});
 		var active = -1;
+		var many = select.multiple;
+		// What was typed, kept apart from what the box displays. The box
+		// shows the chosen labels when it is closed, and reading the search
+		// term back out of it meant the labels became the term the moment
+		// anything was picked — filtering the list down to nothing.
+		var term = '';
 
+		function chosen() {
+			return [].filter.call(select.options, function (o) { return o.selected; });
+		}
+
+		// What the closed field reads. With several picked it names them, and
+		// with none it says so in the words the field was given — an empty
+		// box beside a filter looks like one that is broken rather than one
+		// that is letting everything through.
 		function chosenLabel() {
-			var o = select.options[select.selectedIndex];
-			return o ? o.text : '';
+			var picked = chosen();
+
+			if (!many) { return picked.length ? picked[0].text : ''; }
+			if (!picked.length) { return select.dataset.pickAll || ''; }
+
+			return picked.map(function (o) { return o.text; }).join(', ');
 		}
 
 		function render(term) {
@@ -69,7 +87,9 @@
 				var li = document.createElement('li');
 				li.className = 'kivun-pick__opt';
 				li.setAttribute('role', 'option');
-				li.setAttribute('aria-selected', opt.value === select.value ? 'true' : 'false');
+				var on = isOn(opt.value);
+				li.setAttribute('aria-selected', on ? 'true' : 'false');
+				if (on) { li.classList.add('is-on'); }
 				li.dataset.value = opt.value;
 				li.textContent = opt.label;
 				list.appendChild(li);
@@ -84,7 +104,7 @@
 		}
 
 		function open() {
-			render(input.value === chosenLabel() ? '' : input.value);
+			render(term);
 			list.hidden = false;
 			input.setAttribute('aria-expanded', 'true');
 		}
@@ -92,6 +112,7 @@
 		function close() {
 			list.hidden = true;
 			input.setAttribute('aria-expanded', 'false');
+			term = '';
 			input.value = chosenLabel();
 		}
 
@@ -104,8 +125,41 @@
 			items[active].scrollIntoView({ block: 'nearest' });
 		}
 
+		function isOn(value) {
+			return chosen().some(function (o) { return o.value === value; });
+		}
+
 		function choose(li) {
 			if (!li || !li.dataset) { return; }
+
+			if (many) {
+				// Toggled rather than replaced, and the list stays open: the
+				// whole point of choosing several is that the next one is
+				// about to be chosen too.
+				[].forEach.call(select.options, function (o) {
+					if (o.value === li.dataset.value) { o.selected = !o.selected; }
+				});
+				select.dispatchEvent(new Event('change', { bubbles: true }));
+				// The list is redrawn so the tick moves. The box follows the
+				// choice too while nothing is being typed — saying "all of
+				// them" over two ticked rows contradicts the list right
+				// underneath it — but a search in progress is left alone.
+				render(term);
+
+				// The labels go back in the box, and are selected: the field
+				// still has focus with the caret at the end, so without this
+				// the next thing typed lands after them and becomes the
+				// search term — "ירושלים, בית שמשעיל" matches nothing, and
+				// the list empties for no reason the reader can see. A term
+				// already being typed is left as it is, since the next pick
+				// is usually from the same search.
+				if ('' === term) {
+					input.value = chosenLabel();
+					input.select();
+				}
+				return;
+			}
+
 			select.value = li.dataset.value;
 			// Fired so anything else listening to the filter reacts the same
 			// way it would to a plain select.
@@ -115,8 +169,10 @@
 
 		input.value = chosenLabel();
 
-		input.addEventListener('focus', open);
-		input.addEventListener('input', function () { open(); });
+		// Selected on focus so that typing replaces the labels sitting in the
+		// box rather than being appended to them.
+		input.addEventListener('focus', function () { input.select(); open(); });
+		input.addEventListener('input', function () { term = input.value; open(); });
 
 		input.addEventListener('keydown', function (e) {
 			if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {

@@ -4553,6 +4553,50 @@ class Kivun_Content_Creator {
 	}
 
 	/**
+	 * A filter's chosen ids, however many arrived.
+	 *
+	 * A single choice and several of them come through the same parameter —
+	 * one as a scalar, the rest as an array — so both are read as a list and
+	 * the rest of the code has one shape to deal with. Zeros go, because the
+	 * "all" option carries one and a list holding it would otherwise filter
+	 * to nothing.
+	 *
+	 * @param mixed $raw The parameter as it arrived.
+	 * @return array<int,int>
+	 */
+	public static function filter_ids( $raw ): array {
+		$list = array_map( 'absint', is_array( $raw ) ? $raw : array( $raw ) );
+
+		return array_values( array_unique( array_filter( $list ) ) );
+	}
+
+	/**
+	 * The same for a filter whose values are words rather than ids.
+	 *
+	 * @param mixed $raw The parameter as it arrived.
+	 * @return array<int,string>
+	 */
+	public static function filter_values( $raw ): array {
+		$list = array_map(
+			static function ( $value ) {
+				return sanitize_text_field( (string) $value );
+			},
+			is_array( $raw ) ? $raw : array( $raw )
+		);
+
+		return array_values(
+			array_unique(
+				array_filter(
+					$list,
+					static function ( $value ) {
+						return '' !== trim( $value );
+					}
+				)
+			)
+		);
+	}
+
+	/**
 	 * Render the leads / registrations CRM on the front end: the same data and
 	 * inline editing as the wp-admin page, so managing enquiries never requires
 	 * opening wp-admin.
@@ -4567,16 +4611,22 @@ class Kivun_Content_Creator {
 		$type_labels = Kivun_Admin::reg_type_labels();
 
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Read-only listing filters.
-		$content_filter = isset( $_GET['kivun_content'] ) ? absint( wp_unslash( $_GET['kivun_content'] ) ) : 0;
+		// Several at once, because a question is usually about more than one
+		// of them: the leads from two courses, or from three towns. Read as a
+		// list even when one arrives, so the rest of the code has one shape
+		// to handle. phpcs cannot see the per-value sanitising inside.
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+		$content_filter = self::filter_ids( wp_unslash( $_GET['kivun_content'] ?? array() ) );
 		$type_filter    = isset( $_GET['kivun_ltype'] ) ? sanitize_text_field( wp_unslash( $_GET['kivun_ltype'] ) ) : '';
 		$status_filter  = isset( $_GET['kivun_lstatus'] ) ? sanitize_key( wp_unslash( $_GET['kivun_lstatus'] ) ) : '';
 		$gender_filter  = isset( $_GET['kivun_lgender'] ) ? sanitize_key( wp_unslash( $_GET['kivun_lgender'] ) ) : '';
-		$city_filter    = isset( $_GET['kivun_lcity'] ) ? sanitize_text_field( wp_unslash( $_GET['kivun_lcity'] ) ) : '';
-		$search         = isset( $_GET['kivun_ls'] ) ? sanitize_text_field( wp_unslash( $_GET['kivun_ls'] ) ) : '';
-		$per_page       = isset( $_GET['kivun_lpp'] ) ? absint( wp_unslash( $_GET['kivun_lpp'] ) ) : 25;
-		$paged          = isset( $_GET['kivun_lpaged'] ) ? max( 1, absint( wp_unslash( $_GET['kivun_lpaged'] ) ) ) : 1;
-		$date_from      = isset( $_GET['kivun_lfrom'] ) ? sanitize_text_field( wp_unslash( $_GET['kivun_lfrom'] ) ) : '';
-		$date_to        = isset( $_GET['kivun_lto'] ) ? sanitize_text_field( wp_unslash( $_GET['kivun_lto'] ) ) : '';
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized per value in filter_values().
+		$city_filter = self::filter_values( wp_unslash( $_GET['kivun_lcity'] ?? array() ) );
+		$search      = isset( $_GET['kivun_ls'] ) ? sanitize_text_field( wp_unslash( $_GET['kivun_ls'] ) ) : '';
+		$per_page    = isset( $_GET['kivun_lpp'] ) ? absint( wp_unslash( $_GET['kivun_lpp'] ) ) : 25;
+		$paged       = isset( $_GET['kivun_lpaged'] ) ? max( 1, absint( wp_unslash( $_GET['kivun_lpaged'] ) ) ) : 1;
+		$date_from   = isset( $_GET['kivun_lfrom'] ) ? sanitize_text_field( wp_unslash( $_GET['kivun_lfrom'] ) ) : '';
+		$date_to     = isset( $_GET['kivun_lto'] ) ? sanitize_text_field( wp_unslash( $_GET['kivun_lto'] ) ) : '';
 		// phpcs:enable WordPress.Security.NonceVerification.Recommended
 
 		$date_from = self::valid_date( $date_from );
@@ -4596,8 +4646,13 @@ class Kivun_Content_Creator {
 			// Everything the visitor could have arrived through: a course and
 			// its landing page are one piece of content, so filtering to one of
 			// them and hiding the rest would answer a question nobody asked.
-			$group_ids = self::group_post_ids( $content_filter );
-			$conds[]   = 'r.course_id IN ( ' . implode( ', ', array_map( 'absint', $group_ids ) ) . ' )';
+			// With several chosen it is every arrival into any of them.
+			$group_ids = array();
+			foreach ( $content_filter as $chosen_content ) {
+				$group_ids = array_merge( $group_ids, self::group_post_ids( $chosen_content ) );
+			}
+			$group_ids = array_unique( array_map( 'absint', $group_ids ) );
+			$conds[]   = 'r.course_id IN ( ' . implode( ', ', $group_ids ) . ' )';
 		}
 		if ( '' !== $type_filter && isset( $type_labels[ $type_filter ] ) ) {
 			$conds[] = $wpdb->prepare( 'r.type = %s', $type_filter );
@@ -4615,8 +4670,13 @@ class Kivun_Content_Creator {
 				$conds[] = '( ' . $gender_sql . ' )';
 			}
 		}
-		if ( '' !== $city_filter ) {
-			$conds[] = $wpdb->prepare( 'r.city = %s', $city_filter );
+		if ( $city_filter ) {
+			// Built with one placeholder per value rather than by pasting the
+			// list in: these are names somebody typed into a form once, and a
+			// town with an apostrophe in it is not a reason to trust them.
+			$marks = implode( ', ', array_fill( 0, count( $city_filter ), '%s' ) );
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- $marks is one placeholder per value, built from the count.
+			$conds[] = $wpdb->prepare( "r.city IN ( {$marks} )", $city_filter );
 		}
 		if ( '' !== $search ) {
 			$like = '%' . $wpdb->esc_like( $search ) . '%';
@@ -4664,8 +4724,14 @@ class Kivun_Content_Creator {
 
 		// One entry per piece of content. The group meta is read for each, so
 		// the meta cache is left primed above rather than switched off.
-		$content_list     = self::content_filter_options( $contents );
-		$selected_content = $content_list['rep'][ $content_filter ] ?? $content_filter;
+		$content_list = self::content_filter_options( $contents );
+		// A group is offered under one of its posts, so a chosen id is mapped
+		// to the one the list actually shows — otherwise picking a landing
+		// page would leave the box looking empty.
+		$selected_content = array();
+		foreach ( $content_filter as $chosen_content ) {
+			$selected_content[] = (int) ( $content_list['rep'][ $chosen_content ] ?? $chosen_content );
+		}
 
 		// Only the settlements that actually occur, so the list is short and
 		// nothing in it returns an empty table. Not filtered by the other
@@ -4695,7 +4761,7 @@ class Kivun_Content_Creator {
 		if ( '' !== $gender_filter ) {
 			$base_args['kivun_lgender'] = $gender_filter;
 		}
-		if ( '' !== $city_filter ) {
+		if ( $city_filter ) {
 			$base_args['kivun_lcity'] = $city_filter;
 		}
 		if ( '' !== $search ) {
@@ -4813,10 +4879,9 @@ class Kivun_Content_Creator {
 				<input type="hidden" name="kivun_tab" value="leads">
 
 				<label class="kivun-sr-only" for="kivun-lf-content"><?php esc_html_e( 'סינון לפי תוכן', 'kivun' ); ?></label>
-				<select id="kivun-lf-content" name="kivun_content" class="kivun-pick-src" data-pick-label="סינון לפי תוכן" data-pick-empty="<?php esc_attr_e( 'אין התאמה', 'kivun' ); ?>">
-					<option value="0"><?php esc_html_e( 'כל התכנים', 'kivun' ); ?></option>
+				<select id="kivun-lf-content" name="kivun_content[]" multiple class="kivun-pick-src" data-pick-label="סינון לפי תוכן" data-pick-empty="<?php esc_attr_e( 'אין התאמה', 'kivun' ); ?>" data-pick-all="<?php esc_attr_e( 'כל התכנים', 'kivun' ); ?>">
 					<?php foreach ( $content_list['options'] as $c_id => $c_title ) : ?>
-						<option value="<?php echo esc_attr( $c_id ); ?>" <?php selected( $selected_content, $c_id ); ?>><?php echo esc_html( $c_title ); ?></option>
+						<option value="<?php echo esc_attr( $c_id ); ?>" <?php echo in_array( (int) $c_id, $selected_content, true ) ? 'selected' : ''; ?>><?php echo esc_html( $c_title ); ?></option>
 					<?php endforeach; ?>
 				</select>
 
@@ -4851,10 +4916,9 @@ class Kivun_Content_Creator {
 
 				<?php if ( $city_list ) : ?>
 					<label class="kivun-sr-only" for="kivun-lf-city"><?php esc_html_e( 'סינון לפי עיר', 'kivun' ); ?></label>
-					<select id="kivun-lf-city" name="kivun_lcity" class="kivun-pick-src" data-pick-label="סינון לפי עיר" data-pick-empty="<?php esc_attr_e( 'אין התאמה', 'kivun' ); ?>">
-						<option value=""><?php esc_html_e( 'כל הערים', 'kivun' ); ?></option>
+					<select id="kivun-lf-city" name="kivun_lcity[]" multiple class="kivun-pick-src" data-pick-label="סינון לפי עיר" data-pick-empty="<?php esc_attr_e( 'אין התאמה', 'kivun' ); ?>" data-pick-all="<?php esc_attr_e( 'כל הערים', 'kivun' ); ?>">
 						<?php foreach ( $city_list as $kivun_city ) : ?>
-							<option value="<?php echo esc_attr( $kivun_city ); ?>" <?php selected( $city_filter, $kivun_city ); ?>><?php echo esc_html( $kivun_city ); ?></option>
+							<option value="<?php echo esc_attr( $kivun_city ); ?>" <?php echo in_array( (string) $kivun_city, $city_filter, true ) ? 'selected' : ''; ?>><?php echo esc_html( $kivun_city ); ?></option>
 						<?php endforeach; ?>
 					</select>
 				<?php endif; ?>
@@ -4882,7 +4946,7 @@ class Kivun_Content_Creator {
 				</select>
 
 				<button type="submit" class="kivun-cc-btn kivun-cc-btn--sm"><?php echo kivun_icon( 'filter' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?><?php esc_html_e( 'סינון', 'kivun' ); ?></button>
-				<?php if ( $content_filter || '' !== $type_filter || '' !== $status_filter || '' !== $gender_filter || '' !== $city_filter || '' !== $search || '' !== $date_from || '' !== $date_to ) : ?>
+				<?php if ( $content_filter || '' !== $type_filter || '' !== $status_filter || '' !== $gender_filter || $city_filter || '' !== $search || '' !== $date_from || '' !== $date_to ) : ?>
 					<a class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost" href="<?php echo esc_url( add_query_arg( 'kivun_tab', 'leads', $page_url ) ); ?>"><?php esc_html_e( 'ניקוי', 'kivun' ); ?></a>
 				<?php endif; ?>
 			</form>

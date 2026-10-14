@@ -29,8 +29,11 @@ class Kivun_Export {
 	public static function handle(): void {
 		check_admin_referer( 'kivun_export' );
 
-		$type    = sanitize_key( wp_unslash( $_GET['type'] ?? '' ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Nonce verified via check_admin_referer above.
-		$post_id = absint( wp_unslash( $_GET['post_id'] ?? 0 ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Nonce verified via check_admin_referer above.
+		$type = sanitize_key( wp_unslash( $_GET['type'] ?? '' ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Nonce verified via check_admin_referer above.
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Nonce verified above; each value is cast to an integer here.
+		$raw_ids  = wp_unslash( $_GET['post_id'] ?? 0 );
+		$post_ids = array_values( array_filter( array_map( 'absint', is_array( $raw_ids ) ? $raw_ids : array( $raw_ids ) ) ) );
+		$post_id  = $post_ids[0] ?? 0;
 
 		// Optional publisher scope, used when a manager is "acting as" a publisher.
 		$employer_id = absint( wp_unslash( $_GET['employer'] ?? 0 ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Nonce verified via check_admin_referer above.
@@ -42,7 +45,7 @@ class Kivun_Export {
 			if ( ! Kivun_Content_Creator::can_manage_leads() ) {
 				wp_die( 'Unauthorized' );
 			}
-			self::export_registrations( $post_id );
+			self::export_registrations( $post_ids );
 			return;
 		}
 
@@ -146,15 +149,18 @@ class Kivun_Export {
 	/**
 	 * Stream registrations as a CSV download.
 	 *
-	 * @param int $post_id Optional course ID to filter by, 0 for all.
+	 * @param array<int,int> $post_ids Course IDs to filter by; empty for all.
 	 * @return void
 	 */
-	private static function export_registrations( int $post_id ): void {
+	private static function export_registrations( array $post_ids ): void {
 		global $wpdb;
 
-		$where = $post_id
-			? $wpdb->prepare( 'WHERE r.course_id = %d', $post_id )
-			: '';
+		$where = '';
+		if ( $post_ids ) {
+			$marks = implode( ', ', array_fill( 0, count( $post_ids ), '%d' ) );
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- $marks is one placeholder per value, built from the count.
+			$where = $wpdb->prepare( "WHERE r.course_id IN ( {$marks} )", $post_ids );
+		}
 
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		$rows = $wpdb->get_results(
@@ -167,8 +173,8 @@ class Kivun_Export {
 		);
 		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
-		$filename = $post_id
-			? 'registrations-' . $post_id . '-' . gmdate( 'Ymd' ) . '.csv'
+		$filename = $post_ids
+			? 'registrations-' . implode( '-', $post_ids ) . '-' . gmdate( 'Ymd' ) . '.csv'
 			: 'registrations-all-' . gmdate( 'Ymd' ) . '.csv';
 
 		self::send_headers( $filename );
@@ -341,11 +347,17 @@ class Kivun_Export {
 	 * @param int    $employer_id Optional publisher ID to scope applications to.
 	 * @return string
 	 */
-	public static function url( string $type, int $post_id = 0, int $employer_id = 0 ): string {
+	public static function url( string $type, $post_id = 0, int $employer_id = 0 ): string {
+		// A list as well as a single id, so the button can carry the same
+		// choice the table is filtered by. A download narrower or wider than
+		// what is on screen is worse than no button: it is read as the
+		// screen, and nothing on it says otherwise.
+		$ids = array_values( array_filter( array_map( 'absint', is_array( $post_id ) ? $post_id : array( $post_id ) ) ) );
+
 		$args = array(
 			'action'  => 'kivun_export_csv',
 			'type'    => $type,
-			'post_id' => $post_id,
+			'post_id' => 1 === count( $ids ) ? $ids[0] : $ids,
 		);
 		if ( $employer_id ) {
 			$args['employer'] = $employer_id;

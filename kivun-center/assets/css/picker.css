@@ -69,3 +69,15 @@
 	font-size: .87rem;
 	color: var(--kivun-muted, #76767f);
 }
+
+/* A chosen option in a list where several can be. Marked in the list rather
+   than only in the closed field, because the list is where the next one gets
+   picked and the question there is always "which have I got already". */
+.kivun-pick__opt.is-on { font-weight: 700; }
+.kivun-pick__opt.is-on::after {
+	content: "✓";
+	margin-inline-start: .4rem;
+	color: var(--kivun-accent, #de2952);
+}
+.kivun-pick__opt.is-on.is-active::after,
+.kivun-pick__opt.is-on:hover::after { color: #fff; }
