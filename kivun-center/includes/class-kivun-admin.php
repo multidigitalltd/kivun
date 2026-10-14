@@ -593,6 +593,13 @@ class Kivun_Admin {
 	 */
 	public static function reg_statuses(): array {
 		return array(
+			// What a course registration is stored as, and the column's own
+			// default. It was missing from this list, so a select offered no
+			// option matching it and the browser fell back to showing the
+			// first — every course registration has been reading as "ליד
+			// חדש" while the row said otherwise, and changing anything else
+			// in that row would have written that misreading back.
+			'pending'      => __( 'ממתין', 'kivun' ),
 			'new_lead'     => __( 'ליד חדש', 'kivun' ),
 			'next_cycle'   => __( 'למחזור הבא', 'kivun' ),
 			'new'          => __( 'חדש', 'kivun' ),
@@ -709,6 +716,20 @@ class Kivun_Admin {
 			);
 		}
 		$html .= '</select>';
+
+		// The same answer again, as a label rather than a control.
+		//
+		// A dropdown reads as something to do, not as something already
+		// decided: scanning a column of them, every row looks alike and the
+		// one marked "לא רלוונטי" is as loud as the one still waiting. The
+		// label states where the row got to, in a colour that separates
+		// finished from dismissed from open at a glance.
+		$html .= sprintf(
+			'<span class="kivun-status-badge" data-status="%s">%s</span>',
+			esc_attr( $current ),
+			esc_html( $options[ $current ] ?? $current )
+		);
+
 		return $html;
 	}
 
