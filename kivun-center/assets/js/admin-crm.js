@@ -43,6 +43,19 @@
 		return select.dataset.prev;
 	}
 
+	// The label beside the select that states where the row got to. Its text
+	// comes from the chosen option rather than from a list of its own, so it
+	// cannot disagree with the control it sits next to.
+	function paintStatus(select) {
+		var cell = select.closest('td') || select.parentNode;
+		var badge = cell ? cell.querySelector('.kivun-status-badge') : null;
+		if (!badge) { return; }
+
+		var chosen = select.options[select.selectedIndex];
+		badge.textContent = chosen ? chosen.text : '';
+		badge.dataset.status = select.value;
+	}
+
 	// Status select — save on change.
 	document.addEventListener('change', function (e) {
 		var select = e.target.closest('.kivun-status-select');
@@ -66,6 +79,7 @@
 				// value on screen is how a save that never happened passes
 				// for one that did.
 				select.value = previous;
+				paintStatus(select);
 				flash(indicator, false, reason(res));
 				return;
 			}
@@ -74,9 +88,11 @@
 			var stored = (res.data && res.data.status) ? res.data.status : wanted;
 			select.value = stored;
 			select.dataset.prev = stored;
+			paintStatus(select);
 			flash(indicator, true);
 		}).catch(function () {
 			select.value = previous;
+			paintStatus(select);
 			flash(indicator, false, 'אין חיבור');
 		});
 	});

@@ -157,3 +157,43 @@
 	70% { box-shadow: 0 0 0 7px rgba(214, 54, 56, 0); }
 	100% { box-shadow: 0 0 0 0 rgba(214, 54, 56, 0); }
 }
+
+/* Where a row got to, as a label rather than as a control.
+   Scanning a column of dropdowns, every row looks alike: the one marked
+   "לא רלוונטי" is as loud as the one still waiting. Grouped by what the
+   status means rather than one colour each — finished, dismissed, and
+   still open are the three things worth telling apart from across a
+   table. Unknown or legacy values fall through to the neutral default. */
+.kivun-status-badge {
+	/* Its own line under the control, not trailing after it: beside a
+	   select it reads as part of the widget, which is the thing it is
+	   there to stop being. Width hugs the text so the pill is the size of
+	   the word and not of the column. */
+	display: block;
+	width: fit-content;
+	margin-top: .3rem;
+	padding: .12rem .5rem;
+	border-radius: 999px;
+	background: #eef1f5;
+	color: #475569;
+	font-size: .76rem;
+	font-weight: 700;
+	line-height: 1.7;
+	white-space: nowrap;
+}
+/* Finished well. */
+.kivun-status-badge[data-status="closed"],
+.kivun-status-badge[data-status="enrolled"],
+.kivun-status-badge[data-status="hired"] { background: #dcfce7; color: #15803d; }
+/* Closed without going anywhere. */
+.kivun-status-badge[data-status="not_relevant"],
+.kivun-status-badge[data-status="rejected"] { background: #f1f2f4; color: #71717a; }
+/* Someone has it in hand. */
+.kivun-status-badge[data-status="contacted"],
+.kivun-status-badge[data-status="viewed"],
+.kivun-status-badge[data-status="interview"],
+.kivun-status-badge[data-status="interested"] { background: #dbeafe; color: #1d4ed8; }
+/* Still waiting on somebody. */
+.kivun-status-badge[data-status="new"],
+.kivun-status-badge[data-status="new_lead"] { background: #fff5f8; color: var(--kivun-accent, #de2952); }
+.kivun-status-badge[data-status="next_cycle"] { background: #fef3c7; color: #92400e; }

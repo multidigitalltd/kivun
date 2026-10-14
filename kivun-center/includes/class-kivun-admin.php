@@ -709,6 +709,20 @@ class Kivun_Admin {
 			);
 		}
 		$html .= '</select>';
+
+		// The same answer again, as a label rather than a control.
+		//
+		// A dropdown reads as something to do, not as something already
+		// decided: scanning a column of them, every row looks alike and the
+		// one marked "לא רלוונטי" is as loud as the one still waiting. The
+		// label states where the row got to, in a colour that separates
+		// finished from dismissed from open at a glance.
+		$html .= sprintf(
+			'<span class="kivun-status-badge" data-status="%s">%s</span>',
+			esc_attr( $current ),
+			esc_html( $options[ $current ] ?? $current )
+		);
+
 		return $html;
 	}
 
