@@ -1395,6 +1395,29 @@ td.kivun-app-contact a { display: block; }
 	direction: ltr;
 }
 .kivun-short-slug { max-width: 16rem; }
+
+/* The preview of a link that does not exist yet. Deliberately plain text
+   with no button beside it: it leads nowhere until the row is saved, and a
+   field with a copy button is an invitation to paste a dead link. */
+.kivun-short-preview {
+	margin: .4rem 0 0;
+	font-size: .84rem;
+	line-height: 1.8;
+}
+.kivun-short-preview__label { color: var(--kivun-muted); }
+.kivun-short-preview__url {
+	padding: .15rem .4rem;
+	border-radius: 6px;
+	background: #fff5f8;
+	color: var(--kivun-accent);
+	font-weight: 700;
+	direction: ltr;
+	unicode-bidi: embed;
+}
+.kivun-short-preview__note {
+	color: var(--kivun-muted);
+	font-style: italic;
+}
 .kivun-camp-saved {
 	flex: 1 1 auto;
 	background: #f8fafc;

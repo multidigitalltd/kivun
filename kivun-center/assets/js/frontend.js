@@ -1419,6 +1419,63 @@
 			utm_content: read('kivun-link-content')
 		};
 		out.value = parts.utm_source ? kivunCampUrl(out.dataset.target, parts) : '';
+		kivunShortRefresh(form, !!parts.utm_source);
+	}
+
+	// Tidy a short code the way the server will. The two have to agree,
+	// because what is shown here is sent as the code to save — a preview
+	// that cleaned differently would show one address and store another.
+	function kivunShortClean(raw) {
+		return String(raw || '')
+			.toLowerCase()
+			.trim()
+			.replace(/[ _]/g, '-')
+			.replace(/[^a-z0-9-]/g, '')
+			.replace(/-{2,}/g, '-')
+			.replace(/^-+|-+$/g, '')
+			.slice(0, 64);
+	}
+
+	// A code for a link that has none yet. Drawn from the alphabet the field
+	// carries, which is the server's own, so neither the characters nor the
+	// length can drift apart from it.
+	function kivunShortCode(field) {
+		var alphabet = field.dataset.shortAlphabet || '',
+			length = parseInt(field.dataset.shortLength, 10) || 5,
+			out = '';
+
+		if (!alphabet) { return ''; }
+
+		for (var i = 0; i < length; i++) {
+			out += alphabet.charAt(Math.floor(Math.random() * alphabet.length));
+		}
+		return out;
+	}
+
+	// Show the short link as soon as there is a link to shorten, rather than
+	// only once it has been saved. It is a preview: the row it points at does
+	// not exist yet, which is why it is text and not something to copy.
+	function kivunShortRefresh(form, ready) {
+		var field = form.querySelector('.kivun-short-slug'),
+			row = form.querySelector('.kivun-short-preview');
+
+		if (!field || !row) { return; }
+
+		var typed = kivunShortClean(field.value);
+
+		// A code already saved, or one somebody typed, is used as it is.
+		// Otherwise one is drawn once and kept on the form, so it does not
+		// change under the reader between two keystrokes — and so the code
+		// previewed is the code sent when they save.
+		if (!typed) {
+			if (!form.dataset.shortDraft) { form.dataset.shortDraft = kivunShortCode(field); }
+			typed = form.dataset.shortDraft;
+		}
+
+		var url = form.querySelector('.kivun-short-preview__url');
+		if (url) { url.textContent = (field.dataset.shortBase || '') + typed; }
+
+		row.hidden = !(ready && typed);
 	}
 
 	// Choosing "other" as the target reveals the free URL field. The picker
@@ -1628,11 +1685,19 @@
 		var preview = linkForm.querySelector('.kivun-camp-result');
 
 		var waEl = linkForm.querySelector('.kivun-link-wa-text');
-		// The short link's code. Sent as typed and tidied on the server, which
-		// is the side that can also tell whether it is already taken. Left
-		// blank on an edit it keeps the code the link already has, so a
-		// reworded message does not break a link somebody already shared.
+		// The short link's code. Whatever was previewed is what is sent, so
+		// the address on screen is the address that gets stored — a preview
+		// the server then replaced with a code of its own would have been a
+		// lie told in the one place the reader was looking.
+		//
+		// Only for a link that has none yet: on an edit this stays empty and
+		// the server keeps the code the link already has, so a reworded
+		// message cannot break a link somebody already shared.
 		var shortEl = linkForm.querySelector('.kivun-short-slug');
+		var shortSlug = shortEl ? shortEl.value.trim() : '';
+		if (!shortSlug && !linkForm.dataset.id && linkForm.dataset.shortDraft) {
+			shortSlug = linkForm.dataset.shortDraft;
+		}
 
 		kivunCampSubmit(linkForm, {
 			action: 'kivun_save_campaign_link',
@@ -1644,7 +1709,7 @@
 			utm_source: source,
 			utm_medium: mediumEl ? kivunCampClean(mediumEl.value) : '',
 			utm_content: contentEl ? kivunCampClean(contentEl.value) : '',
-			slug: shortEl ? shortEl.value.trim() : '',
+			slug: shortSlug,
 			whatsapp: waEl ? waEl.value : ''
 		}, linkErr);
 	});

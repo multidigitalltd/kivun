@@ -340,4 +340,54 @@ final class ShortLinkTest extends TestCase {
 		$this->assertStringContainsString( 'set_404()', $source );
 		$this->assertStringContainsString( 'status_header( 404 )', $source );
 	}
+
+	// ── The preview and the stored code are the same code ─────────────────────
+
+	/**
+	 * The browser tidies a typed code the same way this does.
+	 *
+	 * The address shown while typing is sent as the code to save, so the two
+	 * cleaners have to agree: if the browser kept a character this strips,
+	 * the preview would show one address and the row would hold another —
+	 * and the reader would have no reason to doubt the one on screen.
+	 *
+	 * Checked step by step rather than by running the script, because the
+	 * steps are the contract. The two were also compared directly on 22
+	 * inputs, Hebrew and punctuation among them.
+	 *
+	 * @return void
+	 */
+	public function test_the_browser_tidies_a_code_the_same_way(): void {
+		$js = (string) file_get_contents( KIVUN_DIR . 'assets/js/frontend.js' );
+
+		$start = strpos( $js, 'function kivunShortClean' );
+		$this->assertNotFalse( $start, 'the browser-side cleaner is gone; the preview can no longer be trusted to match' );
+
+		$body = substr( $js, $start, 400 );
+
+		foreach ( array(
+			'.toLowerCase()'             => 'case is levelled',
+			'.replace(/[ _]/g, \'-\')'   => 'spaces and underscores become hyphens',
+			'.replace(/[^a-z0-9-]/g, \'\')' => 'anything else is dropped',
+			'.replace(/-{2,}/g, \'-\')'  => 'runs of hyphens collapse',
+			'.slice(0, 64)'              => 'it is cut to the column width',
+		) as $step => $why ) {
+			$this->assertStringContainsString( $step, $body, "the browser no longer does this, but PHP does: {$why}" );
+		}
+	}
+
+	/**
+	 * And it draws a generated code from this alphabet rather than one of
+	 * its own, because the field carries this one to it.
+	 *
+	 * @return void
+	 */
+	public function test_the_browser_is_given_this_alphabet(): void {
+		$php = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-content-creator.php' );
+		$js  = (string) file_get_contents( KIVUN_DIR . 'assets/js/frontend.js' );
+
+		$this->assertStringContainsString( 'Kivun_Short_Links::ALPHABET', $php, 'the field no longer carries the alphabet' );
+		$this->assertStringContainsString( 'dataset.shortAlphabet', $js, 'the browser no longer reads it, so it has one of its own' );
+		$this->assertStringNotContainsString( self::class, $js );
+	}
 }

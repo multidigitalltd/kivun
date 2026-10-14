@@ -4432,6 +4432,13 @@ class Kivun_Content_Creator {
 			<?php endif; ?>
 			<div class="kivun-camp-out">
 				<span class="kivun-short-slug__base" dir="ltr"><?php echo esc_html( home_url( '/' . Kivun_Short_Links::BASE . '/' ) ); ?></span>
+				<?php
+				// The alphabet and length travel with the field rather than
+				// being written out again in the script. The code shown while
+				// typing is the code that gets saved, so the two sides have
+				// to agree about what a code looks like — and the only way
+				// they cannot drift is to have one of them say it.
+				?>
 				<input
 					type="text"
 					id="kivun-short-slug-<?php echo esc_attr( (string) $camp->id ); ?>"
@@ -4440,8 +4447,24 @@ class Kivun_Content_Creator {
 					dir="ltr"
 					value="<?php echo esc_attr( $editing ? (string) ( $link->slug ?? '' ) : '' ); ?>"
 					placeholder="<?php esc_attr_e( 'יווצר אוטומטית', 'kivun' ); ?>"
+					data-short-base="<?php echo esc_attr( home_url( '/' . Kivun_Short_Links::BASE . '/' ) ); ?>"
+					data-short-alphabet="<?php echo esc_attr( Kivun_Short_Links::ALPHABET ); ?>"
+					data-short-length="<?php echo esc_attr( (string) Kivun_Short_Links::LENGTH ); ?>"
 				>
 			</div>
+
+			<?php
+			// Shown as text, not as a field with a copy button beside it. The
+			// short link is a pointer to a row that does not exist yet, so
+			// until this is saved it leads nowhere — and an input with a copy
+			// button next to it is an invitation to paste a dead link into a
+			// message. The working one, with its button, appears once saved.
+			?>
+			<p class="kivun-short-preview" hidden>
+				<span class="kivun-short-preview__label"><?php esc_html_e( 'הקישור הקצר שייווצר:', 'kivun' ); ?></span>
+				<code class="kivun-short-preview__url" dir="ltr"></code>
+				<span class="kivun-short-preview__note"><?php esc_html_e( 'יתחיל לעבוד אחרי השמירה', 'kivun' ); ?></span>
+			</p>
 			<p class="kivun-field-hint">
 				<?php esc_html_e( 'אפשר להשאיר ריק ותיווצר כתובת קצרה אוטומטית, או לכתוב משהו שאפשר להגיד בטלפון — אותיות באנגלית, ספרות ומקפים בלבד.', 'kivun' ); ?>
 				<?php if ( $editing ) : ?>
