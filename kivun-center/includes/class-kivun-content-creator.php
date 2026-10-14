@@ -4617,9 +4617,12 @@ class Kivun_Content_Creator {
 		// to handle. phpcs cannot see the per-value sanitising inside.
 		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 		$content_filter = self::filter_ids( wp_unslash( $_GET['kivun_content'] ?? array() ) );
-		$type_filter    = isset( $_GET['kivun_ltype'] ) ? sanitize_text_field( wp_unslash( $_GET['kivun_ltype'] ) ) : '';
-		$status_filter  = isset( $_GET['kivun_lstatus'] ) ? sanitize_key( wp_unslash( $_GET['kivun_lstatus'] ) ) : '';
-		$gender_filter  = isset( $_GET['kivun_lgender'] ) ? sanitize_key( wp_unslash( $_GET['kivun_lgender'] ) ) : '';
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized per value in filter_values().
+		$type_filter = self::filter_values( wp_unslash( $_GET['kivun_ltype'] ?? array() ) );
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized per value in filter_values().
+		$status_filter = self::filter_values( wp_unslash( $_GET['kivun_lstatus'] ?? array() ) );
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized per value in filter_values().
+		$gender_filter = self::filter_values( wp_unslash( $_GET['kivun_lgender'] ?? array() ) );
 		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized per value in filter_values().
 		$city_filter = self::filter_values( wp_unslash( $_GET['kivun_lcity'] ?? array() ) );
 		$search      = isset( $_GET['kivun_ls'] ) ? sanitize_text_field( wp_unslash( $_GET['kivun_ls'] ) ) : '';
@@ -4654,21 +4657,39 @@ class Kivun_Content_Creator {
 			$group_ids = array_unique( array_map( 'absint', $group_ids ) );
 			$conds[]   = 'r.course_id IN ( ' . implode( ', ', $group_ids ) . ' )';
 		}
-		if ( '' !== $type_filter && isset( $type_labels[ $type_filter ] ) ) {
-			$conds[] = $wpdb->prepare( 'r.type = %s', $type_filter );
+		// Only values this screen offers reach the query — a hand-edited URL
+		// asking for a type that does not exist should narrow to nothing
+		// rather than be passed through to the database.
+		$chosen_types = array_values( array_intersect( $type_filter, array_keys( $type_labels ) ) );
+		if ( $chosen_types ) {
+			$marks = implode( ', ', array_fill( 0, count( $chosen_types ), '%s' ) );
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- $marks is one placeholder per value, built from the count.
+			$conds[] = $wpdb->prepare( "r.type IN ( {$marks} )", $chosen_types );
 		}
-		if ( '' !== $status_filter && isset( $statuses[ $status_filter ] ) ) {
-			$conds[] = $wpdb->prepare( 'r.status = %s', $status_filter );
+
+		$chosen_statuses = array_values( array_intersect( $status_filter, array_keys( $statuses ) ) );
+		if ( $chosen_statuses ) {
+			$marks = implode( ', ', array_fill( 0, count( $chosen_statuses ), '%s' ) );
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- $marks is one placeholder per value, built from the count.
+			$conds[] = $wpdb->prepare( "r.status IN ( {$marks} )", $chosen_statuses );
 		}
-		if ( in_array( $gender_filter, array( 'male', 'female', 'none' ), true ) ) {
-			// Matched on the words rather than on an exact string: the value
-			// is whatever the form offered, and the forms do not agree with
-			// each other. The same words the rota splits by, so the filter
-			// and the split cannot disagree about who is who.
-			$gender_sql = Kivun_Coordinators::gender_where( $gender_filter, 'r.gender' );
-			if ( '' !== $gender_sql ) {
-				$conds[] = '( ' . $gender_sql . ' )';
+		// Matched on the words rather than on an exact string: the value is
+		// whatever the form offered, and the forms do not agree with each
+		// other. The same words the rota splits by, so the filter and the
+		// split cannot disagree about who is who. Several groups are joined
+		// with OR — "women and the ones with no answer" is a real question.
+		$gender_parts = array();
+		foreach ( $gender_filter as $group ) {
+			if ( ! in_array( $group, array( 'male', 'female', 'none' ), true ) ) {
+				continue;
 			}
+			$fragment = Kivun_Coordinators::gender_where( $group, 'r.gender' );
+			if ( '' !== $fragment ) {
+				$gender_parts[] = '( ' . $fragment . ' )';
+			}
+		}
+		if ( $gender_parts ) {
+			$conds[] = '( ' . implode( ' OR ', $gender_parts ) . ' )';
 		}
 		if ( $city_filter ) {
 			// Built with one placeholder per value rather than by pasting the
@@ -4752,13 +4773,13 @@ class Kivun_Content_Creator {
 		if ( $content_filter ) {
 			$base_args['kivun_content'] = $content_filter;
 		}
-		if ( '' !== $type_filter ) {
+		if ( $type_filter ) {
 			$base_args['kivun_ltype'] = $type_filter;
 		}
-		if ( '' !== $status_filter ) {
+		if ( $status_filter ) {
 			$base_args['kivun_lstatus'] = $status_filter;
 		}
-		if ( '' !== $gender_filter ) {
+		if ( $gender_filter ) {
 			$base_args['kivun_lgender'] = $gender_filter;
 		}
 		if ( $city_filter ) {
@@ -4886,32 +4907,29 @@ class Kivun_Content_Creator {
 				</select>
 
 				<label class="kivun-sr-only" for="kivun-lf-type"><?php esc_html_e( 'סינון לפי סוג', 'kivun' ); ?></label>
-				<select id="kivun-lf-type" name="kivun_ltype" class="kivun-pick-src" data-pick-label="סינון לפי סוג" data-pick-empty="<?php esc_attr_e( 'אין התאמה', 'kivun' ); ?>">
-					<option value=""><?php esc_html_e( 'כל הסוגים', 'kivun' ); ?></option>
+				<select id="kivun-lf-type" name="kivun_ltype[]" multiple class="kivun-pick-src" data-pick-label="סינון לפי סוג" data-pick-empty="<?php esc_attr_e( 'אין התאמה', 'kivun' ); ?>" data-pick-all="<?php esc_attr_e( 'כל הסוגים', 'kivun' ); ?>">
 					<?php foreach ( $type_labels as $tv => $tl ) : ?>
-						<option value="<?php echo esc_attr( $tv ); ?>" <?php selected( $type_filter, $tv ); ?>><?php echo esc_html( $tl ); ?></option>
+						<option value="<?php echo esc_attr( $tv ); ?>" <?php echo in_array( (string) $tv, $type_filter, true ) ? 'selected' : ''; ?>><?php echo esc_html( $tl ); ?></option>
 					<?php endforeach; ?>
 				</select>
 
 				<label class="kivun-sr-only" for="kivun-lf-status"><?php esc_html_e( 'סינון לפי סטטוס', 'kivun' ); ?></label>
-				<select id="kivun-lf-status" name="kivun_lstatus" class="kivun-pick-src" data-pick-label="סינון לפי סטטוס" data-pick-empty="<?php esc_attr_e( 'אין התאמה', 'kivun' ); ?>">
-					<option value=""><?php esc_html_e( 'כל הסטטוסים', 'kivun' ); ?></option>
+				<select id="kivun-lf-status" name="kivun_lstatus[]" multiple class="kivun-pick-src" data-pick-label="סינון לפי סטטוס" data-pick-empty="<?php esc_attr_e( 'אין התאמה', 'kivun' ); ?>" data-pick-all="<?php esc_attr_e( 'כל הסטטוסים', 'kivun' ); ?>">
 					<?php foreach ( $statuses as $sv => $sl ) : ?>
-						<option value="<?php echo esc_attr( $sv ); ?>" <?php selected( $status_filter, $sv ); ?>><?php echo esc_html( $sl ); ?></option>
+						<option value="<?php echo esc_attr( $sv ); ?>" <?php echo in_array( (string) $sv, $status_filter, true ) ? 'selected' : ''; ?>><?php echo esc_html( $sl ); ?></option>
 					<?php endforeach; ?>
 				</select>
 
 				<label class="kivun-sr-only" for="kivun-lf-gender"><?php esc_html_e( 'סינון לפי מגדר', 'kivun' ); ?></label>
-				<select id="kivun-lf-gender" name="kivun_lgender" class="kivun-pick-src" data-pick-label="סינון לפי מגדר" data-pick-empty="<?php esc_attr_e( 'אין התאמה', 'kivun' ); ?>">
-					<option value=""><?php esc_html_e( 'כל המגדרים', 'kivun' ); ?></option>
-					<option value="male" <?php selected( $gender_filter, 'male' ); ?>><?php esc_html_e( 'גברים', 'kivun' ); ?></option>
-					<option value="female" <?php selected( $gender_filter, 'female' ); ?>><?php esc_html_e( 'נשים', 'kivun' ); ?></option>
+				<select id="kivun-lf-gender" name="kivun_lgender[]" multiple class="kivun-pick-src" data-pick-label="סינון לפי מגדר" data-pick-empty="<?php esc_attr_e( 'אין התאמה', 'kivun' ); ?>" data-pick-all="<?php esc_attr_e( 'כל המגדרים', 'kivun' ); ?>">
+					<option value="male" <?php echo in_array( 'male', $gender_filter, true ) ? 'selected' : ''; ?>><?php esc_html_e( 'גברים', 'kivun' ); ?></option>
+					<option value="female" <?php echo in_array( 'female', $gender_filter, true ) ? 'selected' : ''; ?>><?php esc_html_e( 'נשים', 'kivun' ); ?></option>
 					<?php
 					// Worth having its own entry: a lead with no gender is one
 					// the rota could not place, so this lists exactly the ones
 					// that never reached a coordinator.
 					?>
-					<option value="none" <?php selected( $gender_filter, 'none' ); ?>><?php esc_html_e( 'ללא מגדר', 'kivun' ); ?></option>
+					<option value="none" <?php echo in_array( 'none', $gender_filter, true ) ? 'selected' : ''; ?>><?php esc_html_e( 'ללא מגדר', 'kivun' ); ?></option>
 				</select>
 
 				<?php if ( $city_list ) : ?>
@@ -4946,7 +4964,7 @@ class Kivun_Content_Creator {
 				</select>
 
 				<button type="submit" class="kivun-cc-btn kivun-cc-btn--sm"><?php echo kivun_icon( 'filter' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?><?php esc_html_e( 'סינון', 'kivun' ); ?></button>
-				<?php if ( $content_filter || '' !== $type_filter || '' !== $status_filter || '' !== $gender_filter || $city_filter || '' !== $search || '' !== $date_from || '' !== $date_to ) : ?>
+				<?php if ( $content_filter || $type_filter || $status_filter || $gender_filter || $city_filter || '' !== $search || '' !== $date_from || '' !== $date_to ) : ?>
 					<a class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost" href="<?php echo esc_url( add_query_arg( 'kivun_tab', 'leads', $page_url ) ); ?>"><?php esc_html_e( 'ניקוי', 'kivun' ); ?></a>
 				<?php endif; ?>
 			</form>

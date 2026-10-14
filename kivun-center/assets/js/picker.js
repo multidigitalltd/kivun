@@ -82,6 +82,26 @@
 			list.textContent = '';
 			active = -1;
 
+			// A way back to "all of them" that is not unticking each one in
+			// turn. Without it the only route back was the button that
+			// clears every filter on the screen, which is a much bigger
+			// thing to ask for than "never mind about the towns".
+			//
+			// Shown whatever has been typed, because clearing is exactly
+			// what somebody does when a search has gone wrong.
+			if (many && select.dataset.pickAll) {
+				var all = document.createElement('li');
+				all.className = 'kivun-pick__opt kivun-pick__all';
+				all.setAttribute('role', 'option');
+				all.dataset.all = '1';
+				all.textContent = select.dataset.pickAll;
+				if (!chosen().length) {
+					all.classList.add('is-on');
+					all.setAttribute('aria-selected', 'true');
+				}
+				list.appendChild(all);
+			}
+
 			options.forEach(function (opt) {
 				if (needle && opt.label.toLowerCase().indexOf(needle) === -1) { return; }
 				var li = document.createElement('li');
@@ -95,7 +115,7 @@
 				list.appendChild(li);
 			});
 
-			if (!list.children.length) {
+			if (!list.querySelectorAll('.kivun-pick__opt:not(.kivun-pick__all)').length) {
 				var none = document.createElement('li');
 				none.className = 'kivun-pick__none';
 				none.textContent = select.dataset.pickEmpty || '';
@@ -116,9 +136,21 @@
 			input.value = chosenLabel();
 		}
 
+		// The results, without the synthetic "all of them" row.
+		function results() {
+			return list.querySelectorAll('.kivun-pick__opt:not(.kivun-pick__all)');
+		}
+
 		function highlight(next) {
 			var items = list.querySelectorAll('.kivun-pick__opt');
 			if (!items.length) { return; }
+
+			// Arrowing down into a list lands on the first result, not on
+			// the row that clears the filter. That row sits at the top, so
+			// without this the first key press after typing a search offered
+			// to throw the search away.
+			if (active < 0 && next >= 0 && items[0].dataset.all) { next = 1; }
+
 			if (active >= 0 && items[active]) { items[active].classList.remove('is-active'); }
 			active = (next + items.length) % items.length;
 			items[active].classList.add('is-active');
@@ -131,6 +163,20 @@
 
 		function choose(li) {
 			if (!li || !li.dataset) { return; }
+
+			// "All of them" is the absence of a choice, so it clears rather
+			// than selects: an IN clause naming every value and no clause at
+			// all mean the same thing to the query, and the empty one says
+			// it in a way that survives a town being added tomorrow.
+			if (li.dataset.all) {
+				[].forEach.call(select.options, function (o) { o.selected = false; });
+				select.dispatchEvent(new Event('change', { bubbles: true }));
+				term = '';
+				input.value = chosenLabel();
+				input.select();
+				render('');
+				return;
+			}
 
 			if (many) {
 				// Toggled rather than replaced, and the list stays open: the
@@ -172,6 +218,21 @@
 		// Selected on focus so that typing replaces the labels sitting in the
 		// box rather than being appended to them.
 		input.addEventListener('focus', function () { input.select(); open(); });
+
+		// What is in the box while nothing is being searched for is a summary
+		// of the choices, not text to edit — so the first thing typed replaces
+		// it rather than being added to the end of it.
+		//
+		// Selecting it on focus is not enough on its own: a click puts the
+		// caret where it was clicked *after* the focus handler has run, and
+		// clicking a box that already has focus fires no focus event at all.
+		// Both end with "ירושלים" still in the box and "ירושליםמודיעין" as
+		// the term, which matches nothing — the list empties and the reader
+		// cannot see why. Emptied here instead, at the one moment text is
+		// actually arriving, which covers typing and pasting alike.
+		input.addEventListener('beforeinput', function () {
+			if ('' === term) { input.value = ''; }
+		});
 		input.addEventListener('input', function () { term = input.value; open(); });
 
 		input.addEventListener('keydown', function (e) {
@@ -182,8 +243,13 @@
 			} else if (e.key === 'Enter') {
 				if (!list.hidden) {
 					e.preventDefault();
+					// Typing until one result is left and pressing Enter takes
+					// it. Counted among the results only, or the "all" row
+					// would make a single match look like two and the key
+					// would do nothing at all.
+					var only = results();
 					choose(list.querySelectorAll('.kivun-pick__opt')[active] ||
-						(list.querySelectorAll('.kivun-pick__opt').length === 1 ? list.querySelector('.kivun-pick__opt') : null));
+						(1 === only.length ? only[0] : null));
 				}
 			} else if (e.key === 'Escape') {
 				close();
