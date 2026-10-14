@@ -43,17 +43,44 @@
 		return select.dataset.prev;
 	}
 
-	// The label beside the select that states where the row got to. Its text
-	// comes from the chosen option rather than from a list of its own, so it
-	// cannot disagree with the control it sits next to.
-	function paintStatus(select) {
+	// The label beside the select that states where the row got to.
+	function statusBadge(select) {
 		var cell = select.closest('td') || select.parentNode;
-		var badge = cell ? cell.querySelector('.kivun-status-badge') : null;
+		return cell ? cell.querySelector('.kivun-status-badge') : null;
+	}
+
+	// As rendered by the server, which is the row as the database holds it.
+	// Kept because the select cannot always be asked: a stored status with
+	// no matching option leaves the browser showing the first one, so
+	// reading the control back would answer with a status the row never
+	// had — and write that misreading over a label that was correct.
+	function rememberStatus(badge) {
+		if (badge && undefined === badge.dataset.stored) {
+			badge.dataset.stored = badge.dataset.status || '';
+			badge.dataset.storedText = (badge.textContent || '').trim();
+		}
+	}
+
+	// Say what was just stored. Its text comes from the chosen option rather
+	// than from a list of its own, so it cannot disagree with the control.
+	function paintStatus(select) {
+		var badge = statusBadge(select);
 		if (!badge) { return; }
 
 		var chosen = select.options[select.selectedIndex];
 		badge.textContent = chosen ? chosen.text : '';
 		badge.dataset.status = select.value;
+		badge.dataset.stored = select.value;
+		badge.dataset.storedText = badge.textContent;
+	}
+
+	// Put back what the row holds, after a save that did not happen.
+	function restoreStatus(select) {
+		var badge = statusBadge(select);
+		if (!badge) { return; }
+
+		badge.textContent = badge.dataset.storedText || '';
+		badge.dataset.status = badge.dataset.stored || '';
 	}
 
 	// Status select — save on change.
@@ -63,6 +90,10 @@
 
 		var indicator = indicatorFor(select);
 		if (indicator) { indicator.style.display = 'none'; }
+
+		// Noted before anything changes, while the label still shows what
+		// the server rendered.
+		rememberStatus(statusBadge(select));
 
 		var previous = committed(select);
 		var wanted = select.value;
@@ -79,7 +110,7 @@
 				// value on screen is how a save that never happened passes
 				// for one that did.
 				select.value = previous;
-				paintStatus(select);
+				restoreStatus(select);
 				flash(indicator, false, reason(res));
 				return;
 			}
@@ -92,7 +123,7 @@
 			flash(indicator, true);
 		}).catch(function () {
 			select.value = previous;
-			paintStatus(select);
+			restoreStatus(select);
 			flash(indicator, false, 'אין חיבור');
 		});
 	});

@@ -593,6 +593,13 @@ class Kivun_Admin {
 	 */
 	public static function reg_statuses(): array {
 		return array(
+			// What a course registration is stored as, and the column's own
+			// default. It was missing from this list, so a select offered no
+			// option matching it and the browser fell back to showing the
+			// first — every course registration has been reading as "ליד
+			// חדש" while the row said otherwise, and changing anything else
+			// in that row would have written that misreading back.
+			'pending'      => __( 'ממתין', 'kivun' ),
 			'new_lead'     => __( 'ליד חדש', 'kivun' ),
 			'next_cycle'   => __( 'למחזור הבא', 'kivun' ),
 			'new'          => __( 'חדש', 'kivun' ),
