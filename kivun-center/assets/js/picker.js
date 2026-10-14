@@ -82,6 +82,26 @@
 			list.textContent = '';
 			active = -1;
 
+			// A way back to "all of them" that is not unticking each one in
+			// turn. Without it the only route back was the button that
+			// clears every filter on the screen, which is a much bigger
+			// thing to ask for than "never mind about the towns".
+			//
+			// Shown whatever has been typed, because clearing is exactly
+			// what somebody does when a search has gone wrong.
+			if (many && select.dataset.pickAll) {
+				var all = document.createElement('li');
+				all.className = 'kivun-pick__opt kivun-pick__all';
+				all.setAttribute('role', 'option');
+				all.dataset.all = '1';
+				all.textContent = select.dataset.pickAll;
+				if (!chosen().length) {
+					all.classList.add('is-on');
+					all.setAttribute('aria-selected', 'true');
+				}
+				list.appendChild(all);
+			}
+
 			options.forEach(function (opt) {
 				if (needle && opt.label.toLowerCase().indexOf(needle) === -1) { return; }
 				var li = document.createElement('li');
@@ -95,7 +115,7 @@
 				list.appendChild(li);
 			});
 
-			if (!list.children.length) {
+			if (!list.querySelectorAll('.kivun-pick__opt:not(.kivun-pick__all)').length) {
 				var none = document.createElement('li');
 				none.className = 'kivun-pick__none';
 				none.textContent = select.dataset.pickEmpty || '';
@@ -131,6 +151,20 @@
 
 		function choose(li) {
 			if (!li || !li.dataset) { return; }
+
+			// "All of them" is the absence of a choice, so it clears rather
+			// than selects: an IN clause naming every value and no clause at
+			// all mean the same thing to the query, and the empty one says
+			// it in a way that survives a town being added tomorrow.
+			if (li.dataset.all) {
+				[].forEach.call(select.options, function (o) { o.selected = false; });
+				select.dispatchEvent(new Event('change', { bubbles: true }));
+				term = '';
+				input.value = chosenLabel();
+				input.select();
+				render('');
+				return;
+			}
 
 			if (many) {
 				// Toggled rather than replaced, and the list stays open: the
