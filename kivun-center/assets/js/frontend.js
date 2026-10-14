@@ -1476,6 +1476,61 @@
 		if (url) { url.textContent = (field.dataset.shortBase || '') + typed; }
 
 		row.hidden = !(ready && typed);
+
+		// A typed code may already belong to another link, and only the
+		// server knows. Asked after a pause so it is one question per code
+		// rather than one per keystroke; the drafted codes are not asked
+		// about, since nothing has seen them.
+		// Cleared the moment the code changes, not when the answer comes
+		// back. Otherwise the warning about the previous code sits there
+		// over a new one for as long as the round trip takes, saying
+		// something untrue about what is on the screen.
+		kivunShortTaken(form, false);
+
+		var wanted = kivunShortClean(field.value);
+		if (ready && wanted) { kivunShortCheck(form, field, wanted); }
+	}
+
+	// Say, or stop saying, that the typed code was already in use.
+	function kivunShortTaken(form, taken) {
+		var note = form.querySelector('.kivun-short-preview__taken');
+		if (note) { note.hidden = !taken; }
+	}
+
+	var kivunShortTimers = new WeakMap();
+
+	function kivunShortCheck(form, field, wanted) {
+		clearTimeout(kivunShortTimers.get(form));
+		kivunShortTimers.set(form, setTimeout(function () {
+			post(params({
+				action: 'kivun_short_preview',
+				nonce: kivun.nonce,
+				slug: wanted,
+				link_id: form.dataset.id || 0
+			}))
+				.then(function (res) {
+					if (!res.success || !res.data) { return; }
+					// Ignore an answer about a code that is no longer the one
+					// in the box — a slow reply must not overwrite a newer
+					// question's answer.
+					if (kivunShortClean(field.value) !== wanted) { return; }
+
+					var url = form.querySelector('.kivun-short-preview__url');
+					if (url && res.data.url) { url.textContent = res.data.url; }
+					kivunShortTaken(form, !!res.data.taken);
+
+					// Remembered against the code it answers, so the save can
+					// send the resolved one. Sending the typed code instead
+					// would land on the same answer only because the server
+					// works it out a second time — true today, and one
+					// change away from the screen and the row disagreeing.
+					form.dataset.shortAsked = wanted;
+					form.dataset.shortResolved = res.data.slug || wanted;
+				})
+				// The preview is a courtesy; a failed check leaves what the
+				// browser worked out rather than emptying the line.
+				.catch(function () {});
+		}, 400));
 	}
 
 	// Choosing "other" as the target reveals the free URL field. The picker
@@ -1580,9 +1635,15 @@
 	document.addEventListener('click', function (e) {
 		var copy = e.target.closest('.kivun-camp-copy');
 		if (!copy) { return; }
-		var field = copy.parentNode.querySelector('.kivun-camp-result, .kivun-camp-saved')
+		var field = copy.parentNode.querySelector('.kivun-camp-result, .kivun-camp-saved, .kivun-short-preview__url')
 			|| (copy.closest('.kivun-cc-card') || document).querySelector('textarea.kivun-camp-saved');
-		if (!field || !field.value) { return; }
+		if (!field) { return; }
+
+		// The short link's preview is a <code>, not a field — it is not
+		// something to type into. Either way what gets copied is its text.
+		var isField = 'value' in field;
+		var text = isField ? field.value : (field.textContent || '').trim();
+		if (!text) { return; }
 
 		var done = function () {
 			var original = copy.textContent;
@@ -1590,8 +1651,8 @@
 			setTimeout(function () { copy.textContent = original; }, 1600);
 		};
 		if (navigator.clipboard) {
-			navigator.clipboard.writeText(field.value).then(done, function () { field.select(); });
-		} else {
+			navigator.clipboard.writeText(text).then(done, function () { if (isField) { field.select(); } });
+		} else if (isField) {
 			field.select();
 			try { document.execCommand('copy'); done(); } catch (err) { /* selection is the fallback */ }
 		}
@@ -1693,8 +1754,26 @@
 		// Only for a link that has none yet: on an edit this stays empty and
 		// the server keeps the code the link already has, so a reworded
 		// message cannot break a link somebody already shared.
+		// Cleaned before it is judged, exactly as the preview judges it.
+		// Reading the raw value here was a real bug: a code in Hebrew is not
+		// empty, so the draft was not substituted, but the preview had
+		// already fallen back to the draft and shown it. The server then
+		// cleaned the Hebrew away and generated a different code — the
+		// screen promising one address and the row holding another, which
+		// is the single thing this preview exists not to do.
 		var shortEl = linkForm.querySelector('.kivun-short-slug');
-		var shortSlug = shortEl ? shortEl.value.trim() : '';
+		var shortSlug = shortEl ? kivunShortClean(shortEl.value) : '';
+
+		// When the server has already said what this code resolves to — a
+		// taken one becomes the next free variant — send that, not the one
+		// typed. Both reach the same row today, because the server resolves
+		// again on save; sending the answer we were given keeps the address
+		// on screen and the address stored the same string rather than two
+		// that merely agree.
+		if (shortSlug && linkForm.dataset.shortAsked === shortSlug && linkForm.dataset.shortResolved) {
+			shortSlug = linkForm.dataset.shortResolved;
+		}
+
 		if (!shortSlug && !linkForm.dataset.id && linkForm.dataset.shortDraft) {
 			shortSlug = linkForm.dataset.shortDraft;
 		}

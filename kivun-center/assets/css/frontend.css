@@ -1418,6 +1418,12 @@ td.kivun-app-contact a { display: block; }
 	color: var(--kivun-muted);
 	font-style: italic;
 }
+.kivun-short-preview__taken {
+	display: block;
+	margin-top: .15rem;
+	color: #92400e;
+	font-weight: 600;
+}
 .kivun-camp-saved {
 	flex: 1 1 auto;
 	background: #f8fafc;

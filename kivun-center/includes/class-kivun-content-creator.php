@@ -4463,7 +4463,9 @@ class Kivun_Content_Creator {
 			<p class="kivun-short-preview" hidden>
 				<span class="kivun-short-preview__label"><?php esc_html_e( 'הקישור הקצר שייווצר:', 'kivun' ); ?></span>
 				<code class="kivun-short-preview__url" dir="ltr"></code>
+				<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost kivun-camp-copy"><?php esc_html_e( 'העתקה', 'kivun' ); ?></button>
 				<span class="kivun-short-preview__note"><?php esc_html_e( 'יתחיל לעבוד אחרי השמירה', 'kivun' ); ?></span>
+				<span class="kivun-short-preview__taken" hidden><?php esc_html_e( 'הקוד שהוקלד כבר תפוס — זה הקוד הפנוי הקרוב אליו', 'kivun' ); ?></span>
 			</p>
 			<p class="kivun-field-hint">
 				<?php esc_html_e( 'אפשר להשאיר ריק ותיווצר כתובת קצרה אוטומטית, או לכתוב משהו שאפשר להגיד בטלפון — אותיות באנגלית, ספרות ומקפים בלבד.', 'kivun' ); ?>
