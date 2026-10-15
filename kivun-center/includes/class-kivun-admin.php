@@ -13,6 +13,16 @@ defined( 'ABSPATH' ) || exit;
 class Kivun_Admin {
 
 	/**
+	 * What the leads filter calls "nobody has dealt with this yet".
+	 *
+	 * Not a status: no row ever holds this word. It stands in the filter for
+	 * the several statuses a lead is captured with, which the query expands
+	 * it back into — so the reader asks one question and the database is
+	 * still asked about the words it actually stores.
+	 */
+	public const UNTOUCHED_FILTER = 'untouched';
+
+	/**
 	 * Register all admin hooks.
 	 *
 	 * @return void
@@ -737,6 +747,61 @@ class Kivun_Admin {
 	 */
 	public static function is_handled( string $table, string $status ): bool {
 		return ! in_array( $status, self::untouched_statuses( $table ), true );
+	}
+
+	/**
+	 * The status vocabulary the leads filter offers.
+	 *
+	 * The three statuses a lead is captured with are one entry here rather
+	 * than three. They are the same answer told apart by where the lead came
+	 * from — a course registration is 'pending' and a form enquiry is
+	 * 'new_lead' — which is a distinction about our own plumbing, not about
+	 * the lead, and the question being asked of this filter is the plain one:
+	 * which of these has nobody dealt with?
+	 *
+	 * @return array<string,string>
+	 */
+	public static function filter_statuses(): array {
+		$statuses = array( self::UNTOUCHED_FILTER => __( 'לא טופלו', 'kivun' ) );
+
+		foreach ( self::reg_statuses() as $value => $label ) {
+			if ( self::is_handled( 'registrations', (string) $value ) ) {
+				$statuses[ $value ] = $label;
+			}
+		}
+
+		return $statuses;
+	}
+
+	/**
+	 * The stored statuses an IN clause should match, for whatever the filter
+	 * came back holding.
+	 *
+	 * Values the screen does not offer are dropped rather than passed on: a
+	 * hand-edited URL asking for a status that does not exist should narrow
+	 * to nothing, not reach the database.
+	 *
+	 * @param array<int,string> $chosen What the filter holds.
+	 * @return array<int,string>
+	 */
+	public static function filter_status_values( array $chosen ): array {
+		$offered = array_keys( self::filter_statuses() );
+		$values  = array();
+
+		foreach ( $chosen as $value ) {
+			$value = (string) $value;
+			if ( ! in_array( $value, $offered, true ) ) {
+				continue;
+			}
+			// One choice, three stored words — and the empty one too, which
+			// no code writes today but which a row could still hold.
+			$values = array_merge(
+				$values,
+				self::UNTOUCHED_FILTER === $value ? self::untouched_statuses( 'registrations' ) : array( $value )
+			);
+		}
+
+		return array_values( array_unique( $values ) );
 	}
 
 	/**

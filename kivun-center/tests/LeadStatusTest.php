@@ -233,6 +233,92 @@ final class LeadStatusTest extends TestCase {
 		}
 	}
 
+	// ── Finding the ones nobody has dealt with ────────────────────────────────
+
+	/**
+	 * The filter asks the plain question once, rather than offering the three
+	 * words the same answer is stored as. Which of them a row holds depends
+	 * on where it came from — a course registration is 'pending', a form
+	 * enquiry is 'new_lead' — and that is a fact about our plumbing, not
+	 * about the lead.
+	 *
+	 * @return void
+	 */
+	public function test_the_filter_offers_one_untouched_choice(): void {
+		$offered = Kivun_Admin::filter_statuses();
+
+		$this->assertSame( 'לא טופלו', $offered[ Kivun_Admin::UNTOUCHED_FILTER ] );
+		$this->assertSame(
+			Kivun_Admin::UNTOUCHED_FILTER,
+			array_key_first( $offered ),
+			'the question being asked most often belongs at the top of the list'
+		);
+
+		foreach ( array( 'pending', 'new', 'new_lead' ) as $status ) {
+			$this->assertArrayNotHasKey( $status, $offered );
+		}
+
+		$this->assertArrayHasKey( 'closed', $offered );
+		$this->assertArrayHasKey( 'not_relevant', $offered );
+	}
+
+	/**
+	 * And it expands back into the words the rows actually hold, or it would
+	 * match nothing: no lead is stored as "untouched".
+	 *
+	 * @return void
+	 */
+	public function test_the_untouched_choice_becomes_the_stored_words(): void {
+		$values = Kivun_Admin::filter_status_values( array( Kivun_Admin::UNTOUCHED_FILTER ) );
+
+		foreach ( array( 'pending', 'new', 'new_lead' ) as $status ) {
+			$this->assertContains( $status, $values );
+		}
+		$this->assertNotContains( Kivun_Admin::UNTOUCHED_FILTER, $values );
+	}
+
+	/**
+	 * Chosen with others, it adds its words to theirs — "not dealt with, or
+	 * closed" is a question somebody asks.
+	 *
+	 * @return void
+	 */
+	public function test_untouched_can_be_chosen_alongside_a_real_status(): void {
+		$values = Kivun_Admin::filter_status_values( array( Kivun_Admin::UNTOUCHED_FILTER, 'closed' ) );
+
+		$this->assertContains( 'new_lead', $values );
+		$this->assertContains( 'closed', $values );
+		$this->assertSame( $values, array_values( array_unique( $values ) ) );
+	}
+
+	/**
+	 * Nothing the screen does not offer reaches the query. A hand-edited URL
+	 * asking for a status that does not exist narrows to nothing rather than
+	 * being passed through.
+	 *
+	 * @return void
+	 */
+	public function test_only_offered_values_survive(): void {
+		$this->assertSame( array(), Kivun_Admin::filter_status_values( array( 'bogus', "'; DROP TABLE x --", '1' ) ) );
+		$this->assertSame( array(), Kivun_Admin::filter_status_values( array() ) );
+		$this->assertSame( array( 'closed' ), Kivun_Admin::filter_status_values( array( 'closed', 'bogus' ) ) );
+	}
+
+	/**
+	 * The list the console filters by is this one, and the words it sends to
+	 * the database come from here — not from the row control's vocabulary,
+	 * which has neither the question nor the statuses that answer it.
+	 *
+	 * @return void
+	 */
+	public function test_the_console_filters_through_these(): void {
+		$source = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-content-creator.php' );
+
+		$this->assertStringContainsString( '$filter_statuses = Kivun_Admin::filter_statuses();', $source );
+		$this->assertStringContainsString( 'Kivun_Admin::filter_status_values( $status_filter )', $source );
+		$this->assertStringContainsString( 'foreach ( $filter_statuses as $sv => $sl )', $source );
+	}
+
 	/**
 	 * Cleared, the row holds 'new_lead' again — and the field must not then
 	 * show it, or clearing would put the word straight back on screen. The
