@@ -4607,8 +4607,13 @@ class Kivun_Content_Creator {
 	private static function front_leads( string $page_url ): void {
 		global $wpdb;
 
-		$statuses    = Kivun_Admin::reg_statuses();
-		$type_labels = Kivun_Admin::reg_type_labels();
+		// Two lists, because the filter and the rows are asking different
+		// things. A row's control offers what a person may decide; the filter
+		// also has to name the leads nobody has decided anything about, which
+		// is not a status but a question about the absence of one.
+		$statuses        = Kivun_Admin::reg_statuses();
+		$filter_statuses = Kivun_Admin::filter_statuses();
+		$type_labels     = Kivun_Admin::reg_type_labels();
 
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Read-only listing filters.
 		// Several at once, because a question is usually about more than one
@@ -4667,7 +4672,9 @@ class Kivun_Content_Creator {
 			$conds[] = $wpdb->prepare( "r.type IN ( {$marks} )", $chosen_types );
 		}
 
-		$chosen_statuses = array_values( array_intersect( $status_filter, array_keys( $statuses ) ) );
+		// "לא טופלו" is one choice standing for the several words a lead is
+		// captured with, so what reaches the query is the words.
+		$chosen_statuses = Kivun_Admin::filter_status_values( $status_filter );
 		if ( $chosen_statuses ) {
 			$marks = implode( ', ', array_fill( 0, count( $chosen_statuses ), '%s' ) );
 			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- $marks is one placeholder per value, built from the count.
@@ -4915,7 +4922,7 @@ class Kivun_Content_Creator {
 
 				<label class="kivun-sr-only" for="kivun-lf-status"><?php esc_html_e( 'סינון לפי סטטוס', 'kivun' ); ?></label>
 				<select id="kivun-lf-status" name="kivun_lstatus[]" multiple class="kivun-pick-src" data-pick-label="סינון לפי סטטוס" data-pick-empty="<?php esc_attr_e( 'אין התאמה', 'kivun' ); ?>" data-pick-all="<?php esc_attr_e( 'כל הסטטוסים', 'kivun' ); ?>">
-					<?php foreach ( $statuses as $sv => $sl ) : ?>
+					<?php foreach ( $filter_statuses as $sv => $sl ) : ?>
 						<option value="<?php echo esc_attr( $sv ); ?>" <?php echo in_array( (string) $sv, $status_filter, true ) ? 'selected' : ''; ?>><?php echo esc_html( $sl ); ?></option>
 					<?php endforeach; ?>
 				</select>

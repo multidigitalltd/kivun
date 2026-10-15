@@ -13,6 +13,16 @@ defined( 'ABSPATH' ) || exit;
 class Kivun_Admin {
 
 	/**
+	 * What the leads filter calls "nobody has dealt with this yet".
+	 *
+	 * Not a status: no row ever holds this word. It stands in the filter for
+	 * the several statuses a lead is captured with, which the query expands
+	 * it back into — so the reader asks one question and the database is
+	 * still asked about the words it actually stores.
+	 */
+	public const UNTOUCHED_FILTER = 'untouched';
+
+	/**
 	 * Register all admin hooks.
 	 *
 	 * @return void
@@ -599,6 +609,10 @@ class Kivun_Admin {
 			// first — every course registration has been reading as "ליד
 			// חדש" while the row said otherwise, and changing anything else
 			// in that row would have written that misreading back.
+			//
+			// Still here because the filters and the export look a stored
+			// value up by name. It is not offered as a choice: see
+			// untouched_statuses().
 			'pending'      => __( 'ממתין', 'kivun' ),
 			'new_lead'     => __( 'ליד חדש', 'kivun' ),
 			'next_cycle'   => __( 'למחזור הבא', 'kivun' ),
@@ -693,6 +707,155 @@ class Kivun_Admin {
 	}
 
 	/**
+	 * The statuses that say nothing about the lead.
+	 *
+	 * Every lead is stored with one of these the moment it arrives — the form
+	 * writes 'new_lead', a course registration takes the column's 'pending' —
+	 * so a screen that shows them reads as a decision on every row, and the
+	 * column of labels says the same thing about the lead nobody has opened
+	 * and the lead somebody worked through yesterday. Which is the question
+	 * the labels were added to answer.
+	 *
+	 * Listed here they are not offered as a choice and carry no label: the
+	 * field is left empty until a person sets it, and then it stays set.
+	 * Nothing is removed from the vocabulary — the filters and the export
+	 * still name these, because they are what the rows hold.
+	 *
+	 * Not the same list as untouched_statuses(), which is a question about
+	 * whether anybody has acted. A waiting-list sign-up is written by the
+	 * form too, but 'למחזור הבא' is something the visitor said, and a field
+	 * emptied of it would be throwing away the reason the lead is there.
+	 *
+	 * Only the leads table, so this is empty for anything else. CV
+	 * applications are worked on the employer's own dashboard as well as
+	 * here, and that screen has a status list of its own; emptying one of the
+	 * two would have them disagree about the same application.
+	 *
+	 * @param string $table The CRM table key ('registrations' or 'applications').
+	 * @return array<int,string>
+	 */
+	public static function blank_statuses( string $table ): array {
+		if ( 'registrations' !== $table ) {
+			return array();
+		}
+
+		return array( 'pending', 'new', 'new_lead' );
+	}
+
+	/**
+	 * Whether a stored status is worth putting on the screen.
+	 *
+	 * @param string $table  The CRM table key.
+	 * @param string $status The stored status.
+	 * @return bool
+	 */
+	public static function is_shown( string $table, string $status ): bool {
+		return '' !== $status && ! in_array( $status, self::blank_statuses( $table ), true );
+	}
+
+	/**
+	 * What "nobody has dealt with this" matches.
+	 *
+	 * The blank ones, and 'next_cycle' with them: the sign-up form writes
+	 * that by itself when somebody asks for the next cycle, before anybody
+	 * here has seen it. Reading it as handled would have quietly kept every
+	 * waiting-list sign-up out of the list of leads waiting to be called —
+	 * which is the list this exists to produce.
+	 *
+	 * Setting one by hand does not take the lead off that list either, and
+	 * should not: somebody still has to ring them. Marking what came of the
+	 * call is what moves it.
+	 *
+	 * @param string $table The CRM table key.
+	 * @return array<int,string>
+	 */
+	public static function untouched_statuses( string $table ): array {
+		// The empty string with them: no code writes one, but a column that
+		// holds it should not be the one lead that hides from the filter.
+		$untouched = array_merge( array( '' ), self::blank_statuses( $table ) );
+
+		if ( 'registrations' === $table ) {
+			$untouched[] = 'next_cycle';
+		}
+
+		return $untouched;
+	}
+
+	/**
+	 * The status vocabulary the leads filter offers.
+	 *
+	 * The statuses a lead is captured with are one entry here rather than
+	 * three. They are the same answer told apart by where the lead came from
+	 * — a course registration is 'pending' and a form enquiry is 'new_lead' —
+	 * which is a distinction about our own plumbing, not about the lead, and
+	 * the question being asked of this filter is the plain one: which of
+	 * these has nobody dealt with?
+	 *
+	 * Everything a row can visibly be in is offered beside it, 'למחזור הבא'
+	 * included — it is both a thing to look for on its own and one of the
+	 * things "לא טופלו" finds, and choosing both asks for both.
+	 *
+	 * @return array<string,string>
+	 */
+	public static function filter_statuses(): array {
+		$statuses = array( self::UNTOUCHED_FILTER => __( 'לא טופלו', 'kivun' ) );
+
+		foreach ( self::reg_statuses() as $value => $label ) {
+			if ( self::is_shown( 'registrations', (string) $value ) ) {
+				$statuses[ $value ] = $label;
+			}
+		}
+
+		return $statuses;
+	}
+
+	/**
+	 * The stored statuses an IN clause should match, for whatever the filter
+	 * came back holding.
+	 *
+	 * Values the screen does not offer are dropped rather than passed on: a
+	 * hand-edited URL asking for a status that does not exist should narrow
+	 * to nothing, not reach the database.
+	 *
+	 * @param array<int,string> $chosen What the filter holds.
+	 * @return array<int,string>
+	 */
+	public static function filter_status_values( array $chosen ): array {
+		$offered = array_keys( self::filter_statuses() );
+		$values  = array();
+
+		foreach ( $chosen as $value ) {
+			$value = (string) $value;
+			if ( ! in_array( $value, $offered, true ) ) {
+				continue;
+			}
+			// One choice, three stored words — and the empty one too, which
+			// no code writes today but which a row could still hold.
+			$values = array_merge(
+				$values,
+				self::UNTOUCHED_FILTER === $value ? self::untouched_statuses( 'registrations' ) : array( $value )
+			);
+		}
+
+		return array_values( array_unique( $values ) );
+	}
+
+	/**
+	 * The status a lead is stored with when it arrives, by the kind of row it
+	 * is — what clearing a status puts back.
+	 *
+	 * Cleared rows go back to this rather than to an empty column, so the
+	 * things that count and filter by the stored word — the dashboard's "new
+	 * leads", the status filter — keep finding them.
+	 *
+	 * @param string $type The row's type column ('registration', 'lead', …).
+	 * @return string
+	 */
+	public static function capture_status( string $type ): string {
+		return 'registration' === $type ? 'pending' : 'new_lead';
+	}
+
+	/**
 	 * Build an escaped status <select> for a CRM row.
 	 *
 	 * @param string $table   The CRM table key ('registrations' or 'applications').
@@ -702,12 +865,31 @@ class Kivun_Admin {
 	 * @return string
 	 */
 	public static function status_select( string $table, int $id, string $current, array $options ): string {
+		$shown = self::is_shown( $table, $current );
+
 		$html = sprintf(
-			'<select class="kivun-status-select" data-table="%s" data-id="%d">',
+			'<select class="kivun-status-select" data-table="%s" data-id="%d" aria-label="%s">',
 			esc_attr( $table ),
-			$id
+			$id,
+			esc_attr__( 'סטטוס', 'kivun' )
 		);
+
+		// Empty, and selected until somebody chooses: a row nobody has reached
+		// says nothing rather than saying "ליד חדש". It stays on the list once
+		// a status is set, as the way back from one picked by mistake.
+		//
+		// Only where a row can be in no state at all. A CV application is
+		// always in one of its own statuses and the handler refuses to write
+		// an empty one, so offering it there would be a choice that can only
+		// fail.
+		if ( self::blank_statuses( $table ) ) {
+			$html .= sprintf( '<option value=""%s></option>', selected( $shown, false, false ) );
+		}
+
 		foreach ( $options as $val => $label ) {
+			if ( ! self::is_shown( $table, (string) $val ) ) {
+				continue;
+			}
 			$html .= sprintf(
 				'<option value="%s"%s>%s</option>',
 				esc_attr( $val ),
@@ -724,10 +906,14 @@ class Kivun_Admin {
 		// one marked "לא רלוונטי" is as loud as the one still waiting. The
 		// label states where the row got to, in a colour that separates
 		// finished from dismissed from open at a glance.
+		//
+		// Empty while nothing has been decided, and hidden by the stylesheet
+		// when it is — the element stays so the script has somewhere to write
+		// the answer the moment one is picked.
 		$html .= sprintf(
 			'<span class="kivun-status-badge" data-status="%s">%s</span>',
-			esc_attr( $current ),
-			esc_html( $options[ $current ] ?? $current )
+			esc_attr( $shown ? $current : '' ),
+			esc_html( $shown ? ( $options[ $current ] ?? $current ) : '' )
 		);
 
 		return $html;
@@ -758,7 +944,16 @@ class Kivun_Admin {
 		$status = sanitize_key( wp_unslash( $_POST['status'] ?? '' ) );
 
 		$allowed = array( 'registrations', 'applications' );
-		if ( ! in_array( $table, $allowed, true ) || ! $id || ! $status ) {
+		if ( ! in_array( $table, $allowed, true ) || ! $id ) {
+			wp_send_json_error( array( 'message' => __( 'בקשה לא תקינה.', 'kivun' ) ), 400 );
+		}
+
+		// Nothing chosen is a choice: the empty option takes back a status set
+		// by mistake. The row goes to the status it would have been captured
+		// with rather than to an empty column, so it still counts as a new
+		// lead and is still found by a filter looking for one.
+		$clearing = '' === $status;
+		if ( $clearing && 'registrations' !== $table ) {
 			wp_send_json_error( array( 'message' => __( 'בקשה לא תקינה.', 'kivun' ) ), 400 );
 		}
 
@@ -766,7 +961,7 @@ class Kivun_Admin {
 		// column would take any word at all, and the row would then show blank
 		// in every list that looks the value up by name.
 		$known = 'registrations' === $table ? self::reg_statuses() : Kivun_Employer::app_statuses();
-		if ( ! isset( $known[ $status ] ) ) {
+		if ( ! $clearing && ! isset( $known[ $status ] ) ) {
 			wp_send_json_error( array( 'message' => __( 'סטטוס לא מוכר.', 'kivun' ) ), 400 );
 		}
 
@@ -783,6 +978,11 @@ class Kivun_Admin {
 		$name = $wpdb->prefix . 'kivun_' . $table;
 
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		if ( $clearing ) {
+			$type   = (string) $wpdb->get_var( $wpdb->prepare( "SELECT type FROM {$name} WHERE id = %d", $id ) );
+			$status = self::capture_status( $type );
+		}
+
 		$updated = $wpdb->update(
 			$name,
 			array( 'status' => $status ),
@@ -805,10 +1005,14 @@ class Kivun_Admin {
 			wp_send_json_error( array( 'message' => __( 'השורה לא נמצאה — ייתכן שנמחקה.', 'kivun' ) ), 404 );
 		}
 
+		// 'chosen' is what the control should read, which is not always what
+		// the column holds: a cleared lead goes back to 'new_lead', and the
+		// field showing that word again is exactly what was being undone.
 		wp_send_json_success(
 			array(
 				'status' => (string) $stored,
 				'label'  => (string) ( $known[ (string) $stored ] ?? $stored ),
+				'chosen' => self::is_shown( $table, (string) $stored ),
 			)
 		);
 	}
