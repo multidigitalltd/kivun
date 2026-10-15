@@ -200,5 +200,6 @@
 /* Still waiting on somebody. */
 .kivun-status-badge[data-status="new"],
 .kivun-status-badge[data-status="new_lead"],
+.kivun-status-badge[data-status="no_answer"],
 .kivun-status-badge[data-status="pending"] { background: #fff5f8; color: #b81843; }
 .kivun-status-badge[data-status="next_cycle"] { background: #fef3c7; color: #92400e; }

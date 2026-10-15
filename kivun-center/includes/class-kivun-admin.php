@@ -618,6 +618,11 @@ class Kivun_Admin {
 			'next_cycle'   => __( 'למחזור הבא', 'kivun' ),
 			'new'          => __( 'חדש', 'kivun' ),
 			'contacted'    => __( 'נוצר קשר', 'kivun' ),
+			// Beside it, because they are the two outcomes of the same act:
+			// somebody rang. This one is still open — the lead is waiting for
+			// another try, not finished with — so it is coloured with the
+			// unfinished ones rather than with "נוצר קשר".
+			'no_answer'    => __( 'אין מענה', 'kivun' ),
 			'interested'   => __( 'מעוניין', 'kivun' ),
 			'enrolled'     => __( 'נרשם סופית', 'kivun' ),
 			'closed'       => __( 'נסגר ✓', 'kivun' ),

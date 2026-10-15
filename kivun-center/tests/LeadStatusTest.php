@@ -63,7 +63,7 @@ final class LeadStatusTest extends TestCase {
 			);
 		}
 
-		foreach ( array( 'contacted', 'interested', 'enrolled', 'closed', 'not_relevant', 'next_cycle' ) as $status ) {
+		foreach ( array( 'contacted', 'no_answer', 'interested', 'enrolled', 'closed', 'not_relevant', 'next_cycle' ) as $status ) {
 			$this->assertTrue(
 				Kivun_Admin::is_shown( 'registrations', $status ),
 				"'{$status}' says something the reader needs"
@@ -285,6 +285,59 @@ final class LeadStatusTest extends TestCase {
 
 		foreach ( array( 'registration', 'lead' ) as $type ) {
 			$this->assertArrayHasKey( Kivun_Admin::capture_status( $type ), $known );
+		}
+	}
+
+	/**
+	 * A call that nobody picked up.
+	 *
+	 * Only ever set by hand, so unlike a waiting-list sign-up it means
+	 * somebody has dealt with the lead: it comes off "לא טופלו" and is
+	 * looked for on its own, which is the list of people to try again.
+	 *
+	 * @return void
+	 */
+	public function test_a_call_that_went_unanswered(): void {
+		$this->assertArrayHasKey( 'no_answer', Kivun_Admin::reg_statuses() );
+		$this->assertSame( 'אין מענה', Kivun_Admin::reg_statuses()['no_answer'] );
+
+		$this->assertTrue( Kivun_Admin::is_shown( 'registrations', 'no_answer' ) );
+		$this->assertNotContains( 'no_answer', Kivun_Admin::untouched_statuses( 'registrations' ) );
+		$this->assertArrayHasKey( 'no_answer', Kivun_Admin::filter_statuses() );
+		$this->assertSame( array( 'no_answer' ), Kivun_Admin::filter_status_values( array( 'no_answer' ) ) );
+
+		$html = $this->leads_control( 'no_answer' );
+		$this->assertStringContainsString( "<option value=\"no_answer\" selected='selected'>אין מענה<", $html );
+		$this->assertStringContainsString( 'data-status="no_answer">אין מענה</span>', $html );
+	}
+
+	/**
+	 * Every status that reaches the screen has a colour of its own.
+	 *
+	 * A new one without a rule does not look broken — it falls through to
+	 * the neutral grey and sits in the column reading as "finished, sort
+	 * of", which is the one thing the colours are there to prevent. The
+	 * stylesheet is the only place that knows, so it is asked here.
+	 *
+	 * @return void
+	 */
+	public function test_every_status_on_screen_has_a_colour(): void {
+		$sheets = array();
+		foreach ( array( 'assets/css/admin.css', 'assets/css/frontend.css' ) as $sheet ) {
+			$sheets[ $sheet ] = (string) file_get_contents( KIVUN_DIR . $sheet );
+		}
+
+		foreach ( array_keys( Kivun_Admin::reg_statuses() ) as $status ) {
+			if ( ! Kivun_Admin::is_shown( 'registrations', (string) $status ) ) {
+				continue;
+			}
+			foreach ( $sheets as $sheet => $css ) {
+				$this->assertStringContainsString(
+					".kivun-status-badge[data-status=\"{$status}\"]",
+					$css,
+					"{$sheet} has no colour for {$status}, so it would read as a finished one"
+				);
+			}
 		}
 	}
 
