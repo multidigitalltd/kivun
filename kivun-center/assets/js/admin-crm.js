@@ -116,9 +116,12 @@
 			}
 
 			// The server says what it stored; trust that over what was picked.
+			// Except where it says the stored word is not a decision — a lead
+			// cleared back to "ליד חדש" shows the empty option, or clearing it
+			// would put the word straight back in the field.
 			var stored = (res.data && res.data.status) ? res.data.status : wanted;
-			select.value = stored;
-			select.dataset.prev = stored;
+			select.value = (res.data && false === res.data.chosen) ? '' : stored;
+			select.dataset.prev = select.value;
 			paintStatus(select);
 			flash(indicator, true);
 		}).catch(function () {

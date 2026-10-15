@@ -2629,6 +2629,10 @@ body.kivun-ty-open { overflow: hidden; }
 	line-height: 1.7;
 	white-space: nowrap;
 }
+/* Nothing decided yet, so nothing said. The element stays in the row for the
+   script to write into the moment a status is picked; an empty pill would
+   otherwise sit under every untouched lead saying nothing at all, loudly. */
+.kivun-status-badge:empty { display: none; }
 /* Finished well. */
 .kivun-status-badge[data-status="closed"],
 .kivun-status-badge[data-status="enrolled"],

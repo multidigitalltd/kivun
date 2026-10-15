@@ -322,6 +322,17 @@ function esc_html_e( string $text, string $domain = 'default' ): void {
 }
 
 /**
+ * Translate and escape for an attribute.
+ *
+ * @param string $text   The text.
+ * @param string $domain The text domain.
+ * @return string
+ */
+function esc_attr__( string $text, string $domain = 'default' ): string {
+	return esc_attr( __( $text, $domain ) );
+}
+
+/**
  * Translate, escape for an attribute and print.
  *
  * @param string $text   The text.
@@ -330,6 +341,28 @@ function esc_html_e( string $text, string $domain = 'default' ): void {
  */
 function esc_attr_e( string $text, string $domain = 'default' ): void {
 	echo esc_attr( __( $text, $domain ) );
+}
+
+/**
+ * The selected attribute, as core emits it.
+ *
+ * Both sides are cast to a string before being compared, which is the part
+ * worth keeping faithful: it is what makes selected( false, false ) true —
+ * how an option with no value is marked as the chosen one.
+ *
+ * @param mixed $selected One value to compare.
+ * @param mixed $current  The other.
+ * @param bool  $display  Whether to print it.
+ * @return string
+ */
+function selected( $selected, $current = true, bool $display = true ): string {
+	$html = (string) $selected === (string) $current ? " selected='selected'" : '';
+
+	if ( $display ) {
+		echo $html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+	}
+
+	return $html;
 }
 
 /**
@@ -965,6 +998,7 @@ foreach ( array(
 	'class-kivun-phones',
 	'class-kivun-forms-router',
 	'class-kivun-content-creator',
+	'class-kivun-admin',
 ) as $kivun_test_class ) {
 	require_once KIVUN_DIR . 'includes/' . $kivun_test_class . '.php';
 }

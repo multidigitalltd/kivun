@@ -599,6 +599,10 @@ class Kivun_Admin {
 			// first — every course registration has been reading as "ליד
 			// חדש" while the row said otherwise, and changing anything else
 			// in that row would have written that misreading back.
+			//
+			// Still here because the filters and the export look a stored
+			// value up by name. It is not offered as a choice: see
+			// untouched_statuses().
 			'pending'      => __( 'ממתין', 'kivun' ),
 			'new_lead'     => __( 'ליד חדש', 'kivun' ),
 			'next_cycle'   => __( 'למחזור הבא', 'kivun' ),
@@ -693,6 +697,64 @@ class Kivun_Admin {
 	}
 
 	/**
+	 * The statuses a lead carries before anybody has looked at it.
+	 *
+	 * Every lead is stored with one of these the moment it arrives — the form
+	 * writes 'new_lead', a course registration takes the column's 'pending' —
+	 * so a screen that shows them reads as a decision on every row, and the
+	 * column of labels says the same thing about the lead nobody has opened
+	 * and the lead somebody worked through yesterday. Which is the question
+	 * the labels were added to answer.
+	 *
+	 * Listed here they are not offered as a choice and carry no label: the
+	 * field is left empty until a person sets it, and then it stays set.
+	 * Nothing is removed from the vocabulary — the filters and the export
+	 * still name these, because they are what the rows hold.
+	 *
+	 * Only the leads table. CV applications are worked on the employer's own
+	 * dashboard as well as here, and that screen has a status list of its
+	 * own; emptying one of the two would have them disagree about the same
+	 * application.
+	 *
+	 * @param string $table The CRM table key ('registrations' or 'applications').
+	 * @return array<int,string>
+	 */
+	public static function untouched_statuses( string $table ): array {
+		if ( 'registrations' !== $table ) {
+			return array( '' );
+		}
+
+		return array( '', 'pending', 'new', 'new_lead' );
+	}
+
+	/**
+	 * Whether a stored status is somebody's decision rather than the one the
+	 * row was created with.
+	 *
+	 * @param string $table  The CRM table key.
+	 * @param string $status The stored status.
+	 * @return bool
+	 */
+	public static function is_handled( string $table, string $status ): bool {
+		return ! in_array( $status, self::untouched_statuses( $table ), true );
+	}
+
+	/**
+	 * The status a lead is stored with when it arrives, by the kind of row it
+	 * is — what clearing a status puts back.
+	 *
+	 * Cleared rows go back to this rather than to an empty column, so the
+	 * things that count and filter by the stored word — the dashboard's "new
+	 * leads", the status filter — keep finding them.
+	 *
+	 * @param string $type The row's type column ('registration', 'lead', …).
+	 * @return string
+	 */
+	public static function capture_status( string $type ): string {
+		return 'registration' === $type ? 'pending' : 'new_lead';
+	}
+
+	/**
 	 * Build an escaped status <select> for a CRM row.
 	 *
 	 * @param string $table   The CRM table key ('registrations' or 'applications').
@@ -702,12 +764,24 @@ class Kivun_Admin {
 	 * @return string
 	 */
 	public static function status_select( string $table, int $id, string $current, array $options ): string {
+		$handled = self::is_handled( $table, $current );
+
 		$html = sprintf(
-			'<select class="kivun-status-select" data-table="%s" data-id="%d">',
+			'<select class="kivun-status-select" data-table="%s" data-id="%d" aria-label="%s">',
 			esc_attr( $table ),
-			$id
+			$id,
+			esc_attr__( 'סטטוס', 'kivun' )
 		);
+
+		// Empty, and selected until somebody chooses: a row nobody has reached
+		// says nothing rather than saying "ליד חדש". It stays on the list once
+		// a status is set, as the way back from one picked by mistake.
+		$html .= sprintf( '<option value=""%s></option>', selected( $handled, false, false ) );
+
 		foreach ( $options as $val => $label ) {
+			if ( ! self::is_handled( $table, (string) $val ) ) {
+				continue;
+			}
 			$html .= sprintf(
 				'<option value="%s"%s>%s</option>',
 				esc_attr( $val ),
@@ -724,10 +798,14 @@ class Kivun_Admin {
 		// one marked "לא רלוונטי" is as loud as the one still waiting. The
 		// label states where the row got to, in a colour that separates
 		// finished from dismissed from open at a glance.
+		//
+		// Empty while nothing has been decided, and hidden by the stylesheet
+		// when it is — the element stays so the script has somewhere to write
+		// the answer the moment one is picked.
 		$html .= sprintf(
 			'<span class="kivun-status-badge" data-status="%s">%s</span>',
-			esc_attr( $current ),
-			esc_html( $options[ $current ] ?? $current )
+			esc_attr( $handled ? $current : '' ),
+			esc_html( $handled ? ( $options[ $current ] ?? $current ) : '' )
 		);
 
 		return $html;
@@ -758,7 +836,16 @@ class Kivun_Admin {
 		$status = sanitize_key( wp_unslash( $_POST['status'] ?? '' ) );
 
 		$allowed = array( 'registrations', 'applications' );
-		if ( ! in_array( $table, $allowed, true ) || ! $id || ! $status ) {
+		if ( ! in_array( $table, $allowed, true ) || ! $id ) {
+			wp_send_json_error( array( 'message' => __( 'בקשה לא תקינה.', 'kivun' ) ), 400 );
+		}
+
+		// Nothing chosen is a choice: the empty option takes back a status set
+		// by mistake. The row goes to the status it would have been captured
+		// with rather than to an empty column, so it still counts as a new
+		// lead and is still found by a filter looking for one.
+		$clearing = '' === $status;
+		if ( $clearing && 'registrations' !== $table ) {
 			wp_send_json_error( array( 'message' => __( 'בקשה לא תקינה.', 'kivun' ) ), 400 );
 		}
 
@@ -766,7 +853,7 @@ class Kivun_Admin {
 		// column would take any word at all, and the row would then show blank
 		// in every list that looks the value up by name.
 		$known = 'registrations' === $table ? self::reg_statuses() : Kivun_Employer::app_statuses();
-		if ( ! isset( $known[ $status ] ) ) {
+		if ( ! $clearing && ! isset( $known[ $status ] ) ) {
 			wp_send_json_error( array( 'message' => __( 'סטטוס לא מוכר.', 'kivun' ) ), 400 );
 		}
 
@@ -783,6 +870,11 @@ class Kivun_Admin {
 		$name = $wpdb->prefix . 'kivun_' . $table;
 
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		if ( $clearing ) {
+			$type   = (string) $wpdb->get_var( $wpdb->prepare( "SELECT type FROM {$name} WHERE id = %d", $id ) );
+			$status = self::capture_status( $type );
+		}
+
 		$updated = $wpdb->update(
 			$name,
 			array( 'status' => $status ),
@@ -805,10 +897,14 @@ class Kivun_Admin {
 			wp_send_json_error( array( 'message' => __( 'השורה לא נמצאה — ייתכן שנמחקה.', 'kivun' ) ), 404 );
 		}
 
+		// 'chosen' is what the control should read, which is not always what
+		// the column holds: a cleared lead goes back to 'new_lead', and the
+		// field showing that word again is exactly what was being undone.
 		wp_send_json_success(
 			array(
 				'status' => (string) $stored,
 				'label'  => (string) ( $known[ (string) $stored ] ?? $stored ),
+				'chosen' => self::is_handled( $table, (string) $stored ),
 			)
 		);
 	}
