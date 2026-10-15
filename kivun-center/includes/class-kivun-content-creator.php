@@ -5129,21 +5129,27 @@ class Kivun_Content_Creator {
 							</td>
 							<td data-label="<?php esc_attr_e( 'עיר', 'kivun' ); ?>" data-col="city"><?php echo esc_html( (string) ( $r->city ?? '' ) ); ?></td>
 							<td data-label="<?php esc_attr_e( 'מגדר', 'kivun' ); ?>" data-col="gender"><?php echo esc_html( '' !== trim( (string) ( $r->gender ?? '' ) ) ? (string) $r->gender : '—' ); ?></td>
-							<?php
-							// An empty cell here would read as "nobody handled
-							// it". The reason matters: a lead the rota was
-							// never asked about is not the same as one it was
-							// asked about and could not place, and only the
-							// second is a fault to go and fix.
-							$kivun_handler = Kivun_Coordinators::label_for( (string) ( $r->coordinator ?? '' ) );
-							?>
 							<td data-label="<?php esc_attr_e( 'רכז/ת מטפל/ת', 'kivun' ); ?>" data-col="handler">
-								<?php if ( '' !== $kivun_handler ) : ?>
-									<?php echo esc_html( $kivun_handler ); ?>
-								<?php elseif ( '' === trim( (string) ( $r->gender ?? '' ) ) ) : ?>
-									<span class="kivun-muted" title="<?php esc_attr_e( 'הפנייה הגיעה בלי מגדר, ולכן לא נבחר רכז', 'kivun' ); ?>"><?php esc_html_e( 'אין מגדר', 'kivun' ); ?></span>
-								<?php else : ?>
-									<span class="kivun-muted">—</span>
+								<?php
+								// A control rather than a word. The rota places
+								// most leads, but one that arrived with no
+								// gender on it is one it cannot place, and it
+								// was landing here with nobody against it and
+								// no way to put somebody there.
+								// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Returns pre-escaped HTML.
+								echo Kivun_Admin::handler_select( (int) $r->id, (string) ( $r->coordinator ?? '' ) );
+								?>
+								<span class="kivun-saved-indicator" role="status" aria-live="polite" style="display:none"></span>
+								<?php if ( '' === trim( (string) ( $r->coordinator ?? '' ) ) && '' === trim( (string) ( $r->gender ?? '' ) ) ) : ?>
+									<?php
+									// Why this one is empty. A lead the rota was
+									// never asked about is not the same as one it
+									// was asked about and could not place, and
+									// only the second is a fault to go and fix —
+									// the note says which this is, and the field
+									// above it is how it gets fixed.
+									?>
+									<span class="kivun-muted kivun-handler-why"><?php esc_html_e( 'הגיע ללא מגדר', 'kivun' ); ?></span>
 								<?php endif; ?>
 							</td>
 							<td data-label="<?php esc_attr_e( 'דיוור', 'kivun' ); ?>" data-col="consent"><?php echo esc_html( empty( $r->marketing_consent ) ? '—' : '✓' ); ?></td>

@@ -251,4 +251,232 @@ final class LeadHandlerTest extends TestCase {
 
 		$this->assertSame( array(), Kivun_Test_State::$updates );
 	}
+
+	// ── Handing one over by hand ──────────────────────────────────────────────
+
+	/**
+	 * Drive the assignment handler as the screen does.
+	 *
+	 * @param int    $id      The lead row.
+	 * @param string $handler The address picked, or '' for nobody.
+	 * @param string $before  What the row holds now.
+	 * @return Kivun_Test_Json
+	 */
+	private function assign( int $id, string $handler, string $before = '' ): Kivun_Test_Json {
+		global $wpdb;
+
+		// Reads answer with what the column holds now, which is the write if
+		// one has happened. A double that answered with the old value either
+		// way would let the handler report the wrong person to the screen and
+		// still pass — and the screen believes the answer over what was
+		// picked.
+		$wpdb->var_handler = static function ( string $sql ) use ( $before, $id ) {
+			if ( ! str_contains( $sql, 'coordinator' ) ) {
+				return null;
+			}
+
+			foreach ( array_reverse( Kivun_Test_State::$updates ) as $write ) {
+				if ( array( 'id' => $id ) === $write['where'] && isset( $write['data']['coordinator'] ) ) {
+					return $write['data']['coordinator'];
+				}
+			}
+
+			return $before;
+		};
+
+		$_POST = array(
+			'id'      => (string) $id,
+			'handler' => $handler,
+		);
+
+		try {
+			Kivun_Admin::ajax_assign_handler();
+		} catch ( Kivun_Test_Json $answer ) {
+			return $answer;
+		} finally {
+			$_POST             = array();
+			$wpdb->var_handler = null;
+		}
+
+		$this->fail( 'the handler answered nothing at all' );
+	}
+
+	/**
+	 * The field offers everyone on both rosters, by name.
+	 *
+	 * @return void
+	 */
+	public function test_the_field_offers_every_coordinator(): void {
+		$html = Kivun_Admin::handler_select( 5, '' );
+
+		$this->assertStringContainsString( '<option value="yehudaf@kivun.test"', $html );
+		$this->assertStringContainsString( '>יהודה<', $html );
+		$this->assertStringContainsString( '<option value="dasi@kivun.test"', $html );
+		$this->assertStringContainsString( '<option value="avigaila@kivun.test"', $html );
+	}
+
+	/**
+	 * A lead the rota could not place shows nobody, and that is the selected
+	 * option rather than the first name on the list — which is the whole
+	 * point: the field is empty because nobody has it, and picking somebody
+	 * is a deliberate act.
+	 *
+	 * @return void
+	 */
+	public function test_an_unplaced_lead_selects_nobody(): void {
+		$this->assertStringContainsString(
+			"<option value=\"\" selected='selected'>",
+			Kivun_Admin::handler_select( 5, '' )
+		);
+	}
+
+	/**
+	 * Whoever has it is the one showing.
+	 *
+	 * @return void
+	 */
+	public function test_the_coordinator_on_the_row_is_the_one_selected(): void {
+		$this->assertStringContainsString(
+			"<option value=\"dasi@kivun.test\" selected='selected'>",
+			Kivun_Admin::handler_select( 5, 'dasi@kivun.test' )
+		);
+	}
+
+	/**
+	 * Somebody since taken off the roster is still offered, and still
+	 * selected. A control with no option matching its row shows the first
+	 * one instead — so the lead would read as somebody else's, and the next
+	 * save in that row would make it true.
+	 *
+	 * @return void
+	 */
+	public function test_a_coordinator_who_has_left_still_shows(): void {
+		$html = Kivun_Admin::handler_select( 5, 'gone@kivun.test' );
+
+		$this->assertStringContainsString( "<option value=\"gone@kivun.test\" selected='selected'>", $html );
+		$this->assertStringNotContainsString( "<option value=\"\" selected='selected'>", $html );
+	}
+
+	/**
+	 * Assigning writes the address to the lead's own column.
+	 *
+	 * @return void
+	 */
+	public function test_assigning_writes_the_coordinator(): void {
+		kivun_test_set_caps( array( 'kivun_view_leads' ) );
+
+		$answer = $this->assign( 42, 'dasi@kivun.test' );
+
+		$this->assertTrue( $answer->ok );
+		$this->assertSame(
+			array(
+				'table' => 'wp_kivun_registrations',
+				'data'  => array( 'coordinator' => 'dasi@kivun.test' ),
+				'where' => array( 'id' => 42 ),
+			),
+			end( Kivun_Test_State::$updates )
+		);
+
+		// Read back and reported, rather than echoed from what was asked
+		// for: the screen trusts this over what was picked.
+		$this->assertSame( 'dasi@kivun.test', $answer->data['handler'] );
+	}
+
+	/**
+	 * And taking a lead off somebody writes the empty column back, so it
+	 * returns to the list of ones nobody has.
+	 *
+	 * @return void
+	 */
+	public function test_a_lead_can_be_taken_off_somebody(): void {
+		kivun_test_set_caps( array( 'kivun_view_leads' ) );
+
+		$answer = $this->assign( 42, '', 'dasi@kivun.test' );
+
+		$this->assertTrue( $answer->ok );
+		$this->assertSame( array( 'coordinator' => '' ), end( Kivun_Test_State::$updates )['data'] );
+		$this->assertSame( '', $answer->data['handler'] );
+		$this->assertSame( '', $answer->data['label'] );
+	}
+
+	/**
+	 * An address nobody on the rosters has is refused rather than written.
+	 * The column feeds the sign-off on the candidate's letter and the
+	 * question of who had which lead, and a typed-in address answers both
+	 * with something that is not a person here.
+	 *
+	 * @return void
+	 */
+	public function test_somebody_who_is_not_a_coordinator_is_refused(): void {
+		kivun_test_set_caps( array( 'kivun_view_leads' ) );
+
+		$answer = $this->assign( 42, 'stranger@example.com' );
+
+		$this->assertFalse( $answer->ok );
+		$this->assertSame( 400, $answer->status );
+		$this->assertSame( array(), Kivun_Test_State::$updates );
+	}
+
+	/**
+	 * Except the one already on the row: a coordinator who has left is still
+	 * the value the field is showing, and re-picking what is already there
+	 * is not an error.
+	 *
+	 * @return void
+	 */
+	public function test_the_address_already_on_the_row_is_allowed(): void {
+		kivun_test_set_caps( array( 'kivun_view_leads' ) );
+
+		$answer = $this->assign( 42, 'gone@kivun.test', 'gone@kivun.test' );
+
+		$this->assertTrue( $answer->ok );
+	}
+
+	/**
+	 * Reading the leads is not enough on its own — but it is what the leads
+	 * reader has, and working a lead means saying who is working it. The
+	 * same rule as the status beside it.
+	 *
+	 * @return void
+	 */
+	public function test_who_may_hand_a_lead_over(): void {
+		kivun_test_set_caps( array() );
+		$refused = $this->assign( 42, 'dasi@kivun.test' );
+
+		$this->assertFalse( $refused->ok );
+		$this->assertSame( 403, $refused->status );
+		$this->assertSame( array(), Kivun_Test_State::$updates );
+
+		kivun_test_set_caps( array( 'edit_posts' ) );
+		$this->assertTrue( $this->assign( 42, 'dasi@kivun.test' )->ok );
+	}
+
+	/**
+	 * A row that is not there is said to be not there, rather than reported
+	 * as saved.
+	 *
+	 * @return void
+	 */
+	public function test_a_deleted_row_is_not_reported_as_saved(): void {
+		kivun_test_set_caps( array( 'kivun_view_leads' ) );
+
+		global $wpdb;
+		$wpdb->var_handler = static fn () => null;
+		$_POST             = array(
+			'id'      => '42',
+			'handler' => 'dasi@kivun.test',
+		);
+
+		try {
+			Kivun_Admin::ajax_assign_handler();
+			$this->fail( 'the handler answered nothing at all' );
+		} catch ( Kivun_Test_Json $answer ) {
+			$this->assertFalse( $answer->ok );
+			$this->assertSame( 404, $answer->status );
+			$this->assertSame( array(), Kivun_Test_State::$updates );
+		} finally {
+			$_POST             = array();
+			$wpdb->var_handler = null;
+		}
+	}
 }

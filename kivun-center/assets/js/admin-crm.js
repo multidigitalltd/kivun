@@ -131,6 +131,47 @@
 		});
 	});
 
+	// Coordinator select — hand the lead over, save on change.
+	document.addEventListener('change', function (e) {
+		var select = e.target.closest('.kivun-handler-select');
+		if (!select) { return; }
+
+		var indicator = indicatorFor(select);
+		if (indicator) { indicator.style.display = 'none'; }
+
+		var previous = committed(select);
+		var wanted = select.value;
+
+		post({
+			action: 'kivun_assign_handler',
+			nonce: kivunCrm.nonce,
+			id: select.dataset.id,
+			handler: wanted
+		}).then(function (res) {
+			if (!res || !res.success) {
+				// Back to whoever the row actually names. Leaving the picked
+				// name on screen is how a lead nobody was given reads as one
+				// somebody was.
+				select.value = previous;
+				flash(indicator, false, reason(res));
+				return;
+			}
+
+			var stored = (res.data && undefined !== res.data.handler) ? res.data.handler : wanted;
+			select.value = stored;
+			select.dataset.prev = stored;
+
+			// The note saying why nobody was picked has been answered.
+			var why = select.parentNode.querySelector('.kivun-handler-why');
+			if (why && stored) { why.parentNode.removeChild(why); }
+
+			flash(indicator, true);
+		}).catch(function () {
+			select.value = previous;
+			flash(indicator, false, 'אין חיבור');
+		});
+	});
+
 	// Delete a CRM row.
 	document.addEventListener('click', function (e) {
 		var btn = e.target.closest('.kivun-delete-row');
