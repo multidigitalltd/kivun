@@ -1186,7 +1186,8 @@ td.kivun-app-contact a { display: block; }
 	font-size: .82rem;
 	resize: vertical;
 }
-.kivun-cc-leadtable .kivun-status-select {
+.kivun-cc-leadtable .kivun-status-select,
+.kivun-cc-leadtable .kivun-handler-select {
 	box-sizing: border-box;
 	min-width: 0;
 	padding: .4rem .35rem;
@@ -1196,6 +1197,13 @@ td.kivun-app-contact a { display: block; }
 	font: inherit;
 	font-size: .82rem;
 	max-width: 100%;
+}
+/* Why nobody was picked, under the field that puts somebody there. Its own
+   line, like the status label: beside a control it reads as part of it. */
+.kivun-cc-leadtable .kivun-handler-why {
+	display: block;
+	margin-top: .25rem;
+	font-size: .76rem;
 }
 .kivun-cc-pager { display: flex; align-items: center; justify-content: center; gap: .75rem; margin-top: 1rem; }
 .kivun-cc-pager__state { font-size: .85rem; color: var(--kivun-muted); }
@@ -2307,6 +2315,7 @@ body.kivun-ty-open { overflow: hidden; }
    border out past the card's own edge. */
 .kivun-cc-table.is-stacked .kivun-notes-input,
 .kivun-cc-table.is-stacked .kivun-status-select,
+.kivun-cc-table.is-stacked .kivun-handler-select,
 .kivun-cc-table.is-stacked select,
 .kivun-cc-table.is-stacked textarea,
 .kivun-cc-table.is-stacked input[type="text"] {

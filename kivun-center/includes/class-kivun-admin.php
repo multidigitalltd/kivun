@@ -51,6 +51,9 @@ class Kivun_Admin {
 		// Notes save.
 		add_action( 'wp_ajax_kivun_save_note', array( __CLASS__, 'ajax_save_note' ) );
 
+		// Hand a lead to a coordinator by hand, where the rota could not.
+		add_action( 'wp_ajax_kivun_assign_handler', array( __CLASS__, 'ajax_assign_handler' ) );
+
 		// Delete a CRM row (registration / application).
 		add_action( 'wp_ajax_kivun_delete_row', array( __CLASS__, 'ajax_delete_row' ) );
 	}
@@ -924,6 +927,64 @@ class Kivun_Admin {
 		return $html;
 	}
 
+	/**
+	 * Build an escaped coordinator <select> for a lead.
+	 *
+	 * The rota picks somebody for most leads, but not for all of them: an
+	 * enquiry that arrived with no gender on it is one the rota cannot place,
+	 * and it was landing in the list with nobody's name against it and no way
+	 * to put one there. So the column is a control rather than a word — the
+	 * unplaced ones get given to somebody by hand, and a lead handed over to
+	 * a colleague can be moved.
+	 *
+	 * @param int    $id      The lead row ID.
+	 * @param string $current The stored coordinator address.
+	 * @return string
+	 */
+	public static function handler_select( int $id, string $current ): string {
+		$current = trim( $current );
+		$roster  = Kivun_Coordinators::all();
+
+		$html = sprintf(
+			'<select class="kivun-handler-select" data-id="%d" aria-label="%s">',
+			$id,
+			esc_attr__( 'רכז/ת מטפל/ת', 'kivun' )
+		);
+
+		// Nobody, and the way back to nobody.
+		$html .= sprintf(
+			'<option value=""%s>%s</option>',
+			selected( '', $current, false ),
+			esc_html__( '— ללא —', 'kivun' )
+		);
+
+		// Somebody who has since left the roster still appears, and selected:
+		// they did handle this lead, and a control that cannot show the value
+		// its row holds shows the first option instead — so opening the page
+		// would offer to reassign the lead to whoever happens to be first,
+		// and a stray click would do it.
+		if ( '' !== $current && ! isset( $roster[ $current ] ) ) {
+			$html .= sprintf(
+				'<option value="%s" selected=\'selected\'>%s</option>',
+				esc_attr( $current ),
+				esc_html( Kivun_Coordinators::label_for( $current ) )
+			);
+		}
+
+		foreach ( $roster as $email => $record ) {
+			$html .= sprintf(
+				'<option value="%s"%s>%s</option>',
+				esc_attr( $email ),
+				selected( $current, $email, false ),
+				esc_html( '' !== trim( (string) $record['name'] ) ? $record['name'] : $email )
+			);
+		}
+
+		$html .= '</select>';
+
+		return $html;
+	}
+
 	// ── AJAX: update status ────────────────────────────────────────────────────.
 
 	/**
@@ -1018,6 +1079,90 @@ class Kivun_Admin {
 				'status' => (string) $stored,
 				'label'  => (string) ( $known[ (string) $stored ] ?? $stored ),
 				'chosen' => self::is_shown( $table, (string) $stored ),
+			)
+		);
+	}
+
+	/**
+	 * AJAX handler: hand a lead to a coordinator, or take it off one.
+	 *
+	 * Leads only. The rota is a leads idea, and the column it writes to is on
+	 * the leads table.
+	 *
+	 * @return void
+	 */
+	public static function ajax_assign_handler(): void {
+		// Explained rather than dying: see ajax_update_status().
+		if ( ! check_ajax_referer( 'kivun_admin_nonce', 'nonce', false ) ) {
+			wp_send_json_error( array( 'message' => __( 'פג תוקף העמוד. רעננו את הדף ונסו שוב.', 'kivun' ) ), 403 );
+		}
+
+		$id = absint( wp_unslash( $_POST['id'] ?? 0 ) );
+
+		// Read twice: once as an address and once as plain text. Nobody and a
+		// malformed address both come out of sanitize_email() as '', and the
+		// first means "take this lead off whoever has it" while the second is
+		// a request to refuse — silently reading the second as the first
+		// would quietly unassign a lead somebody meant to hand over.
+		$handler = sanitize_email( wp_unslash( $_POST['handler'] ?? '' ) );
+		$wanted  = trim( sanitize_text_field( wp_unslash( $_POST['handler'] ?? '' ) ) );
+
+		if ( ! $id || ( '' !== $wanted && '' === $handler ) ) {
+			wp_send_json_error( array( 'message' => __( 'בקשה לא תקינה.', 'kivun' ) ), 400 );
+		}
+
+		// Working a lead means saying who is working it, so whoever can read
+		// the leads can set this — the same reasoning as the status and the
+		// note beside it.
+		$may_edit = current_user_can( 'edit_posts' ) || Kivun_Content_Creator::can_manage_leads();
+		if ( ! $may_edit ) {
+			wp_send_json_error( array( 'message' => __( 'אין לך הרשאה לעדכן את השורה הזו.', 'kivun' ) ), 403 );
+		}
+
+		global $wpdb;
+		$name = $wpdb->prefix . 'kivun_registrations';
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$before = $wpdb->get_var( $wpdb->prepare( "SELECT coordinator FROM {$name} WHERE id = %d", $id ) );
+
+		if ( null === $before ) {
+			wp_send_json_error( array( 'message' => __( 'השורה לא נמצאה — ייתכן שנמחקה.', 'kivun' ) ), 404 );
+		}
+
+		// Somebody off the roster is not somebody to hand a lead to. The one
+		// exception is the address already on the row: a coordinator who has
+		// since left is still offered, as the value the control is showing,
+		// and re-picking what is already there should not be an error.
+		$known = '' === $handler
+			|| (bool) Kivun_Coordinators::by_email( $handler )
+			|| trim( (string) $before ) === $handler;
+		if ( ! $known ) {
+			wp_send_json_error( array( 'message' => __( 'הרכז/ת לא נמצאים ברשימה.', 'kivun' ) ), 400 );
+		}
+
+		$updated = $wpdb->update(
+			$name,
+			array( 'coordinator' => $handler ),
+			array( 'id' => $id ),
+			array( '%s' ),
+			array( '%d' )
+		);
+
+		if ( false === $updated ) {
+			wp_send_json_error( array( 'message' => __( 'השמירה נכשלה. נסו שוב.', 'kivun' ) ), 500 );
+		}
+
+		$stored = $wpdb->get_var( $wpdb->prepare( "SELECT coordinator FROM {$name} WHERE id = %d", $id ) );
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+
+		if ( null === $stored ) {
+			wp_send_json_error( array( 'message' => __( 'השורה לא נמצאה — ייתכן שנמחקה.', 'kivun' ) ), 404 );
+		}
+
+		wp_send_json_success(
+			array(
+				'handler' => (string) $stored,
+				'label'   => Kivun_Coordinators::label_for( (string) $stored ),
 			)
 		);
 	}

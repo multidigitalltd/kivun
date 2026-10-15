@@ -630,6 +630,87 @@ function kivun_test_set_caps( array $caps ): void {
 	Kivun_Test_State::$caps = array_fill_keys( $caps, true );
 }
 
+// ── AJAX ──────────────────────────────────────────────────────────────────────
+
+/**
+ * What an AJAX handler answered.
+ *
+ * Thrown rather than returned, because that is what the real functions do to
+ * the handler: they send and exit, so nothing after the call runs. A test
+ * that returned instead would let a handler carry on past a refusal and pass
+ * on the second answer it gave.
+ */
+final class Kivun_Test_Json extends Exception {
+
+	/**
+	 * Whether it was a success.
+	 */
+	public bool $ok;
+
+	/**
+	 * The payload.
+	 *
+	 * @var mixed
+	 */
+	public $data;
+
+	/**
+	 * The HTTP status, where one was given.
+	 */
+	public int $status;
+
+	/**
+	 * @param bool  $ok   Whether it was a success.
+	 * @param mixed $data The payload.
+	 * @param int   $code The HTTP status.
+	 */
+	public function __construct( bool $ok, $data = null, int $code = 200 ) {
+		parent::__construct( $ok ? 'success' : 'error' );
+		$this->ok     = $ok;
+		$this->data   = $data;
+		$this->status = $code;
+	}
+}
+
+/**
+ * Answer an AJAX request and stop.
+ *
+ * @param mixed $data The payload.
+ * @param int   $code The HTTP status.
+ * @return void
+ * @throws Kivun_Test_Json Always — it is the answer.
+ */
+function wp_send_json_success( $data = null, int $code = 200 ): void {
+	throw new Kivun_Test_Json( true, $data, $code );
+}
+
+/**
+ * Refuse an AJAX request and stop.
+ *
+ * @param mixed $data The payload.
+ * @param int   $code The HTTP status.
+ * @return void
+ * @throws Kivun_Test_Json Always.
+ */
+function wp_send_json_error( $data = null, int $code = 200 ): void {
+	throw new Kivun_Test_Json( false, $data, $code );
+}
+
+/**
+ * The nonce check. Tests drive the handlers directly, so there is no request
+ * to have signed; what the check is for — a stale page — has its own path in
+ * the handlers and is not what these tests are about.
+ *
+ * @param string $action The action.
+ * @param string $field  The field holding the nonce.
+ * @param bool   $die    Whether to die on failure.
+ * @return bool
+ */
+function check_ajax_referer( string $action = '-1', string $field = '', bool $die = true ): bool {
+	unset( $action, $field, $die );
+	return true;
+}
+
 // ── Time ──────────────────────────────────────────────────────────────────────
 
 /**
