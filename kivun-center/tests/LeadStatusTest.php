@@ -46,34 +46,71 @@ final class LeadStatusTest extends TestCase {
 		return Kivun_Admin::status_select( 'registrations', 7, $current, Kivun_Admin::reg_statuses() );
 	}
 
-	// ── Which statuses count as a decision ────────────────────────────────────
+	// ── The two questions, which are not the same question ────────────────────
 
 	/**
-	 * The three the system writes by itself, and no status at all, are not
-	 * decisions. Everything a person can pick is.
+	 * What is worth showing. The three the system writes when a lead arrives
+	 * say only that a lead arrived, so the field stays empty; everything else
+	 * says something, and is shown.
 	 *
 	 * @return void
 	 */
-	public function test_what_counts_as_handled(): void {
+	public function test_what_is_worth_showing(): void {
 		foreach ( array( '', 'pending', 'new', 'new_lead' ) as $status ) {
 			$this->assertFalse(
-				Kivun_Admin::is_handled( 'registrations', $status ),
-				"'{$status}' is written when the lead arrives, so it is not somebody's answer"
+				Kivun_Admin::is_shown( 'registrations', $status ),
+				"'{$status}' is written when the lead arrives and says nothing about it"
 			);
 		}
 
 		foreach ( array( 'contacted', 'interested', 'enrolled', 'closed', 'not_relevant', 'next_cycle' ) as $status ) {
 			$this->assertTrue(
-				Kivun_Admin::is_handled( 'registrations', $status ),
-				"'{$status}' is only ever there because somebody put it there"
+				Kivun_Admin::is_shown( 'registrations', $status ),
+				"'{$status}' says something the reader needs"
 			);
 		}
 	}
 
 	/**
-	 * Each one the rule hides is a status the vocabulary still knows, so a
-	 * renamed key cannot quietly stop matching and put "ליד חדש" back on
-	 * every row.
+	 * What counts as nobody having dealt with it, which is the other
+	 * question. A waiting-list sign-up is written by the form too, before
+	 * anybody here has seen it — so it is shown, because the visitor asked
+	 * for it, and it is still waiting for somebody to ring them.
+	 *
+	 * Read as handled, every waiting-list sign-up would have been quietly
+	 * missing from the list of leads to call, which is the list the filter
+	 * exists to produce.
+	 *
+	 * @return void
+	 */
+	public function test_a_waiting_list_sign_up_is_shown_and_still_waiting(): void {
+		$this->assertTrue( Kivun_Admin::is_shown( 'registrations', 'next_cycle' ) );
+		$this->assertContains( 'next_cycle', Kivun_Admin::untouched_statuses( 'registrations' ) );
+		$this->assertContains( 'next_cycle', Kivun_Admin::filter_status_values( array( Kivun_Admin::UNTOUCHED_FILTER ) ) );
+
+		// Shown means shown: the field names it and so does the label.
+		$html = $this->leads_control( 'next_cycle' );
+		$this->assertStringContainsString( "<option value=\"next_cycle\" selected='selected'>", $html );
+		$this->assertStringContainsString( 'data-status="next_cycle">למחזור הבא</span>', $html );
+	}
+
+	/**
+	 * It is the form that writes it, so this test is only true while that is
+	 * what the form writes.
+	 *
+	 * @return void
+	 */
+	public function test_the_sign_up_form_still_writes_it(): void {
+		$this->assertStringContainsString(
+			"\$status = \$is_next_cycle ? 'next_cycle' : 'new_lead';",
+			(string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-workshops.php' ),
+			'the waiting-list status is written somewhere else now, so check it is still nobody\'s decision'
+		);
+	}
+
+	/**
+	 * Each status the rules name is one the vocabulary knows, so a renamed
+	 * key cannot quietly stop matching and put "ליד חדש" back on every row.
 	 *
 	 * @return void
 	 */
@@ -84,7 +121,7 @@ final class LeadStatusTest extends TestCase {
 			if ( '' === $status ) {
 				continue;
 			}
-			$this->assertArrayHasKey( $status, $known, "{$status} is hidden from the list but is not in it" );
+			$this->assertArrayHasKey( $status, $known, "{$status} is named by the rules but is not a status" );
 		}
 	}
 
@@ -97,12 +134,30 @@ final class LeadStatusTest extends TestCase {
 	 * @return void
 	 */
 	public function test_applications_are_left_as_they_were(): void {
-		$this->assertTrue( Kivun_Admin::is_handled( 'applications', 'new' ) );
+		$this->assertTrue( Kivun_Admin::is_shown( 'applications', 'new' ) );
 
 		$html = Kivun_Admin::status_select( 'applications', 3, 'new', Kivun_Employer::app_statuses() );
 
 		$this->assertStringContainsString( ">חדש<", $html );
 		$this->assertStringContainsString( 'data-status="new">חדש<', $html );
+	}
+
+	/**
+	 * And they are not offered the empty option, which the handler refuses to
+	 * write for anything but a lead: a choice that can only answer 400 and
+	 * put itself back is worse than no choice at all.
+	 *
+	 * @return void
+	 */
+	public function test_applications_are_not_offered_a_choice_that_cannot_work(): void {
+		$html = Kivun_Admin::status_select( 'applications', 3, 'new', Kivun_Employer::app_statuses() );
+
+		$this->assertStringNotContainsString( '<option value=""', $html );
+		$this->assertStringContainsString(
+			"\$clearing && 'registrations' !== \$table",
+			(string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-admin.php' ),
+			'the handler no longer refuses it, so the two have stopped agreeing'
+		);
 	}
 
 	// ── What the control shows ────────────────────────────────────────────────
@@ -327,11 +382,11 @@ final class LeadStatusTest extends TestCase {
 	 * @return void
 	 */
 	public function test_the_answer_says_whether_to_show_what_was_stored(): void {
-		$this->assertFalse( Kivun_Admin::is_handled( 'registrations', 'new_lead' ) );
-		$this->assertTrue( Kivun_Admin::is_handled( 'registrations', 'contacted' ) );
+		$this->assertFalse( Kivun_Admin::is_shown( 'registrations', 'new_lead' ) );
+		$this->assertTrue( Kivun_Admin::is_shown( 'registrations', 'contacted' ) );
 
 		$this->assertStringContainsString(
-			"'chosen' => self::is_handled( \$table, (string) \$stored )",
+			"'chosen' => self::is_shown( \$table, (string) \$stored )",
 			(string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-admin.php' ),
 			'the handler no longer tells the browser whether the stored status is a decision'
 		);

@@ -707,7 +707,7 @@ class Kivun_Admin {
 	}
 
 	/**
-	 * The statuses a lead carries before anybody has looked at it.
+	 * The statuses that say nothing about the lead.
 	 *
 	 * Every lead is stored with one of these the moment it arrives — the form
 	 * writes 'new_lead', a course registration takes the column's 'pending' —
@@ -721,43 +721,79 @@ class Kivun_Admin {
 	 * Nothing is removed from the vocabulary — the filters and the export
 	 * still name these, because they are what the rows hold.
 	 *
-	 * Only the leads table. CV applications are worked on the employer's own
-	 * dashboard as well as here, and that screen has a status list of its
-	 * own; emptying one of the two would have them disagree about the same
-	 * application.
+	 * Not the same list as untouched_statuses(), which is a question about
+	 * whether anybody has acted. A waiting-list sign-up is written by the
+	 * form too, but 'למחזור הבא' is something the visitor said, and a field
+	 * emptied of it would be throwing away the reason the lead is there.
+	 *
+	 * Only the leads table, so this is empty for anything else. CV
+	 * applications are worked on the employer's own dashboard as well as
+	 * here, and that screen has a status list of its own; emptying one of the
+	 * two would have them disagree about the same application.
 	 *
 	 * @param string $table The CRM table key ('registrations' or 'applications').
 	 * @return array<int,string>
 	 */
-	public static function untouched_statuses( string $table ): array {
+	public static function blank_statuses( string $table ): array {
 		if ( 'registrations' !== $table ) {
-			return array( '' );
+			return array();
 		}
 
-		return array( '', 'pending', 'new', 'new_lead' );
+		return array( 'pending', 'new', 'new_lead' );
 	}
 
 	/**
-	 * Whether a stored status is somebody's decision rather than the one the
-	 * row was created with.
+	 * Whether a stored status is worth putting on the screen.
 	 *
 	 * @param string $table  The CRM table key.
 	 * @param string $status The stored status.
 	 * @return bool
 	 */
-	public static function is_handled( string $table, string $status ): bool {
-		return ! in_array( $status, self::untouched_statuses( $table ), true );
+	public static function is_shown( string $table, string $status ): bool {
+		return '' !== $status && ! in_array( $status, self::blank_statuses( $table ), true );
+	}
+
+	/**
+	 * What "nobody has dealt with this" matches.
+	 *
+	 * The blank ones, and 'next_cycle' with them: the sign-up form writes
+	 * that by itself when somebody asks for the next cycle, before anybody
+	 * here has seen it. Reading it as handled would have quietly kept every
+	 * waiting-list sign-up out of the list of leads waiting to be called —
+	 * which is the list this exists to produce.
+	 *
+	 * Setting one by hand does not take the lead off that list either, and
+	 * should not: somebody still has to ring them. Marking what came of the
+	 * call is what moves it.
+	 *
+	 * @param string $table The CRM table key.
+	 * @return array<int,string>
+	 */
+	public static function untouched_statuses( string $table ): array {
+		// The empty string with them: no code writes one, but a column that
+		// holds it should not be the one lead that hides from the filter.
+		$untouched = array_merge( array( '' ), self::blank_statuses( $table ) );
+
+		if ( 'registrations' === $table ) {
+			$untouched[] = 'next_cycle';
+		}
+
+		return $untouched;
 	}
 
 	/**
 	 * The status vocabulary the leads filter offers.
 	 *
-	 * The three statuses a lead is captured with are one entry here rather
-	 * than three. They are the same answer told apart by where the lead came
-	 * from — a course registration is 'pending' and a form enquiry is
-	 * 'new_lead' — which is a distinction about our own plumbing, not about
-	 * the lead, and the question being asked of this filter is the plain one:
-	 * which of these has nobody dealt with?
+	 * The statuses a lead is captured with are one entry here rather than
+	 * three. They are the same answer told apart by where the lead came from
+	 * — a course registration is 'pending' and a form enquiry is 'new_lead' —
+	 * which is a distinction about our own plumbing, not about the lead, and
+	 * the question being asked of this filter is the plain one: which of
+	 * these has nobody dealt with?
+	 *
+	 * Everything a row can visibly be in is offered beside it, 'למחזור הבא'
+	 * included — it is both a thing to look for on its own and one of the
+	 * things "לא טופלו" finds, and choosing both asks for both.
 	 *
 	 * @return array<string,string>
 	 */
@@ -765,7 +801,7 @@ class Kivun_Admin {
 		$statuses = array( self::UNTOUCHED_FILTER => __( 'לא טופלו', 'kivun' ) );
 
 		foreach ( self::reg_statuses() as $value => $label ) {
-			if ( self::is_handled( 'registrations', (string) $value ) ) {
+			if ( self::is_shown( 'registrations', (string) $value ) ) {
 				$statuses[ $value ] = $label;
 			}
 		}
@@ -829,7 +865,7 @@ class Kivun_Admin {
 	 * @return string
 	 */
 	public static function status_select( string $table, int $id, string $current, array $options ): string {
-		$handled = self::is_handled( $table, $current );
+		$shown = self::is_shown( $table, $current );
 
 		$html = sprintf(
 			'<select class="kivun-status-select" data-table="%s" data-id="%d" aria-label="%s">',
@@ -841,10 +877,17 @@ class Kivun_Admin {
 		// Empty, and selected until somebody chooses: a row nobody has reached
 		// says nothing rather than saying "ליד חדש". It stays on the list once
 		// a status is set, as the way back from one picked by mistake.
-		$html .= sprintf( '<option value=""%s></option>', selected( $handled, false, false ) );
+		//
+		// Only where a row can be in no state at all. A CV application is
+		// always in one of its own statuses and the handler refuses to write
+		// an empty one, so offering it there would be a choice that can only
+		// fail.
+		if ( self::blank_statuses( $table ) ) {
+			$html .= sprintf( '<option value=""%s></option>', selected( $shown, false, false ) );
+		}
 
 		foreach ( $options as $val => $label ) {
-			if ( ! self::is_handled( $table, (string) $val ) ) {
+			if ( ! self::is_shown( $table, (string) $val ) ) {
 				continue;
 			}
 			$html .= sprintf(
@@ -869,8 +912,8 @@ class Kivun_Admin {
 		// the answer the moment one is picked.
 		$html .= sprintf(
 			'<span class="kivun-status-badge" data-status="%s">%s</span>',
-			esc_attr( $handled ? $current : '' ),
-			esc_html( $handled ? ( $options[ $current ] ?? $current ) : '' )
+			esc_attr( $shown ? $current : '' ),
+			esc_html( $shown ? ( $options[ $current ] ?? $current ) : '' )
 		);
 
 		return $html;
@@ -969,7 +1012,7 @@ class Kivun_Admin {
 			array(
 				'status' => (string) $stored,
 				'label'  => (string) ( $known[ (string) $stored ] ?? $stored ),
-				'chosen' => self::is_handled( $table, (string) $stored ),
+				'chosen' => self::is_shown( $table, (string) $stored ),
 			)
 		);
 	}
