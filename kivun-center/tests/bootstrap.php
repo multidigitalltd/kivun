@@ -778,11 +778,22 @@ function home_url( string $path = '/' ): string {
 /**
  * Add query arguments to a URL.
  *
- * @param array<string,mixed> $args The arguments.
- * @param string              $url  The URL.
+ * Core takes either a map and a URL, or one key, one value and a URL, and
+ * the plugin uses both. A stub that took only the first form would reject
+ * code that works — and reject it with a type error, so the test would read
+ * as the feature being broken.
+ *
+ * @param array<string,mixed>|string $args The arguments, or one key.
+ * @param string                     $url  The URL, or the value when a key was given.
+ * @param string                     $rest The URL, when a key and value were given.
  * @return string
  */
-function add_query_arg( array $args, string $url = '' ): string {
+function add_query_arg( $args, string $url = '', string $rest = '' ): string {
+	if ( ! is_array( $args ) ) {
+		$args = array( $args => $url );
+		$url  = $rest;
+	}
+
 	$parts = wp_parse_url( $url );
 	$query = array();
 	if ( ! empty( $parts['query'] ) ) {
