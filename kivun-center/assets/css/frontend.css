@@ -1416,13 +1416,6 @@ td.kivun-app-contact a { display: block; }
 	color: var(--kivun-muted);
 	white-space: nowrap;
 }
-.kivun-short-slug__base {
-	font-size: .82rem;
-	color: var(--kivun-muted);
-	white-space: nowrap;
-	direction: ltr;
-}
-.kivun-short-slug { max-width: 16rem; }
 
 /* The preview of a link that does not exist yet. Deliberately plain text
    with no button beside it: it leads nowhere until the row is saved, and a
@@ -1445,12 +1438,6 @@ td.kivun-app-contact a { display: block; }
 .kivun-short-preview__note {
 	color: var(--kivun-muted);
 	font-style: italic;
-}
-.kivun-short-preview__taken {
-	display: block;
-	margin-top: .15rem;
-	color: #92400e;
-	font-weight: 600;
 }
 .kivun-camp-saved {
 	flex: 1 1 auto;

@@ -390,4 +390,72 @@ final class ShortLinkTest extends TestCase {
 		$this->assertStringContainsString( 'dataset.shortAlphabet', $js, 'the browser no longer reads it, so it has one of its own' );
 		$this->assertStringNotContainsString( self::class, $js );
 	}
+
+	// ── The code is drawn, never typed ────────────────────────────────────────
+
+	/**
+	 * The form has no box to type a code into.
+	 *
+	 * It used to have one, beside a line that spelled out the same address —
+	 * two places saying one thing, which is what sent this back. The code is
+	 * generated for every link now, so the field only carries it to the save.
+	 *
+	 * @return void
+	 */
+	public function test_there_is_nothing_to_type_a_code_into(): void {
+		$php = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-content-creator.php' );
+
+		$this->assertStringContainsString( 'type="hidden"', $php );
+		$this->assertStringContainsString( 'class="kivun-short-slug"', $php );
+		$this->assertStringNotContainsString( 'יווצר אוטומטית', $php, 'the typed-code box is back' );
+		$this->assertStringNotContainsString( 'kivun-short-slug__base', $php );
+	}
+
+	/**
+	 * The line that spells out the address is shown only where there is no
+	 * address yet.
+	 *
+	 * Once the link is saved its real short URL sits above with a copy
+	 * button, and a preview of what it is "about to be" beside it is the
+	 * same duplication in its other form.
+	 *
+	 * @return void
+	 */
+	public function test_the_preview_belongs_to_a_link_that_has_none(): void {
+		$php   = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-content-creator.php' );
+		$start = strpos( $php, "<?php if ( '' === \$kivun_edit_short ) : ?>" );
+
+		$this->assertIsInt( $start, 'the preview is no longer kept to links without a code' );
+		$this->assertStringContainsString(
+			'kivun-short-preview',
+			substr( $php, $start, 1800 ),
+			'the preview moved out of that branch'
+		);
+	}
+
+	/**
+	 * And the machinery that served typing is gone with it.
+	 *
+	 * Asking the server whether a code is taken, and the warning that said
+	 * so, only ever answered a code somebody had typed. The server still
+	 * settles collisions on save, which is where it always mattered.
+	 *
+	 * @return void
+	 */
+	public function test_the_typing_machinery_went_with_it(): void {
+		$js  = (string) file_get_contents( KIVUN_DIR . 'assets/js/frontend.js' );
+		$php = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-short-links.php' );
+		$cc  = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-content-creator.php' );
+
+		foreach ( array( 'kivunShortCheck', 'kivunShortTaken', 'shortResolved', 'shortAsked' ) as $gone ) {
+			$this->assertStringNotContainsString( $gone, $js, "{$gone} is still there with nothing to feed it" );
+		}
+		$this->assertStringNotContainsString( 'ajax_preview', $php );
+		$this->assertStringNotContainsString( 'kivun_short_preview', $php );
+		$this->assertStringNotContainsString( 'short-preview__taken', $cc );
+
+		// What still settles a collision, and must not have gone with them.
+		$this->assertStringContainsString( 'function resolve_slug', $php );
+		$this->assertStringContainsString( 'function slug_for_save', $php );
+	}
 }

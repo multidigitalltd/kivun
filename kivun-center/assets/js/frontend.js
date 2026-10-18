@@ -1374,8 +1374,6 @@
 				var slugEl = form.querySelector('.kivun-short-slug');
 				if (slugEl && kivunShortClean(slugEl.value) !== res.data.slug) {
 					slugEl.value = res.data.slug;
-					form.dataset.shortAsked = res.data.slug;
-					form.dataset.shortResolved = res.data.slug;
 					kivunShortRefresh(form, true);
 				}
 			}
@@ -1483,16 +1481,6 @@
 		var field = form.querySelector('.kivun-short-slug');
 		var slug = field ? kivunShortClean(field.value) : '';
 
-		// When the server has already said what this code resolves to — a
-		// taken one becomes the next free variant — use that, not the one
-		// typed. Both reach the same row today, because the server resolves
-		// again on save; sending the answer we were given keeps the address
-		// on screen and the address stored the same string rather than two
-		// that merely agree.
-		if (slug && form.dataset.shortAsked === slug && form.dataset.shortResolved) {
-			slug = form.dataset.shortResolved;
-		}
-
 		// Only for a link that has none yet: on an edit this stays empty and
 		// the server keeps the code the link already has, so a reworded
 		// message cannot break a link somebody already shared.
@@ -1544,62 +1532,9 @@
 
 		row.hidden = !(ready && typed);
 
-		// A typed code may already belong to another link, and only the
-		// server knows. Asked after a pause so it is one question per code
-		// rather than one per keystroke; the drafted codes are not asked
-		// about, since nothing has seen them.
-		// Cleared the moment the code changes, not when the answer comes
-		// back. Otherwise the warning about the previous code sits there
-		// over a new one for as long as the round trip takes, saying
-		// something untrue about what is on the screen.
-		kivunShortTaken(form, false);
-
-		var wanted = kivunShortClean(field.value);
-		if (ready && wanted) { kivunShortCheck(form, field, wanted); }
 	}
 
 	// Say, or stop saying, that the typed code was already in use.
-	function kivunShortTaken(form, taken) {
-		var note = form.querySelector('.kivun-short-preview__taken');
-		if (note) { note.hidden = !taken; }
-	}
-
-	var kivunShortTimers = new WeakMap();
-
-	function kivunShortCheck(form, field, wanted) {
-		clearTimeout(kivunShortTimers.get(form));
-		kivunShortTimers.set(form, setTimeout(function () {
-			post(params({
-				action: 'kivun_short_preview',
-				nonce: kivun.nonce,
-				slug: wanted,
-				link_id: form.dataset.id || 0
-			}))
-				.then(function (res) {
-					if (!res.success || !res.data) { return; }
-					// Ignore an answer about a code that is no longer the one
-					// in the box — a slow reply must not overwrite a newer
-					// question's answer.
-					if (kivunShortClean(field.value) !== wanted) { return; }
-
-					var url = form.querySelector('.kivun-short-preview__url');
-					if (url && res.data.url) { url.textContent = res.data.url; }
-					kivunShortTaken(form, !!res.data.taken);
-
-					// Remembered against the code it answers, so the save can
-					// send the resolved one. Sending the typed code instead
-					// would land on the same answer only because the server
-					// works it out a second time — true today, and one
-					// change away from the screen and the row disagreeing.
-					form.dataset.shortAsked = wanted;
-					form.dataset.shortResolved = res.data.slug || wanted;
-				})
-				// The preview is a courtesy; a failed check leaves what the
-				// browser worked out rather than emptying the line.
-				.catch(function () {});
-		}, 400));
-	}
-
 	// Choosing "other" as the target reveals the free URL field. The picker
 	// appears both in the campaign form and in the shortcut for creating a
 	// campaign while assigning a phone number.
