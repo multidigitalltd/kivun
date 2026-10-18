@@ -334,12 +334,14 @@ class Kivun_Forms_Router {
 	 * @return string The destination email (may be empty).
 	 */
 	private static function email_for_post( int $post_id ): string {
-		if ( $post_id && in_array( get_post_type( $post_id ), array( 'kivun_course', 'kivun_workshop', 'kivun_session', 'kivun_event' ), true ) ) {
-			$specific = (string) get_post_meta( $post_id, '_kivun_contact_email', true );
-			if ( '' !== trim( $specific ) && is_email( $specific ) ) {
-				return $specific;
-			}
+		// Asked of the one place that reads it, because the lead is now also
+		// filed against this address: the page that receives a lead and the
+		// name shown beside it in the list have to be the same answer.
+		$specific = Kivun_Coordinators::page_handler( $post_id );
+		if ( '' !== $specific ) {
+			return $specific;
 		}
+
 		return (string) Kivun_Admin_Settings::get( 'forms_router_email', '' );
 	}
 

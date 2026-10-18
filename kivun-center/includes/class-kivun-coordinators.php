@@ -353,16 +353,59 @@ class Kivun_Coordinators {
 	}
 
 	/**
-	 * Tie a freshly filed lead to the coordinator handling this submission.
+	 * The address a page sends its own leads to, where one is set.
+	 *
+	 * Courses, workshops, sessions and events each carry an "אימייל לקבלת
+	 * הרשמות" naming who deals with that page's enquiries. For a lead the
+	 * rota never saw — which is every lead but the jobs board's — that field
+	 * is the answer to "who is handling this one", and it was being used to
+	 * address the mail and then forgotten.
+	 *
+	 * The site-wide address behind it in the router is deliberately not read
+	 * here. It is where everything goes when nothing else was said, so
+	 * writing it on every lead would fill the column with one name that
+	 * tells the reader nothing.
+	 *
+	 * @param int $post_id The course/workshop/session/event the lead belongs to.
+	 * @return string The address, or '' when the page names none.
+	 */
+	public static function page_handler( int $post_id ): string {
+		if ( $post_id <= 0 ) {
+			return '';
+		}
+
+		$kinds = array( 'kivun_course', 'kivun_workshop', 'kivun_session', 'kivun_event' );
+		if ( ! in_array( (string) get_post_type( $post_id ), $kinds, true ) ) {
+			return '';
+		}
+
+		$email = trim( (string) get_post_meta( $post_id, '_kivun_contact_email', true ) );
+
+		return is_email( $email ) ? $email : '';
+	}
+
+	/**
+	 * Tie a freshly filed lead to whoever is handling it.
 	 *
 	 * Called by whoever writes the lead row, with the id it was given. When
-	 * the choice has already been made it is stamped on at once; when it has
-	 * not, the id is held and pick() stamps it a moment later.
+	 * the rota's choice has already been made it is stamped on at once; when
+	 * it has not, the id is held and pick() stamps it a moment later.
+	 *
+	 * Failing both, the page's own address is stamped. A lead from a course
+	 * or a landing page is never the rota's — those are not shared between
+	 * the coordinators, by design — but somebody is still receiving it, and
+	 * the column saying nobody was what sent every one of them to the screen
+	 * looking unhandled.
+	 *
+	 * The rota still wins where it chose: a late pick() overwrites this, and
+	 * a page that is on the rota's side of the site has no such field to
+	 * read anyway.
 	 *
 	 * @param int $lead_id The row id in kivun_registrations.
+	 * @param int $post_id The page the lead came from, where it is known.
 	 * @return void
 	 */
-	public static function attach_to_lead( int $lead_id ): void {
+	public static function attach_to_lead( int $lead_id, int $post_id = 0 ): void {
 		if ( $lead_id <= 0 ) {
 			return;
 		}
@@ -371,7 +414,10 @@ class Kivun_Coordinators {
 
 		if ( self::$current ) {
 			self::write_handler( $lead_id, (string) self::$current['email'] );
+			return;
 		}
+
+		self::write_handler( $lead_id, self::page_handler( $post_id ) );
 	}
 
 	/**
