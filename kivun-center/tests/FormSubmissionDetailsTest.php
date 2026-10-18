@@ -320,6 +320,34 @@ final class FormSubmissionDetailsTest extends TestCase {
 		$this->assertCount( 1, $GLOBALS['wpdb']->rows, 'Order completion must remain idempotent.' );
 	}
 
+	/**
+	 * A paid registration is filed against the same person as a free one.
+	 *
+	 * A course with a product on it goes through the order instead of
+	 * through register_free(), so the two halves of the same course can
+	 * disagree about who is handling them — and the paid half is the half
+	 * somebody has already taken money for.
+	 */
+	public function test_a_paid_registration_is_filed_against_the_course_s_address(): void {
+		Kivun_Test_State::$meta[42]['_kivun_wc_product_id']  = 100;
+		Kivun_Test_State::$meta[42]['_kivun_contact_email'] = 'rochel@kivun.test';
+
+		$this->register_course();
+		Kivun_WooCommerce::store_course_in_order( $GLOBALS['kivun_form_test_order'] );
+		Kivun_WooCommerce::on_order_complete( 500 );
+
+		$this->assertCount( 1, $GLOBALS['wpdb']->rows );
+		$this->assertSame(
+			array(
+				'table' => 'wp_kivun_registrations',
+				'data'  => array( 'coordinator' => 'rochel@kivun.test' ),
+				'where' => array( 'id' => 1 ),
+			),
+			end( $GLOBALS['wpdb']->updates ),
+			'the registration was paid for and stored, and nobody was recorded as having it'
+		);
+	}
+
 	private function register_course(): Kivun_Form_Test_Handler {
 		$settings = array(
 			'kivun_course_source' => 'manual',

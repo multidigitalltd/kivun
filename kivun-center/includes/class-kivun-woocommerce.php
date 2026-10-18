@@ -178,6 +178,13 @@ class Kivun_WooCommerce {
 			array( '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s' )
 		);
 
+		// Who is handling it: the address this course sends its registrations
+		// to, the same as the free path writes. A paid course goes through
+		// here instead of through register_free(), so without this the two
+		// halves of the same course would disagree — the ones who paid
+		// filed against nobody.
+		Kivun_Coordinators::attach_to_lead( (int) $wpdb->insert_id, (int) $reg['course_id'] );
+
 		Kivun_Mailer::send_course_registration( $reg['course_id'], $reg );
 
 		$order->update_meta_data( '_kivun_registration_saved', '1' );
