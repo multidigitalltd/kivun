@@ -113,6 +113,12 @@ class Kivun_Courses {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$wpdb->insert( $wpdb->prefix . 'kivun_registrations', $row, $fmt );
 
+		// Who is handling it: the address this course sends its registrations
+		// to. This path never asked the rota and never will — a registration
+		// is not a candidate to be shared out — so it filed every row with
+		// nobody against it, and the list could not say who had any of them.
+		Kivun_Coordinators::attach_to_lead( (int) $wpdb->insert_id, (int) $course_id );
+
 		Kivun_Mailer::send_course_registration( $course_id, compact( 'name', 'email', 'phone', 'city', 'message' ) );
 		do_action( 'kivun_after_registration', $course_id, compact( 'name', 'email', 'phone', 'city', 'message' ) );
 

@@ -186,10 +186,12 @@ class Kivun_Workshops {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$wpdb->insert( $wpdb->prefix . 'kivun_registrations', $row, $fmt );
 
-		// Which coordinator this one reached. Recorded here rather than put
-		// in the row above, because this path files the lead before the rota
-		// is consulted — the choice does not exist yet at this point.
-		Kivun_Coordinators::attach_to_lead( (int) $wpdb->insert_id );
+		// Who is handling this one. Recorded here rather than put in the row
+		// above, because this path files the lead before the rota is
+		// consulted — the choice does not exist yet at this point. The page
+		// is named too: a landing page's lead is nobody's on the rota, and
+		// the address that page sends its leads to is who has it.
+		Kivun_Coordinators::attach_to_lead( (int) $wpdb->insert_id, (int) $post_id );
 
 		$notify               = compact( 'name', 'email', 'phone', 'city', 'gender', 'message' );
 		$notify['next_cycle'] = $is_next_cycle;

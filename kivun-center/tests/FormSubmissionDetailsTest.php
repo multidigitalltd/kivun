@@ -218,6 +218,47 @@ final class FormSubmissionDetailsTest extends TestCase {
 		$this->assertCount( 1, $GLOBALS['wpdb']->rows, 'Do not insert a second row for forms saved by their Kivun action.' );
 	}
 
+	/**
+	 * A lead from a landing page is filed against the address that page
+	 * sends its leads to.
+	 *
+	 * The rota never sees these — courses and landing pages are not shared
+	 * between the coordinators, by design — so every one of them was stored
+	 * with nobody against it, and the whole "רכז/ת מטפל/ת" column read as
+	 * though not one lead on the site had been picked up. The page already
+	 * knows who deals with it; the mail has always gone there.
+	 */
+	public function test_a_landing_page_lead_is_filed_against_that_page_s_address(): void {
+		Kivun_Test_State::$meta[43]['_kivun_contact_email'] = 'rochel@kivun.test';
+
+		Kivun_Lead_Capture::capture( new Kivun_Form_Test_Record( $this->answers() ), null );
+
+		$this->assertCount( 1, $GLOBALS['wpdb']->rows );
+		$this->assertSame(
+			array(
+				'table' => 'wp_kivun_registrations',
+				'data'  => array( 'coordinator' => 'rochel@kivun.test' ),
+				'where' => array( 'id' => 1 ),
+			),
+			end( $GLOBALS['wpdb']->updates ),
+			'the lead was stored, and nobody was recorded as having it'
+		);
+	}
+
+	/**
+	 * And a page that names nobody leaves the column empty rather than
+	 * writing something meaningless into it — the site-wide address behind
+	 * it catches everything, so it would have read the same on every row.
+	 */
+	public function test_a_page_that_names_nobody_files_the_lead_against_nobody(): void {
+		Kivun_Test_State::$options['kivun_settings']['forms_router_email'] = 'leads@kivun.test';
+
+		Kivun_Lead_Capture::capture( new Kivun_Form_Test_Record( $this->answers() ), null );
+
+		$this->assertCount( 1, $GLOBALS['wpdb']->rows );
+		$this->assertSame( array(), $GLOBALS['wpdb']->updates );
+	}
+
 	public function test_generic_capture_keeps_a_lead_with_only_a_hidden_email_contact(): void {
 		$answers = array(
 			'email' => $this->field( 'hidden', 'אימייל', 'sara@example.test' ),
@@ -277,6 +318,34 @@ final class FormSubmissionDetailsTest extends TestCase {
 
 		Kivun_WooCommerce::on_order_complete( 500 );
 		$this->assertCount( 1, $GLOBALS['wpdb']->rows, 'Order completion must remain idempotent.' );
+	}
+
+	/**
+	 * A paid registration is filed against the same person as a free one.
+	 *
+	 * A course with a product on it goes through the order instead of
+	 * through register_free(), so the two halves of the same course can
+	 * disagree about who is handling them — and the paid half is the half
+	 * somebody has already taken money for.
+	 */
+	public function test_a_paid_registration_is_filed_against_the_course_s_address(): void {
+		Kivun_Test_State::$meta[42]['_kivun_wc_product_id']  = 100;
+		Kivun_Test_State::$meta[42]['_kivun_contact_email'] = 'rochel@kivun.test';
+
+		$this->register_course();
+		Kivun_WooCommerce::store_course_in_order( $GLOBALS['kivun_form_test_order'] );
+		Kivun_WooCommerce::on_order_complete( 500 );
+
+		$this->assertCount( 1, $GLOBALS['wpdb']->rows );
+		$this->assertSame(
+			array(
+				'table' => 'wp_kivun_registrations',
+				'data'  => array( 'coordinator' => 'rochel@kivun.test' ),
+				'where' => array( 'id' => 1 ),
+			),
+			end( $GLOBALS['wpdb']->updates ),
+			'the registration was paid for and stored, and nobody was recorded as having it'
+		);
 	}
 
 	private function register_course(): Kivun_Form_Test_Handler {

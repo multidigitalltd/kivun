@@ -252,6 +252,139 @@ final class LeadHandlerTest extends TestCase {
 		$this->assertSame( array(), Kivun_Test_State::$updates );
 	}
 
+	// ── The address a page sends its own leads to ─────────────────────────────
+
+	/**
+	 * Put a page on the test site with a lead address of its own.
+	 *
+	 * @param int    $post_id The post.
+	 * @param string $type    Its post type.
+	 * @param string $email   The address, or '' for none.
+	 * @return void
+	 */
+	private function page_with_email( int $post_id, string $type, string $email ): void {
+		Kivun_Test_State::$posts[ $post_id ]                          = array( 'post_type' => $type );
+		Kivun_Test_State::$meta[ $post_id ]['_kivun_contact_email']    = $email;
+	}
+
+	/**
+	 * A course, workshop, session or event names who deals with its
+	 * enquiries, and that is who the lead is filed against.
+	 *
+	 * @return void
+	 */
+	public function test_a_page_names_who_handles_its_leads(): void {
+		foreach ( array( 'kivun_course', 'kivun_workshop', 'kivun_session', 'kivun_event' ) as $i => $type ) {
+			$this->page_with_email( 100 + $i, $type, 'rochel@kivun.test' );
+			$this->assertSame( 'rochel@kivun.test', Kivun_Coordinators::page_handler( 100 + $i ) );
+		}
+	}
+
+	/**
+	 * A page with nothing in the field names nobody, and so does a page of a
+	 * kind that has no such field — a job is not a page that collects its
+	 * own leads.
+	 *
+	 * @return void
+	 */
+	public function test_a_page_that_names_nobody(): void {
+		$this->page_with_email( 200, 'kivun_course', '' );
+		$this->page_with_email( 201, 'kivun_course', 'not an address' );
+		$this->page_with_email( 202, 'kivun_job', 'boss@kivun.test' );
+
+		$this->assertSame( '', Kivun_Coordinators::page_handler( 200 ) );
+		$this->assertSame( '', Kivun_Coordinators::page_handler( 201 ) );
+		$this->assertSame( '', Kivun_Coordinators::page_handler( 202 ) );
+		$this->assertSame( '', Kivun_Coordinators::page_handler( 0 ) );
+	}
+
+	/**
+	 * A lead the rota never saw is filed against that address. Every lead
+	 * but the jobs board's is one of these — courses and landing pages are
+	 * not shared between the coordinators, by design — and the column
+	 * saying nobody sent all of them to the screen looking unhandled.
+	 *
+	 * @return void
+	 */
+	public function test_a_lead_from_a_page_is_filed_against_its_address(): void {
+		$this->page_with_email( 301, 'kivun_workshop', 'rochel@kivun.test' );
+		Kivun_Coordinators::attach_to_lead( 55, 301 );
+
+		$this->assertSame(
+			array(
+				'table' => 'wp_kivun_registrations',
+				'data'  => array( 'coordinator' => 'rochel@kivun.test' ),
+				'where' => array( 'id' => 55 ),
+			),
+			end( Kivun_Test_State::$updates )
+		);
+	}
+
+	/**
+	 * Where the rota did choose, its choice is the one written: a candidate
+	 * from the board belongs to whoever's turn it was, and that page has no
+	 * such field to read anyway.
+	 *
+	 * @return void
+	 */
+	public function test_the_rota_beats_the_page(): void {
+		$this->page_with_email( 302, 'kivun_workshop', 'rochel@kivun.test' );
+		$chosen = Kivun_Coordinators::pick( 'אשה' );
+		Kivun_Coordinators::attach_to_lead( 56, 302 );
+
+		$this->assertSame( $chosen['email'], end( Kivun_Test_State::$updates )['data']['coordinator'] );
+	}
+
+	/**
+	 * And where neither has an answer the column is left empty, for somebody
+	 * to set by hand. Which is still the open question: what should happen
+	 * to a lead from a page that names nobody.
+	 *
+	 * @return void
+	 */
+	public function test_neither_leaves_it_to_be_set_by_hand(): void {
+		$this->page_with_email( 303, 'kivun_course', '' );
+		Kivun_Coordinators::attach_to_lead( 57, 303 );
+
+		$this->assertSame( array(), Kivun_Test_State::$updates );
+	}
+
+	/**
+	 * The router addresses the mail through the same function, so the person
+	 * receiving a page's leads and the name shown beside them in the list
+	 * cannot be two different answers.
+	 *
+	 * @return void
+	 */
+	public function test_the_mail_and_the_column_name_the_same_person(): void {
+		$this->assertStringContainsString(
+			'Kivun_Coordinators::page_handler( $post_id )',
+			(string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-forms-router.php' ),
+			'the router reads the page address its own way again'
+		);
+	}
+
+	/**
+	 * Every path that files a lead says which page it came from. One that
+	 * forgot would file its leads against nobody, which is the bug this
+	 * fixes — and it would do it silently.
+	 *
+	 * @return void
+	 */
+	public function test_every_path_that_files_a_lead_names_the_page(): void {
+		foreach ( array(
+			'includes/class-kivun-lead-capture.php' => 'attach_to_lead( (int) $wpdb->insert_id, $post_id )',
+			'includes/class-kivun-workshops.php'    => 'attach_to_lead( (int) $wpdb->insert_id, (int) $post_id )',
+			'includes/class-kivun-courses.php'      => 'attach_to_lead( (int) $wpdb->insert_id, (int) $course_id )',
+		) as $file => $call ) {
+			$this->assertStringContainsString(
+				$call,
+				(string) file_get_contents( KIVUN_DIR . $file ),
+				"{$file} files its leads without saying which page they came from"
+			);
+		}
+	}
+
 	// ── Handing one over by hand ──────────────────────────────────────────────
 
 	/**

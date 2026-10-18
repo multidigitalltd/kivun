@@ -98,6 +98,14 @@ final class Kivun_Test_State {
 		self::$mail     = array();
 		self::$updates  = array();
 		self::$timezone = 'Asia/Jerusalem';
+
+		// The rota remembers its last pick for the rest of the request, which
+		// across tests is the rest of the run: one test choosing a
+		// coordinator left the next one filing its lead against that person.
+		// It leaks silently — the write happens, it is simply the wrong name.
+		if ( class_exists( 'Kivun_Coordinators' ) ) {
+			Kivun_Coordinators::forget_current();
+		}
 	}
 }
 

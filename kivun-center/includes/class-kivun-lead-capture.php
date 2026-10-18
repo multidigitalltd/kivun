@@ -112,10 +112,12 @@ class Kivun_Lead_Capture {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$wpdb->insert( $wpdb->prefix . 'kivun_registrations', $row, $fmt );
 
-		// Which coordinator this one reached. Stamped through the same call
-		// as the other path that files a lead, so it does not matter whether
-		// the rota was consulted before this point or is reached after it.
-		Kivun_Coordinators::attach_to_lead( (int) $wpdb->insert_id );
+		// Who is handling this one. Stamped through the same call as the other
+		// paths that file a lead, so it does not matter whether the rota was
+		// consulted before this point or is reached after it — and the page
+		// is named so that a lead the rota never saw is still filed against
+		// the address that page sends its leads to.
+		Kivun_Coordinators::attach_to_lead( (int) $wpdb->insert_id, $post_id );
 	}
 
 	/**
