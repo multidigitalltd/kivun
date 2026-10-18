@@ -1219,6 +1219,14 @@ class Kivun_Content_Creator {
 		$post_id = (int) $result;
 
 		update_post_meta( $post_id, self::GROUP_META, $group );
+		// Where the group is in the archive, a type added to it now goes
+		// there with the rest. The library lists groups but the mark sits on
+		// posts, so a sibling without it would put the same group in both
+		// tables at once — each row holding half its types, half its leads,
+		// and a button pointing the opposite way to the other.
+		if ( self::group_is_archived( $group ) ) {
+			update_post_meta( $post_id, self::ARCHIVED_META, '1' );
+		}
 		// The WhatsApp promo describes the group, not one post type, so every
 		// post in the group carries the same copy.
 		update_post_meta( $post_id, '_kivun_whatsapp', $shared['whatsapp'] ?? '' );
@@ -1457,6 +1465,46 @@ class Kivun_Content_Creator {
 		}
 
 		return $ids;
+	}
+
+	/**
+	 * Whether a content group is in the library's archive.
+	 *
+	 * Asked of the group rather than of one post: the mark is written to
+	 * every post in the group, so any of them answers, and a group half
+	 * marked is a group that would be listed twice.
+	 *
+	 * @param string $group The group key.
+	 * @return bool
+	 */
+	public static function group_is_archived( string $group ): bool {
+		if ( '' === $group ) {
+			return false;
+		}
+
+		$marked = get_posts(
+			array(
+				'post_type'              => array_values( self::type_map() ),
+				'post_status'            => array( 'publish', 'draft', 'pending', 'private', 'future' ),
+				'posts_per_page'         => 1,
+				'fields'                 => 'ids',
+				'no_found_rows'          => true,
+				'update_post_term_cache' => false,
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'             => array(
+					array(
+						'key'   => self::GROUP_META,
+						'value' => $group,
+					),
+					array(
+						'key'     => self::ARCHIVED_META,
+						'compare' => 'EXISTS',
+					),
+				),
+			)
+		);
+
+		return ! empty( $marked );
 	}
 
 	/**
@@ -2556,7 +2604,10 @@ class Kivun_Content_Creator {
 			return false;
 		}
 
-		$skip = array( '_edit_lock', '_edit_last', self::GROUP_META );
+		// The archive mark is not copied: a duplicate is new work, and it
+		// would otherwise be born inside the shut section where nobody is
+		// looking for the thing they just made.
+		$skip = array( '_edit_lock', '_edit_last', self::GROUP_META, self::ARCHIVED_META );
 		foreach ( get_post_meta( $post_id ) as $key => $values ) {
 			if ( in_array( $key, $skip, true ) ) {
 				continue;
@@ -3117,6 +3168,14 @@ class Kivun_Content_Creator {
 	private static function front_library( string $page_url, bool $can_delete = false ): void {
 		$groups   = self::library_groups( self::library_posts( false ) );
 		$put_away = self::library_groups( self::library_posts( true ) );
+
+		// A group is marked on every one of its posts, so the two halves do
+		// not overlap. Should one ever be marked in part — a post created by
+		// some path that forgot — it is listed once, in the open list, each
+		// row holding only the posts that half saw. Being shown is the safe
+		// side of that mistake: content nobody can find is worse than
+		// content still in view after somebody filed it away.
+		$put_away = array_diff_key( $put_away, $groups );
 
 		$lead_counts = self::leads_per_content();
 		?>

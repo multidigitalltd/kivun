@@ -195,6 +195,60 @@ final class ArchiveTest extends TestCase {
 	// ── The library's two halves ──────────────────────────────────────────────
 
 	/**
+	 * A type added to a group that is already put away goes in with it.
+	 *
+	 * The library lists groups while the mark sits on posts, so a sibling
+	 * created without it puts the same group in both tables at once — each
+	 * row holding half its types and half its leads, with buttons pointing
+	 * opposite ways. Found in review.
+	 *
+	 * @return void
+	 */
+	public function test_a_type_added_to_an_archived_group_joins_it(): void {
+		$source = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-content-creator.php' );
+
+		$this->assertStringContainsString(
+			"if ( self::group_is_archived( \$group ) ) {\n\t\t\tupdate_post_meta( \$post_id, self::ARCHIVED_META, '1' );",
+			$source,
+			'a newly added content type no longer follows its group into the archive'
+		);
+	}
+
+	/**
+	 * A duplicate is new work, and starts outside the archive.
+	 *
+	 * Cloning copies the metadata wholesale, so without this the copy is
+	 * born inside the shut section — where nobody looks for the thing they
+	 * have just made. Found in review.
+	 *
+	 * @return void
+	 */
+	public function test_a_duplicate_does_not_inherit_the_mark(): void {
+		$this->assertStringContainsString(
+			"\$skip = array( '_edit_lock', '_edit_last', self::GROUP_META, self::ARCHIVED_META );",
+			(string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-content-creator.php' ),
+			'duplicating archived content now produces an archived copy'
+		);
+	}
+
+	/**
+	 * And whatever happens, one group is listed once.
+	 *
+	 * A belt on top of the braces above: if some path ever marks a group in
+	 * part, it shows in the open list rather than in both. Being shown is
+	 * the safe side of that mistake — content nobody can find is worse than
+	 * content still in view after somebody filed it away.
+	 *
+	 * @return void
+	 */
+	public function test_a_group_cannot_be_listed_twice(): void {
+		$this->assertStringContainsString(
+			'$put_away = array_diff_key( $put_away, $groups );',
+			(string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-content-creator.php' )
+		);
+	}
+
+	/**
 	 * The library asks for each half separately rather than filtering one
 	 * list after the fact.
 	 *
