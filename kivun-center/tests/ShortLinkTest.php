@@ -458,4 +458,94 @@ final class ShortLinkTest extends TestCase {
 		$this->assertStringContainsString( 'function resolve_slug', $php );
 		$this->assertStringContainsString( 'function slug_for_save', $php );
 	}
+
+	// ── Every link has a code ─────────────────────────────────────────────────
+
+	/**
+	 * Links made before the short codes existed are given one on upgrade.
+	 *
+	 * Their rows carried an empty slug, so the list had no code to show and
+	 * offered the long tagged URL alone — the one thing nobody wants to
+	 * paste into a message. The column means the same on every row only if
+	 * every row has a code.
+	 *
+	 * @return void
+	 */
+	public function test_links_without_a_code_are_given_one(): void {
+		$source = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-installer.php' );
+
+		$this->assertStringContainsString( 'function backfill_short_codes', $source );
+		$this->assertStringContainsString( "WHERE slug IS NULL OR slug = ''", $source );
+		$this->assertStringContainsString( 'self::backfill_short_codes();', $source, 'the backfill is never called' );
+	}
+
+	/**
+	 * And it leaves the codes that already exist alone.
+	 *
+	 * A code already out in the world — in a WhatsApp message, on a printed
+	 * flyer — is the one promise this feature makes. A migration that
+	 * reshuffled them would break the links shared the longest.
+	 *
+	 * @return void
+	 */
+	public function test_the_backfill_never_touches_a_code_that_exists(): void {
+		$source  = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-installer.php' );
+		$start   = (int) strpos( $source, 'private static function backfill_short_codes' );
+		$handler = substr( $source, $start, 1600 );
+
+		// The guard is in the statement rather than around it, so the
+		// database re-checks it at the moment of the write. Two upgrades
+		// running at once read the same empty row, and the second one
+		// writing would replace a code the first had already handed out —
+		// a link that worked when the screen drew it and is dead by the
+		// time anybody clicks it. Found in review.
+		$this->assertStringContainsString(
+			"WHERE id = %d AND ( slug IS NULL OR slug = '' )",
+			$handler,
+			'the write no longer re-checks that the code is still missing'
+		);
+	}
+
+	/**
+	 * And a site updated with the plugin switched off is backfilled too.
+	 *
+	 * That site comes back through activate(), which stamps the version —
+	 * and the stamp is what stops maybe_upgrade() from ever running its
+	 * branch. The one path most likely to be carrying old links would have
+	 * been the one path that never gave them codes. Found in review.
+	 *
+	 * @return void
+	 */
+	public function test_activation_backfills_as_well(): void {
+		$source = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-installer.php' );
+		$start  = (int) strpos( $source, 'public static function activate()' );
+		$body   = substr( $source, $start, (int) strpos( $source, 'public static function deactivate()' ) - $start );
+
+		$call  = strpos( $body, 'self::backfill_short_codes();' );
+		$stamp = strpos( $body, "update_option( 'kivun_db_version'" );
+
+		$this->assertNotFalse( $call, 'activation stamps the version without ever backfilling' );
+		$this->assertLessThan( $stamp, $call, 'the backfill runs after the stamp that makes it unreachable' );
+	}
+
+	/**
+	 * The copy button beside a short link copies that link.
+	 *
+	 * It used to copy the WhatsApp message instead: the field it was next to
+	 * was not in the list of fields the handler knew, so it fell through to
+	 * a fallback that reaches across the whole card — and the card holds the
+	 * message. Silent, and wrong in the worst way, since what lands in the
+	 * message is what the publisher sends out.
+	 *
+	 * @return void
+	 */
+	public function test_the_copy_button_copies_the_link_beside_it(): void {
+		$js = (string) file_get_contents( KIVUN_DIR . 'assets/js/frontend.js' );
+
+		$this->assertStringContainsString(
+			".kivun-camp-result, .kivun-camp-saved, .kivun-camp-short, .kivun-short-preview__url",
+			$js,
+			'a short link field the handler does not know falls through to the message'
+		);
+	}
 }

@@ -267,4 +267,23 @@ final class ArchiveTest extends TestCase {
 		$this->assertStringContainsString( 'self::library_posts( true )', $source );
 		$this->assertStringContainsString( "'compare' => \$archived ? 'EXISTS' : 'NOT EXISTS'", $source );
 	}
+
+	/**
+	 * Both buttons say what they do, in words.
+	 *
+	 * The campaign's was an icon with the words kept for screen readers
+	 * only, which left everyone else guessing at a filing-cabinet glyph.
+	 *
+	 * @return void
+	 */
+	public function test_the_buttons_are_worded(): void {
+		$source = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-content-creator.php' );
+
+		$this->assertSame(
+			2,
+			substr_count( $source, "esc_html__( 'העברה לארכיון', 'kivun' )" ),
+			'a campaign and a content group are put away by buttons that read the same'
+		);
+		$this->assertStringNotContainsString( "'🗄'", $source, 'the glyph is back in place of the words' );
+	}
 }

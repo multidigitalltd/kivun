@@ -1637,7 +1637,13 @@
 	document.addEventListener('click', function (e) {
 		var copy = e.target.closest('.kivun-camp-copy');
 		if (!copy) { return; }
-		var field = copy.parentNode.querySelector('.kivun-camp-result, .kivun-camp-saved, .kivun-short-preview__url')
+
+		// Every field this button can copy is named above. The fallback below
+		// reaches outside the button's own row, which is right for the one
+		// button that sits apart from the message it copies — and wrong for
+		// every other, which is how a button beside a short link came to put
+		// a WhatsApp message on the clipboard.
+		var field = copy.parentNode.querySelector('.kivun-camp-result, .kivun-camp-saved, .kivun-camp-short, .kivun-short-preview__url')
 			|| (copy.closest('.kivun-cc-card') || document).querySelector('textarea.kivun-camp-saved');
 		if (!field) { return; }
 
