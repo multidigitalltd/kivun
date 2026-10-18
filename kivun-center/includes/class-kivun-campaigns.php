@@ -475,7 +475,16 @@ class Kivun_Campaigns {
 		$data['whatsapp'] = self::shorten_in_text(
 			$whatsapp,
 			Kivun_Short_Links::url_for( $data['slug'] ),
-			array( $data['final_url'], $id ? self::final_url_of( $id ) : '' )
+			array(
+				$data['final_url'],
+				$id ? self::final_url_of( $id ) : '',
+				// And the short address the form was showing, where the save
+				// settled on a different code — somebody else took it in
+				// between. The message was written around what was on screen,
+				// and left alone it would send its readers to that other
+				// person's link.
+				Kivun_Short_Links::url_for( Kivun_Short_Links::clean_slug( $wanted_slug ) ),
+			)
 		);
 		$format           = array( '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' );
 
@@ -731,20 +740,37 @@ class Kivun_Campaigns {
 			$target = (string) $campaign->target_url;
 		}
 
-		$utm = array(
+		$utm     = array(
 			'source'   => self::clean_value( sanitize_text_field( wp_unslash( $_POST['utm_source'] ?? '' ) ) ),
 			'medium'   => self::clean_value( sanitize_text_field( wp_unslash( $_POST['utm_medium'] ?? '' ) ) ),
 			'campaign' => (string) $campaign->utm_campaign,
 			'content'  => self::clean_value( sanitize_text_field( wp_unslash( $_POST['utm_content'] ?? '' ) ) ),
 		);
+		$link_id = absint( wp_unslash( $_POST['link_id'] ?? 0 ) );
+		// The code the form is showing — the same value its save sends.
+		$wanted_slug = sanitize_text_field( wp_unslash( $_POST['slug'] ?? '' ) );
 		// phpcs:enable WordPress.Security.NonceVerification.Missing
 
 		if ( '' === $utm['source'] ) {
 			wp_send_json_error( array( 'message' => __( 'יש להזין מקור לפני יצירת ההודעה, כדי שהקישור יהיה מסומן.', 'kivun' ) ) );
 		}
 
-		$fields        = self::target_fields( $campaign );
-		$fields['url'] = self::build_url( $target, $utm );
+		$fields = self::target_fields( $campaign );
+
+		// Written around the short link rather than the long one.
+		//
+		// The message is the thing that gets sent, and a tracked URL is three
+		// lines of percent-encoded Hebrew in it — which is what the short
+		// links were built for. Swapping it in at save time, as this used to
+		// rely on, came too late: what the writer reads, approves and often
+		// copies straight out of the box is this text, here.
+		//
+		// The code is settled the same way the save settles it, from the same
+		// value the form sends, so the address in the message is the address
+		// the link gets. Where they still differ — somebody took the code in
+		// between — the save corrects the stored copy.
+		$short         = Kivun_Short_Links::url_for( Kivun_Short_Links::slug_for_save( $wanted_slug, $link_id ) );
+		$fields['url'] = '' !== $short ? $short : self::build_url( $target, $utm );
 
 		if ( '' === trim( (string) Kivun_Admin_Settings::get( 'openai_api_key', '' ) ) ) {
 			wp_send_json_success(

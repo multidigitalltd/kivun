@@ -1349,7 +1349,13 @@
 			target_url: preview ? preview.dataset.target : '',
 			utm_source: source,
 			utm_medium: mediumEl ? kivunCampClean(mediumEl.value) : '',
-			utm_content: contentEl ? kivunCampClean(contentEl.value) : ''
+			utm_content: contentEl ? kivunCampClean(contentEl.value) : '',
+			// So the message is written around this link's short address.
+			// The same code the save sends, worked out the same way — the
+			// message names a link, and naming a different one would send
+			// its readers somewhere else.
+			link_id: form.dataset.id || 0,
+			slug: kivunShortChosen(form)
 		})).then(function (res) {
 			btn.disabled = false;
 			if (!res.success) {
@@ -1434,6 +1440,42 @@
 			.replace(/-{2,}/g, '-')
 			.replace(/^-+|-+$/g, '')
 			.slice(0, 64);
+	}
+
+	// The code this form is going to save under — the one its preview is
+	// showing. Asked by the save, and by the WhatsApp message written before
+	// it: the message carries the short link, so the two have to name the
+	// same code or the message points somewhere the link is not.
+	//
+	// Cleaned before it is judged, exactly as the preview judges it. Reading
+	// the raw value here was a real bug: a code in Hebrew is not empty, so
+	// the draft was not substituted, but the preview had already fallen back
+	// to the draft and shown it. The server then cleaned the Hebrew away and
+	// generated a different code — the screen promising one address and the
+	// row holding another, which is the single thing this preview exists not
+	// to do.
+	function kivunShortChosen(form) {
+		var field = form.querySelector('.kivun-short-slug');
+		var slug = field ? kivunShortClean(field.value) : '';
+
+		// When the server has already said what this code resolves to — a
+		// taken one becomes the next free variant — use that, not the one
+		// typed. Both reach the same row today, because the server resolves
+		// again on save; sending the answer we were given keeps the address
+		// on screen and the address stored the same string rather than two
+		// that merely agree.
+		if (slug && form.dataset.shortAsked === slug && form.dataset.shortResolved) {
+			slug = form.dataset.shortResolved;
+		}
+
+		// Only for a link that has none yet: on an edit this stays empty and
+		// the server keeps the code the link already has, so a reworded
+		// message cannot break a link somebody already shared.
+		if (!slug && !form.dataset.id && form.dataset.shortDraft) {
+			slug = form.dataset.shortDraft;
+		}
+
+		return slug;
 	}
 
 	// A code for a link that has none yet. Drawn from the alphabet the field
@@ -1746,37 +1788,12 @@
 		var preview = linkForm.querySelector('.kivun-camp-result');
 
 		var waEl = linkForm.querySelector('.kivun-link-wa-text');
-		// The short link's code. Whatever was previewed is what is sent, so
-		// the address on screen is the address that gets stored — a preview
-		// the server then replaced with a code of its own would have been a
-		// lie told in the one place the reader was looking.
-		//
-		// Only for a link that has none yet: on an edit this stays empty and
-		// the server keeps the code the link already has, so a reworded
-		// message cannot break a link somebody already shared.
-		// Cleaned before it is judged, exactly as the preview judges it.
-		// Reading the raw value here was a real bug: a code in Hebrew is not
-		// empty, so the draft was not substituted, but the preview had
-		// already fallen back to the draft and shown it. The server then
-		// cleaned the Hebrew away and generated a different code — the
-		// screen promising one address and the row holding another, which
-		// is the single thing this preview exists not to do.
-		var shortEl = linkForm.querySelector('.kivun-short-slug');
-		var shortSlug = shortEl ? kivunShortClean(shortEl.value) : '';
-
-		// When the server has already said what this code resolves to — a
-		// taken one becomes the next free variant — send that, not the one
-		// typed. Both reach the same row today, because the server resolves
-		// again on save; sending the answer we were given keeps the address
-		// on screen and the address stored the same string rather than two
-		// that merely agree.
-		if (shortSlug && linkForm.dataset.shortAsked === shortSlug && linkForm.dataset.shortResolved) {
-			shortSlug = linkForm.dataset.shortResolved;
-		}
-
-		if (!shortSlug && !linkForm.dataset.id && linkForm.dataset.shortDraft) {
-			shortSlug = linkForm.dataset.shortDraft;
-		}
+		// Whatever was previewed is what is sent, so the address on screen is
+		// the address that gets stored — a preview the server then replaced
+		// with a code of its own would have been a lie told in the one place
+		// the reader was looking. The same answer the message was built
+		// around; see kivunShortChosen().
+		var shortSlug = kivunShortChosen(linkForm);
 
 		kivunCampSubmit(linkForm, {
 			action: 'kivun_save_campaign_link',
