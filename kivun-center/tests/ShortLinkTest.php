@@ -458,4 +458,65 @@ final class ShortLinkTest extends TestCase {
 		$this->assertStringContainsString( 'function resolve_slug', $php );
 		$this->assertStringContainsString( 'function slug_for_save', $php );
 	}
+
+	// ── Every link has a code ─────────────────────────────────────────────────
+
+	/**
+	 * Links made before the short codes existed are given one on upgrade.
+	 *
+	 * Their rows carried an empty slug, so the list had no code to show and
+	 * offered the long tagged URL alone — the one thing nobody wants to
+	 * paste into a message. The column means the same on every row only if
+	 * every row has a code.
+	 *
+	 * @return void
+	 */
+	public function test_links_without_a_code_are_given_one(): void {
+		$source = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-installer.php' );
+
+		$this->assertStringContainsString( 'function backfill_short_codes', $source );
+		$this->assertStringContainsString( "WHERE slug IS NULL OR slug = ''", $source );
+		$this->assertStringContainsString( 'self::backfill_short_codes();', $source, 'the backfill is never called' );
+	}
+
+	/**
+	 * And it leaves the codes that already exist alone.
+	 *
+	 * A code already out in the world — in a WhatsApp message, on a printed
+	 * flyer — is the one promise this feature makes. A migration that
+	 * reshuffled them would break the links shared the longest.
+	 *
+	 * @return void
+	 */
+	public function test_the_backfill_never_touches_a_code_that_exists(): void {
+		$source  = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-installer.php' );
+		$start   = (int) strpos( $source, 'private static function backfill_short_codes' );
+		$handler = substr( $source, $start, 1600 );
+
+		// It only ever selects the empty ones, and only ever updates by the
+		// id it just read.
+		$this->assertStringNotContainsString( 'UPDATE', $handler, 'a bulk update cannot tell an empty code from a shared one' );
+		$this->assertStringContainsString( "array( 'id' => \$id )", $handler );
+	}
+
+	/**
+	 * The copy button beside a short link copies that link.
+	 *
+	 * It used to copy the WhatsApp message instead: the field it was next to
+	 * was not in the list of fields the handler knew, so it fell through to
+	 * a fallback that reaches across the whole card — and the card holds the
+	 * message. Silent, and wrong in the worst way, since what lands in the
+	 * message is what the publisher sends out.
+	 *
+	 * @return void
+	 */
+	public function test_the_copy_button_copies_the_link_beside_it(): void {
+		$js = (string) file_get_contents( KIVUN_DIR . 'assets/js/frontend.js' );
+
+		$this->assertStringContainsString(
+			".kivun-camp-result, .kivun-camp-saved, .kivun-camp-short, .kivun-short-preview__url",
+			$js,
+			'a short link field the handler does not know falls through to the message'
+		);
+	}
 }

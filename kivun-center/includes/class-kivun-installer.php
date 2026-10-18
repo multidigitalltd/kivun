@@ -65,6 +65,7 @@ class Kivun_Installer {
 			// Runs after ensure_columns(), which is what creates the columns
 			// it fills.
 			self::migrate_lead_utm();
+			self::backfill_short_codes();
 			self::clean_stored_promos();
 			self::add_roles();
 			// Rewrite slugs may change between versions (e.g. landing pages) —
@@ -76,6 +77,46 @@ class Kivun_Installer {
 			// that fails partway is skipped for good rather than retried on
 			// the next load.
 			update_option( 'kivun_db_version', KIVUN_VERSION );
+		}
+	}
+
+	/**
+	 * Give a short code to every link that has none.
+	 *
+	 * Links made before the short codes existed carry an empty slug, and the
+	 * screen has no code to show for them: their row offers the long tagged
+	 * URL alone, which is the one thing nobody wants to paste into a message.
+	 * Every link gets one here, so the column means the same thing on every
+	 * row.
+	 *
+	 * Existing codes are never touched. A code already out in the world is
+	 * the one promise this feature makes, and a migration that reshuffled
+	 * them would break exactly the links that have been shared the longest.
+	 *
+	 * @return void
+	 */
+	private static function backfill_short_codes(): void {
+		global $wpdb;
+
+		$table = $wpdb->prefix . 'kivun_campaign_links';
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$ids = $wpdb->get_col( "SELECT id FROM {$table} WHERE slug IS NULL OR slug = ''" );
+		if ( ! $ids ) {
+			return;
+		}
+
+		foreach ( array_map( 'absint', $ids ) as $id ) {
+			// Asked for one code at a time rather than in bulk: resolve_slug()
+			// is what knows a code is free, and it has to see each code it
+			// just handed out before drawing the next.
+			$slug = Kivun_Short_Links::resolve_slug( '', $id );
+			if ( '' === $slug ) {
+				continue;
+			}
+
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$wpdb->update( $table, array( 'slug' => $slug ), array( 'id' => $id ), array( '%s' ), array( '%d' ) );
 		}
 	}
 

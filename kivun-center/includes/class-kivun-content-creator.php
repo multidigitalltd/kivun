@@ -3388,7 +3388,7 @@ class Kivun_Content_Creator {
 										class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost kivun-archive-content"
 										data-group="<?php echo esc_attr( (string) $gid ); ?>"
 										data-archived="<?php echo $archived ? '0' : '1'; ?>"
-									><?php echo $archived ? esc_html__( 'החזרה', 'kivun' ) : esc_html__( 'לארכיון', 'kivun' ); ?></button>
+									><?php echo $archived ? esc_html__( 'החזרה מהארכיון', 'kivun' ) : esc_html__( 'העברה לארכיון', 'kivun' ); ?></button>
 								<?php endif; ?>
 							</td>
 						</tr>
@@ -4245,13 +4245,12 @@ class Kivun_Content_Creator {
 								</button>
 								<button
 									type="button"
-									class="kivun-cc-iconbtn kivun-archive-campaign"
+									class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost kivun-archive-campaign"
 									data-id="<?php echo esc_attr( $camp->id ); ?>"
 									data-archived="<?php echo $kivun_is_away ? '0' : '1'; ?>"
 									title="<?php echo $kivun_is_away ? esc_attr__( 'החזרה מהארכיון', 'kivun' ) : esc_attr__( 'העברה לארכיון — הקישורים ימשיכו לעבוד', 'kivun' ); ?>"
 								>
-									<span aria-hidden="true"><?php echo $kivun_is_away ? '↩' : '🗄'; ?></span>
-									<span class="kivun-sr-only"><?php echo $kivun_is_away ? esc_html__( 'החזרה מהארכיון', 'kivun' ) : esc_html__( 'העברה לארכיון', 'kivun' ); ?></span>
+									<?php echo $kivun_is_away ? esc_html__( 'החזרה מהארכיון', 'kivun' ) : esc_html__( 'העברה לארכיון', 'kivun' ); ?>
 								</button>
 								<button
 									type="button"
@@ -4743,7 +4742,6 @@ class Kivun_Content_Creator {
 				<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost kivun-camp-copy"><?php esc_html_e( 'העתקה', 'kivun' ); ?></button>
 				<span class="kivun-short-preview__note"><?php esc_html_e( 'יתחיל לעבוד אחרי השמירה', 'kivun' ); ?></span>
 			</p>
-			<p class="kivun-field-hint"><?php esc_html_e( 'הכתובת הקצרה נוצרת אוטומטית לכל קישור, ונשארת כפי שהיא כל עוד הקישור קיים.', 'kivun' ); ?></p>
 			<?php endif; ?>
 
 			<label class="kivun-cc-sub"><?php esc_html_e( 'הקישור המלא', 'kivun' ); ?></label>
