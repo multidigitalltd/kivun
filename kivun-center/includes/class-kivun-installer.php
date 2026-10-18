@@ -39,6 +39,13 @@ class Kivun_Installer {
 
 		flush_rewrite_rules();
 
+		// Here as well as in maybe_upgrade(): a site updated while the plugin
+		// was switched off comes back through this path, and the version
+		// stamped below would then stop that branch from ever running. The
+		// work is the same either way, and costs one query where there is
+		// nothing to do.
+		self::backfill_short_codes();
+
 		update_option( 'kivun_db_version', KIVUN_VERSION );
 	}
 
@@ -115,8 +122,20 @@ class Kivun_Installer {
 				continue;
 			}
 
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-			$wpdb->update( $table, array( 'slug' => $slug ), array( 'id' => $id ), array( '%s' ), array( '%d' ) );
+			// Guarded in the statement, not around it. Two upgrades running at
+			// once read the same empty row, and the second one writing would
+			// replace a code the first had already handed out — a short link
+			// that worked when the screen drew it and is dead by the time
+			// anybody clicks it.
+			// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name from $wpdb->prefix; both values are placeholders.
+			$wpdb->query(
+				$wpdb->prepare(
+					"UPDATE {$table} SET slug = %s WHERE id = %d AND ( slug IS NULL OR slug = '' )",
+					$slug,
+					$id
+				)
+			);
+			// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		}
 	}
 

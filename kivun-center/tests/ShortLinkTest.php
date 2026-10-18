@@ -493,10 +493,39 @@ final class ShortLinkTest extends TestCase {
 		$start   = (int) strpos( $source, 'private static function backfill_short_codes' );
 		$handler = substr( $source, $start, 1600 );
 
-		// It only ever selects the empty ones, and only ever updates by the
-		// id it just read.
-		$this->assertStringNotContainsString( 'UPDATE', $handler, 'a bulk update cannot tell an empty code from a shared one' );
-		$this->assertStringContainsString( "array( 'id' => \$id )", $handler );
+		// The guard is in the statement rather than around it, so the
+		// database re-checks it at the moment of the write. Two upgrades
+		// running at once read the same empty row, and the second one
+		// writing would replace a code the first had already handed out —
+		// a link that worked when the screen drew it and is dead by the
+		// time anybody clicks it. Found in review.
+		$this->assertStringContainsString(
+			"WHERE id = %d AND ( slug IS NULL OR slug = '' )",
+			$handler,
+			'the write no longer re-checks that the code is still missing'
+		);
+	}
+
+	/**
+	 * And a site updated with the plugin switched off is backfilled too.
+	 *
+	 * That site comes back through activate(), which stamps the version —
+	 * and the stamp is what stops maybe_upgrade() from ever running its
+	 * branch. The one path most likely to be carrying old links would have
+	 * been the one path that never gave them codes. Found in review.
+	 *
+	 * @return void
+	 */
+	public function test_activation_backfills_as_well(): void {
+		$source = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-installer.php' );
+		$start  = (int) strpos( $source, 'public static function activate()' );
+		$body   = substr( $source, $start, (int) strpos( $source, 'public static function deactivate()' ) - $start );
+
+		$call  = strpos( $body, 'self::backfill_short_codes();' );
+		$stamp = strpos( $body, "update_option( 'kivun_db_version'" );
+
+		$this->assertNotFalse( $call, 'activation stamps the version without ever backfilling' );
+		$this->assertLessThan( $stamp, $call, 'the backfill runs after the stamp that makes it unreachable' );
 	}
 
 	/**
