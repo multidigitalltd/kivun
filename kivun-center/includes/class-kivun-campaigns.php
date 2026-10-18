@@ -31,6 +31,7 @@ class Kivun_Campaigns {
 		add_action( 'wp_ajax_kivun_save_campaign_link', array( __CLASS__, 'ajax_save_link' ) );
 		add_action( 'wp_ajax_kivun_delete_campaign_link', array( __CLASS__, 'ajax_delete_link' ) );
 		add_action( 'wp_ajax_kivun_campaign_whatsapp', array( __CLASS__, 'ajax_whatsapp' ) );
+		add_action( 'wp_ajax_kivun_archive_campaign', array( __CLASS__, 'ajax_archive' ) );
 		add_action( 'wp_ajax_kivun_save_link_whatsapp', array( __CLASS__, 'ajax_save_whatsapp' ) );
 	}
 
@@ -824,14 +825,77 @@ class Kivun_Campaigns {
 	// ── Reporting ─────────────────────────────────────────────────────────────.
 
 	/**
-	 * All campaigns, newest first.
+	 * All campaigns, the ones in use first and newest first within each.
+	 *
+	 * Archived ones come back too, at the end: the screen shows them in a
+	 * section of their own rather than hiding them, and everything that
+	 * reports on a campaign reports on all of them.
 	 *
 	 * @return array<int,object>
 	 */
 	public static function all(): array {
 		global $wpdb;
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		return $wpdb->get_results( "SELECT * FROM {$wpdb->prefix}kivun_campaigns ORDER BY created_at DESC, id DESC" );
+		return $wpdb->get_results(
+			"SELECT * FROM {$wpdb->prefix}kivun_campaigns ORDER BY archived ASC, created_at DESC, id DESC"
+		);
+	}
+
+	/**
+	 * Whether a campaign row has been put away.
+	 *
+	 * @param object $campaign The row.
+	 * @return bool
+	 */
+	public static function is_archived( $campaign ): bool {
+		return ! empty( $campaign->archived );
+	}
+
+	/**
+	 * AJAX: put a campaign away, or bring it back.
+	 *
+	 * Listing only. The campaign's links keep redirecting, its short codes
+	 * keep working, and every lead that arrives through one keeps counting
+	 * against it — those are matched on the UTM values a visitor carries,
+	 * which know nothing about this flag. A campaign whose links are out in
+	 * the world cannot be switched off by tidying the screen, and should
+	 * not be.
+	 *
+	 * @return void
+	 */
+	public static function ajax_archive(): void {
+		self::guard();
+
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- self::guard() verifies the nonce.
+		$id       = absint( wp_unslash( $_POST['id'] ?? 0 ) );
+		$archived = ! empty( $_POST['archived'] ) ? 1 : 0;
+		// phpcs:enable WordPress.Security.NonceVerification.Missing
+
+		if ( ! $id ) {
+			wp_send_json_error( array( 'message' => __( 'הקמפיין לא נמצא.', 'kivun' ) ) );
+		}
+
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$ok = $wpdb->update(
+			$wpdb->prefix . 'kivun_campaigns',
+			array( 'archived' => $archived ),
+			array( 'id' => $id ),
+			array( '%d' ),
+			array( '%d' )
+		);
+
+		if ( false === $ok ) {
+			wp_send_json_error( array( 'message' => __( 'הפעולה נכשלה. נסו שוב.', 'kivun' ) ) );
+		}
+
+		wp_send_json_success(
+			array(
+				'message' => $archived
+					? __( 'הקמפיין הועבר לארכיון.', 'kivun' )
+					: __( 'הקמפיין הוחזר.', 'kivun' ),
+			)
+		);
 	}
 
 	/**

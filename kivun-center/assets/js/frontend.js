@@ -1903,6 +1903,43 @@
 		}).catch(function () { del.disabled = false; });
 	});
 
+	// ── Put a campaign or a piece of content away, or bring it back ─────────────
+	// The page is reloaded on success rather than the row being moved by hand:
+	// the archive section, its count and the button's own direction all have to
+	// change together, and a half-moved row is the kind of thing somebody acts
+	// on believing it.
+	document.addEventListener('click', function (e) {
+		var btn = e.target.closest('.kivun-archive-campaign, .kivun-archive-content');
+		if (!btn) { return; }
+
+		// The campaign's button sits inside the <summary>, so a click on it
+		// would otherwise also open or close the panel.
+		e.preventDefault();
+		e.stopPropagation();
+
+		var isCampaign = btn.classList.contains('kivun-archive-campaign');
+		var away = '1' === btn.dataset.archived;
+
+		btn.disabled = true;
+		post(params({
+			action: isCampaign ? 'kivun_archive_campaign' : 'kivun_archive_content',
+			nonce: kivun.nonce,
+			id: btn.dataset.id || 0,
+			group: btn.dataset.group || '',
+			archived: away ? '1' : ''
+		})).then(function (res) {
+			if (res && res.success) {
+				window.location.reload();
+				return;
+			}
+			btn.disabled = false;
+			window.alert((res && res.data && res.data.message) || kivun.i18n.error_generic);
+		}).catch(function () {
+			btn.disabled = false;
+			window.alert(kivun.i18n.error_generic);
+		});
+	});
+
 	// ── Content publishing wizard (multi-step form) ──────────────────────────────
 	// Every field stays in the DOM the whole time — only visibility changes — so
 	// the form still submits as one payload and the save logic is untouched.
