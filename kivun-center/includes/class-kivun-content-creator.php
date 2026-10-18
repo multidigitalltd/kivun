@@ -2123,7 +2123,29 @@ class Kivun_Content_Creator {
 					<div class="kivun-cc-front">
 						<div class="kivun-cc-head">
 							<h2 class="kivun-cc-title"><?php esc_html_e( 'לוח המשרות', 'kivun' ); ?></h2>
-							<p class="kivun-cc-lead"><?php esc_html_e( 'מערכת נפרדת: משרות, מפרסמים והגשות מועמדות עם קורות חיים — לא מעורבב עם פניות התכנים.', 'kivun' ); ?></p>
+							<?php
+							// The other half of the pair: the leads screen points
+							// here for applications, and this one points there for
+							// everything else. Shown only where that tab is on the
+							// screen — a jobs manager without the leads screen
+							// cannot follow it, and the line says nothing else.
+							if ( self::can_manage_leads() ) :
+								$kivun_leads_tab = sprintf(
+									'<a href="%s">%s</a>',
+									esc_url( add_query_arg( 'kivun_tab', 'leads', $page_url ) ),
+									esc_html__( 'לידים והרשמות', 'kivun' )
+								);
+								?>
+								<p class="kivun-cc-lead">
+									<?php
+									printf(
+										/* translators: %s: a link whose text is the name of the leads tab. */
+										esc_html__( 'לידים והרשמות לקורסים, סדנאות ואירועים נמצאות בלשונית %s.', 'kivun' ),
+										$kivun_leads_tab // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built from the escaped parts above.
+									);
+									?>
+								</p>
+							<?php endif; ?>
 						</div>
 						<?php if ( Kivun_Mercaz::configured() && Kivun_Employer::can_manage_all() ) : ?>
 							<div class="kivun-mercaz-bulk">
