@@ -108,6 +108,12 @@ class Kivun_Installer {
 				'local_resident'  => "varchar(10) NOT NULL DEFAULT ''",
 				'address'         => "varchar(191) NOT NULL DEFAULT ''",
 			),
+			$wpdb->prefix . 'kivun_campaigns'      => array(
+				// Put away, not switched off: the flag decides whether the
+				// campaign is listed, and nothing else. Its links keep
+				// redirecting and its leads keep counting.
+				'archived' => 'tinyint(1) NOT NULL DEFAULT 0',
+			),
 			$wpdb->prefix . 'kivun_registrations'  => array(
 				'city'              => "varchar(100) NOT NULL DEFAULT ''",
 				'gender'            => "varchar(20) NOT NULL DEFAULT ''",
@@ -267,6 +273,7 @@ class Kivun_Installer {
 				utm_campaign varchar(150)       NOT NULL DEFAULT '',
 				utm_term    varchar(150)        NOT NULL DEFAULT '',
 				utm_content varchar(150)        NOT NULL DEFAULT '',
+				archived    tinyint(1)          NOT NULL DEFAULT 0,
 				created_by  bigint(20) UNSIGNED NOT NULL DEFAULT 0,
 				created_at  datetime            NOT NULL DEFAULT CURRENT_TIMESTAMP,
 				PRIMARY KEY (id),

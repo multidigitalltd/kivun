@@ -29,6 +29,16 @@ class Kivun_Content_Creator {
 	const GROUP_META = '_kivun_content_group';
 
 	/**
+	 * Meta key marking content put away in the library's archive.
+	 *
+	 * Listing only. The pages stay published and reachable, their forms keep
+	 * taking enquiries, and every lead already filed against them is
+	 * untouched — this says where the content appears on the management
+	 * screen and nothing more.
+	 */
+	const ARCHIVED_META = '_kivun_archived';
+
+	/**
 	 * Where the console was last seen, so invitations can link to it.
 	 */
 	const CONSOLE_URL_OPTION = 'kivun_console_url';
@@ -49,6 +59,7 @@ class Kivun_Content_Creator {
 		add_action( 'admin_post_kivun_delete_content_front', array( __CLASS__, 'handle_front_delete' ) );
 		add_action( 'admin_post_kivun_cc_duplicate_front', array( __CLASS__, 'handle_front_duplicate' ) );
 
+		add_action( 'wp_ajax_kivun_archive_content', array( __CLASS__, 'ajax_archive_content' ) );
 		add_action( 'wp_ajax_kivun_add_leads_viewer', array( __CLASS__, 'ajax_add_leads_viewer' ) );
 		add_action( 'wp_ajax_kivun_remove_leads_viewer', array( __CLASS__, 'ajax_remove_leads_viewer' ) );
 	}
@@ -1446,6 +1457,74 @@ class Kivun_Content_Creator {
 		}
 
 		return $ids;
+	}
+
+	/**
+	 * AJAX: put a piece of content away in the library's archive, or bring
+	 * it back.
+	 *
+	 * Where it is listed, and nothing else. The pages stay published and
+	 * reachable, their forms keep taking enquiries, and the leads already
+	 * filed against them are untouched — somebody tidying the management
+	 * screen is not somebody taking a page off the site, and the two must
+	 * not be the same button.
+	 *
+	 * The mark goes on every post in the group, because the library lists
+	 * the group: a course and the landing page built for it are one line
+	 * there, and one of them left behind would put that line back.
+	 *
+	 * @return void
+	 */
+	public static function ajax_archive_content(): void {
+		check_ajax_referer( 'kivun_nonce', 'nonce' );
+
+		// Whoever may create content may put it away. Reading the leads is
+		// not enough: this is the content side of the console.
+		if ( ! current_user_can( 'edit_posts' ) ) {
+			wp_send_json_error( array( 'message' => __( 'אין לך הרשאה.', 'kivun' ) ), 403 );
+		}
+
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- Verified above.
+		$group    = sanitize_text_field( wp_unslash( $_POST['group'] ?? '' ) );
+		$archived = ! empty( $_POST['archived'] );
+		// phpcs:enable WordPress.Security.NonceVerification.Missing
+
+		if ( '' === $group ) {
+			wp_send_json_error( array( 'message' => __( 'התוכן לא נמצא.', 'kivun' ) ), 400 );
+		}
+
+		$ids = get_posts(
+			array(
+				'post_type'              => array_values( self::type_map() ),
+				'post_status'            => array( 'publish', 'draft', 'pending', 'private', 'future' ),
+				'posts_per_page'         => -1,
+				'fields'                 => 'ids',
+				'no_found_rows'          => true,
+				'update_post_term_cache' => false,
+				'meta_key'               => self::GROUP_META, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+				'meta_value'             => $group, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+			)
+		);
+
+		if ( ! $ids ) {
+			wp_send_json_error( array( 'message' => __( 'התוכן לא נמצא.', 'kivun' ) ), 404 );
+		}
+
+		foreach ( array_map( 'absint', (array) $ids ) as $id ) {
+			if ( $archived ) {
+				update_post_meta( $id, self::ARCHIVED_META, '1' );
+			} else {
+				delete_post_meta( $id, self::ARCHIVED_META );
+			}
+		}
+
+		wp_send_json_success(
+			array(
+				'message' => $archived
+					? __( 'התוכן הועבר לארכיון.', 'kivun' )
+					: __( 'התוכן הוחזר.', 'kivun' ),
+			)
+		);
 	}
 
 	/**
@@ -2991,6 +3070,43 @@ class Kivun_Content_Creator {
 
 
 	/**
+	 * The library's content, either the part in use or the part put away.
+	 *
+	 * Asked for separately rather than filtered after the fact. The list is
+	 * capped at 200 and always was: past that the oldest content simply
+	 * stopped appearing, with nothing on screen to say so. Two queries mean
+	 * putting something away actually frees a place in the list it was
+	 * crowding, which is half of what the archive is for here.
+	 *
+	 * @param bool $archived Which half to fetch.
+	 * @return array<int,\WP_Post>
+	 */
+	private static function library_posts( bool $archived ): array {
+		return get_posts(
+			array(
+				'post_type'              => array_values( self::type_map() ),
+				'post_status'            => array( 'publish', 'draft', 'pending', 'private', 'future' ),
+				'posts_per_page'         => 200, // phpcs:ignore WordPress.WP.PostsPerPage.posts_per_page_posts_per_page
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'             => array(
+					array(
+						'key'     => self::GROUP_META,
+						'compare' => 'EXISTS',
+					),
+					array(
+						'key'     => self::ARCHIVED_META,
+						'compare' => $archived ? 'EXISTS' : 'NOT EXISTS',
+					),
+				),
+				'orderby'                => 'date',
+				'order'                  => 'DESC',
+				'no_found_rows'          => true,
+				'update_post_term_cache' => false,
+			)
+		);
+	}
+
+	/**
 	 * Render the content library: every content group this console created,
 	 * with its status, live registration count and management actions.
 	 *
@@ -2999,19 +3115,55 @@ class Kivun_Content_Creator {
 	 * @return void
 	 */
 	private static function front_library( string $page_url, bool $can_delete = false ): void {
-		$posts = get_posts(
-			array(
-				'post_type'              => array_values( self::type_map() ),
-				'post_status'            => array( 'publish', 'draft', 'pending', 'private', 'future' ),
-				'posts_per_page'         => 200, // phpcs:ignore WordPress.WP.PostsPerPage.posts_per_page_posts_per_page
-				'meta_key'               => self::GROUP_META, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
-				'orderby'                => 'date',
-				'order'                  => 'DESC',
-				'no_found_rows'          => true,
-				'update_post_term_cache' => false,
-			)
-		);
+		$groups   = self::library_groups( self::library_posts( false ) );
+		$put_away = self::library_groups( self::library_posts( true ) );
 
+		$lead_counts = self::leads_per_content();
+		?>
+		<div class="kivun-cc-front">
+			<div class="kivun-cc-head">
+				<h2 class="kivun-cc-title"><?php esc_html_e( 'התכנים שלי', 'kivun' ); ?></h2>
+				<p class="kivun-cc-lead"><?php esc_html_e( 'כל התכנים שנוצרו כאן — עריכה, שכפול, צפייה ומחיקה, ומספר הפניות שהתקבלו לכל תוכן.', 'kivun' ); ?></p>
+			</div>
+
+			<?php if ( ! $groups && ! $put_away ) : ?>
+				<div class="kivun-cc-note"><?php esc_html_e( 'עדיין לא נוצרו תכנים. עברו ללשונית "פרסום תוכן" כדי להתחיל.', 'kivun' ); ?></div>
+			<?php else : ?>
+				<?php self::library_table( $groups, $lead_counts, $page_url, $can_delete, false ); ?>
+
+				<?php if ( $put_away ) : ?>
+					<?php
+					// Put away, at the bottom, shut. The content itself is
+					// untouched: its pages are still published and still
+					// taking enquiries — this is only where it is listed.
+					?>
+					<details class="kivun-archive">
+						<summary class="kivun-camp-summary">
+							<?php
+							echo esc_html(
+								sprintf(
+									/* translators: %s: how many content groups are archived. */
+									__( 'ארכיון (%s)', 'kivun' ),
+									number_format_i18n( count( $put_away ) )
+								)
+							);
+							?>
+						</summary>
+						<?php self::library_table( $put_away, $lead_counts, $page_url, $can_delete, true ); ?>
+					</details>
+				<?php endif; ?>
+			<?php endif; ?>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Fold the library's posts into one row per content group.
+	 *
+	 * @param array<int,\WP_Post> $posts The posts.
+	 * @return array<string,array<string,mixed>> Group key => its row.
+	 */
+	private static function library_groups( array $posts ): array {
 		$labels = array(
 			'kivun_workshop' => __( 'דף נחיתה', 'kivun' ),
 			'kivun_course'   => __( 'קורס', 'kivun' ),
@@ -3057,18 +3209,25 @@ class Kivun_Content_Creator {
 			}
 		}
 
-		$lead_counts = self::leads_per_content();
-		?>
-		<div class="kivun-cc-front">
-			<div class="kivun-cc-head">
-				<h2 class="kivun-cc-title"><?php esc_html_e( 'התכנים שלי', 'kivun' ); ?></h2>
-				<p class="kivun-cc-lead"><?php esc_html_e( 'כל התכנים שנוצרו כאן — עריכה, שכפול, צפייה ומחיקה, ומספר הפניות שהתקבלו לכל תוכן.', 'kivun' ); ?></p>
-			</div>
+		return $groups;
+	}
 
-			<?php if ( ! $groups ) : ?>
-				<div class="kivun-cc-note"><?php esc_html_e( 'עדיין לא נוצרו תכנים. עברו ללשונית "פרסום תוכן" כדי להתחיל.', 'kivun' ); ?></div>
-			<?php else : ?>
-				<div class="kivun-cc-tablewrap">
+	/**
+	 * One table of content groups — the ones in use, or the ones put away.
+	 *
+	 * @param array<string,array<string,mixed>> $groups      The rows.
+	 * @param array<int,int>                    $lead_counts Leads per content id.
+	 * @param string                            $page_url    The console's address.
+	 * @param bool                              $can_delete  Whether deletion is offered.
+	 * @param bool                              $archived    Whether these are the ones put away.
+	 * @return void
+	 */
+	private static function library_table( array $groups, array $lead_counts, string $page_url, bool $can_delete, bool $archived ): void {
+		if ( ! $groups ) {
+			return;
+		}
+		?>
+			<div class="kivun-cc-tablewrap">
 				<table class="kivun-cc-table">
 					<thead>
 						<tr>
@@ -3175,14 +3334,20 @@ class Kivun_Content_Creator {
 								<?php if ( $can_delete ) : ?>
 									<?php echo self::delete_form( (string) $gid, $page_url, __( 'מחיקה', 'kivun' ), 'kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--danger' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built from escaped parts in delete_form(). ?>
 								<?php endif; ?>
+								<?php if ( current_user_can( 'edit_posts' ) ) : ?>
+									<button
+										type="button"
+										class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost kivun-archive-content"
+										data-group="<?php echo esc_attr( (string) $gid ); ?>"
+										data-archived="<?php echo $archived ? '0' : '1'; ?>"
+									><?php echo $archived ? esc_html__( 'החזרה', 'kivun' ) : esc_html__( 'לארכיון', 'kivun' ); ?></button>
+								<?php endif; ?>
 							</td>
 						</tr>
 					<?php endforeach; ?>
 					</tbody>
 				</table>
-				</div>
-			<?php endif; ?>
-		</div>
+			</div>
 		<?php
 	}
 
@@ -3972,7 +4137,19 @@ class Kivun_Content_Creator {
 				<div class="kivun-cc-note"><?php esc_html_e( 'עדיין לא נוצרו קמפיינים. התחילו בקמפיין אחד, והוסיפו תחתיו קישור לכל מפרסם.', 'kivun' ); ?></div>
 			<?php else : ?>
 				<?php
+				// The ones put away are captured as they are drawn and printed
+				// below, inside a section that starts shut. Drawn by the same
+				// code either way: an archived campaign is still edited, still
+				// counted and still has its links copied out of it — the only
+				// difference is where on the page it sits.
+				$kivun_put_away = '';
+				$kivun_away_n   = 0;
 				foreach ( $campaigns as $camp ) :
+					$kivun_is_away = Kivun_Campaigns::is_archived( $camp );
+					if ( $kivun_is_away ) {
+						++$kivun_away_n;
+						ob_start();
+					}
 					$links = $links_by_id[ (int) $camp->id ] ?? array();
 					$rows  = 0;
 					foreach ( $links as $link ) {
@@ -4017,6 +4194,16 @@ class Kivun_Content_Creator {
 								>
 									<?php echo kivun_icon( 'edit' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?>
 									<span class="kivun-sr-only"><?php esc_html_e( 'עריכת הקמפיין', 'kivun' ); ?></span>
+								</button>
+								<button
+									type="button"
+									class="kivun-cc-iconbtn kivun-archive-campaign"
+									data-id="<?php echo esc_attr( $camp->id ); ?>"
+									data-archived="<?php echo $kivun_is_away ? '0' : '1'; ?>"
+									title="<?php echo $kivun_is_away ? esc_attr__( 'החזרה מהארכיון', 'kivun' ) : esc_attr__( 'העברה לארכיון — הקישורים ימשיכו לעבוד', 'kivun' ); ?>"
+								>
+									<span aria-hidden="true"><?php echo $kivun_is_away ? '↩' : '🗄'; ?></span>
+									<span class="kivun-sr-only"><?php echo $kivun_is_away ? esc_html__( 'החזרה מהארכיון', 'kivun' ) : esc_html__( 'העברה לארכיון', 'kivun' ); ?></span>
 								</button>
 								<button
 									type="button"
@@ -4187,7 +4374,33 @@ class Kivun_Content_Creator {
 							<?php self::campaign_link_form( $camp ); ?>
 						</details>
 					</details>
+					<?php
+					if ( $kivun_is_away ) {
+						$kivun_put_away .= ob_get_clean();
+					}
+					?>
 				<?php endforeach; ?>
+
+				<?php if ( '' !== $kivun_put_away ) : ?>
+					<details class="kivun-archive">
+						<summary class="kivun-camp-summary">
+							<?php
+							echo esc_html(
+								sprintf(
+									/* translators: %s: how many campaigns are archived. */
+									__( 'ארכיון (%s)', 'kivun' ),
+									number_format_i18n( $kivun_away_n )
+								)
+							);
+							?>
+						</summary>
+						<?php
+						// Captured above, from the same drawing code as the rest.
+						// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Already-escaped markup, captured above.
+						echo $kivun_put_away;
+						?>
+					</details>
+				<?php endif; ?>
 
 				<p class="kivun-field-hint"><?php esc_html_e( 'מחיקה מסירה את הקישור מהרשימה בלבד — הפניות שכבר הגיעו דרכו נשמרות.', 'kivun' ); ?></p>
 			<?php endif; ?>

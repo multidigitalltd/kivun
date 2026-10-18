@@ -954,6 +954,19 @@ td.kivun-app-contact a { display: block; }
 .kivun-cc-console .kivun-cc-head { margin-bottom: 1.1rem; }
 .kivun-cc-console .kivun-cc-title { font-size: 1.3rem; font-weight: 800; margin: 0 0 .2rem; }
 .kivun-cc-console .kivun-cc-lead { font-size: .88rem; color: var(--kivun-muted); margin: 0; line-height: 1.6; }
+/* Put away: at the bottom of its tab, shut, and quieter than the list above
+   it. Set apart by a line rather than by a box inside a box — the cards it
+   holds are already cards. */
+.kivun-cc-console .kivun-archive {
+	margin-top: 1.5rem;
+	border-top: 2px solid var(--kivun-border);
+	border-radius: 0;
+	background: none;
+	box-shadow: none;
+	padding: .9rem 0 0;
+}
+.kivun-cc-console .kivun-archive > summary { color: var(--kivun-muted); font-weight: 600; }
+.kivun-cc-console .kivun-archive[open] > summary { margin-bottom: .9rem; }
 .kivun-cc-sep-note { display: inline-block; margin-top: .35rem; font-size: .82rem; color: var(--cc-brand); font-weight: 700; }
 /* Same treatment for the tab named in the other direction, from the jobs
    board back to the leads. The two lines are a pair and should read alike. */
