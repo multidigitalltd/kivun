@@ -955,6 +955,9 @@ td.kivun-app-contact a { display: block; }
 .kivun-cc-console .kivun-cc-title { font-size: 1.3rem; font-weight: 800; margin: 0 0 .2rem; }
 .kivun-cc-console .kivun-cc-lead { font-size: .88rem; color: var(--kivun-muted); margin: 0; line-height: 1.6; }
 .kivun-cc-sep-note { display: inline-block; margin-top: .35rem; font-size: .82rem; color: var(--cc-brand); font-weight: 700; }
+/* Same treatment for the tab named in the other direction, from the jobs
+   board back to the leads. The two lines are a pair and should read alike. */
+.kivun-cc-console .kivun-cc-lead a { color: inherit; text-decoration: underline; }
 /* The tab it names is a link to that tab. Underlined rather than recoloured:
    the line is already bold and in the brand colour, so a theme's own link
    colour would either fight it or vanish into it. */
