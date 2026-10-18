@@ -4812,8 +4812,26 @@ class Kivun_Content_Creator {
 				<h2 class="kivun-cc-title"><?php esc_html_e( 'לידים והרשמות', 'kivun' ); ?></h2>
 				<p class="kivun-cc-lead">
 					<?php esc_html_e( 'פניות שהתקבלו מהתכנים — קורסים, סדנאות, דפי נחיתה ואירועים — וכן פניות מטפסים כלליים באתר (צור קשר וכד׳), המסומנות "טופס באתר". פרטי הפנייה מציגים את תשובות הלקוח; עדכון סטטוס והערות פנימיות נשמרים אוטומטית.', 'kivun' ); ?>
-					<?php if ( Kivun_Employer::can_manage_all() ) : ?>
-						<br><span class="kivun-cc-sep-note"><?php esc_html_e( 'הגשות מועמדות למשרות (עם קורות חיים) נמצאות בלשונית "לוח משרות" — הן מערכת נפרדת.', 'kivun' ); ?></span>
+					<?php
+					// Only where that tab is actually on the screen. A leads
+					// reader has one tab and no others to reach, so pointing
+					// them at one is an answer they cannot act on.
+					if ( Kivun_Employer::can_manage_all() && ! self::is_leads_only() ) :
+						$kivun_jobs_tab = sprintf(
+							'<a href="%s">%s</a>',
+							esc_url( add_query_arg( 'kivun_tab', 'jobs', $page_url ) ),
+							esc_html__( 'לוח משרות', 'kivun' )
+						);
+						?>
+						<br><span class="kivun-cc-sep-note">
+							<?php
+							printf(
+								/* translators: %s: a link whose text is the name of the jobs board tab. */
+								esc_html__( 'הגשות מועמדות למשרות (עם קורות חיים) נמצאות בלשונית %s.', 'kivun' ),
+								$kivun_jobs_tab // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built from the escaped parts above.
+							);
+							?>
+						</span>
 					<?php endif; ?>
 				</p>
 			</div>
