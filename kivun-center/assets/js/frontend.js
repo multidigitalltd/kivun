@@ -1363,6 +1363,31 @@
 				return;
 			}
 			out.value = res.data.text;
+
+			// The code the message names is this link's code from now on.
+			// Put it in the field, so the save stores that one rather than
+			// drawing a second: a link from before the short codes existed
+			// has none to keep and none typed, and the two draws would not
+			// have matched. Nothing on screen would have said so — only the
+			// person who clicked the link in the message.
+			if (res.data.slug) {
+				var slugEl = form.querySelector('.kivun-short-slug');
+				if (slugEl && kivunShortClean(slugEl.value) !== res.data.slug) {
+					slugEl.value = res.data.slug;
+					form.dataset.shortAsked = res.data.slug;
+					form.dataset.shortResolved = res.data.slug;
+					kivunShortRefresh(form, true);
+				}
+			}
+
+			// The address itself, kept for the save: if the code is taken
+			// between now and then, the stored message has this exact string
+			// swapped for the one that was settled on. Rebuilding it from
+			// the code there would not match — /go/sale is a prefix of
+			// /go/sale-2, and replacing a prefix inside it makes a third
+			// address belonging to nobody.
+			form.dataset.waShort = res.data.url || '';
+
 			if (status) {
 				status.textContent = res.data.notice
 					? res.data.notice
@@ -1806,6 +1831,9 @@
 			utm_medium: mediumEl ? kivunCampClean(mediumEl.value) : '',
 			utm_content: contentEl ? kivunCampClean(contentEl.value) : '',
 			slug: shortSlug,
+			// The short address the message in the box was written around,
+			// so a code taken since then can be corrected inside it.
+			wa_short: linkForm.dataset.waShort || '',
 			whatsapp: waEl ? waEl.value : ''
 		}, linkErr);
 	});

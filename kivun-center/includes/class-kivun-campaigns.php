@@ -411,6 +411,9 @@ class Kivun_Campaigns {
 		// What the short link should be called. Blank is the normal case —
 		// a code is generated rather than demanded.
 		$wanted_slug = sanitize_text_field( wp_unslash( $_POST['slug'] ?? '' ) );
+		// The short address the WhatsApp message was written around, where
+		// one was generated for it. Carried rather than rebuilt: see below.
+		$wa_short = esc_url_raw( wp_unslash( $_POST['wa_short'] ?? '' ) );
 		if ( ! self::valid_target( $target ) ) {
 			$target = (string) $campaign->target_url;
 		}
@@ -478,12 +481,17 @@ class Kivun_Campaigns {
 			array(
 				$data['final_url'],
 				$id ? self::final_url_of( $id ) : '',
-				// And the short address the form was showing, where the save
-				// settled on a different code — somebody else took it in
-				// between. The message was written around what was on screen,
-				// and left alone it would send its readers to that other
-				// person's link.
-				Kivun_Short_Links::url_for( Kivun_Short_Links::clean_slug( $wanted_slug ) ),
+				// And the short address the message was actually written
+				// around, where the save settled on a different code —
+				// somebody else took it in between. Left alone, the message
+				// would send its readers to that other person's link.
+				//
+				// The address itself, as the generator returned it, rather
+				// than one rebuilt from the code: /go/sale rebuilt from a
+				// save that resolved to /go/sale-2 is a prefix of it, and
+				// replacing a prefix inside the full address yields
+				// /go/sale-2-2, which is nobody's link at all.
+				$wa_short,
 			)
 		);
 		$format           = array( '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' );
@@ -766,10 +774,16 @@ class Kivun_Campaigns {
 		// copies straight out of the box is this text, here.
 		//
 		// The code is settled the same way the save settles it, from the same
-		// value the form sends, so the address in the message is the address
-		// the link gets. Where they still differ — somebody took the code in
-		// between — the save corrects the stored copy.
-		$short         = Kivun_Short_Links::url_for( Kivun_Short_Links::slug_for_save( $wanted_slug, $link_id ) );
+		// value the form sends — and then sent back, so the form can put it
+		// in its field and the save stores the very code the message names.
+		//
+		// Without that, a link from before the short codes existed has none
+		// to keep and none typed, so this would draw one at random for the
+		// message and the save would draw a second one for the row. Every
+		// one of those messages would have pointed at a code belonging to
+		// nobody, and the only sign would be the person who clicked it.
+		$slug          = Kivun_Short_Links::slug_for_save( $wanted_slug, $link_id );
+		$short         = Kivun_Short_Links::url_for( $slug );
 		$fields['url'] = '' !== $short ? $short : self::build_url( $target, $utm );
 
 		if ( '' === trim( (string) Kivun_Admin_Settings::get( 'openai_api_key', '' ) ) ) {
@@ -777,6 +791,7 @@ class Kivun_Campaigns {
 				array(
 					'text'   => Kivun_AI_Content::whatsapp_template( $fields ),
 					'url'    => $fields['url'],
+					'slug'   => $slug,
 					'source' => 'template',
 				)
 			);
@@ -789,6 +804,7 @@ class Kivun_Campaigns {
 				array(
 					'text'   => Kivun_AI_Content::whatsapp_template( $fields ),
 					'url'    => $fields['url'],
+					'slug'   => $slug,
 					'source' => 'template',
 					'notice' => $text->get_error_message(),
 				)
@@ -799,6 +815,7 @@ class Kivun_Campaigns {
 			array(
 				'text'   => $text,
 				'url'    => $fields['url'],
+				'slug'   => $slug,
 				'source' => 'ai',
 			)
 		);

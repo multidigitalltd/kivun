@@ -165,6 +165,63 @@ final class PromoShortLinkTest extends TestCase {
 	}
 
 	/**
+	 * The address the message was written around is carried to the save, not
+	 * rebuilt there from the code.
+	 *
+	 * A code resolved to "sale-2" while the message still said "sale" is the
+	 * ordinary case, and /go/sale is a prefix of /go/sale-2 — so a save that
+	 * rebuilt the old address from the new code would replace that prefix
+	 * inside the full address and produce /go/sale-2-2, which is nobody's
+	 * link at all. Carrying the exact string makes the match exact.
+	 *
+	 * @return void
+	 */
+	public function test_the_exact_address_is_carried_rather_than_rebuilt(): void {
+		$source = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-campaigns.php' );
+
+		$this->assertStringContainsString(
+			"\$wa_short = esc_url_raw( wp_unslash( \$_POST['wa_short'] ?? '' ) );",
+			$source,
+			'the save no longer receives the address the message was built around'
+		);
+		$this->assertStringNotContainsString(
+			'Kivun_Short_Links::url_for( Kivun_Short_Links::clean_slug( $wanted_slug ) )',
+			$source,
+			'the save is rebuilding the old address from the code again'
+		);
+
+		$script = (string) file_get_contents( KIVUN_DIR . 'assets/js/frontend.js' );
+		$this->assertStringContainsString( "form.dataset.waShort = res.data.url || '';", $script );
+		$this->assertStringContainsString( "wa_short: linkForm.dataset.waShort || '',", $script );
+	}
+
+	/**
+	 * And the code the message names becomes the link's code, rather than
+	 * being drawn again at save time.
+	 *
+	 * A link from before the short codes existed has none to keep and none
+	 * typed in its form, so the message would have been written around one
+	 * random code and the row stored another. Every one of those messages
+	 * points at a code belonging to nobody, and the only sign of it is the
+	 * person who clicked the link.
+	 *
+	 * @return void
+	 */
+	public function test_the_code_the_message_names_is_the_one_saved(): void {
+		$source = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-campaigns.php' );
+
+		$this->assertSame(
+			3,
+			substr_count( $source, "'slug'   => \$slug," ),
+			'an answer that does not say which code it used leaves the form to guess'
+		);
+
+		$script = (string) file_get_contents( KIVUN_DIR . 'assets/js/frontend.js' );
+		$this->assertStringContainsString( 'slugEl.value = res.data.slug;', $script );
+		$this->assertStringContainsString( 'form.dataset.shortResolved = res.data.slug;', $script );
+	}
+
+	/**
 	 * And where it did not change, the message is left exactly as it was
 	 * rather than having its own address swapped for itself.
 	 *
@@ -212,7 +269,12 @@ final class PromoShortLinkTest extends TestCase {
 		$source = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-campaigns.php' );
 
 		$this->assertStringContainsString(
-			"\$short         = Kivun_Short_Links::url_for( Kivun_Short_Links::slug_for_save( \$wanted_slug, \$link_id ) );",
+			"\$slug          = Kivun_Short_Links::slug_for_save( \$wanted_slug, \$link_id );",
+			$source,
+			'the generated promo no longer settles the code the way the save does'
+		);
+		$this->assertStringContainsString(
+			"\$short         = Kivun_Short_Links::url_for( \$slug );",
 			$source,
 			'the generated promo no longer names the short link'
 		);
