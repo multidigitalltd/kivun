@@ -4833,7 +4833,7 @@ class Kivun_Content_Creator {
 			<div class="kivun-cc-head">
 				<h2 class="kivun-cc-title"><?php esc_html_e( 'לידים והרשמות', 'kivun' ); ?></h2>
 				<p class="kivun-cc-lead">
-					<?php esc_html_e( 'פניות שהתקבלו מהתכנים — קורסים, סדנאות, דפי נחיתה ואירועים — וכן פניות מטפסים כלליים באתר (צור קשר וכד׳), המסומנות "טופס באתר". פרטי הפנייה מציגים את תשובות הלקוח; עדכון סטטוס והערות פנימיות נשמרים אוטומטית.', 'kivun' ); ?>
+					<?php esc_html_e( 'פניות שהתקבלו מהתכנים — קורסים, סדנאות, דפי נחיתה ואירועים — וכן פניות מטפסים כלליים באתר (צור קשר וכד׳), המסומנות "טופס באתר".', 'kivun' ); ?>
 					<?php
 					// Only where that tab is actually on the screen. A leads
 					// reader has one tab and no others to reach, so pointing
