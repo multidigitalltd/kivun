@@ -2398,17 +2398,6 @@ class Kivun_Content_Creator {
 	}
 
 	/**
-	 * Total number of registration/lead rows, for the tab badge.
-	 *
-	 * @return int
-	 */
-	private static function leads_count(): int {
-		global $wpdb;
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		return (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}kivun_registrations" );
-	}
-
-	/**
 	 * Handle the front-end submission (logged-in authorised users only).
 	 *
 	 * @return void
@@ -4717,57 +4706,45 @@ class Kivun_Content_Creator {
 
 			<?php $kivun_edit_short = $editing ? Kivun_Short_Links::url_for( (string) ( $link->slug ?? '' ) ) : ''; ?>
 
-			<label class="kivun-cc-sub" for="kivun-short-slug-<?php echo esc_attr( (string) $camp->id ); ?>"><?php esc_html_e( 'הקישור הקצר', 'kivun' ); ?></label>
+			<label class="kivun-cc-sub"><?php esc_html_e( 'הקישור הקצר', 'kivun' ); ?></label>
 			<?php if ( '' !== $kivun_edit_short ) : ?>
 				<div class="kivun-camp-out">
 					<input type="text" class="kivun-cc-input kivun-camp-short" dir="ltr" readonly value="<?php echo esc_url( $kivun_edit_short ); ?>">
 					<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-camp-copy"><?php esc_html_e( 'העתקה', 'kivun' ); ?></button>
 				</div>
 			<?php endif; ?>
-			<div class="kivun-camp-out">
-				<span class="kivun-short-slug__base" dir="ltr"><?php echo esc_html( home_url( '/' . Kivun_Short_Links::BASE . '/' ) ); ?></span>
-				<?php
-				// The alphabet and length travel with the field rather than
-				// being written out again in the script. The code shown while
-				// typing is the code that gets saved, so the two sides have
-				// to agree about what a code looks like — and the only way
-				// they cannot drift is to have one of them say it.
-				?>
-				<input
-					type="text"
-					id="kivun-short-slug-<?php echo esc_attr( (string) $camp->id ); ?>"
-					class="kivun-cc-input kivun-short-slug"
-					name="slug"
-					dir="ltr"
-					value="<?php echo esc_attr( $editing ? (string) ( $link->slug ?? '' ) : '' ); ?>"
-					placeholder="<?php esc_attr_e( 'יווצר אוטומטית', 'kivun' ); ?>"
-					data-short-base="<?php echo esc_attr( home_url( '/' . Kivun_Short_Links::BASE . '/' ) ); ?>"
-					data-short-alphabet="<?php echo esc_attr( Kivun_Short_Links::ALPHABET ); ?>"
-					data-short-length="<?php echo esc_attr( (string) Kivun_Short_Links::LENGTH ); ?>"
-				>
-			</div>
-
 			<?php
-			// Shown as text, not as a field with a copy button beside it. The
-			// short link is a pointer to a row that does not exist yet, so
-			// until this is saved it leads nowhere — and an input with a copy
-			// button next to it is an invitation to paste a dead link into a
-			// message. The working one, with its button, appears once saved.
+			// Drawn, never typed. The field carries the code to the save and
+			// the alphabet it was drawn from — the server's own, so neither the
+			// characters nor the length can drift from it — while the line below
+			// is what anybody actually reads. One code, said once.
 			?>
+			<input
+				type="hidden"
+				class="kivun-short-slug"
+				name="slug"
+				value="<?php echo esc_attr( $editing ? (string) ( $link->slug ?? '' ) : '' ); ?>"
+				data-short-base="<?php echo esc_attr( home_url( '/' . Kivun_Short_Links::BASE . '/' ) ); ?>"
+				data-short-alphabet="<?php echo esc_attr( Kivun_Short_Links::ALPHABET ); ?>"
+				data-short-length="<?php echo esc_attr( (string) Kivun_Short_Links::LENGTH ); ?>"
+			>
+
+			<?php if ( '' === $kivun_edit_short ) : ?>
+				<?php
+				// Shown as text, not as a field with a copy button beside it. The
+				// short link is a pointer to a row that does not exist yet, so
+				// until this is saved it leads nowhere — and an input with a copy
+				// button next to it is an invitation to paste a dead link into a
+				// message. The working one, with its button, appears once saved.
+				?>
 			<p class="kivun-short-preview" hidden>
 				<span class="kivun-short-preview__label"><?php esc_html_e( 'הקישור הקצר שייווצר:', 'kivun' ); ?></span>
 				<code class="kivun-short-preview__url" dir="ltr"></code>
 				<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost kivun-camp-copy"><?php esc_html_e( 'העתקה', 'kivun' ); ?></button>
 				<span class="kivun-short-preview__note"><?php esc_html_e( 'יתחיל לעבוד אחרי השמירה', 'kivun' ); ?></span>
-				<span class="kivun-short-preview__taken" hidden><?php esc_html_e( 'הקוד שהוקלד כבר תפוס — זה הקוד הפנוי הקרוב אליו', 'kivun' ); ?></span>
 			</p>
-			<p class="kivun-field-hint">
-				<?php esc_html_e( 'אפשר להשאיר ריק ותיווצר כתובת קצרה אוטומטית, או לכתוב משהו שאפשר להגיד בטלפון — אותיות באנגלית, ספרות ומקפים בלבד.', 'kivun' ); ?>
-				<?php if ( $editing ) : ?>
-					<br><strong><?php esc_html_e( 'שימו לב:', 'kivun' ); ?></strong>
-					<?php esc_html_e( 'שינוי הקוד מבטל את הקישור הקצר הקודם — מי שכבר קיבל אותו יגיע לשגיאה.', 'kivun' ); ?>
-				<?php endif; ?>
-			</p>
+			<p class="kivun-field-hint"><?php esc_html_e( 'הכתובת הקצרה נוצרת אוטומטית לכל קישור, ונשארת כפי שהיא כל עוד הקישור קיים.', 'kivun' ); ?></p>
+			<?php endif; ?>
 
 			<label class="kivun-cc-sub"><?php esc_html_e( 'הקישור המלא', 'kivun' ); ?></label>
 			<p class="kivun-field-hint"><?php esc_html_e( 'זה מה שהקישור הקצר פותח, וזה מה שגוגל אנליטיקס רואה. אין צורך לשתף אותו.', 'kivun' ); ?></p>

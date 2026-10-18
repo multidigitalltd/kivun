@@ -216,9 +216,14 @@ final class PromoShortLinkTest extends TestCase {
 			'an answer that does not say which code it used leaves the form to guess'
 		);
 
+		// Written into the field, which is where the save reads the code
+		// from and now the only place it is kept. It used to be remembered
+		// beside the field as well, for a code somebody had typed and the
+		// server had answered about; nothing is typed any more, and one
+		// place that holds the code cannot disagree with itself.
 		$script = (string) file_get_contents( KIVUN_DIR . 'assets/js/frontend.js' );
 		$this->assertStringContainsString( 'slugEl.value = res.data.slug;', $script );
-		$this->assertStringContainsString( 'form.dataset.shortResolved = res.data.slug;', $script );
+		$this->assertStringContainsString( 'slug: kivunShortChosen(form)', $script );
 	}
 
 	/**
