@@ -426,9 +426,120 @@ class Kivun_Mercaz {
 			$done[ $remote ] = $counts;
 		}
 
+		// Their list is here now, so the values this site was using before it
+		// existed can be put onto it. Once, and never asked about again.
+		$done['legacy'] = self::adopt_legacy_names();
+
 		update_option( 'kivun_mercaz_vocab_synced', current_time( 'mysql' ) );
 
 		return $done;
+	}
+
+	/**
+	 * What this site called things before the centre's list arrived, and
+	 * which of their values each one is.
+	 *
+	 * A table, not a guess. Matching by letters would read
+	 * "מכירות ושיווק" as either "מכירות" or "פרסום ושיווק" and pick one
+	 * silently; these were read against their list once, by someone looking
+	 * at both, and written down.
+	 *
+	 * Two were judgement rather than translation and are worth knowing:
+	 * "ייעוץ מקצועי" has no counterpart and goes to their "כללי", and
+	 * "רווחה ושירותים חברתיים" is closest to their "טיפול". Either can be
+	 * moved afterwards from the term screen like any other.
+	 *
+	 * "התנדבות" is absent on purpose: they have nothing like it, and
+	 * sending it anywhere would file volunteering under paid work.
+	 *
+	 * @return array<string,string> Our old name => their name.
+	 */
+	public static function legacy_names(): array {
+		return array(
+			// job-type.
+			'משרה מלאה'              => 'מלאה',
+			'משרה חלקית'             => 'חלקית',
+			'פרילאנס'                => 'פרילנס',
+			// job_cat.
+			'אדמינסטרציה ומזכירות'   => 'אדמיניסטרציה',
+			'בריאות ורפואה'          => 'בריאות',
+			'חינוך והוראה'           => 'חינוך',
+			'טכנולוגיה ומחשבים'      => 'הייטק',
+			'ייעוץ מקצועי'           => 'כללי',
+			'כספים וחשבונאות'        => 'כספים',
+			'מכירות ושיווק'          => 'מכירות',
+			'ניהול ומנהל'            => 'ניהול',
+			'עיצוב ויצירה'           => 'עיצוב ואמנות',
+			'רווחה ושירותים חברתיים' => 'טיפול',
+		);
+	}
+
+	/**
+	 * Move this site's old values onto the centre's, once.
+	 *
+	 * Renaming a term carries every job tagged with it, so one pass moves
+	 * 42 jobs without anybody opening one. Where their value already exists
+	 * here the two merge, which is the same thing said twice.
+	 *
+	 * Done once and recorded, because afterwards the names are theirs and
+	 * running it again would only find nothing — or, worse, catch a value
+	 * somebody has since created on purpose with one of the old names.
+	 *
+	 * @return array{adopted:int,merged:int}
+	 */
+	private static function adopt_legacy_names(): array {
+		$out = array(
+			'adopted' => 0,
+			'merged'  => 0,
+		);
+
+		if ( get_option( 'kivun_mercaz_legacy_adopted' ) ) {
+			return $out;
+		}
+
+		$legacy = self::legacy_names();
+
+		foreach ( self::vocabularies() as $remote => $taxonomy ) {
+			$theirs = self::remote_terms( $remote );
+			if ( is_wp_error( $theirs ) ) {
+				// Not marked done, so the next run tries again rather than
+				// leaving this site half on their list for good.
+				return $out;
+			}
+
+			foreach ( $legacy as $was => $becomes ) {
+				$term = get_term_by( 'name', $was, $taxonomy );
+				if ( ! $term || is_wp_error( $term ) ) {
+					continue;
+				}
+
+				$their_id = (int) array_search( $becomes, $theirs, true );
+				if ( ! $their_id ) {
+					// They do not have it after all — their list is the
+					// authority, and renaming to something they reject would
+					// swap one dead value for another.
+					continue;
+				}
+
+				$already = get_term_by( 'name', $becomes, $taxonomy );
+				if ( $already && ! is_wp_error( $already ) && (int) $already->term_id !== (int) $term->term_id ) {
+					self::merge_term( $taxonomy, (int) $term->term_id, (int) $already->term_id );
+					update_term_meta( (int) $already->term_id, self::REMOTE_TERM, $their_id );
+					++$out['merged'];
+					continue;
+				}
+
+				$renamed = wp_update_term( (int) $term->term_id, $taxonomy, array( 'name' => $becomes ) );
+				if ( ! is_wp_error( $renamed ) ) {
+					update_term_meta( (int) $term->term_id, self::REMOTE_TERM, $their_id );
+					++$out['adopted'];
+				}
+			}
+		}
+
+		update_option( 'kivun_mercaz_legacy_adopted', 1 );
+
+		return $out;
 	}
 
 	/**
@@ -528,16 +639,23 @@ class Kivun_Mercaz {
 			wp_send_json_error( array( 'message' => $done->get_error_message() ) );
 		}
 
+		$legacy = $done['legacy'] ?? array(
+			'adopted' => 0,
+			'merged'  => 0,
+		);
+		unset( $done['legacy'] );
+
 		$added  = 0;
 		$named  = 0;
 		$tied   = 0;
-		$merged = 0;
+		$merged = $legacy['merged'];
 		foreach ( $done as $counts ) {
 			$added  += $counts['added'];
 			$named  += $counts['renamed'];
 			$tied   += $counts['linked'];
 			$merged += $counts['merged'];
 		}
+		$named += $legacy['adopted'];
 
 		wp_send_json_success(
 			array(
