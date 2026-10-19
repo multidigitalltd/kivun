@@ -498,6 +498,7 @@ class Kivun_Mercaz {
 		}
 
 		$legacy = self::legacy_names();
+		$stuck  = false;
 
 		foreach ( self::vocabularies() as $remote => $taxonomy ) {
 			$theirs = self::remote_terms( $remote );
@@ -530,14 +531,24 @@ class Kivun_Mercaz {
 				}
 
 				$renamed = wp_update_term( (int) $term->term_id, $taxonomy, array( 'name' => $becomes ) );
-				if ( ! is_wp_error( $renamed ) ) {
-					update_term_meta( (int) $term->term_id, self::REMOTE_TERM, $their_id );
-					++$out['adopted'];
+				if ( is_wp_error( $renamed ) ) {
+					// Left for the next run rather than written off. A value
+					// that could not be renamed — a slug already taken, say —
+					// keeps its jobs on a name the centre rejects, and
+					// marking the pass done would mean nothing ever looks at
+					// it again.
+					$stuck = true;
+					continue;
 				}
+
+				update_term_meta( (int) $term->term_id, self::REMOTE_TERM, $their_id );
+				++$out['adopted'];
 			}
 		}
 
-		update_option( 'kivun_mercaz_legacy_adopted', 1 );
+		if ( ! $stuck ) {
+			update_option( 'kivun_mercaz_legacy_adopted', 1 );
+		}
 
 		return $out;
 	}
@@ -794,7 +805,14 @@ class Kivun_Mercaz {
 		);
 
 		foreach ( (array) $ids as $id ) {
-			wp_set_object_terms( (int) $id, array( $to ), $taxonomy, false );
+			// Added, then the old one taken away. Replacing the job's terms
+			// outright would also take every other term it holds in this
+			// taxonomy — a job tagged with two fields would come out of the
+			// merge holding one, with nothing to say the other was ever
+			// there. The form offers a single choice, but the WordPress term
+			// box and an import do not.
+			wp_set_object_terms( (int) $id, array( $to ), $taxonomy, true );
+			wp_remove_object_terms( (int) $id, array( $from ), $taxonomy );
 		}
 
 		wp_delete_term( $from, $taxonomy );
