@@ -58,6 +58,7 @@ class Kivun_Mercaz {
 	 */
 	public static function init(): void {
 		add_action( 'wp_ajax_kivun_mercaz_test', array( __CLASS__, 'ajax_test' ) );
+		add_action( 'wp_ajax_kivun_mercaz_vocab', array( __CLASS__, 'ajax_vocab' ) );
 	}
 
 	/**
@@ -276,6 +277,82 @@ class Kivun_Mercaz {
 				),
 				'note'    => $note,
 				'roles'   => $roles,
+			)
+		);
+	}
+
+	/**
+	 * AJAX: the centre's own list of values, beside ours.
+	 *
+	 * A job is matched to their vocabulary by name, and a name they do not
+	 * have is dropped — so "משרה מלאה" can block fifty jobs while every one
+	 * of them looks correctly filled in here. Nothing on either screen says
+	 * what they would have accepted instead, and guessing at it by pushing
+	 * and reading the refusals is how an afternoon goes.
+	 *
+	 * Their list and ours, side by side, answers it in one look.
+	 *
+	 * @return void
+	 */
+	public static function ajax_vocab(): void {
+		self::guard();
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Verified by guard().
+		$remote = sanitize_text_field( wp_unslash( $_POST['taxonomy'] ?? '' ) );
+
+		// Only the vocabularies a job is matched against: this is a window
+		// onto their list, not a way to read anything by name.
+		$known = array(
+			'job-type' => 'kivun_job_scope',
+			'job_cat'  => 'kivun_job_field',
+		);
+		if ( ! isset( $known[ $remote ] ) ) {
+			wp_send_json_error( array( 'message' => __( 'רשימה לא מוכרת.', 'kivun' ) ) );
+		}
+
+		$result = self::request(
+			'GET',
+			$remote,
+			array( 'per_page' => 100 ),
+			null,
+			'jobs'
+		);
+
+		if ( is_wp_error( $result ) ) {
+			wp_send_json_error( array( 'message' => $result->get_error_message() ) );
+		}
+
+		$theirs = array();
+		foreach ( (array) ( $result['data'] ?? array() ) as $term ) {
+			if ( ! empty( $term['name'] ) ) {
+				$theirs[] = (string) $term['name'];
+			}
+		}
+
+		// Ours, with how many jobs carry each: a name used once and a name
+		// used fifty times are the same line otherwise, and they are not the
+		// same problem.
+		$ours  = array();
+		$terms = get_terms(
+			array(
+				'taxonomy'   => $known[ $remote ],
+				'hide_empty' => false,
+			)
+		);
+		if ( ! is_wp_error( $terms ) ) {
+			foreach ( $terms as $term ) {
+				$ours[] = array(
+					'name'    => (string) $term->name,
+					'jobs'    => (int) $term->count,
+					'matches' => in_array( (string) $term->name, $theirs, true ),
+				);
+			}
+		}
+
+		wp_send_json_success(
+			array(
+				'theirs' => $theirs,
+				'ours'   => $ours,
 			)
 		);
 	}

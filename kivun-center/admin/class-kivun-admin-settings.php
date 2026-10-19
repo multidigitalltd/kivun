@@ -682,8 +682,17 @@ class Kivun_Admin_Settings {
 						<button type="button" class="button kivun-mercaz-test" data-nonce="<?php echo esc_attr( wp_create_nonce( 'kivun_mercaz' ) ); ?>">
 							<?php esc_html_e( 'בדיקת חיבור', 'kivun' ); ?>
 						</button>
+						<button type="button" class="button kivun-mercaz-vocab" data-nonce="<?php echo esc_attr( wp_create_nonce( 'kivun_mercaz' ) ); ?>" data-taxonomy="job-type">
+							<?php esc_html_e( 'רשימת סוגי משרה שלהם', 'kivun' ); ?>
+						</button>
+						<button type="button" class="button kivun-mercaz-vocab" data-nonce="<?php echo esc_attr( wp_create_nonce( 'kivun_mercaz' ) ); ?>" data-taxonomy="job_cat">
+							<?php esc_html_e( 'רשימת תחומים שלהם', 'kivun' ); ?>
+						</button>
 						<p class="description">
 							<?php esc_html_e( 'מאמת את הפרטים ומדווח באיזה תפקיד התחברתם. משתמש במה שכתוב בשדות למעלה, גם לפני שמירה.', 'kivun' ); ?>
+						</p>
+						<p class="description">
+							<?php esc_html_e( 'משרה מותאמת לרשימה שלהם לפי שם, ושם שאין להם נופל בשקט. שתי הרשימות זו מול זו מראות אילו מהערכים שלנו מתקבלים ואילו לא.', 'kivun' ); ?>
 						</p>
 						<div class="kivun-mercaz-result" style="margin-top:10px"></div>
 						<script>
@@ -723,6 +732,42 @@ class Kivun_Admin_Settings {
 										say( '<div class="notice notice-error inline"><p><?php echo esc_js( __( 'הבקשה נכשלה.', 'kivun' ) ); ?></p></div>' );
 									} );
 							};
+
+							document.querySelectorAll( '.kivun-mercaz-vocab' ).forEach( function ( btn ) {
+								btn.addEventListener( 'click', function () {
+									var b = new URLSearchParams();
+									b.append( 'action', 'kivun_mercaz_vocab' );
+									b.append( 'taxonomy', btn.dataset.taxonomy );
+									call( btn, b, function ( d ) {
+										var theirs = ( d.theirs || [] );
+										var ours = ( d.ours || [] );
+
+										var mine = ours.length
+											? ours.map( function ( t ) {
+												// The ones that do not match are the whole
+												// point, so they are the ones that stand out.
+												return '<li>' + ( t.matches ? '✓ ' : '✗ ' ) + esc( t.name )
+													+ ' <span style="opacity:.6">(' + t.jobs + ' <?php echo esc_js( __( 'משרות', 'kivun' ) ); ?>)</span>'
+													+ ( t.matches ? '' : ' — <strong><?php echo esc_js( __( 'אין להם ערך כזה', 'kivun' ) ); ?></strong>' )
+													+ '</li>';
+											} ).join( '' )
+											: '<li><em><?php echo esc_js( __( 'אין ערכים אצלנו', 'kivun' ) ); ?></em></li>';
+
+										var hers = theirs.length
+											? theirs.map( function ( n ) { return '<li>' + esc( n ) + '</li>'; } ).join( '' )
+											: '<li><em><?php echo esc_js( __( 'הרשימה שלהם ריקה', 'kivun' ) ); ?></em></li>';
+
+										say(
+											'<div class="notice notice-info inline" style="padding:8px 12px">'
+											+ '<p style="margin:.3em 0"><strong>' + esc( btn.dataset.taxonomy ) + '</strong></p>'
+											+ '<div style="display:flex;gap:30px;flex-wrap:wrap">'
+											+ '<div><p style="margin:.3em 0"><strong><?php echo esc_js( __( 'אצלנו', 'kivun' ) ); ?></strong></p><ul style="margin:0">' + mine + '</ul></div>'
+											+ '<div><p style="margin:.3em 0"><strong><?php echo esc_js( __( 'אצלם', 'kivun' ) ); ?></strong></p><ul style="margin:0">' + hers + '</ul></div>'
+											+ '</div></div>'
+										);
+									} );
+								} );
+							} );
 
 							var testBtn = document.querySelector( '.kivun-mercaz-test' );
 							if ( testBtn ) {
