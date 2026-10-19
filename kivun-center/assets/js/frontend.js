@@ -829,6 +829,68 @@
 		}, 300);
 	});
 
+	// A settlement they do not have is dropped on the way out, and the job
+	// then sits on their board findable by nobody. Said here, while somebody
+	// is looking at the field and knows the answer — rather than weeks later
+	// in a list of refusals, by which time the person who typed
+	// "מרכז העיר" has moved on.
+	//
+	// Said, not enforced: the field is the site's, the vocabulary is theirs,
+	// and a job that cannot be published here because another site has not
+	// heard of a place helps nobody.
+	document.addEventListener('blur', function (e) {
+		var field = e.target.closest('input[list="kivun-city-list"]');
+		if (!field) { return; }
+
+		var note = field.parentNode.querySelector('.kivun-city-warn');
+		var term = field.value.trim();
+
+		var say = function (text) {
+			if (!text) {
+				if (note) { note.remove(); }
+				return;
+			}
+			if (!note) {
+				note = document.createElement('p');
+				note.className = 'kivun-city-warn';
+				field.parentNode.insertBefore(note, field.nextSibling);
+			}
+			note.textContent = text;
+		};
+
+		if (term.length < 2) { say(''); return; }
+
+		post(params({ action: 'kivun_city_search', nonce: kivun.nonce, term: term }))
+			.then(function (res) {
+				if (!res.success || !res.data.cities) { say(''); return; }
+
+				// Only where they actually answered. An empty list comes back
+				// both from a settlement they do not have and from a request
+				// that never reached them, and warning on the second blames
+				// the person who typed a perfectly good town for a
+				// connection being down.
+				if (res.data.asked === false) { say(''); return; }
+
+				// The field may have moved on while this was in flight —
+				// blurred as one value, edited to another, or two answers
+				// arriving out of order. The reply belongs to the text it
+				// asked about, and to nothing else.
+				if (field.value.trim() !== term) { return; }
+
+				// An exact name, not a close one. Their matching is exact, so
+				// "ירושלים" among the suggestions does not make
+				// "ירושלים - מרכז העיר" acceptable.
+				if (res.data.cities.indexOf(term) !== -1) { say(''); return; }
+
+				var near = res.data.cities.slice(0, 3).join(', ');
+				say(
+					kivun.i18n.city_unknown
+						+ (near ? ' ' + kivun.i18n.city_did_you_mean + ' ' + near : '')
+				);
+			})
+			.catch(function () { say(''); });
+	}, true);
+
 	// ── Send one item to Mercaz Kivun ────────────────────────────────────────────
 	document.addEventListener('click', function (e) {
 		var btn = e.target.closest('.kivun-mercaz-push');

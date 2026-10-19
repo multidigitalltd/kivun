@@ -131,14 +131,29 @@ class Kivun_Mercaz_Sync {
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Verified above.
 		$term = sanitize_text_field( wp_unslash( $_POST['term'] ?? '' ) );
+		// 'asked' says whether the centre answered at all. An empty list and
+		// an unanswered question look identical from the browser, and a
+		// caller that cannot tell them apart will report a working
+		// settlement as one they have never heard of — blaming the typist
+		// for a connection that is down.
 		if ( mb_strlen( $term ) < 2 ) {
-			wp_send_json_success( array( 'cities' => array() ) );
+			wp_send_json_success(
+				array(
+					'cities' => array(),
+					'asked'  => false,
+				)
+			);
 		}
 
 		$cache_key = 'kivun_city_q_' . md5( $term );
 		$cached    = get_transient( $cache_key );
 		if ( false !== $cached ) {
-			wp_send_json_success( array( 'cities' => $cached ) );
+			wp_send_json_success(
+				array(
+					'cities' => $cached,
+					'asked'  => true,
+				)
+			);
 		}
 
 		$result = Kivun_Mercaz::request(
@@ -151,7 +166,12 @@ class Kivun_Mercaz_Sync {
 		);
 
 		if ( is_wp_error( $result ) || ! is_array( $result['data'] ) ) {
-			wp_send_json_success( array( 'cities' => array() ) );
+			wp_send_json_success(
+				array(
+					'cities' => array(),
+					'asked'  => false,
+				)
+			);
 		}
 
 		$names = array();
@@ -162,7 +182,12 @@ class Kivun_Mercaz_Sync {
 		}
 
 		set_transient( $cache_key, $names, DAY_IN_SECONDS );
-		wp_send_json_success( array( 'cities' => $names ) );
+		wp_send_json_success(
+			array(
+				'cities' => $names,
+				'asked'  => true,
+			)
+		);
 	}
 
 	/**

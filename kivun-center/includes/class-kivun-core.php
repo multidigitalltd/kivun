@@ -375,6 +375,8 @@ class Kivun_Core {
 					'sending'                   => __( 'שולח...', 'kivun' ),
 					'confirm_delete'            => __( 'האם למחוק משרה זו?', 'kivun' ),
 					'error_generic'             => __( 'אירעה שגיאה, נסה שוב.', 'kivun' ),
+					'city_unknown'              => __( 'היישוב הזה לא קיים ברשימה של מרכז כיוון — המשרה תישלח בלי יישוב ולא תימצא שם בחיפוש לפי מרחק.', 'kivun' ),
+					'city_did_you_mean'         => __( 'אולי התכוונתם ל:', 'kivun' ),
 					'session_expired'           => __( 'פג תוקף החיבור. רעננו את הדף ונסו שוב.', 'kivun' ),
 					'bad_response'              => __( 'התקבלה תשובה לא תקינה מהשרת. ייתכן שתוסף אחר מפריע.', 'kivun' ),
 					/* translators: %d: HTTP status code. */
