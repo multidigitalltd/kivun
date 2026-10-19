@@ -243,74 +243,10 @@ class Kivun_Mercaz_Sync {
 			$id = (int) $result['data'][0]['id'];
 		}
 
-		// A settlement field people type into collects more than a settlement:
-		// "ירושלים - מרכז העיר", "ירושלים, גבעת שאול". Their vocabulary holds
-		// the settlement, so the part before the separator is tried as well.
-		//
-		// Exact only for that second attempt. The first-hit fallback above is
-		// a reasonable risk on what somebody actually wrote; on a fragment
-		// this code chose for them it would quietly file the job under a
-		// place nobody named.
-		if ( ! $id ) {
-			$head = self::before_separator( $name );
-			if ( '' !== $head ) {
-				$id = self::exact_term( $taxonomy, $head, $type );
-			}
-		}
-
 		// Cache misses briefly too: a name that does not exist should not be
 		// re-queried on every push, but should recover once it is added.
 		set_transient( $cache_key, $id, $id ? WEEK_IN_SECONDS : HOUR_IN_SECONDS );
 		return $id;
-	}
-
-	/**
-	 * The part of a written value before the first separator, when there is
-	 * one and it leaves something worth looking up.
-	 *
-	 * @param string $name The written value.
-	 * @return string '' when there is nothing to try.
-	 */
-	private static function before_separator( string $name ): string {
-		$head = (string) preg_split( '/\s*[,|\-–—]\s*/u', $name, 2 )[0];
-		$head = trim( $head );
-
-		// A one-letter fragment is not a place, and a head equal to the whole
-		// value means there was no separator to cut on.
-		return ( $head === $name || mb_strlen( $head ) < 2 ) ? '' : $head;
-	}
-
-	/**
-	 * A term id for this exact name, or 0. No substring, no first hit.
-	 *
-	 * @param string $taxonomy Remote taxonomy rest_base.
-	 * @param string $name     The name to match exactly.
-	 * @param string $type     Content type key, to pick the right base URL.
-	 * @return int
-	 */
-	private static function exact_term( string $taxonomy, string $name, string $type ): int {
-		$result = Kivun_Mercaz::request(
-			'GET',
-			$taxonomy,
-			array(
-				'search'   => $name,
-				'per_page' => 20,
-			),
-			null,
-			$type
-		);
-
-		if ( is_wp_error( $result ) || ! is_array( $result['data'] ) ) {
-			return 0;
-		}
-
-		foreach ( $result['data'] as $term ) {
-			if ( isset( $term['name'], $term['id'] ) && (string) $term['name'] === $name ) {
-				return (int) $term['id'];
-			}
-		}
-
-		return 0;
 	}
 
 	/**
