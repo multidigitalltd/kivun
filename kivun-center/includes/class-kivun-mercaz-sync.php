@@ -312,13 +312,32 @@ class Kivun_Mercaz_Sync {
 			return '';
 		}
 
-		// Day-first is how dates read in Hebrew, but strtotime() reads a slash
-		// as the American month-first order, so "31/12/2026" is not a date to
-		// it and would be dropped without a word. Try the local order first.
-		foreach ( array( 'd/m/Y', 'd.m.Y', 'd-m-Y' ) as $format ) {
-			$parsed = \DateTimeImmutable::createFromFormat( $format, $raw );
-			if ( $parsed && $parsed->format( $format ) === $raw ) {
-				return $parsed->format( 'Y-m-d' );
+		// An ISO date is already what the API wants; read it first so the
+		// day-first rule below never gets to misread one.
+		if ( preg_match( '/\d{4}-\d{1,2}-\d{1,2}/', $raw, $iso ) ) {
+			$stamp = strtotime( $iso[0] );
+			return $stamp ? gmdate( 'Y-m-d', $stamp ) : '';
+		}
+
+		// These values are written for people to read, not for a parser: the
+		// forms themselves suggest "15.9.2025 | 18:00" and
+		// "ד׳ 15.9.2025 | 18:00–21:00". Take the date out of the sentence
+		// before reading it — matching the whole string finds nothing in
+		// either of those, and a date that parses to nothing is dropped
+		// before the request with nothing said at either end.
+		//
+		// Day-first, because that is how a date reads in Hebrew and how both
+		// of those examples are written. strtotime() reads a slash the
+		// American way round, so it is not asked.
+		if ( preg_match( '/(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{2,4})/', $raw, $m ) ) {
+			$day   = (int) $m[1];
+			$month = (int) $m[2];
+			$year  = (int) $m[3];
+			if ( $year < 100 ) {
+				$year += 2000;
+			}
+			if ( checkdate( $month, $day, $year ) ) {
+				return sprintf( '%04d-%02d-%02d', $year, $month, $day );
 			}
 		}
 

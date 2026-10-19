@@ -123,4 +123,87 @@ final class MercazWorkshopTest extends TestCase {
 
 		$this->assertStringContainsString( "\$body['meta'] = array_filter(", $source );
 	}
+
+	// ── Reading a date a person wrote ─────────────────────────────────────────
+
+	/**
+	 * The date is read out of the sentence it is written in.
+	 *
+	 * Both forms suggest a format with more than a date in it — the סדנה
+	 * field shows "15.9.2025 | 18:00" and the landing page
+	 * "ד׳ 15.9.2025 | 18:00–21:00" — and neither parsed at all: the match
+	 * was against the whole string, so it found nothing, and a date that
+	 * parses to nothing is dropped before the request. Sending סדנאות
+	 * without fixing this would have restored the field in name only.
+	 * Found in review.
+	 *
+	 * @return void
+	 */
+	public function test_a_date_is_found_inside_what_people_type(): void {
+		foreach ( array(
+			'15.9.2025 | 18:00'          => '2025-09-15',
+			'ד׳ 15.9.2025 | 18:00–21:00' => '2025-09-15',
+			'15/09/2025'                 => '2025-09-15',
+			'31/12/2026'                 => '2026-12-31',
+			'1.1.26'                     => '2026-01-01',
+			'2025-09-15'                 => '2025-09-15',
+		) as $written => $sent ) {
+			$this->assertSame( $sent, self::as_date( $written ), "\"{$written}\" is not read as a date" );
+		}
+	}
+
+	/**
+	 * And a value with no date in it still sends nothing.
+	 *
+	 * A course's "מועדים" field reads "ימי ג׳ 18:00-20:00", which is a
+	 * schedule and not a date. Guessing one from it would put a wrong date
+	 * on their site, which is worse than the empty field they have now.
+	 *
+	 * @return void
+	 */
+	public function test_text_with_no_date_sends_none(): void {
+		foreach ( array( 'ימי ג׳ 18:00-20:00', 'בקרוב', '', '32.13.2025' ) as $written ) {
+			$this->assertSame( '', self::as_date( $written ), "\"{$written}\" produced a date out of nothing" );
+		}
+	}
+
+	/**
+	 * as_date() as the class defines it, which is private.
+	 *
+	 * @param string $raw The written value.
+	 * @return string
+	 */
+	private static function as_date( string $raw ): string {
+		$method = new \ReflectionMethod( 'Kivun_Mercaz_Sync', 'as_date' );
+		$method->setAccessible( true );
+
+		return (string) $method->invoke( null, $raw );
+	}
+
+	// ── A copy is a new record ────────────────────────────────────────────────
+
+	/**
+	 * Duplicating synced content does not carry the centre's record id.
+	 *
+	 * Cloning copies the metadata wholesale. The id names a record on their
+	 * side belonging to the original, so a copy holding it pushes over that
+	 * record and replaces it instead of creating its own — and what it
+	 * overwrote is already out there being read. Found in review.
+	 *
+	 * @return void
+	 */
+	public function test_a_copy_does_not_inherit_the_remote_record(): void {
+		foreach ( array(
+			'includes/class-kivun-duplicate.php'       => 'the admin duplicate',
+			'includes/class-kivun-content-creator.php' => 'the console duplicate',
+		) as $file => $which ) {
+			$source = (string) file_get_contents( KIVUN_DIR . $file );
+			$start  = (int) strpos( $source, '$skip = array(' );
+			$list   = substr( $source, $start, 400 );
+
+			$this->assertStringContainsString( 'Kivun_Mercaz_Sync::REMOTE_ID', $list, "{$which} copies the centre's record id" );
+			$this->assertStringContainsString( 'Kivun_Mercaz_Sync::SYNCED_AT', $list, "{$which} copies the sync state" );
+			$this->assertStringContainsString( 'Kivun_Mercaz_Sync::LAST_ERROR', $list, "{$which} copies the last error" );
+		}
+	}
 }

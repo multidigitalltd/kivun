@@ -2596,7 +2596,20 @@ class Kivun_Content_Creator {
 		// The archive mark is not copied: a duplicate is new work, and it
 		// would otherwise be born inside the shut section where nobody is
 		// looking for the thing they just made.
-		$skip = array( '_edit_lock', '_edit_last', self::GROUP_META, self::ARCHIVED_META );
+		// The centre's record id is not copied either, nor the state that
+		// goes with it. It names a record on their side that belongs to
+		// the original: a copy carrying it would push over that record
+		// and replace it, rather than making one of its own — and the
+		// thing it overwrote is already out there being read.
+		$skip = array(
+			'_edit_lock',
+			'_edit_last',
+			self::GROUP_META,
+			self::ARCHIVED_META,
+			Kivun_Mercaz_Sync::REMOTE_ID,
+			Kivun_Mercaz_Sync::SYNCED_AT,
+			Kivun_Mercaz_Sync::LAST_ERROR,
+		);
 		foreach ( get_post_meta( $post_id ) as $key => $values ) {
 			if ( in_array( $key, $skip, true ) ) {
 				continue;

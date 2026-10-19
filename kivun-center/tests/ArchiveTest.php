@@ -224,9 +224,15 @@ final class ArchiveTest extends TestCase {
 	 * @return void
 	 */
 	public function test_a_duplicate_does_not_inherit_the_mark(): void {
+		// Membership in the skip list, not the line it is written on: the
+		// list grew and this failed on the reformatting rather than on
+		// anything that changed for a reader of the library.
+		$source = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-content-creator.php' );
+		$start  = (int) strpos( $source, '$skip = array(' );
+
 		$this->assertStringContainsString(
-			"\$skip = array( '_edit_lock', '_edit_last', self::GROUP_META, self::ARCHIVED_META );",
-			(string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-content-creator.php' ),
+			'self::ARCHIVED_META',
+			substr( $source, $start, 400 ),
 			'duplicating archived content now produces an archived copy'
 		);
 	}
