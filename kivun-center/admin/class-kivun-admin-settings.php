@@ -688,11 +688,17 @@ class Kivun_Admin_Settings {
 						<button type="button" class="button kivun-mercaz-vocab" data-nonce="<?php echo esc_attr( wp_create_nonce( 'kivun_mercaz' ) ); ?>" data-taxonomy="job_cat">
 							<?php esc_html_e( 'רשימת תחומים שלהם', 'kivun' ); ?>
 						</button>
+						<button type="button" class="button button-primary kivun-mercaz-sync" data-nonce="<?php echo esc_attr( wp_create_nonce( 'kivun_mercaz' ) ); ?>">
+							<?php esc_html_e( 'סנכרן את הרשימות עכשיו', 'kivun' ); ?>
+						</button>
 						<p class="description">
 							<?php esc_html_e( 'מאמת את הפרטים ומדווח באיזה תפקיד התחברתם. משתמש במה שכתוב בשדות למעלה, גם לפני שמירה.', 'kivun' ); ?>
 						</p>
 						<p class="description">
 							<?php esc_html_e( 'משרה מותאמת לרשימה שלהם לפי שם, ושם שאין להם נופל בשקט. שתי הרשימות זו מול זו מראות אילו מהערכים שלנו מתקבלים ואילו לא.', 'kivun' ); ?>
+						</p>
+						<p class="description">
+							<?php esc_html_e( 'הסנכרון מושך את הרשימות שלהם לכאן: ערך חדש אצלם נוסף, ושם שהם שינו מתעדכן. הוא רץ אוטומטית כל לילה, והכפתור רק מקדים אותו. ערך שלנו שאין להם לא נמחק — מחיקה הייתה מסירה את התיוג מכל משרה שנשאה אותו.', 'kivun' ); ?>
 						</p>
 						<div class="kivun-mercaz-result" style="margin-top:10px"></div>
 						<script>
@@ -742,13 +748,30 @@ class Kivun_Admin_Settings {
 										var theirs = ( d.theirs || [] );
 										var ours = ( d.ours || [] );
 
+										// Beside each value of ours that they will not
+										// take, their list to choose from. Which of their
+										// words it means is a judgement — two of ours can
+										// mean one of theirs, and some mean none — so the
+										// choice is made here by somebody who knows, not
+										// guessed by matching letters.
+										var options = theirs.map( function ( n ) {
+											return '<option value="' + esc( n ) + '">' + esc( n ) + '</option>';
+										} ).join( '' );
+
 										var mine = ours.length
 											? ours.map( function ( t ) {
-												// The ones that do not match are the whole
-												// point, so they are the ones that stand out.
-												return '<li>' + ( t.matches ? '✓ ' : '✗ ' ) + esc( t.name )
-													+ ' <span style="opacity:.6">(' + t.jobs + ' <?php echo esc_js( __( 'משרות', 'kivun' ) ); ?>)</span>'
-													+ ( t.matches ? '' : ' — <strong><?php echo esc_js( __( 'אין להם ערך כזה', 'kivun' ) ); ?></strong>' )
+												if ( t.matches ) {
+													return '<li>✓ ' + esc( t.name )
+														+ ' <span style="opacity:.6">(' + t.jobs + ' <?php echo esc_js( __( 'משרות', 'kivun' ) ); ?>)</span></li>';
+												}
+
+												return '<li style="margin-bottom:.5em">✗ ' + esc( t.name )
+													+ ' <span style="opacity:.6">(' + t.jobs + ' <?php echo esc_js( __( 'משרות', 'kivun' ) ); ?>)</span><br>'
+													+ '<select class="kivun-adopt-pick" data-term="' + t.id + '">'
+													+ '<option value=""><?php echo esc_js( __( 'בחרו את הערך המקביל אצלם…', 'kivun' ) ); ?></option>'
+													+ options
+													+ '</select> '
+													+ '<button type="button" class="button button-small kivun-adopt" data-term="' + t.id + '" data-taxonomy="' + esc( btn.dataset.taxonomy ) + '" data-nonce="' + esc( btn.dataset.nonce ) + '"><?php echo esc_js( __( 'אמץ', 'kivun' ) ); ?></button>'
 													+ '</li>';
 											} ).join( '' )
 											: '<li><em><?php echo esc_js( __( 'אין ערכים אצלנו', 'kivun' ) ); ?></em></li>';
@@ -768,6 +791,43 @@ class Kivun_Admin_Settings {
 									} );
 								} );
 							} );
+
+							// Adopting is a write, so it reports what it did and then
+							// re-reads the list rather than redrawing from what this
+							// page happened to believe a moment ago.
+							box.addEventListener( 'click', function ( e ) {
+								var go = e.target.closest( '.kivun-adopt' );
+								if ( ! go ) { return; }
+
+								var pick = box.querySelector( '.kivun-adopt-pick[data-term="' + go.dataset.term + '"]' );
+								if ( ! pick || ! pick.value ) {
+									window.alert( '<?php echo esc_js( __( 'בחרו קודם ערך מהרשימה שלהם.', 'kivun' ) ); ?>' );
+									return;
+								}
+
+								var b = new URLSearchParams();
+								b.append( 'action', 'kivun_mercaz_adopt' );
+								b.append( 'taxonomy', go.dataset.taxonomy );
+								b.append( 'term_id', go.dataset.term );
+								b.append( 'name', pick.value );
+
+								call( go, b, function ( d ) {
+									say( '<div class="notice notice-success inline"><p>' + esc( d.message ) + '</p></div>' );
+									var again = document.querySelector( '.kivun-mercaz-vocab[data-taxonomy="' + go.dataset.taxonomy + '"]' );
+									if ( again ) { window.setTimeout( function () { again.click(); }, 700 ); }
+								} );
+							} );
+
+							var syncBtn = document.querySelector( '.kivun-mercaz-sync' );
+							if ( syncBtn ) {
+								syncBtn.addEventListener( 'click', function () {
+									var b = new URLSearchParams();
+									b.append( 'action', 'kivun_mercaz_sync_vocab' );
+									call( syncBtn, b, function ( d ) {
+										say( '<div class="notice notice-success inline"><p>' + esc( d.message ) + '</p></div>' );
+									} );
+								} );
+							}
 
 							var testBtn = document.querySelector( '.kivun-mercaz-test' );
 							if ( testBtn ) {
