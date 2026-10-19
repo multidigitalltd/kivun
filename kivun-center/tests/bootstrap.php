@@ -60,6 +60,13 @@ final class Kivun_Test_State {
 	public static array $terms = array();
 
 	/**
+	 * Transients, by key.
+	 *
+	 * @var array<string,mixed>
+	 */
+	public static array $transients = array();
+
+	/**
 	 * Posts, keyed by id: each an array of post fields.
 	 *
 	 * @var array<int,array<string,mixed>>
@@ -101,6 +108,7 @@ final class Kivun_Test_State {
 		self::$options  = array();
 		self::$meta     = array();
 		self::$terms    = array();
+		self::$transients = array();
 		self::$posts    = array();
 		self::$caps     = array();
 		self::$mail     = array();
@@ -525,6 +533,40 @@ function update_post_meta( int $post_id, string $key, $value ): bool {
  * @param string $taxonomy The taxonomy.
  * @return array<int,object>|false
  */
+/**
+ * Read a cached value.
+ *
+ * @param string $key The transient key.
+ * @return mixed False when nothing is stored, as WordPress returns.
+ */
+function get_transient( string $key ) {
+	return Kivun_Test_State::$transients[ $key ] ?? false;
+}
+
+/**
+ * Cache a value. The expiry is not modelled: no test turns the clock.
+ *
+ * @param string $key        The transient key.
+ * @param mixed  $value      The value.
+ * @param int    $expiration Seconds, ignored here.
+ * @return bool
+ */
+function set_transient( string $key, $value, int $expiration = 0 ): bool {
+	Kivun_Test_State::$transients[ $key ] = $value;
+	return true;
+}
+
+/**
+ * Forget a cached value.
+ *
+ * @param string $key The transient key.
+ * @return bool
+ */
+function delete_transient( string $key ): bool {
+	unset( Kivun_Test_State::$transients[ $key ] );
+	return true;
+}
+
 function get_the_terms( int $post_id, string $taxonomy ) {
 	$names = Kivun_Test_State::$terms[ $post_id ][ $taxonomy ] ?? array();
 	if ( ! $names ) {

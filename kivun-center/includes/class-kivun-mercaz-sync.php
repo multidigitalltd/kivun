@@ -37,6 +37,19 @@ class Kivun_Mercaz_Sync {
 	const CITY_META = '_kivun_city';
 
 	/**
+	 * Lookups this request could not complete, as "taxonomy|name".
+	 *
+	 * A term that does not exist and a term we could not ask about both
+	 * resolve to nothing, and the push is blocked either way — but they are
+	 * opposite problems. One is a word to agree on with the centre; the
+	 * other is a connection to fix, and telling somebody to rename good
+	 * data because their network blinked is worse than saying nothing.
+	 *
+	 * @var array<string,bool>
+	 */
+	private static array $unreachable = array();
+
+	/**
 	 * Local post type => remote endpoint.
 	 *
 	 * @return array<string,string>
@@ -207,8 +220,14 @@ class Kivun_Mercaz_Sync {
 		);
 
 		if ( is_wp_error( $result ) || ! is_array( $result['data'] ) ) {
+			// Not cached, and remembered as unanswered: the next push asks
+			// again, and anything reporting on this one says it did not get
+			// an answer rather than inventing one.
+			self::$unreachable[ $taxonomy . '|' . $name ] = true;
 			return 0;
 		}
+
+		unset( self::$unreachable[ $taxonomy . '|' . $name ] );
 
 		// A search is a substring match, so prefer an exact name before
 		// settling for the first hit — "בית שמש" must not resolve to
@@ -542,6 +561,21 @@ class Kivun_Mercaz_Sync {
 	}
 
 	/**
+	 * Whether a lookup for this name could not be completed this request.
+	 *
+	 * False once it has been asked and answered, including answered "no
+	 * such term" — that answer is cached, and a cached nothing is a real
+	 * nothing.
+	 *
+	 * @param string $taxonomy Remote taxonomy rest_base.
+	 * @param string $name     The term name that was looked for.
+	 * @return bool
+	 */
+	public static function lookup_failed( string $taxonomy, string $name ): bool {
+		return isset( self::$unreachable[ $taxonomy . '|' . trim( $name ) ] );
+	}
+
+	/**
 	 * What is missing, and which of the two reasons it is missing for.
 	 *
 	 * "חסר: סוג משרה" is true and useless: it does not say whether nobody
@@ -566,9 +600,9 @@ class Kivun_Mercaz_Sync {
 		// can be shown. Anything not listed is plain post content, which is
 		// either there or it is not.
 		$sources = array(
-			'city'     => array( 'meta', self::CITY_META ),
-			'job-type' => array( 'term', 'kivun_job_scope' ),
-			'job_cat'  => array( 'term', 'kivun_job_field' ),
+			'city'     => array( 'meta', self::CITY_META, 'city' ),
+			'job-type' => array( 'term', 'kivun_job_scope', 'job-type' ),
+			'job_cat'  => array( 'term', 'kivun_job_field', 'job_cat' ),
 		);
 
 		$out  = array();
@@ -586,16 +620,30 @@ class Kivun_Mercaz_Sync {
 				continue;
 			}
 
-			list( $kind, $from ) = $sources[ $key ];
-			$local               = 'term' === $kind
+			list( $kind, $from, $remote ) = $sources[ $key ];
+			$local                        = 'term' === $kind
 				? self::local_term_name( $post->ID, $from )
 				: trim( (string) get_post_meta( $post->ID, $from, true ) );
 
-			$out[] = '' === $local
-				? sprintf(
+			if ( '' === $local ) {
+				$out[] = sprintf(
 					/* translators: %s: field name, e.g. "סוג משרה". */
 					__( '%s (לא נבחר במשרה)', 'kivun' ),
 					$label
+				);
+				continue;
+			}
+
+			// Said only where the centre actually answered. A lookup that
+			// never got through leaves the same empty value behind, and
+			// blaming the word would send somebody to rename data that is
+			// perfectly good.
+			$out[] = self::lookup_failed( $remote, $local )
+				? sprintf(
+					/* translators: 1: field name. 2: the value set locally. */
+					__( '%1$s ("%2$s" — לא הצלחנו לבדוק מול מרכז כיוון, ייתכן שהחיבור נכשל)', 'kivun' ),
+					$label,
+					$local
 				)
 				: sprintf(
 					/* translators: 1: field name. 2: the value set locally. */

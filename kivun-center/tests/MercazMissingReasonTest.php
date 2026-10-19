@@ -20,6 +20,7 @@ declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
 
+require_once KIVUN_DIR . 'includes/class-kivun-mercaz.php';
 require_once KIVUN_DIR . 'includes/class-kivun-mercaz-sync.php';
 
 /**
@@ -182,5 +183,46 @@ final class MercazMissingReasonTest extends TestCase {
 
 		// A bare number is not a field name; it is what produced the "0".
 		$this->assertSame( array(), Kivun_Mercaz_Sync::warnings( array( 'ckvn_warnings' => array( 0 ) ) ) );
+	}
+
+	// ── Not asked is not the same as answered "no" ────────────────────────────
+
+	/**
+	 * A lookup that never got through does not blame the value.
+	 *
+	 * The centre being unreachable leaves exactly the same empty field
+	 * behind as a word they have never heard of, and the push is blocked
+	 * either way — but one is a connection to fix and the other is a word
+	 * to agree on. Telling somebody to rename good data because their
+	 * network blinked is worse than saying nothing. Found in review.
+	 *
+	 * @return void
+	 */
+	public function test_an_unanswered_lookup_does_not_blame_the_value(): void {
+		$post = new WP_Post( 11, 'kivun_job' );
+		Kivun_Test_State::$terms[11]['kivun_job_scope'] = array( 'משרה מלאה' );
+
+		// No credentials, so the request never leaves the building and comes
+		// back as an error — the same "could not ask" the centre being down
+		// produces, and the one the harness can arrange honestly.
+		Kivun_Mercaz_Sync::resolve_term( 'job-type', 'משרה מלאה', 'jobs' );
+
+		$this->assertTrue( Kivun_Mercaz_Sync::lookup_failed( 'job-type', 'משרה מלאה' ) );
+
+		$lines = Kivun_Mercaz_Sync::missing_detail( $post, array(), array( 'job-type' => 'סוג משרה' ) );
+
+		$this->assertSame(
+			array( 'סוג משרה ("משרה מלאה" — לא הצלחנו לבדוק מול מרכז כיוון, ייתכן שהחיבור נכשל)' ),
+			$lines
+		);
+	}
+
+	/**
+	 * And a name nobody asked about is not reported as unreachable either.
+	 *
+	 * @return void
+	 */
+	public function test_a_name_never_looked_up_is_not_called_unreachable(): void {
+		$this->assertFalse( Kivun_Mercaz_Sync::lookup_failed( 'job-type', 'משרה חלקית' ) );
 	}
 }
