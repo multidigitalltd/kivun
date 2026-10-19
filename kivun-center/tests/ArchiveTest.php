@@ -269,21 +269,52 @@ final class ArchiveTest extends TestCase {
 	}
 
 	/**
-	 * Both buttons say what they do, in words.
+	 * Each button looks like the ones it sits beside.
 	 *
-	 * The campaign's was an icon with the words kept for screen readers
-	 * only, which left everyone else guessing at a filing-cabinet glyph.
+	 * On a campaign card that means an icon, in the same box and the same
+	 * stroke as edit and delete next to it — with the words kept for
+	 * anyone who cannot see it, which is how those two carry theirs. In
+	 * the library the row's actions are worded buttons, so the archive one
+	 * is worded too: matching its neighbours is the point, and the
+	 * neighbours differ between the two screens.
 	 *
 	 * @return void
 	 */
-	public function test_the_buttons_are_worded(): void {
+	public function test_each_button_matches_the_ones_beside_it(): void {
 		$source = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-content-creator.php' );
 
-		$this->assertSame(
-			2,
-			substr_count( $source, "esc_html__( 'העברה לארכיון', 'kivun' )" ),
-			'a campaign and a content group are put away by buttons that read the same'
-		);
-		$this->assertStringNotContainsString( "'🗄'", $source, 'the glyph is back in place of the words' );
+		// The campaign card: an icon button, drawn from the same set.
+		$this->assertStringContainsString( 'class="kivun-cc-iconbtn kivun-archive-campaign"', $source );
+		$this->assertStringContainsString( "kivun_icon( \$kivun_is_away ? 'restore' : 'archive' )", $source );
+		$this->assertStringNotContainsString( "'🗄'", $source, 'the glyph is back in place of a drawn icon' );
+
+		// Named for screen readers and on hover, as edit and delete are.
+		$start  = (int) strpos( $source, 'kivun-archive-campaign' );
+		$button = substr( $source, $start - 200, 900 );
+		$this->assertStringContainsString( 'kivun-sr-only', $button, 'an icon with no name is a button nobody can read' );
+		$this->assertStringContainsString( 'title="', $button );
+
+		// The library row, whose other actions are worded.
+		$this->assertStringContainsString( "esc_html__( 'העברה לארכיון', 'kivun' )", $source );
 	}
+
+	/**
+	 * The icons it uses exist.
+	 *
+	 * kivun_icon() returns an empty string for a name it does not know, so
+	 * a typo here is a button with nothing in it — and nothing on screen
+	 * would say which button it was.
+	 *
+	 * @return void
+	 */
+	public function test_the_icons_it_asks_for_exist(): void {
+		require_once KIVUN_DIR . 'includes/functions.php';
+
+		foreach ( array( 'archive', 'restore', 'edit', 'trash' ) as $name ) {
+			$svg = kivun_icon( $name );
+			$this->assertStringContainsString( '<svg', $svg, "kivun_icon( '{$name}' ) draws nothing" );
+			$this->assertStringContainsString( 'stroke-width="1.8"', $svg, "{$name} is drawn at a different weight to the row it sits in" );
+		}
+	}
+
 }
