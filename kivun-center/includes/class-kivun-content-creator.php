@@ -3635,10 +3635,22 @@ class Kivun_Content_Creator {
 				// The other question about the same numbers: not which calls
 				// came in, but what each number brought — which is what a
 				// number is rented for. Same dates as the log above it.
-				$kivun_numbers_url = add_query_arg(
-					array_intersect_key( $call_args, array_flip( array( 'from', 'to' ) ) ),
-					Kivun_Export::url( 'numbers' )
-				);
+				// The screen's own names for the dates are prefixed; the export
+				// reads them unprefixed. Translated here rather than hoped
+				// for — an intersection on the wrong keys finds nothing and
+				// downloads all of time while the screen shows one month,
+				// and nothing in the file says which it is.
+				$kivun_numbers_dates = array();
+				foreach ( array(
+					'kivun_call_from' => 'from',
+					'kivun_call_to'   => 'to',
+				) as $kivun_screen_key => $kivun_export_key ) {
+					if ( isset( $call_args[ $kivun_screen_key ] ) && '' !== $call_args[ $kivun_screen_key ] ) {
+						$kivun_numbers_dates[ $kivun_export_key ] = $call_args[ $kivun_screen_key ];
+					}
+				}
+
+				$kivun_numbers_url = add_query_arg( $kivun_numbers_dates, Kivun_Export::url( 'numbers' ) );
 				?>
 				<a class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost" href="<?php echo esc_url( $kivun_numbers_url ); ?>">
 					<?php echo kivun_icon( 'download' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?><?php esc_html_e( 'דוח מספרים', 'kivun' ); ?>

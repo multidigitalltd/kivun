@@ -248,4 +248,69 @@ final class ReportExportTest extends TestCase {
 
 		return (string) $method->invoke( null, $range );
 	}
+
+	// ── Two ways a report can state a falsehood ───────────────────────────────
+
+	/**
+	 * Missed calls are reported only where the switchboard says so.
+	 *
+	 * "Answered" is worked out from the talk time, so on a switchboard that
+	 * sends only the start of a call every row carries answered = 0 — and
+	 * the report would say every call in the period went unanswered. That
+	 * is not a cautious number, it is a wrong one, and the call log already
+	 * draws this line. Found in review.
+	 *
+	 * @return void
+	 */
+	public function test_missed_calls_are_hidden_when_nobody_knows(): void {
+		$source = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-export.php' );
+		$start  = (int) strpos( $source, 'function export_numbers' );
+		$body   = substr( $source, $start, 3000 );
+
+		$this->assertStringContainsString( 'Kivun_Phones::has_answer_data()', $body, 'the numbers report states answered and missed without checking it can' );
+
+		// The subtraction that produces "missed" sits behind that check.
+		$guard  = (int) strpos( $body, 'if ( $knows ) {' );
+		$missed = (int) strpos( $body, '$calls - $answered' );
+		$this->assertGreaterThan( 0, $guard );
+		$this->assertGreaterThan( $guard, $missed, 'the missed count is written before the check that it is knowable' );
+	}
+
+	/**
+	 * The numbers report is given the dates the screen is showing.
+	 *
+	 * The call screen names them kivun_call_from and kivun_call_to; the
+	 * export reads from and to. Reading the screen's array for the export's
+	 * names finds nothing, and the button then downloads all of time while
+	 * the screen shows one month — with nothing in the file to say which it
+	 * is. Found in review.
+	 *
+	 * @return void
+	 */
+	public function test_the_numbers_button_carries_the_dates_on_screen(): void {
+		$source = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-content-creator.php' );
+
+		$this->assertStringContainsString( "'kivun_call_from' => 'from'", $source );
+		$this->assertStringContainsString( "'kivun_call_to'   => 'to'", $source );
+		$this->assertStringNotContainsString(
+			"array_intersect_key( \$call_args, array_flip( array( 'from', 'to' ) ) )",
+			$source,
+			'the export is back to looking for names the screen does not use'
+		);
+	}
+
+	/**
+	 * And those are the names the call screen really uses.
+	 *
+	 * Asserted against the screen rather than a copy kept here, because the
+	 * translation is only right while the two agree.
+	 *
+	 * @return void
+	 */
+	public function test_those_are_the_names_the_screen_uses(): void {
+		$source = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-content-creator.php' );
+
+		$this->assertStringContainsString( "'from'        => 'kivun_call_from',", $source );
+		$this->assertStringContainsString( "'to'          => 'kivun_call_to',", $source );
+	}
 }

@@ -602,36 +602,47 @@ class Kivun_Export {
 		$out = fopen( 'php://output', 'w' );
 		fputs( $out, "\xEF\xBB\xBF" ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fputs
 
-		fputcsv(
-			$out,
-			array( 'מספר', 'שם המספר', 'שיוך', 'מדיה', 'קמפיין', 'utm_campaign', 'שיחות', 'נענו', 'לא נענו', 'דקות שיחה', 'נוצר' )
-		);
+		// The answered columns only where the switchboard reports a talk
+		// time. "Answered" is worked out from it, so on a switchboard that
+		// sends only the start of a call every row would read as missed —
+		// and a report that says every call went unanswered is not a
+		// cautious report, it is a wrong one. The call log already draws
+		// this line; the same line belongs here.
+		$knows = Kivun_Phones::has_answer_data();
+
+		$headings = array( 'מספר', 'שם המספר', 'שיוך', 'מדיה', 'קמפיין', 'utm_campaign', 'שיחות' );
+		if ( $knows ) {
+			$headings = array_merge( $headings, array( 'נענו', 'לא נענו', 'דקות שיחה' ) );
+		}
+		$headings[] = 'נוצר';
+
+		fputcsv( $out, $headings );
 
 		foreach ( (array) $rows as $r ) {
 			$calls    = (int) $r['calls'];
 			$answered = (int) $r['answered'];
 
-			fputcsv(
-				$out,
-				array_map(
-					array( __CLASS__, 'csv_safe' ),
-					array(
-						$r['number'],
-						$r['number_label'],
-						$r['assignment_label'],
-						$r['media'],
-						$r['campaign_label'],
-						$r['utm_campaign'],
-						$calls,
-						$answered,
-						$calls - $answered,
-						// Minutes, because an hour of calls in seconds is a
-						// number nobody reads.
-						round( (int) $r['talk_time'] / 60, 1 ),
-						$r['created_at'],
-					)
-				)
+			$line = array(
+				$r['number'],
+				$r['number_label'],
+				$r['assignment_label'],
+				$r['media'],
+				$r['campaign_label'],
+				$r['utm_campaign'],
+				$calls,
 			);
+
+			if ( $knows ) {
+				$line[] = $answered;
+				$line[] = $calls - $answered;
+				// Minutes, because an hour of calls in seconds is a number
+				// nobody reads.
+				$line[] = round( (int) $r['talk_time'] / 60, 1 );
+			}
+
+			$line[] = $r['created_at'];
+
+			fputcsv( $out, array_map( array( __CLASS__, 'csv_safe' ), $line ) );
 		}
 
 		fclose( $out ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose
