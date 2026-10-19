@@ -548,4 +548,105 @@ final class ShortLinkTest extends TestCase {
 			'a short link field the handler does not know falls through to the message'
 		);
 	}
+
+	// ── The upgrade runs before half of WordPress exists ──────────────────────
+
+	/**
+	 * Nothing the upgrade touches may call a function from pluggable.php.
+	 *
+	 * This one shipped. `maybe_upgrade()` runs from the plugin's own file
+	 * while WordPress is still including plugins, and pluggable.php is not
+	 * loaded until after that — so the backfill's first drawn code called
+	 * wp_rand(), which did not exist yet, and every page of the site became
+	 * a fatal error. The admin included: there was no screen left to
+	 * deactivate the plugin from.
+	 *
+	 * The guard is a list rather than a single name on purpose. What broke
+	 * was not wp_rand; it was reaching for anything WordPress defines late
+	 * from code that runs early.
+	 *
+	 * @return void
+	 */
+	public function test_the_upgrade_path_touches_nothing_pluggable(): void {
+		$pluggable = array(
+			'wp_rand',
+			'wp_generate_password',
+			'wp_hash_password',
+			'wp_check_password',
+			'wp_mail',
+			'wp_redirect',
+			'wp_safe_redirect',
+			'wp_get_current_user',
+			'get_userdata',
+			'wp_set_current_user',
+			'wp_salt',
+			'wp_nonce_tick',
+		);
+
+		// Comments stripped first: this file explains the incident by name,
+		// and a test that cannot tell an explanation from a call would fail
+		// on the very comment warning about it.
+		$links = self::code_only( (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-short-links.php' ) );
+		$start = (int) strpos( $links, 'function random_slug' );
+		$drawn = substr( $links, $start, 1000 );
+
+		foreach ( $pluggable as $late ) {
+			$this->assertStringNotContainsString(
+				$late . '(',
+				$drawn,
+				"random_slug() calls {$late}(), which does not exist while the plugin is loading"
+			);
+		}
+
+		// And the installer itself, which is the thing that runs that early.
+		$installer = self::code_only( (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-installer.php' ) );
+		foreach ( $pluggable as $late ) {
+			$this->assertStringNotContainsString( $late . '(', $installer, "the installer calls {$late}()" );
+		}
+	}
+
+	/**
+	 * The code of a PHP file with its comments taken out.
+	 *
+	 * @param string $source The file.
+	 * @return string
+	 */
+	private static function code_only( string $source ): string {
+		$out = '';
+		foreach ( token_get_all( $source ) as $token ) {
+			if ( is_array( $token ) ) {
+				if ( T_COMMENT === $token[0] || T_DOC_COMMENT === $token[0] ) {
+					continue;
+				}
+				$out .= $token[1];
+				continue;
+			}
+			$out .= $token;
+		}
+
+		return $out;
+	}
+
+	/**
+	 * And the code is still drawn from the alphabet, by something that is
+	 * always there.
+	 *
+	 * @return void
+	 */
+	public function test_a_code_is_still_drawn_and_well_formed(): void {
+		$this->assertStringContainsString(
+			'random_int( 0, $last )',
+			(string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-short-links.php' )
+		);
+
+		for ( $i = 0; $i < 50; $i++ ) {
+			$slug = Kivun_Short_Links::random_slug();
+			$this->assertSame( Kivun_Short_Links::LENGTH, strlen( $slug ) );
+			$this->assertSame(
+				'',
+				(string) preg_replace( '/[' . preg_quote( Kivun_Short_Links::ALPHABET, '/' ) . ']/', '', $slug ),
+				'a drawn code used a character outside the alphabet'
+			);
+		}
+	}
 }

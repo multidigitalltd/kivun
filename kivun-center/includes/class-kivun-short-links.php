@@ -117,8 +117,23 @@ class Kivun_Short_Links {
 		$last     = strlen( $alphabet ) - 1;
 		$slug     = '';
 
+		// Not wp_rand(). That lives in pluggable.php, which WordPress loads
+		// after the plugins — so a code drawn while the plugin file is still
+		// loading, as the upgrade does, called a function that did not exist
+		// yet and took the whole site down with it. random_int() is PHP's
+		// own and is there from the first line of the request.
 		for ( $i = 0; $i < self::LENGTH; $i++ ) {
-			$slug .= $alphabet[ wp_rand( 0, $last ) ];
+			try {
+				$pick = random_int( 0, $last );
+			} catch ( \Throwable $e ) {
+				// Only reachable on a host with no source of randomness at
+				// all. A short code is a public address, not a secret, and
+				// a collision is settled by taken() either way — so this
+				// falls back rather than failing, because the one thing it
+				// must never do again is stop the site from loading.
+				$pick = mt_rand( 0, $last ); // phpcs:ignore WordPress.WP.AlternativeFunctions.rand_mt_rand
+			}
+			$slug .= $alphabet[ $pick ];
 		}
 
 		return $slug;
