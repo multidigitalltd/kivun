@@ -88,7 +88,19 @@ class Kivun_Duplicate {
 		}
 
 		// Copy meta (skip editor-internal keys and the content-group link).
-		$skip = array( '_edit_lock', '_edit_last', '_kivun_content_group' );
+		// The centre's record id is not copied either, nor the state that
+		// goes with it. It names a record on their side that belongs to
+		// the original: a copy carrying it would push over that record
+		// and replace it, rather than making one of its own — and the
+		// thing it overwrote is already out there being read.
+		$skip = array(
+			'_edit_lock',
+			'_edit_last',
+			'_kivun_content_group',
+			Kivun_Mercaz_Sync::REMOTE_ID,
+			Kivun_Mercaz_Sync::SYNCED_AT,
+			Kivun_Mercaz_Sync::LAST_ERROR,
+		);
 		foreach ( get_post_meta( $id ) as $key => $values ) {
 			if ( in_array( $key, $skip, true ) ) {
 				continue;
