@@ -224,4 +224,75 @@ final class AgencyRoleTest extends TestCase {
 			'the leads export was opened to the agency'
 		);
 	}
+
+	// ── Three ways the boundary leaked ───────────────────────────────────────
+
+	/**
+	 * The content panels are not rendered at all.
+	 *
+	 * Hiding a panel is a CSS state; the markup is still in the response.
+	 * front_library() asks for every draft, pending, private and scheduled
+	 * item on the site, and front_form() fills itself in from a group id in
+	 * the URL — so an agency reading the page source had all of it. The one
+	 * failure this role was designed against, made one layer above the
+	 * design. Found in review.
+	 *
+	 * @return void
+	 */
+	public function test_the_content_panels_are_not_rendered(): void {
+		$source = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-content-creator.php' );
+		$at     = (int) strpos( $source, 'data-panel="form"' );
+		$this->assertGreaterThan( 0, $at );
+
+		$before = substr( $source, 0, $at );
+		$guard  = (int) strrpos( $before, 'if ( ! $leads_only && ! $agency ) :' );
+		$this->assertGreaterThan( 0, $guard, 'the publishing and library panels still render for an agency' );
+
+		// And the same for the figures above them, which count site content.
+		$this->assertStringContainsString( "self::console_stats( \$show_leads, \$show_jobs, ! \$leads_only && ! \$agency )", $source );
+	}
+
+	/**
+	 * The call counts the role promises are actually produced.
+	 *
+	 * The agency is told it gets enquiry and call totals. The calls tab is
+	 * closed to it — those rows hold the caller's own number — so the
+	 * aggregate has to arrive another way or half the reporting does not
+	 * exist. Found in review.
+	 *
+	 * @return void
+	 */
+	public function test_the_call_totals_exist(): void {
+		$this->assertTrue(
+			method_exists( 'Kivun_Campaigns', 'campaign_call_counts' ),
+			'an agency is promised call totals that nothing produces'
+		);
+
+		// On the screen...
+		$creator = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-content-creator.php' );
+		$this->assertStringContainsString( 'Kivun_Campaigns::campaign_call_counts()', $creator );
+
+		// ...and in the file.
+		$export = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-export.php' );
+		$this->assertStringContainsString( 'שיחות לקמפיין', $export );
+	}
+
+	/**
+	 * The count is not offered as a way into the enquiries.
+	 *
+	 * The link opens the leads tab, which the routing sends straight back —
+	 * so it reads as a fault rather than a boundary, and invites the one
+	 * click the role exists to prevent. Found in review.
+	 *
+	 * @return void
+	 */
+	public function test_the_lead_count_is_not_a_link_for_an_agency(): void {
+		$source = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-content-creator.php' );
+
+		$this->assertStringContainsString(
+			'<?php if ( $link_leads && ! $kivun_read_only ) : ?>',
+			$source,
+			'the enquiry count is still an anchor into the leads tab'
+		);
+	}
 }

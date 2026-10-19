@@ -2196,7 +2196,7 @@ class Kivun_Content_Creator {
 			</header>
 
 			<div class="kivun-cc-stats">
-				<?php if ( ! $leads_only ) : ?>
+				<?php if ( ! $leads_only && ! $agency ) : ?>
 					<div class="kivun-cc-stat">
 						<span class="kivun-cc-stat__num"><?php echo esc_html( number_format_i18n( $stats['published'] ) ); ?></span>
 						<span class="kivun-cc-stat__label"><?php esc_html_e( 'פרסומים', 'kivun' ); ?></span>
@@ -2251,7 +2251,14 @@ class Kivun_Content_Creator {
 			</div>
 			<?php endif; ?>
 
-			<?php if ( ! $leads_only ) : ?>
+			<?php
+			// Not rendered, rather than rendered and hidden. A hidden panel
+			// is still in the response: front_library() asks for every
+			// draft, pending, private and scheduled item on the site, and
+			// front_form() will fill itself in from a group id in the URL.
+			// An agency reading the page source would have had all of it.
+			?>
+			<?php if ( ! $leads_only && ! $agency ) : ?>
 				<section class="kivun-tab-panel <?php echo 'form' === $tab ? 'is-active' : ''; ?>" data-panel="form" id="kivun-ccpanel-form" role="tabpanel" aria-labelledby="kivun-cctab-form" tabindex="0" <?php echo 'form' === $tab ? '' : 'hidden'; ?>>
 					<?php self::front_form(); ?>
 				</section>
@@ -4207,6 +4214,9 @@ class Kivun_Content_Creator {
 		// courtesy: a button that cannot work should not be offered.
 		$kivun_read_only = self::is_agency();
 
+		// Counted once for the whole screen rather than per campaign.
+		$kivun_call_counts = Kivun_Campaigns::campaign_call_counts();
+
 		// Links here are built from the page's own address. add_query_arg() with
 		// no base builds on the CURRENT one, which drags every stale parameter
 		// along: a leftover kivun_group forces the console back to the publish
@@ -4340,6 +4350,15 @@ class Kivun_Content_Creator {
 							<div class="kivun-camp-metrics">
 								<span class="kivun-cc-badge"><?php echo esc_html( sprintf( /* translators: %s: number of links. */ _n( '%s קישור', '%s קישורים', count( $links ), 'kivun' ), number_format_i18n( count( $links ) ) ) ); ?></span>
 								<span class="kivun-cc-badge kivun-camp-total"><?php echo esc_html( sprintf( /* translators: %s: number of leads. */ _n( '%s פנייה', '%s פניות', $total, 'kivun' ), number_format_i18n( $total ) ) ); ?></span>
+								<?php
+								// Calls belong beside enquiries: both are what the
+								// campaign produced, and a campaign promoted by a
+								// tracked number is answered mostly by phone.
+								$kivun_calls = (int) ( $kivun_call_counts[ (int) $camp->id ] ?? 0 );
+								?>
+								<?php if ( $kivun_calls ) : ?>
+									<span class="kivun-cc-badge"><?php echo esc_html( sprintf( /* translators: %s: number of calls. */ _n( '%s שיחה', '%s שיחות', $kivun_calls, 'kivun' ), number_format_i18n( $kivun_calls ) ) ); ?></span>
+								<?php endif; ?>
 								<?php if ( ! $kivun_read_only ) : ?>
 								<button
 									type="button"
@@ -4477,7 +4496,7 @@ class Kivun_Content_Creator {
 												<?php endif; ?>
 											</td>
 											<td>
-												<?php if ( $link_leads ) : ?>
+												<?php if ( $link_leads && ! $kivun_read_only ) : ?>
 													<a class="kivun-cc-leadlink" href="
 													<?php
 													echo esc_url(
@@ -4491,6 +4510,15 @@ class Kivun_Content_Creator {
 													);
 													?>
 																						"><?php echo esc_html( number_format_i18n( $link_leads ) ); ?></a>
+												<?php elseif ( $link_leads ) : ?>
+													<?php
+													// The number, with nowhere to go. The link opens the
+													// enquiries themselves, which is the one screen this
+													// reader must not reach — and an anchor that lands
+													// back on the page it was clicked from reads as a
+													// fault rather than a boundary.
+													?>
+													<?php echo esc_html( number_format_i18n( $link_leads ) ); ?>
 												<?php else : ?>
 													<span class="kivun-muted" aria-hidden="true">—</span>
 												<?php endif; ?>
