@@ -158,7 +158,10 @@ final class MercazVocabularySyncTest extends TestCase {
 		$source = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-mercaz.php' );
 
 		$this->assertStringContainsString( 'private static function merge_term', $source );
-		$this->assertStringContainsString( 'wp_set_object_terms( (int) $id, array( $to ), $taxonomy, false );', $source );
+		// How it moves them is asserted in
+		// test_a_merge_keeps_the_other_terms_on_the_job; here it only has
+		// to exist and be reached.
+		$this->assertStringContainsString( 'self::merge_term( $taxonomy,', $source );
 	}
 
 	/**
@@ -216,12 +219,14 @@ final class MercazVocabularySyncTest extends TestCase {
 		$this->assertStringContainsString( "x-wp-totalpages", $body, 'nothing reads how many pages there are' );
 		$this->assertStringContainsString( 'while ( $pages > 0 && $page <= $pages', $body );
 
-		// And every reader of their list goes through it, rather than one of
-		// them keeping its own capped request.
+		// And no reader keeps a capped request of its own. Asserted on the
+		// thing that would be wrong rather than on how many callers there
+		// are, which grows for good reasons.
+		$this->assertGreaterThan( 1, substr_count( $source, 'self::remote_terms(' ) );
 		$this->assertSame(
-			3,
-			substr_count( $source, 'self::remote_terms(' ),
-			'a reader of their vocabulary still fetches only one page of it'
+			1,
+			substr_count( $source, "'per_page' => 100" ),
+			'something fetches their vocabulary without paging through it'
 		);
 	}
 
@@ -244,5 +249,177 @@ final class MercazVocabularySyncTest extends TestCase {
 
 		// And a rename that does fail is not counted as one that worked.
 		$this->assertStringContainsString( 'if ( ! is_wp_error( $renamed ) ) {', $body );
+	}
+
+	// ── The one-time move onto their list ─────────────────────────────────────
+
+	/**
+	 * Every value this site had maps to one of theirs, with no asking.
+	 *
+	 * The table is read against their real lists, which came back as:
+	 * job-type — היברידית, חלקית, מלאה, משמרות, משרה לאקדמאים, משרת אם,
+	 * סטודנט, עבודה מהבית, פרילנס; and job_cat — 39 values including
+	 * אדמיניסטרציה, בריאות, חינוך, הייטק, כללי, כספים, מכירות, ניהול,
+	 * עיצוב ואמנות and טיפול.
+	 *
+	 * @return void
+	 */
+	public function test_every_old_value_has_one_of_theirs(): void {
+		$theirs = array(
+			// Their job-type list, as it came back.
+			'היברידית',
+			'חלקית',
+			'מלאה',
+			'משמרות',
+			'משרה לאקדמאים',
+			'משרת אם',
+			'סטודנט',
+			'עבודה מהבית',
+			'פרילנס',
+			// The parts of their job_cat list this table reaches for.
+			'אדמיניסטרציה',
+			'בריאות',
+			'חינוך',
+			'הייטק',
+			'כללי',
+			'כספים',
+			'מכירות',
+			'ניהול',
+			'עיצוב ואמנות',
+			'טיפול',
+		);
+
+		foreach ( Kivun_Mercaz::legacy_names() as $was => $becomes ) {
+			$this->assertContains(
+				$becomes,
+				$theirs,
+				"\"{$was}\" is mapped to \"{$becomes}\", which is not on the centre's list"
+			);
+		}
+	}
+
+	/**
+	 * The two values that already matched are left out of the table.
+	 *
+	 * "משרת אם" is theirs word for word, and renaming it to itself is a
+	 * line of work that can only go wrong.
+	 *
+	 * @return void
+	 */
+	public function test_values_that_already_matched_are_not_in_the_table(): void {
+		$this->assertArrayNotHasKey( 'משרת אם', Kivun_Mercaz::legacy_names() );
+	}
+
+	/**
+	 * Volunteering is deliberately not mapped.
+	 *
+	 * They have nothing like it, and sending it to the nearest-looking
+	 * value would file volunteering under paid work.
+	 *
+	 * @return void
+	 */
+	public function test_volunteering_is_left_alone(): void {
+		$this->assertArrayNotHasKey( 'התנדבות', Kivun_Mercaz::legacy_names() );
+	}
+
+	/**
+	 * The move happens once and records itself.
+	 *
+	 * Run again later it would find nothing — or catch a value somebody has
+	 * since created on purpose under one of the old names and rename it out
+	 * from under them.
+	 *
+	 * @return void
+	 */
+	public function test_the_move_happens_once(): void {
+		$source = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-mercaz.php' );
+		$start  = (int) strpos( $source, 'private static function adopt_legacy_names' );
+		$body   = substr( $source, $start, 3500 );
+
+		$this->assertStringContainsString( "if ( get_option( 'kivun_mercaz_legacy_adopted' ) ) {", $body );
+		$this->assertStringContainsString( "update_option( 'kivun_mercaz_legacy_adopted', 1 );", $body );
+	}
+
+	/**
+	 * And it is not marked done when their list could not be read.
+	 *
+	 * Marking it would leave this site half on their vocabulary for good,
+	 * with no second attempt.
+	 *
+	 * @return void
+	 */
+	public function test_it_is_not_marked_done_on_a_failed_read(): void {
+		Kivun_Mercaz::sync_vocabularies();
+
+		$this->assertSame(
+			'',
+			(string) get_option( 'kivun_mercaz_legacy_adopted', '' ),
+			'the one-time move was recorded as done although nothing was read'
+		);
+	}
+
+	/**
+	 * A value they turn out not to have is left as it was.
+	 *
+	 * Their list is the authority even over this table: renaming to
+	 * something they reject swaps one dead value for another and loses the
+	 * old name on the way.
+	 *
+	 * @return void
+	 */
+	public function test_a_target_they_lack_is_skipped(): void {
+		$source = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-mercaz.php' );
+		$start  = (int) strpos( $source, 'private static function adopt_legacy_names' );
+		$body   = substr( $source, $start, 3500 );
+
+		$this->assertStringContainsString( '$their_id = (int) array_search( $becomes, $theirs, true );', $body );
+		$this->assertStringContainsString( 'if ( ! $their_id ) {', $body );
+	}
+
+	// ── A merge that only moves what it means to ─────────────────────────────
+
+	/**
+	 * Merging takes the old value away without taking the others with it.
+	 *
+	 * wp_set_object_terms() with replace would hand the job a term set of
+	 * exactly one, so a job tagged with two fields comes out of the merge
+	 * holding one and nothing says the other was ever there. The job form
+	 * offers a single choice, but the WordPress term box and an import do
+	 * not. Found in review.
+	 *
+	 * @return void
+	 */
+	public function test_a_merge_keeps_the_other_terms_on_the_job(): void {
+		$source = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-mercaz.php' );
+		$start  = (int) strpos( $source, 'private static function merge_term' );
+		$body   = substr( $source, $start, 1600 );
+
+		// Appended, then the old one removed — never a wholesale replace.
+		$this->assertStringContainsString( 'wp_set_object_terms( (int) $id, array( $to ), $taxonomy, true );', $body );
+		$this->assertStringContainsString( 'wp_remove_object_terms( (int) $id, array( $from ), $taxonomy );', $body );
+		$this->assertStringNotContainsString( '$taxonomy, false );', $body, 'the merge replaces the job\'s terms instead of adding to them' );
+	}
+
+	/**
+	 * A value that could not be renamed is tried again tomorrow.
+	 *
+	 * Writing the done flag anyway would leave its jobs on a name the
+	 * centre rejects, with every later sync stepping straight over it.
+	 * Found in review.
+	 *
+	 * @return void
+	 */
+	public function test_a_stuck_rename_leaves_the_pass_unfinished(): void {
+		$source = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-mercaz.php' );
+		$start  = (int) strpos( $source, 'private static function adopt_legacy_names' );
+		$body   = substr( $source, $start, 4000 );
+
+		$this->assertStringContainsString( '$stuck = true;', $body );
+		$this->assertStringContainsString( 'if ( ! $stuck ) {', $body );
+
+		// The flag is written inside that guard, not beside it.
+		$guard = (int) strpos( $body, 'if ( ! $stuck ) {' );
+		$flag  = (int) strpos( $body, "update_option( 'kivun_mercaz_legacy_adopted', 1 );" );
+		$this->assertGreaterThan( $guard, $flag, 'the pass is marked done outside the check that it finished' );
 	}
 }
