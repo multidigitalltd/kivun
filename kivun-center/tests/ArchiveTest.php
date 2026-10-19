@@ -130,7 +130,9 @@ final class ArchiveTest extends TestCase {
 		// archived campaign must still appear in it, or its numbers vanish
 		// from the report the moment somebody tidies the screen.
 		$campaigns = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-campaigns.php' );
-		$start     = strpos( $campaigns, 'public static function link_lead_counts()' );
+		// Matched without the parameter list: the signature grew a date
+		// range, and this test is about the join, not the arguments.
+		$start     = strpos( $campaigns, 'function link_lead_counts(' );
 		$this->assertIsInt( $start );
 		$this->assertStringNotContainsString( 'archived', substr( $campaigns, $start, 1200 ) );
 	}

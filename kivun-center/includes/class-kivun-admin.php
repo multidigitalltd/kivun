@@ -1915,6 +1915,39 @@ class Kivun_Admin {
 				<a href="<?php echo esc_url( Kivun_Export::url( 'registrations', 0 ) ); ?>" class="button">⬇ <?php esc_html_e( 'ייצוא CSV', 'kivun' ); ?></a>
 			</p>
 
+			<?php
+			// The same export, cut to a period. Kept beside the one above
+			// rather than replacing it: "everything" is still a reasonable
+			// thing to ask for, and making it the harder of the two would
+			// be a change nobody asked for.
+			?>
+			<form method="get" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="margin:0 0 1rem;display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
+				<input type="hidden" name="action" value="kivun_export_csv">
+				<input type="hidden" name="type" value="registrations">
+				<?php wp_nonce_field( 'kivun_export', '_wpnonce', false ); ?>
+				<label for="kivun-leads-from"><?php esc_html_e( 'ייצוא לתקופה:', 'kivun' ); ?></label>
+				<input type="date" id="kivun-leads-from" name="from" aria-label="<?php esc_attr_e( 'מתאריך', 'kivun' ); ?>">
+				<span aria-hidden="true">–</span>
+				<input type="date" name="to" aria-label="<?php esc_attr_e( 'עד תאריך', 'kivun' ); ?>">
+				<select name="ctype" aria-label="<?php esc_attr_e( 'סוג תוכן', 'kivun' ); ?>">
+					<option value=""><?php esc_html_e( 'כל סוגי התוכן', 'kivun' ); ?></option>
+					<?php
+					foreach ( array(
+						'registration' => __( 'הרשמה', 'kivun' ),
+						'lead'         => __( 'מתעניין', 'kivun' ),
+						'workshop'     => __( 'דף נחיתה', 'kivun' ),
+						'session'      => __( 'סדנה', 'kivun' ),
+						'event'        => __( 'אירוע', 'kivun' ),
+						'form'         => __( 'טופס', 'kivun' ),
+					) as $kivun_ct => $kivun_ct_label ) :
+						?>
+						<option value="<?php echo esc_attr( $kivun_ct ); ?>"><?php echo esc_html( $kivun_ct_label ); ?></option>
+					<?php endforeach; ?>
+				</select>
+				<input type="text" name="campaign" placeholder="<?php esc_attr_e( 'utm_campaign (לא חובה)', 'kivun' ); ?>" dir="ltr" style="max-width:14rem">
+				<button type="submit" class="button">⬇ <?php esc_html_e( 'ייצוא CSV', 'kivun' ); ?></button>
+			</form>
+
 			<form method="get" class="kivun-apps-admin-filter" style="margin:1rem 0;display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
 				<input type="hidden" name="post_type" value="kivun_course">
 				<input type="hidden" name="page" value="kivun-registrations">
