@@ -177,4 +177,72 @@ final class MercazVocabularySyncTest extends TestCase {
 		$this->assertStringContainsString( "_pre_add_form', array( __CLASS__, 'vocabulary_notice' )", $source );
 		$this->assertStringContainsString( 'הרשימה הזו נשאבת מאתר כיוון הראשי', $source );
 	}
+
+	// ── What it refuses to claim ──────────────────────────────────────────────
+
+	/**
+	 * A sync that could not read their list is not reported as a sync.
+	 *
+	 * It would otherwise stamp a fresh "סונכרן לאחרונה: היום" on the term
+	 * screen and answer the button with a cheerful row of zeros, while the
+	 * integration stays broken and the list stays weeks stale. Found in
+	 * review.
+	 *
+	 * @return void
+	 */
+	public function test_a_failed_fetch_is_not_reported_as_a_sync(): void {
+		// No credentials, so the request fails before it leaves.
+		$done = Kivun_Mercaz::sync_vocabularies();
+
+		$this->assertTrue( is_wp_error( $done ), 'a sync that read nothing reported success' );
+		$this->assertSame( '', (string) get_option( 'kivun_mercaz_vocab_synced', '' ), 'the last-synced stamp was written for a sync that did not happen' );
+	}
+
+	/**
+	 * The whole vocabulary is read, not its first hundred.
+	 *
+	 * Their API caps a page at 100. Reading one page leaves later values
+	 * missing here and unavailable to adopt, with nothing on screen to say
+	 * they exist. Found in review.
+	 *
+	 * @return void
+	 */
+	public function test_it_reads_past_the_first_page(): void {
+		$source = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-mercaz.php' );
+		$start  = (int) strpos( $source, 'public static function remote_terms' );
+		$body   = substr( $source, $start, 1800 );
+
+		$this->assertStringContainsString( "'page'     => \$page", $body );
+		$this->assertStringContainsString( "x-wp-totalpages", $body, 'nothing reads how many pages there are' );
+		$this->assertStringContainsString( 'while ( $pages > 0 && $page <= $pages', $body );
+
+		// And every reader of their list goes through it, rather than one of
+		// them keeping its own capped request.
+		$this->assertSame(
+			3,
+			substr_count( $source, 'self::remote_terms(' ),
+			'a reader of their vocabulary still fetches only one page of it'
+		);
+	}
+
+	/**
+	 * A rename onto a name we already hold is a merge, not a lost rename.
+	 *
+	 * wp_update_term() refuses it as term_exists. Ignoring that left the
+	 * jobs on the old name, still rejected, while the sync counted the
+	 * rename as done. Found in review.
+	 *
+	 * @return void
+	 */
+	public function test_a_rename_onto_an_existing_name_merges(): void {
+		$source = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-mercaz.php' );
+		$start  = (int) strpos( $source, 'private static function sync_vocabulary' );
+		$body   = substr( $source, $start, 4000 );
+
+		$this->assertStringContainsString( '$clash = get_term_by( \'name\', $name, $taxonomy );', $body );
+		$this->assertStringContainsString( 'self::merge_term( $taxonomy,', $body );
+
+		// And a rename that does fail is not counted as one that worked.
+		$this->assertStringContainsString( 'if ( ! is_wp_error( $renamed ) ) {', $body );
+	}
 }

@@ -343,6 +343,55 @@ class Kivun_Mercaz {
 	}
 
 	/**
+	 * Every term in one of their vocabularies, as id => name.
+	 *
+	 * Paged through to the end. Their API caps a page at 100, and reading
+	 * only the first one would leave later values missing here and
+	 * unavailable to adopt — with nothing to show they exist.
+	 *
+	 * @param string $remote Their taxonomy rest_base.
+	 * @return array<int,string>|\WP_Error
+	 */
+	public static function remote_terms( string $remote ) {
+		$out  = array();
+		$page = 1;
+
+		do {
+			$result = self::request(
+				'GET',
+				$remote,
+				array(
+					'per_page' => 100,
+					'page'     => $page,
+				),
+				null,
+				'jobs'
+			);
+
+			if ( is_wp_error( $result ) ) {
+				return $result;
+			}
+			if ( ! is_array( $result['data'] ?? null ) ) {
+				return new \WP_Error(
+					'kivun_mercaz_vocab',
+					__( 'מרכז כיוון החזיר תשובה שלא ניתן לקרוא.', 'kivun' )
+				);
+			}
+
+			foreach ( $result['data'] as $row ) {
+				if ( ! empty( $row['id'] ) && ! empty( $row['name'] ) ) {
+					$out[ (int) $row['id'] ] = trim( (string) $row['name'] );
+				}
+			}
+
+			$pages = (int) ( $result['headers']['x-wp-totalpages'] ?? 0 );
+			++$page;
+		} while ( $pages > 0 && $page <= $pages && $page <= 20 );
+
+		return $out;
+	}
+
+	/**
 	 * Bring both vocabularies into line with the centre's.
 	 *
 	 * Their list is the list: a value they do not have is a value that gets
@@ -359,13 +408,22 @@ class Kivun_Mercaz {
 	 *   untag every job carrying it, and an untagged job is a worse problem
 	 *   than a value that no longer sends.
 	 *
-	 * @return array<string,array<string,int>> What changed, per vocabulary.
+	 * @return array<string,array<string,int>>|\WP_Error What changed, per
+	 *                                                  vocabulary.
 	 */
-	public static function sync_vocabularies(): array {
+	public static function sync_vocabularies() {
 		$done = array();
 
 		foreach ( self::vocabularies() as $remote => $taxonomy ) {
-			$done[ $remote ] = self::sync_vocabulary( $remote, $taxonomy );
+			$counts = self::sync_vocabulary( $remote, $taxonomy );
+			if ( is_wp_error( $counts ) ) {
+				// Not stamped, not reported as done. A sync that could not
+				// read their list changed nothing, and saying otherwise
+				// leaves somebody reading "סונכרן לאחרונה: היום" off a
+				// screen whose list is weeks stale.
+				return $counts;
+			}
+			$done[ $remote ] = $counts;
 		}
 
 		update_option( 'kivun_mercaz_vocab_synced', current_time( 'mysql' ) );
@@ -378,18 +436,19 @@ class Kivun_Mercaz {
 	 *
 	 * @param string $remote   Their taxonomy rest_base.
 	 * @param string $taxonomy Our taxonomy.
-	 * @return array{added:int,renamed:int,linked:int}
+	 * @return array{added:int,renamed:int,linked:int,merged:int}|\WP_Error
 	 */
-	private static function sync_vocabulary( string $remote, string $taxonomy ): array {
+	private static function sync_vocabulary( string $remote, string $taxonomy ) {
 		$out = array(
 			'added'   => 0,
 			'renamed' => 0,
 			'linked'  => 0,
+			'merged'  => 0,
 		);
 
-		$result = self::request( 'GET', $remote, array( 'per_page' => 100 ), null, 'jobs' );
-		if ( is_wp_error( $result ) || ! is_array( $result['data'] ?? null ) ) {
-			return $out;
+		$theirs = self::remote_terms( $remote );
+		if ( is_wp_error( $theirs ) ) {
+			return $theirs;
 		}
 
 		// Ours, indexed by the centre's id where we already know it.
@@ -409,9 +468,7 @@ class Kivun_Mercaz {
 			}
 		}
 
-		foreach ( $result['data'] as $row ) {
-			$id   = (int) ( $row['id'] ?? 0 );
-			$name = trim( (string) ( $row['name'] ?? '' ) );
+		foreach ( $theirs as $id => $name ) {
 			if ( ! $id || '' === $name ) {
 				continue;
 			}
@@ -419,8 +476,23 @@ class Kivun_Mercaz {
 			// Already linked: follow a rename, and otherwise leave it be.
 			if ( isset( $by_remote[ $id ] ) ) {
 				if ( $by_remote[ $id ]->name !== $name ) {
-					wp_update_term( (int) $by_remote[ $id ]->term_id, $taxonomy, array( 'name' => $name ) );
-					++$out['renamed'];
+					// Where they rename one value to another we already
+					// hold, the rename is refused and the jobs would sit on
+					// the old name still being rejected — while the sync
+					// counted it as done. Merged instead, which is what
+					// their rename means.
+					$clash = get_term_by( 'name', $name, $taxonomy );
+					if ( $clash && ! is_wp_error( $clash ) && (int) $clash->term_id !== (int) $by_remote[ $id ]->term_id ) {
+						self::merge_term( $taxonomy, (int) $by_remote[ $id ]->term_id, (int) $clash->term_id );
+						update_term_meta( (int) $clash->term_id, self::REMOTE_TERM, $id );
+						++$out['merged'];
+						continue;
+					}
+
+					$renamed = wp_update_term( (int) $by_remote[ $id ]->term_id, $taxonomy, array( 'name' => $name ) );
+					if ( ! is_wp_error( $renamed ) ) {
+						++$out['renamed'];
+					}
 				}
 				continue;
 			}
@@ -451,24 +523,31 @@ class Kivun_Mercaz {
 	public static function ajax_sync_vocab(): void {
 		self::guard();
 
-		$done  = self::sync_vocabularies();
-		$added = 0;
-		$named = 0;
-		$tied  = 0;
+		$done = self::sync_vocabularies();
+		if ( is_wp_error( $done ) ) {
+			wp_send_json_error( array( 'message' => $done->get_error_message() ) );
+		}
+
+		$added  = 0;
+		$named  = 0;
+		$tied   = 0;
+		$merged = 0;
 		foreach ( $done as $counts ) {
-			$added += $counts['added'];
-			$named += $counts['renamed'];
-			$tied  += $counts['linked'];
+			$added  += $counts['added'];
+			$named  += $counts['renamed'];
+			$tied   += $counts['linked'];
+			$merged += $counts['merged'];
 		}
 
 		wp_send_json_success(
 			array(
 				'message' => sprintf(
-					/* translators: 1: values added. 2: values renamed. 3: values linked. */
-					__( 'הסתיים: %1$d ערכים נוספו, %2$d שמות עודכנו, %3$d חוברו לערך אצלם.', 'kivun' ),
+					/* translators: 1: added. 2: renamed. 3: linked. 4: merged. */
+					__( 'הסתיים: %1$d ערכים נוספו, %2$d שמות עודכנו, %3$d חוברו לערך אצלם, %4$d מוזגו.', 'kivun' ),
 					$added,
 					$named,
-					$tied
+					$tied,
+					$merged
 				),
 			)
 		);
@@ -514,17 +593,12 @@ class Kivun_Mercaz {
 		// Checked against their live list rather than taken on trust. A name
 		// that is not on it would rename the term to something they reject
 		// just the same, and the screen would say it was adopted.
-		$result = self::request( 'GET', $remote, array( 'per_page' => 100 ), null, 'jobs' );
-		if ( is_wp_error( $result ) ) {
-			wp_send_json_error( array( 'message' => $result->get_error_message() ) );
+		$fetched = self::remote_terms( $remote );
+		if ( is_wp_error( $fetched ) ) {
+			wp_send_json_error( array( 'message' => $fetched->get_error_message() ) );
 		}
 
-		$theirs = array();
-		foreach ( (array) ( $result['data'] ?? array() ) as $row ) {
-			if ( ! empty( $row['name'] ) ) {
-				$theirs[] = (string) $row['name'];
-			}
-		}
+		$theirs = array_values( $fetched );
 		if ( ! in_array( $name, $theirs, true ) ) {
 			wp_send_json_error( array( 'message' => __( 'הערך הזה לא קיים ברשימה של מרכז כיוון.', 'kivun' ) ) );
 		}
@@ -556,11 +630,9 @@ class Kivun_Mercaz {
 		// Linked to their id as well as their name, so when they reword it
 		// later the change follows instead of arriving as a new value with
 		// ours left stranded beside it.
-		foreach ( (array) ( $result['data'] ?? array() ) as $row ) {
-			if ( isset( $row['name'], $row['id'] ) && (string) $row['name'] === $name ) {
-				update_term_meta( (int) $term->term_id, self::REMOTE_TERM, (int) $row['id'] );
-				break;
-			}
+		$their_id = (int) array_search( $name, $fetched, true );
+		if ( $their_id ) {
+			update_term_meta( (int) $term->term_id, self::REMOTE_TERM, $their_id );
 		}
 
 		wp_send_json_success(
@@ -677,24 +749,12 @@ class Kivun_Mercaz {
 			wp_send_json_error( array( 'message' => __( 'רשימה לא מוכרת.', 'kivun' ) ) );
 		}
 
-		$result = self::request(
-			'GET',
-			$remote,
-			array( 'per_page' => 100 ),
-			null,
-			'jobs'
-		);
-
-		if ( is_wp_error( $result ) ) {
-			wp_send_json_error( array( 'message' => $result->get_error_message() ) );
+		$fetched = self::remote_terms( $remote );
+		if ( is_wp_error( $fetched ) ) {
+			wp_send_json_error( array( 'message' => $fetched->get_error_message() ) );
 		}
 
-		$theirs = array();
-		foreach ( (array) ( $result['data'] ?? array() ) as $term ) {
-			if ( ! empty( $term['name'] ) ) {
-				$theirs[] = (string) $term['name'];
-			}
-		}
+		$theirs = array_values( $fetched );
 
 		// Ours, with how many jobs carry each: a name used once and a name
 		// used fifty times are the same line otherwise, and they are not the
