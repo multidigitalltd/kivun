@@ -44,6 +44,13 @@ class Kivun_Mercaz_Sync {
 	public static function type_map(): array {
 		return array(
 			'kivun_course'   => 'courses',
+			// Both of these are 'workshops' on their side. A סדנה is the one
+			// that was meant: its fields are the ones the workshops branch
+			// below reads. It was missing from this map, so not one has ever
+			// been sent — and a דף נחיתה was going in its place, carrying a
+			// date and an audience it keeps under other names, which arrived
+			// empty every time.
+			'kivun_session'  => 'workshops',
 			'kivun_workshop' => 'workshops',
 			'kivun_event'    => 'events',
 			'kivun_job'      => 'jobs',
@@ -385,12 +392,18 @@ class Kivun_Mercaz_Sync {
 				break;
 
 			case 'workshops':
+				// A סדנה and a דף נחיתה both land here, and they keep the same
+				// two values under different names. Asked for by what the post
+				// actually is, so neither reads the other's empty keys.
+				$who  = 'kivun_workshop' === $post->post_type ? '_kivun_ws_audience' : '_kivun_session_audience';
+				$when = 'kivun_workshop' === $post->post_type ? '_kivun_ws_date' : '_kivun_session_date';
+
 				$body['meta'] = array(
 					'workshop_info' => self::as_html( $post->post_content ),
 					// These two are stored as plain text on their side.
-					'workshop_who'  => wp_strip_all_tags( $get( '_kivun_session_audience' ) ),
-					'workshop_when' => wp_strip_all_tags( $get( '_kivun_session_date' ) ),
-					'workshop_date' => self::as_date( $get( '_kivun_session_date' ) ),
+					'workshop_who'  => wp_strip_all_tags( $get( $who ) ),
+					'workshop_when' => wp_strip_all_tags( $get( $when ) ),
+					'workshop_date' => self::as_date( $get( $when ) ),
 				);
 				break;
 
