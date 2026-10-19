@@ -276,4 +276,66 @@ final class MercazMissingReasonTest extends TestCase {
 			'the push no longer sends the statuses the diagnostic counts'
 		);
 	}
+
+	// ── Said at the field, not weeks later ───────────────────────────────────
+
+	/**
+	 * A settlement the centre does not have is flagged while it is typed.
+	 *
+	 * Of 37 jobs still held back, every one is held on the settlement, and
+	 * ten of those carry a place that is real but is not a settlement:
+	 * "מרכז העיר", "הר חוצבים", "ירושלים - מרכז העיר". Each was typed by
+	 * somebody who knew exactly which town they meant — weeks before
+	 * anybody saw a refusal.
+	 *
+	 * @return void
+	 */
+	public function test_an_unknown_settlement_is_flagged_at_the_field(): void {
+		$js = (string) file_get_contents( KIVUN_DIR . 'assets/js/frontend.js' );
+
+		$this->assertStringContainsString( "kivun.i18n.city_unknown", $js );
+		$this->assertStringContainsString( "input[list=\"kivun-city-list\"]", $js );
+
+		// Exact, because their matching is exact: "ירושלים" appearing among
+		// the suggestions does not make "ירושלים - מרכז העיר" acceptable.
+		$this->assertStringContainsString( 'res.data.cities.indexOf(term) !== -1', $js );
+	}
+
+	/**
+	 * It warns and does not block.
+	 *
+	 * The field belongs to this site and the vocabulary to theirs. A job
+	 * that cannot be published here because another site has not heard of
+	 * a place helps nobody.
+	 *
+	 * @return void
+	 */
+	public function test_it_warns_without_blocking(): void {
+		// Bounded to the handler itself. A window measured in characters
+		// reaches into whatever happens to sit next to it, and the first
+		// version of this test failed on a neighbouring button.
+		$js    = (string) file_get_contents( KIVUN_DIR . 'assets/js/frontend.js' );
+		$start = (int) strpos( $js, "var note = field.parentNode.querySelector('.kivun-city-warn');" );
+		$end   = (int) strpos( $js, '}, true);', $start );
+		$body  = substr( $js, $start, $end - $start );
+
+		foreach ( array( 'preventDefault', 'setCustomValidity', 'disabled = true' ) as $gate ) {
+			$this->assertStringNotContainsString( $gate, $body, "the settlement warning blocks with {$gate}" );
+		}
+	}
+
+	/**
+	 * And the words it says exist.
+	 *
+	 * A missing i18n key renders as nothing, so the field would fall silent
+	 * exactly where it is meant to speak.
+	 *
+	 * @return void
+	 */
+	public function test_the_words_it_needs_are_there(): void {
+		$core = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-core.php' );
+
+		$this->assertStringContainsString( "'city_unknown'", $core );
+		$this->assertStringContainsString( "'city_did_you_mean'", $core );
+	}
 }
