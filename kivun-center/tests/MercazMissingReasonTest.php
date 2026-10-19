@@ -338,4 +338,43 @@ final class MercazMissingReasonTest extends TestCase {
 		$this->assertStringContainsString( "'city_unknown'", $core );
 		$this->assertStringContainsString( "'city_did_you_mean'", $core );
 	}
+
+	/**
+	 * A connection that is down is not reported as a bad settlement.
+	 *
+	 * The search endpoint answers an unreachable centre with an empty list
+	 * and a success, which from the browser is indistinguishable from a
+	 * place they do not have — so every town typed would have been flagged
+	 * while the real fault was the connection. The same mistake this
+	 * integration has made three times. Found in review.
+	 *
+	 * @return void
+	 */
+	public function test_an_unanswered_search_does_not_blame_the_typist(): void {
+		$php = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-mercaz-sync.php' );
+		$js  = (string) file_get_contents( KIVUN_DIR . 'assets/js/frontend.js' );
+
+		// The endpoint says whether it got an answer...
+		$this->assertStringContainsString( "'asked'  => false,", $php );
+		$this->assertStringContainsString( "'asked'  => true,", $php );
+
+		// ...and the warning is only shown when it did.
+		$this->assertStringContainsString( 'if (res.data.asked === false) { say(\'\'); return; }', $js );
+	}
+
+	/**
+	 * A reply about text the field no longer holds is dropped.
+	 *
+	 * Blur one value, correct it to another, and the first answer lands on
+	 * the second — flagging a perfectly good town. Two replies arriving out
+	 * of order do the same. Found in review.
+	 *
+	 * @return void
+	 */
+	public function test_a_stale_reply_is_ignored(): void {
+		$this->assertStringContainsString(
+			'if (field.value.trim() !== term) { return; }',
+			(string) file_get_contents( KIVUN_DIR . 'assets/js/frontend.js' )
+		);
+	}
 }

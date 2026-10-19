@@ -864,6 +864,19 @@
 			.then(function (res) {
 				if (!res.success || !res.data.cities) { say(''); return; }
 
+				// Only where they actually answered. An empty list comes back
+				// both from a settlement they do not have and from a request
+				// that never reached them, and warning on the second blames
+				// the person who typed a perfectly good town for a
+				// connection being down.
+				if (res.data.asked === false) { say(''); return; }
+
+				// The field may have moved on while this was in flight —
+				// blurred as one value, edited to another, or two answers
+				// arriving out of order. The reply belongs to the text it
+				// asked about, and to nothing else.
+				if (field.value.trim() !== term) { return; }
+
 				// An exact name, not a close one. Their matching is exact, so
 				// "ירושלים" among the suggestions does not make
 				// "ירושלים - מרכז העיר" acceptable.
