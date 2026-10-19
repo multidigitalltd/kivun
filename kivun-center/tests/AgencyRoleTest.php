@@ -1,0 +1,227 @@
+<?php
+/**
+ * The outside advertising agency: counts, and nothing else.
+ *
+ * An agency runs campaigns for the centre and needs to know what they
+ * produced. It does not need to know who enquired, and it has no business
+ * changing anything — the campaigns are the centre's, and so are the
+ * people who answered them.
+ *
+ * The role is defined by what it cannot do, which is why none of it rests
+ * on hiding buttons. The capability it holds is deliberately not
+ * `edit_posts`: every handler in this plugin that guards on `edit_posts`
+ * would have opened the moment that was granted, and the screen would then
+ * be the only thing standing between an agency and the whole console.
+ *
+ * @package Kivun
+ */
+
+declare(strict_types=1);
+
+use PHPUnit\Framework\TestCase;
+
+require_once KIVUN_DIR . 'includes/class-kivun-content-creator.php';
+
+/**
+ * Tests for what the agency role can and cannot reach.
+ */
+final class AgencyRoleTest extends TestCase {
+
+	/**
+	 * Start each test with an empty site.
+	 *
+	 * @return void
+	 */
+	protected function setUp(): void {
+		Kivun_Test_State::reset();
+	}
+
+	/**
+	 * Become an agency account.
+	 *
+	 * @return void
+	 */
+	private function as_agency(): void {
+		Kivun_Test_State::$caps = array(
+			'read'                 => true,
+			'kivun_view_campaigns' => true,
+		);
+	}
+
+	// ── What it is ────────────────────────────────────────────────────────────
+
+	/**
+	 * The role is recognised from its own capability.
+	 *
+	 * @return void
+	 */
+	public function test_an_agency_is_recognised(): void {
+		$this->as_agency();
+		$this->assertTrue( Kivun_Content_Creator::is_agency() );
+	}
+
+	/**
+	 * And an administrator is not one, however the capability is granted.
+	 *
+	 * Otherwise granting it to an existing manager would quietly take their
+	 * console away.
+	 *
+	 * @return void
+	 */
+	public function test_an_administrator_is_not_an_agency(): void {
+		Kivun_Test_State::$caps = array(
+			'manage_options'       => true,
+			'edit_posts'           => true,
+			'kivun_view_campaigns' => true,
+		);
+
+		$this->assertFalse( Kivun_Content_Creator::is_agency() );
+	}
+
+	/**
+	 * Somebody without the capability is not one either.
+	 *
+	 * @return void
+	 */
+	public function test_everyone_else_is_not_an_agency(): void {
+		Kivun_Test_State::$caps = array( 'read' => true );
+		$this->assertFalse( Kivun_Content_Creator::is_agency() );
+	}
+
+	// ── What it must never reach ──────────────────────────────────────────────
+
+	/**
+	 * It cannot read the leads.
+	 *
+	 * This is the whole point of the role. A count is the agency's
+	 * business; a name and a phone number belong to the person who left
+	 * them.
+	 *
+	 * @return void
+	 */
+	public function test_it_cannot_read_the_leads(): void {
+		$this->as_agency();
+
+		$this->assertFalse( Kivun_Content_Creator::can_manage_leads(), 'an agency can open the leads table' );
+		$this->assertFalse( Kivun_Content_Creator::can_see_lead_source(), 'an agency can see where a lead came from' );
+		$this->assertFalse( Kivun_Content_Creator::is_leads_only() );
+	}
+
+	/**
+	 * It cannot write to the campaigns it reads.
+	 *
+	 * @return void
+	 */
+	public function test_it_cannot_change_a_campaign(): void {
+		$this->as_agency();
+
+		$this->assertFalse( Kivun_Campaigns::can_manage(), 'an agency can create, edit and delete campaigns' );
+	}
+
+	/**
+	 * The capability it holds is not an editing one.
+	 *
+	 * Asserted against the role as the installer writes it, because this is
+	 * the line the whole design rests on: `edit_posts` here would open every
+	 * handler in the plugin that asks for it, and no screen could take that
+	 * back.
+	 *
+	 * @return void
+	 */
+	public function test_the_role_holds_no_editing_capability(): void {
+		$installer = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-installer.php' );
+		$start     = (int) strpos( $installer, "add_role(\n\t\t\t'kivun_agency'" );
+		$this->assertGreaterThan( 0, $start, 'the agency role is not created' );
+
+		$block = substr( $installer, $start, 400 );
+
+		$this->assertStringContainsString( "'kivun_view_campaigns' => true,", $block );
+		foreach ( array( 'edit_posts', 'edit_others_posts', 'manage_options', 'kivun_view_leads', 'delete_posts' ) as $never ) {
+			$this->assertStringNotContainsString( $never, $block, "the agency role was granted {$never}" );
+		}
+	}
+
+	// ── What the screen offers it ─────────────────────────────────────────────
+
+	/**
+	 * Every control that writes is withheld, not merely refused.
+	 *
+	 * A button that cannot work should not be offered: an agency pressing
+	 * one and reading "אין לך הרשאה" learns only that this screen was not
+	 * built for them.
+	 *
+	 * @return void
+	 */
+	public function test_the_writing_controls_are_withheld(): void {
+		$source = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-content-creator.php' );
+		$start  = (int) strpos( $source, 'private static function front_campaigns' );
+		$end    = (int) strpos( $source, 'private static function campaign_form', $start );
+		$tab    = substr( $source, $start, $end - $start );
+
+		$this->assertStringContainsString( '$kivun_read_only = self::is_agency();', $tab );
+
+		// Each writing control sits behind that flag.
+		foreach ( array(
+			'kivun-camp-new'         => 'creating a campaign',
+			'kivun-edit-campaign'    => 'editing a campaign',
+			'kivun-delete-campaign'  => 'deleting a campaign',
+			'kivun-archive-campaign' => 'archiving a campaign',
+			'kivun-edit-link'        => 'editing a link',
+			'kivun-delete-link'      => 'deleting a link',
+			'kivun-camp-addlink'     => 'adding a link',
+			'kivun-wa-save'          => 'saving a message',
+		) as $control => $what ) {
+			$at = (int) strpos( $tab, $control );
+			$this->assertGreaterThan( 0, $at, "{$control} is no longer on the campaigns tab" );
+
+			$before = substr( $tab, 0, $at );
+			$guard  = strrpos( $before, 'if ( ! $kivun_read_only )' );
+			$this->assertNotFalse( $guard, "{$what} is offered to an agency" );
+		}
+	}
+
+	/**
+	 * Copying a message that already exists is left alone.
+	 *
+	 * It is the one thing the agency came to do, and it reads rather than
+	 * writes.
+	 *
+	 * @return void
+	 */
+	public function test_copying_a_message_is_still_offered(): void {
+		$source = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-content-creator.php' );
+		$start  = (int) strpos( $source, 'private static function front_campaigns' );
+		$end    = (int) strpos( $source, 'private static function campaign_form', $start );
+		$tab    = substr( $source, $start, $end - $start );
+
+		$this->assertStringContainsString( 'kivun-wa-copy', $tab, 'the agency can no longer copy a message' );
+		$this->assertStringContainsString( 'kivun-camp-copy', $tab, 'the agency can no longer copy a link' );
+	}
+
+	/**
+	 * The campaigns report is allowed; the leads export is not.
+	 *
+	 * The report holds counts and no enquiry, which is the question the
+	 * agency is asking. The leads export is the answer it must not have —
+	 * and an export is exactly where a screen restriction leaks.
+	 *
+	 * @return void
+	 */
+	public function test_the_report_is_allowed_and_the_leads_export_is_not(): void {
+		$export = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-export.php' );
+
+		$camp = (int) strpos( $export, "if ( 'campaigns' === \$type ) {" );
+		$this->assertStringContainsString(
+			'Kivun_Content_Creator::is_agency()',
+			substr( $export, $camp, 500 ),
+			'the campaigns report is closed to the agency'
+		);
+
+		$regs = (int) strpos( $export, "if ( 'registrations' === \$type ) {" );
+		$this->assertStringNotContainsString(
+			'is_agency',
+			substr( $export, $regs, 400 ),
+			'the leads export was opened to the agency'
+		);
+	}
+}

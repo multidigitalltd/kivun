@@ -42,6 +42,14 @@ class Kivun_Admin_Settings {
 		// Kivun menus are already registered).
 		add_action( 'admin_menu', array( __CLASS__, 'hide_menus' ), 999999 );
 
+		// And again once nothing can be added any more. A plugin that
+		// registers its menu after admin_menu — or puts it back afterwards,
+		// which the big page builders do — slipped through the pass above
+		// and went on showing in a list the operator had already unticked.
+		// The menu is printed after this hook, so this is the last moment
+		// the removal still counts.
+		add_action( 'adminmenu', array( __CLASS__, 'hide_menus_again' ) );
+
 		// Always keep a Settings link on the Plugins page — a safety net in case
 		// the Settings menu itself was hidden.
 		add_filter( 'plugin_action_links_' . plugin_basename( KIVUN_FILE ), array( __CLASS__, 'action_links' ) );
@@ -163,6 +171,31 @@ class Kivun_Admin_Settings {
 		if ( ! is_array( $hidden ) || ! $hidden ) {
 			return;
 		}
+		foreach ( $hidden as $slug ) {
+			remove_menu_page( (string) $slug );
+		}
+	}
+
+	/**
+	 * Take the hidden items out again, immediately before the menu is drawn.
+	 *
+	 * Removal only reaches what is registered at the time it runs. This
+	 * is the same removal at the last possible moment, so an item added or
+	 * restored after admin_menu does not survive to the screen.
+	 *
+	 * The snapshot is deliberately not retaken here: it is what fills the
+	 * settings checklist, and an item hidden by the earlier pass is already
+	 * gone from the menu by now — retaking it would drop that item from the
+	 * list and leave no way to turn it back on.
+	 *
+	 * @return void
+	 */
+	public static function hide_menus_again(): void {
+		$hidden = self::get( 'admin_menu_hidden', array() );
+		if ( ! is_array( $hidden ) || ! $hidden ) {
+			return;
+		}
+
 		foreach ( $hidden as $slug ) {
 			remove_menu_page( (string) $slug );
 		}

@@ -744,6 +744,21 @@ class Kivun_Installer {
 			)
 		);
 
+		// An outside advertising agency: the numbers its campaigns produced,
+		// and nothing else. It holds no editing capability and not
+		// kivun_view_leads, so every write handler and the leads table
+		// already refuse it without being told about this role — the one
+		// capability it does hold opens the campaigns tab and stops there.
+		remove_role( 'kivun_agency' );
+		add_role(
+			'kivun_agency',
+			__( 'משרד פרסום (צפייה)', 'kivun' ),
+			array(
+				'read'                 => true,
+				'kivun_view_campaigns' => true,
+			)
+		);
+
 		// Re-create so capability changes propagate on upgrade.
 		remove_role( 'kivun_jobs_manager' );
 		add_role(

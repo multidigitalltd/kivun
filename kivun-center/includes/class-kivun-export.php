@@ -65,8 +65,11 @@ class Kivun_Export {
 
 		if ( 'campaigns' === $type ) {
 			// The same rule as the campaigns screen itself: this report is
-			// that screen's numbers, counted.
-			if ( ! Kivun_Campaigns::can_manage() ) {
+			// that screen's numbers, counted. An outside agency is allowed
+			// it for the same reason it is allowed the screen — the file
+			// holds counts and no enquiry, which is the whole question the
+			// agency is asking.
+			if ( ! Kivun_Campaigns::can_manage() && ! Kivun_Content_Creator::is_agency() ) {
 				wp_die( 'Unauthorized' );
 			}
 			self::export_campaigns( self::date_range() );
