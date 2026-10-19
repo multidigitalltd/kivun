@@ -542,6 +542,73 @@ class Kivun_Mercaz_Sync {
 	}
 
 	/**
+	 * What is missing, and which of the two reasons it is missing for.
+	 *
+	 * "חסר: סוג משרה" is true and useless: it does not say whether nobody
+	 * chose a type on the job, or whether somebody chose one and the centre
+	 * has no such name in its list. Those need opposite work — filling a
+	 * field here, or agreeing on a word with them — and 50 jobs reporting
+	 * the first sentence tell you nothing about which.
+	 *
+	 * So the value that was tried is named. A field nobody filled says so;
+	 * a field that was filled and did not survive the mapping shows what it
+	 * held, which is the thing to go and compare against their list.
+	 *
+	 * @param \WP_Post             $post   The job.
+	 * @param array<string,mixed>  $body   The mapped request body.
+	 * @param array<string,string> $fields Key => label; defaults to required.
+	 * @return array<int,string> One readable line per missing field.
+	 */
+	public static function missing_detail( \WP_Post $post, array $body, array $fields = array() ): array {
+		$fields = $fields ? $fields : self::job_required();
+
+		// Where each of these comes from locally, so the value that was tried
+		// can be shown. Anything not listed is plain post content, which is
+		// either there or it is not.
+		$sources = array(
+			'city'     => array( 'meta', self::CITY_META ),
+			'job-type' => array( 'term', 'kivun_job_scope' ),
+			'job_cat'  => array( 'term', 'kivun_job_field' ),
+		);
+
+		$out  = array();
+		$meta = isset( $body['meta'] ) && is_array( $body['meta'] ) ? $body['meta'] : array();
+
+		foreach ( $fields as $key => $label ) {
+			$value   = $body[ $key ] ?? ( $meta[ $key ] ?? null );
+			$present = is_array( $value ) ? (bool) $value : '' !== trim( (string) $value );
+			if ( $present ) {
+				continue;
+			}
+
+			if ( ! isset( $sources[ $key ] ) ) {
+				$out[] = $label;
+				continue;
+			}
+
+			list( $kind, $from ) = $sources[ $key ];
+			$local               = 'term' === $kind
+				? self::local_term_name( $post->ID, $from )
+				: trim( (string) get_post_meta( $post->ID, $from, true ) );
+
+			$out[] = '' === $local
+				? sprintf(
+					/* translators: %s: field name, e.g. "סוג משרה". */
+					__( '%s (לא נבחר במשרה)', 'kivun' ),
+					$label
+				)
+				: sprintf(
+					/* translators: 1: field name. 2: the value set locally. */
+					__( '%1$s ("%2$s" — אין ערך כזה ברשימה של מרכז כיוון)', 'kivun' ),
+					$label,
+					$local
+				);
+		}
+
+		return $out;
+	}
+
+	/**
 	 * Which required fields a built body is missing.
 	 *
 	 * Read off the body rather than the post, so a value that was filled in
@@ -609,9 +676,9 @@ class Kivun_Mercaz_Sync {
 				$error = new \WP_Error(
 					'kivun_mercaz_incomplete',
 					sprintf(
-						/* translators: %s: comma-separated field names. */
+						/* translators: %s: field names, each with why it is missing. */
 						__( 'המשרה לא שודרה — חסר: %s. משרה בלי השדות האלה נקלטת אצלם אבל לא נמצאת בחיפוש.', 'kivun' ),
-						implode( ', ', $missing )
+						implode( '; ', self::missing_detail( $post, $body ) )
 					)
 				);
 				update_post_meta( $post_id, self::LAST_ERROR, $error->get_error_message() );
@@ -684,15 +751,31 @@ class Kivun_Mercaz_Sync {
 			return array();
 		}
 
+		// The field name is the part worth reading, and it is the key
+		// wherever there is one. A map of field => number used to print the
+		// number and throw the name away, which is how a real warning
+		// reached the screen reading "לא נקלטו: 0" — true, unhelpful, and
+		// impossible to act on.
 		$out = array();
 		foreach ( $data['ckvn_warnings'] as $key => $value ) {
-			if ( is_string( $value ) && ! is_numeric( $key ) ) {
-				$out[] = $key . ' (' . $value . ')';
-			} elseif ( is_scalar( $value ) ) {
-				$out[] = (string) $value;
-			} else {
-				$out[] = (string) $key;
+			$field = is_numeric( $key ) ? '' : trim( (string) $key );
+			// Only a string is a reason. A number beside a field name is a
+			// code or a count, and reads as noise next to it.
+			$why = is_string( $value ) ? trim( $value ) : '';
+
+			// A numbered entry carries the field name as its value — but only
+			// when that value is a string. A bare number in a numbered list
+			// names nothing, and printing it is how "לא נקלטו: 0" happened.
+			if ( '' === $field && is_string( $value ) ) {
+				$field = trim( $value );
+				$why   = '';
 			}
+
+			if ( '' === $field ) {
+				continue;
+			}
+
+			$out[] = ( '' !== $why && $why !== $field ) ? $field . ' (' . $why . ')' : $field;
 		}
 
 		return $out;

@@ -53,6 +53,13 @@ final class Kivun_Test_State {
 	public static array $meta = array();
 
 	/**
+	 * Terms attached to posts: [ post_id ][ taxonomy ] => array of names.
+	 *
+	 * @var array<int,array<string,array<int,string>>>
+	 */
+	public static array $terms = array();
+
+	/**
 	 * Posts, keyed by id: each an array of post fields.
 	 *
 	 * @var array<int,array<string,mixed>>
@@ -93,6 +100,7 @@ final class Kivun_Test_State {
 	public static function reset(): void {
 		self::$options  = array();
 		self::$meta     = array();
+		self::$terms    = array();
 		self::$posts    = array();
 		self::$caps     = array();
 		self::$mail     = array();
@@ -505,6 +513,30 @@ function get_post_meta( int $post_id, string $key = '', bool $single = false ) {
 function update_post_meta( int $post_id, string $key, $value ): bool {
 	Kivun_Test_State::$meta[ $post_id ][ $key ] = $value;
 	return true;
+}
+
+/**
+ * Terms attached to a post in one taxonomy.
+ *
+ * Objects with a name, which is all the code under test reads: the two
+ * sites match their vocabularies by name, not by id.
+ *
+ * @param int    $post_id  The post.
+ * @param string $taxonomy The taxonomy.
+ * @return array<int,object>|false
+ */
+function get_the_terms( int $post_id, string $taxonomy ) {
+	$names = Kivun_Test_State::$terms[ $post_id ][ $taxonomy ] ?? array();
+	if ( ! $names ) {
+		return false;
+	}
+
+	return array_map(
+		static function ( $name ) {
+			return (object) array( 'name' => $name );
+		},
+		$names
+	);
 }
 
 /**
@@ -1101,4 +1133,36 @@ foreach ( array(
 	'class-kivun-admin',
 ) as $kivun_test_class ) {
 	require_once KIVUN_DIR . 'includes/' . $kivun_test_class . '.php';
+}
+
+/**
+ * Just enough of a post for code that is handed one.
+ */
+// phpcs:ignore Generic.Classes.OpeningBraceSameLine.ContentAfterBrace
+class WP_Post {
+
+	/**
+	 * The post id.
+	 *
+	 * @var int
+	 */
+	public $ID = 0;
+
+	/**
+	 * The post type.
+	 *
+	 * @var string
+	 */
+	public $post_type = '';
+
+	/**
+	 * Build one.
+	 *
+	 * @param int    $id   The post id.
+	 * @param string $type The post type.
+	 */
+	public function __construct( int $id = 0, string $type = '' ) {
+		$this->ID        = $id;
+		$this->post_type = $type;
+	}
 }
