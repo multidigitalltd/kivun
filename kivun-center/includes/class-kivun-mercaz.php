@@ -282,6 +282,42 @@ class Kivun_Mercaz {
 	}
 
 	/**
+	 * How many jobs ride on one term, counting the ones that are queued to
+	 * go as well as the ones already published.
+	 *
+	 * Not $term->count: WordPress keeps that for published posts only, while
+	 * a draft, a pending job and a scheduled one are all pushed to the centre
+	 * too. A value blocking five drafts would report zero and read as the
+	 * least urgent line on the screen, which is the opposite of true.
+	 *
+	 * @param string $taxonomy Local taxonomy.
+	 * @param int    $term_id  Term id.
+	 * @return int
+	 */
+	private static function jobs_on_term( string $taxonomy, int $term_id ): int {
+		$ids = get_posts(
+			array(
+				'post_type'              => 'kivun_job',
+				'post_status'            => array( 'publish', 'draft', 'pending', 'private', 'future' ),
+				'posts_per_page'         => -1,
+				'fields'                 => 'ids',
+				'no_found_rows'          => true,
+				'update_post_term_cache' => false,
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query
+				'tax_query'              => array(
+					array(
+						'taxonomy' => $taxonomy,
+						'field'    => 'term_id',
+						'terms'    => $term_id,
+					),
+				),
+			)
+		);
+
+		return count( (array) $ids );
+	}
+
+	/**
 	 * AJAX: the centre's own list of values, beside ours.
 	 *
 	 * A job is matched to their vocabulary by name, and a name they do not
@@ -343,7 +379,7 @@ class Kivun_Mercaz {
 			foreach ( $terms as $term ) {
 				$ours[] = array(
 					'name'    => (string) $term->name,
-					'jobs'    => (int) $term->count,
+					'jobs'    => self::jobs_on_term( $known[ $remote ], (int) $term->term_id ),
 					'matches' => in_array( (string) $term->name, $theirs, true ),
 				);
 			}

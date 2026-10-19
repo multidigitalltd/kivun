@@ -225,4 +225,55 @@ final class MercazMissingReasonTest extends TestCase {
 	public function test_a_name_never_looked_up_is_not_called_unreachable(): void {
 		$this->assertFalse( Kivun_Mercaz_Sync::lookup_failed( 'job-type', 'משרה חלקית' ) );
 	}
+
+	// ── What the diagnostic counts ────────────────────────────────────────────
+
+	/**
+	 * The jobs-per-value count includes the ones not published yet.
+	 *
+	 * WordPress keeps a term's own count for published posts only, while a
+	 * draft, a pending job and a scheduled one are all pushed to the centre
+	 * too. A value blocking five drafts would have reported zero and read as
+	 * the least urgent line on a screen whose whole job is to say which
+	 * value to deal with first. Found in review.
+	 *
+	 * @return void
+	 */
+	public function test_the_count_includes_jobs_not_yet_published(): void {
+		$source = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-mercaz.php' );
+
+		$this->assertStringNotContainsString(
+			'(int) $term->count',
+			$source,
+			"the diagnostic is back on WordPress's published-only count"
+		);
+
+		$start = (int) strpos( $source, 'function jobs_on_term' );
+		$body  = substr( $source, $start, 900 );
+
+		// The same statuses queue_push() sends, so the count means the same
+		// thing as the push it is advising about.
+		foreach ( array( 'publish', 'draft', 'pending', 'private', 'future' ) as $status ) {
+			$this->assertStringContainsString( "'{$status}'", $body, "jobs in {$status} are not counted" );
+		}
+	}
+
+	/**
+	 * And those are exactly the statuses the push itself acts on.
+	 *
+	 * Asserted against queue_push() rather than against a list repeated
+	 * here, because the count is only useful while the two agree.
+	 *
+	 * @return void
+	 */
+	public function test_it_counts_the_statuses_the_push_sends(): void {
+		$sync  = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-mercaz-sync.php' );
+		$start = (int) strpos( $sync, 'function queue_push' );
+
+		$this->assertStringContainsString(
+			"array( 'publish', 'draft', 'pending', 'private', 'future' )",
+			substr( $sync, $start, 900 ),
+			'the push no longer sends the statuses the diagnostic counts'
+		);
+	}
 }
