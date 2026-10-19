@@ -65,8 +65,11 @@ class Kivun_Export {
 
 		if ( 'campaigns' === $type ) {
 			// The same rule as the campaigns screen itself: this report is
-			// that screen's numbers, counted.
-			if ( ! Kivun_Campaigns::can_manage() ) {
+			// that screen's numbers, counted. An outside agency is allowed
+			// it for the same reason it is allowed the screen — the file
+			// holds counts and no enquiry, which is the whole question the
+			// agency is asking.
+			if ( ! Kivun_Campaigns::can_manage() && ! Kivun_Content_Creator::is_agency() ) {
 				wp_die( 'Unauthorized' );
 			}
 			self::export_campaigns( self::date_range() );
@@ -490,6 +493,7 @@ class Kivun_Export {
 		$campaigns = Kivun_Campaigns::all();
 		$links     = Kivun_Campaigns::links_by_campaign();
 		$leads     = Kivun_Campaigns::link_lead_counts( $range['from'], $range['to'] );
+		$calls     = Kivun_Campaigns::campaign_call_counts( $range['from'], $range['to'] );
 
 		$only = self::slices()['campaign_id'];
 		if ( $only ) {
@@ -522,6 +526,7 @@ class Kivun_Export {
 				'כניסות',
 				'לידים',
 				'אחוז המרה',
+				'שיחות לקמפיין',
 				'נוצר',
 			)
 		);
@@ -550,6 +555,11 @@ class Kivun_Export {
 							// has clicked: a rate out of nothing is not zero,
 							// it is unknown, and 0% reads as a verdict.
 							$clicks > 0 ? round( $count / $clicks * 100, 1 ) . '%' : '',
+							// A campaign-level figure repeated on each of its
+							// rows: calls arrive on a tracked number, which
+							// belongs to the campaign and not to one link.
+							// Summing this column would multiply it.
+							(int) ( $calls[ (int) $camp->id ] ?? 0 ),
 							$link->created_at ?? '',
 						)
 					)

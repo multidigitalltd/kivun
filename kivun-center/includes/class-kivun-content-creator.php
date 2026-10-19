@@ -1301,7 +1301,7 @@ class Kivun_Content_Creator {
 		// holds no editing capability, so the one screen the role exists for
 		// turned them away — everything behind this line already knew to show
 		// them the table and nothing else.
-		if ( ! current_user_can( 'edit_posts' ) && ! self::can_manage_leads() ) {
+		if ( ! current_user_can( 'edit_posts' ) && ! self::can_manage_leads() && ! self::is_agency() ) {
 			return '<div class="kivun-cc-front"><div class="kivun-cc-note kivun-cc-note--error">'
 				. esc_html__( 'אין לך הרשאה להזין תוכן. פנו למנהל המערכת.', 'kivun' )
 				. '</div></div>';
@@ -1316,7 +1316,7 @@ class Kivun_Content_Creator {
 		// Voice dictation is for content authors only — load it here (the content
 		// creator page), never on the public lead/registration forms, and not for
 		// a leads reader, who is never shown a field to dictate into.
-		if ( ! self::is_leads_only() ) {
+		if ( ! self::is_leads_only() && ! self::is_agency() ) {
 			wp_enqueue_script( 'kivun-voice' );
 		}
 
@@ -2029,6 +2029,30 @@ class Kivun_Content_Creator {
 	}
 
 	/**
+	 * Whether the current user is an outside agency: the campaign numbers
+	 * and nothing else.
+	 *
+	 * They are shown how many enquiries and calls each of their links
+	 * produced, and never a single enquiry. A name and a phone number are
+	 * the person's, not the agency's, and the agency's job is answered by
+	 * the count.
+	 *
+	 * Nothing is written either. The capability is deliberately not
+	 * edit_posts: every handler in this plugin that guards on edit_posts
+	 * would have opened to it the moment it was granted, and a role defined
+	 * by what it cannot do must not be defined with the capability that
+	 * does it.
+	 *
+	 * @return bool
+	 */
+	public static function is_agency(): bool {
+		// phpcs:ignore WordPress.WP.Capabilities.Unknown -- Custom plugin capability.
+		return current_user_can( 'kivun_view_campaigns' )
+			&& ! current_user_can( 'edit_others_posts' )
+			&& ! current_user_can( 'manage_options' );
+	}
+
+	/**
 	 * Whether the current user may read the leads and nothing else.
 	 *
 	 * The console is otherwise a content editor; this role has no business in
@@ -2060,9 +2084,10 @@ class Kivun_Content_Creator {
 		// A leads reader has one tab, so nothing else can be reached — not by a
 		// stale URL and not by an edit link kept from a previous session.
 		$leads_only = self::is_leads_only();
+		$agency     = self::is_agency();
 
 		// Editing a specific group always lands on the form.
-		if ( '' !== $group && ! $leads_only ) {
+		if ( '' !== $group && ! $leads_only && ! $agency ) {
 			$tab = 'form';
 		}
 		$show_leads = self::can_manage_leads();
@@ -2071,13 +2096,22 @@ class Kivun_Content_Creator {
 		// content leads table.
 		$show_jobs = Kivun_Employer::can_manage_all();
 
-		$show_camp  = Kivun_Campaigns::can_manage();
+		$show_camp  = Kivun_Campaigns::can_manage() || $agency;
 		$show_calls = Kivun_Phones::can_manage();
 
 		if ( $leads_only ) {
 			$tab        = 'leads';
 			$show_jobs  = false;
 			$show_camp  = false;
+			$show_calls = false;
+		}
+
+		// One tab, so a stale URL and an old bookmark both land on it rather
+		// than on something the agency has no business seeing refused.
+		if ( $agency ) {
+			$tab        = 'campaigns';
+			$show_leads = false;
+			$show_jobs  = false;
 			$show_calls = false;
 		}
 
@@ -2096,10 +2130,10 @@ class Kivun_Content_Creator {
 		self::remember_console_url( $page_url );
 
 		$can_delete = current_user_can( 'delete_posts' );
-		$stats      = self::console_stats( $show_leads, $show_jobs, ! $leads_only );
+		$stats      = self::console_stats( $show_leads, $show_jobs, ! $leads_only && ! $agency );
 		$user       = wp_get_current_user();
 
-		$console_tabs = $leads_only ? array() : array(
+		$console_tabs = ( $leads_only || $agency ) ? array() : array(
 			'form'    => array(
 				'label' => __( 'פרסום תוכן', 'kivun' ),
 				'icon'  => 'publish',
@@ -2162,7 +2196,7 @@ class Kivun_Content_Creator {
 			</header>
 
 			<div class="kivun-cc-stats">
-				<?php if ( ! $leads_only ) : ?>
+				<?php if ( ! $leads_only && ! $agency ) : ?>
 					<div class="kivun-cc-stat">
 						<span class="kivun-cc-stat__num"><?php echo esc_html( number_format_i18n( $stats['published'] ) ); ?></span>
 						<span class="kivun-cc-stat__label"><?php esc_html_e( 'פרסומים', 'kivun' ); ?></span>
@@ -2217,7 +2251,14 @@ class Kivun_Content_Creator {
 			</div>
 			<?php endif; ?>
 
-			<?php if ( ! $leads_only ) : ?>
+			<?php
+			// Not rendered, rather than rendered and hidden. A hidden panel
+			// is still in the response: front_library() asks for every
+			// draft, pending, private and scheduled item on the site, and
+			// front_form() will fill itself in from a group id in the URL.
+			// An agency reading the page source would have had all of it.
+			?>
+			<?php if ( ! $leads_only && ! $agency ) : ?>
 				<section class="kivun-tab-panel <?php echo 'form' === $tab ? 'is-active' : ''; ?>" data-panel="form" id="kivun-ccpanel-form" role="tabpanel" aria-labelledby="kivun-cctab-form" tabindex="0" <?php echo 'form' === $tab ? '' : 'hidden'; ?>>
 					<?php self::front_form(); ?>
 				</section>
@@ -4167,6 +4208,15 @@ class Kivun_Content_Creator {
 	 * @return void
 	 */
 	private static function front_campaigns(): void {
+		// An outside agency reads this screen and writes nothing on it. The
+		// handlers behind every control below already refuse the role — it
+		// holds no editing capability — so this is not the lock but the
+		// courtesy: a button that cannot work should not be offered.
+		$kivun_read_only = self::is_agency();
+
+		// Counted once for the whole screen rather than per campaign.
+		$kivun_call_counts = Kivun_Campaigns::campaign_call_counts();
+
 		// Links here are built from the page's own address. add_query_arg() with
 		// no base builds on the CURRENT one, which drags every stale parameter
 		// along: a leftover kivun_group forces the console back to the publish
@@ -4240,10 +4290,12 @@ class Kivun_Content_Creator {
 				<p class="kivun-field-hint"><?php esc_html_e( 'שורה לכל קישור: כניסות, לידים ואחוז המרה. התאריכים חותכים את הלידים; השאירו ריק להכל.', 'kivun' ); ?></p>
 			</form>
 
-			<details class="kivun-cc-card kivun-camp-new">
-				<summary class="kivun-camp-summary"><?php esc_html_e( '+ קמפיין חדש', 'kivun' ); ?></summary>
-				<?php self::campaign_form( $contents, $pages ); ?>
-			</details>
+			<?php if ( ! $kivun_read_only ) : ?>
+				<details class="kivun-cc-card kivun-camp-new">
+					<summary class="kivun-camp-summary"><?php esc_html_e( '+ קמפיין חדש', 'kivun' ); ?></summary>
+					<?php self::campaign_form( $contents, $pages ); ?>
+				</details>
+			<?php endif; ?>
 
 			<?php if ( ! $campaigns ) : ?>
 				<div class="kivun-cc-note"><?php esc_html_e( 'עדיין לא נוצרו קמפיינים. התחילו בקמפיין אחד, והוסיפו תחתיו קישור לכל מפרסם.', 'kivun' ); ?></div>
@@ -4298,6 +4350,16 @@ class Kivun_Content_Creator {
 							<div class="kivun-camp-metrics">
 								<span class="kivun-cc-badge"><?php echo esc_html( sprintf( /* translators: %s: number of links. */ _n( '%s קישור', '%s קישורים', count( $links ), 'kivun' ), number_format_i18n( count( $links ) ) ) ); ?></span>
 								<span class="kivun-cc-badge kivun-camp-total"><?php echo esc_html( sprintf( /* translators: %s: number of leads. */ _n( '%s פנייה', '%s פניות', $total, 'kivun' ), number_format_i18n( $total ) ) ); ?></span>
+								<?php
+								// Calls belong beside enquiries: both are what the
+								// campaign produced, and a campaign promoted by a
+								// tracked number is answered mostly by phone.
+								$kivun_calls = (int) ( $kivun_call_counts[ (int) $camp->id ] ?? 0 );
+								?>
+								<?php if ( $kivun_calls ) : ?>
+									<span class="kivun-cc-badge"><?php echo esc_html( sprintf( /* translators: %s: number of calls. */ _n( '%s שיחה', '%s שיחות', $kivun_calls, 'kivun' ), number_format_i18n( $kivun_calls ) ) ); ?></span>
+								<?php endif; ?>
+								<?php if ( ! $kivun_read_only ) : ?>
 								<button
 									type="button"
 									class="kivun-cc-iconbtn kivun-edit-campaign"
@@ -4326,6 +4388,7 @@ class Kivun_Content_Creator {
 									<?php echo kivun_icon( 'trash' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?>
 									<span class="kivun-sr-only"><?php esc_html_e( 'מחיקת הקמפיין', 'kivun' ); ?></span>
 								</button>
+								<?php endif; ?>
 							</div>
 						</summary>
 
@@ -4421,7 +4484,9 @@ class Kivun_Content_Creator {
 														?>
 														<textarea class="kivun-cc-input kivun-cc-textarea kivun-wa-text" rows="8" dir="rtl"><?php echo esc_textarea( (string) $link->whatsapp ); ?></textarea>
 														<div class="kivun-wa-actions">
-															<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-wa-save" data-id="<?php echo esc_attr( (string) $link->id ); ?>"><?php esc_html_e( 'שמירת ההודעה', 'kivun' ); ?></button>
+															<?php if ( ! $kivun_read_only ) : ?>
+																<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-wa-save" data-id="<?php echo esc_attr( (string) $link->id ); ?>"><?php esc_html_e( 'שמירת ההודעה', 'kivun' ); ?></button>
+															<?php endif; ?>
 															<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost kivun-wa-copy"><?php esc_html_e( 'העתקת ההודעה', 'kivun' ); ?></button>
 															<a class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost kivun-wa-share" href="https://wa.me/" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'שליחה בוואטסאפ', 'kivun' ); ?></a>
 															<span class="kivun-cc-wa-status" role="status" aria-live="polite"></span>
@@ -4431,7 +4496,7 @@ class Kivun_Content_Creator {
 												<?php endif; ?>
 											</td>
 											<td>
-												<?php if ( $link_leads ) : ?>
+												<?php if ( $link_leads && ! $kivun_read_only ) : ?>
 													<a class="kivun-cc-leadlink" href="
 													<?php
 													echo esc_url(
@@ -4445,11 +4510,21 @@ class Kivun_Content_Creator {
 													);
 													?>
 																						"><?php echo esc_html( number_format_i18n( $link_leads ) ); ?></a>
+												<?php elseif ( $link_leads ) : ?>
+													<?php
+													// The number, with nowhere to go. The link opens the
+													// enquiries themselves, which is the one screen this
+													// reader must not reach — and an anchor that lands
+													// back on the page it was clicked from reads as a
+													// fault rather than a boundary.
+													?>
+													<?php echo esc_html( number_format_i18n( $link_leads ) ); ?>
 												<?php else : ?>
 													<span class="kivun-muted" aria-hidden="true">—</span>
 												<?php endif; ?>
 											</td>
 											<td>
+												<?php if ( ! $kivun_read_only ) : ?>
 												<button
 													type="button"
 													class="kivun-cc-iconbtn kivun-edit-link"
@@ -4468,11 +4543,14 @@ class Kivun_Content_Creator {
 													<?php echo kivun_icon( 'trash' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?>
 													<span class="kivun-sr-only"><?php esc_html_e( 'מחיקת הקישור', 'kivun' ); ?></span>
 												</button>
+												<?php endif; ?>
 											</td>
 										</tr>
+										<?php if ( ! $kivun_read_only ) : ?>
 										<tr class="kivun-link-editrow" data-link-edit="<?php echo esc_attr( $link->id ); ?>" hidden>
 											<td colspan="5"><?php self::campaign_link_form( $camp, $link ); ?></td>
 										</tr>
+										<?php endif; ?>
 									<?php endforeach; ?>
 									</tbody>
 								</table>
@@ -4481,10 +4559,12 @@ class Kivun_Content_Creator {
 							<p class="kivun-field-hint"><?php esc_html_e( 'אין עדיין קישורים בקמפיין הזה. הוסיפו קישור לכל מפרסם כדי לדעת מי מביא פניות.', 'kivun' ); ?></p>
 						<?php endif; ?>
 
+						<?php if ( ! $kivun_read_only ) : ?>
 						<details class="kivun-camp-addlink">
 							<summary class="kivun-camp-summary"><?php esc_html_e( '+ הוספת קישור למפרסם', 'kivun' ); ?></summary>
 							<?php self::campaign_link_form( $camp ); ?>
 						</details>
+						<?php endif; ?>
 					</details>
 					<?php
 					if ( $kivun_is_away ) {
@@ -4816,7 +4896,7 @@ class Kivun_Content_Creator {
 				<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost kivun-camp-copy"><?php esc_html_e( 'העתקה', 'kivun' ); ?></button>
 			</div>
 
-			<div class="kivun-cc-wa kivun-link-wa">
+			<div class="kivun-cc-wa kivun-link-wa" <?php echo self::is_agency() ? 'hidden' : ''; ?>>
 				<label class="kivun-cc-sub"><?php esc_html_e( 'הודעה לוואטסאפ למפרסם הזה', 'kivun' ); ?></label>
 				<p class="kivun-field-hint"><?php esc_html_e( 'ההודעה נכתבת מהתוכן שביעד, ומשובץ בה הקישור המסומן של המפרסם הזה — כך שכל מפרסם מפיץ הודעה עם קישור משלו.', 'kivun' ); ?></p>
 

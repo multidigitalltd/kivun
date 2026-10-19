@@ -983,6 +983,53 @@ class Kivun_Campaigns {
 	}
 
 	/**
+	 * How many tracked calls each campaign brought.
+	 *
+	 * A number, from a table whose rows hold the caller's own phone number.
+	 * The count is a campaign's result and belongs beside its enquiries;
+	 * the rows behind it belong to the people who dialled, and stay in the
+	 * call log where the permission to read them lives.
+	 *
+	 * @param string $from Optional Y-m-d, counting calls from this day on.
+	 * @param string $to   Optional Y-m-d, up to and including it.
+	 * @return array<int,int> Call count keyed by campaign id.
+	 */
+	public static function campaign_call_counts( string $from = '', string $to = '' ): array {
+		global $wpdb;
+
+		$period = '';
+		$args   = array();
+		if ( '' !== $from ) {
+			$period .= ' AND k.started_at >= %s';
+			$args[]  = $from . ' 00:00:00';
+		}
+		if ( '' !== $to ) {
+			$period .= ' AND k.started_at <= %s';
+			$args[]  = $to . ' 23:59:59';
+		}
+
+		// The dates sit in the join for the same reason they do on the lead
+		// count: a campaign with no calls in the period keeps its row and
+		// reports zero, rather than dropping out of the report entirely.
+		$sql = "SELECT a.campaign_id, COUNT( k.id ) AS total
+			 FROM {$wpdb->prefix}kivun_phone_assignments a
+			 LEFT JOIN {$wpdb->prefix}kivun_calls k ON k.assignment_id = a.id{$period}
+			 WHERE a.campaign_id > 0
+			 GROUP BY a.campaign_id";
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+		$rows = $wpdb->get_results( $args ? $wpdb->prepare( $sql, $args ) : $sql );
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+
+		$counts = array();
+		foreach ( (array) $rows as $row ) {
+			$counts[ (int) $row->campaign_id ] = (int) $row->total;
+		}
+
+		return $counts;
+	}
+
+	/**
 	 * How many leads a campaign brought in total, counted on the campaign
 	 * itself rather than by summing its links.
 	 *
