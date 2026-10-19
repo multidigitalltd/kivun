@@ -45,7 +45,7 @@ class Kivun_Export {
 			if ( ! Kivun_Content_Creator::can_manage_leads() ) {
 				wp_die( 'Unauthorized' );
 			}
-			self::export_registrations( $post_ids );
+			self::export_registrations( $post_ids, self::date_range() );
 			return;
 		}
 
@@ -63,6 +63,24 @@ class Kivun_Export {
 			return;
 		}
 
+		if ( 'campaigns' === $type ) {
+			// The same rule as the campaigns screen itself: this report is
+			// that screen's numbers, counted.
+			if ( ! Kivun_Campaigns::can_manage() ) {
+				wp_die( 'Unauthorized' );
+			}
+			self::export_campaigns( self::date_range() );
+			return;
+		}
+
+		if ( 'numbers' === $type ) {
+			if ( ! Kivun_Phones::can_manage() ) {
+				wp_die( 'Unauthorized' );
+			}
+			self::export_numbers( self::date_range() );
+			return;
+		}
+
 		if ( 'calls' === $type ) {
 			// The call screen's own rule: whoever runs the tracking numbers.
 			if ( ! Kivun_Phones::can_manage() ) {
@@ -74,6 +92,86 @@ class Kivun_Export {
 		}
 
 		wp_die( 'Invalid type' );
+	}
+
+	/**
+	 * The date range asked for, as two Y-m-d strings or ''.
+	 *
+	 * A report of everything ever is the one report nobody wants: "how did
+	 * last month go" is the question, and until now the answer was to export
+	 * all of it and cut it in Excel.
+	 *
+	 * @return array{from:string,to:string}
+	 */
+	private static function date_range(): array {
+		$read = static function ( string $key ): string {
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Nonce verified by the caller.
+			$raw = sanitize_text_field( wp_unslash( $_GET[ $key ] ?? '' ) );
+			return preg_match( '/^\d{4}-\d{2}-\d{2}$/', $raw ) ? $raw : '';
+		};
+
+		return array(
+			'from' => $read( 'from' ),
+			'to'   => $read( 'to' ),
+		);
+	}
+
+	/**
+	 * The other cuts a report can take, beside the dates.
+	 *
+	 * @return array{type:string,campaign:string,campaign_id:int}
+	 */
+	private static function slices(): array {
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Nonce verified by the caller.
+		return array(
+			'type'        => sanitize_key( wp_unslash( $_GET['ctype'] ?? '' ) ),
+			'campaign'    => sanitize_text_field( wp_unslash( $_GET['campaign'] ?? '' ) ),
+			'campaign_id' => absint( wp_unslash( $_GET['campaign_id'] ?? 0 ) ),
+		);
+		// phpcs:enable WordPress.Security.NonceVerification.Recommended
+	}
+
+	/**
+	 * The range as SQL against a datetime column, and the values for it.
+	 *
+	 * The closing day is included whole: somebody asking for a month that
+	 * ends on the 31st means the 31st, not everything up to its midnight.
+	 *
+	 * @param array{from:string,to:string} $range  From date_range().
+	 * @param string                       $column Qualified column name.
+	 * @return array{sql:string,args:array<int,string>}
+	 */
+	private static function range_sql( array $range, string $column ): array {
+		$sql  = '';
+		$args = array();
+
+		if ( '' !== $range['from'] ) {
+			$sql   .= " AND {$column} >= %s";
+			$args[] = $range['from'] . ' 00:00:00';
+		}
+		if ( '' !== $range['to'] ) {
+			$sql   .= " AND {$column} <= %s";
+			$args[] = $range['to'] . ' 23:59:59';
+		}
+
+		return array(
+			'sql'  => $sql,
+			'args' => $args,
+		);
+	}
+
+	/**
+	 * The range as something to put in a file name.
+	 *
+	 * @param array{from:string,to:string} $range From date_range().
+	 * @return string
+	 */
+	private static function range_slug( array $range ): string {
+		if ( '' === $range['from'] && '' === $range['to'] ) {
+			return 'all';
+		}
+
+		return ( $range['from'] ? $range['from'] : 'start' ) . '_' . ( $range['to'] ? $range['to'] : gmdate( 'Y-m-d' ) );
 	}
 
 	// ── Calls CSV ─────────────────────────────────────────────────────────────.
@@ -149,33 +247,57 @@ class Kivun_Export {
 	/**
 	 * Stream registrations as a CSV download.
 	 *
-	 * @param array<int,int> $post_ids Course IDs to filter by; empty for all.
+	 * @param array<int,int>               $post_ids Course IDs to filter by; empty for all.
+	 * @param array{from:string,to:string} $range    Optional date range on the lead.
 	 * @return void
 	 */
-	private static function export_registrations( array $post_ids ): void {
+	private static function export_registrations( array $post_ids, array $range = array() ): void {
 		global $wpdb;
 
-		$where = '';
+		$range = $range ? $range : array(
+			'from' => '',
+			'to'   => '',
+		);
+
+		$where = 'WHERE 1=1';
+		$args  = array();
 		if ( $post_ids ) {
-			$marks = implode( ', ', array_fill( 0, count( $post_ids ), '%d' ) );
-			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- $marks is one placeholder per value, built from the count.
-			$where = $wpdb->prepare( "WHERE r.course_id IN ( {$marks} )", $post_ids );
+			$marks  = implode( ', ', array_fill( 0, count( $post_ids ), '%d' ) );
+			$where .= " AND r.course_id IN ( {$marks} )";
+			$args   = array_merge( $args, $post_ids );
 		}
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		$rows = $wpdb->get_results(
-			"SELECT r.*, p.post_title AS post_name
+		$period = self::range_sql( $range, 'r.created_at' );
+		$where .= $period['sql'];
+		$args   = array_merge( $args, $period['args'] );
+
+		$slice = self::slices();
+		if ( '' !== $slice['type'] ) {
+			$where .= ' AND r.type = %s';
+			$args[] = $slice['type'];
+		}
+		if ( '' !== $slice['campaign'] ) {
+			// Matched on the campaign's own utm value, which is what a lead
+			// carries — the campaign's display name is not on the lead.
+			$where .= ' AND r.utm_campaign = %s';
+			$args[] = $slice['campaign'];
+		}
+
+		$sql = "SELECT r.*, p.post_title AS post_name
 			 FROM {$wpdb->prefix}kivun_registrations r
 			 LEFT JOIN {$wpdb->posts} p ON p.ID = r.course_id
-			 $where
-			 ORDER BY r.created_at DESC",
+			 {$where}
+			 ORDER BY r.created_at DESC";
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+		$rows = $wpdb->get_results(
+			$args ? $wpdb->prepare( $sql, $args ) : $sql,
 			ARRAY_A
 		);
-		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
 
-		$filename = $post_ids
-			? 'registrations-' . implode( '-', $post_ids ) . '-' . gmdate( 'Ymd' ) . '.csv'
-			: 'registrations-all-' . gmdate( 'Ymd' ) . '.csv';
+		$filename = ( $post_ids ? 'registrations-' . implode( '-', $post_ids ) : 'registrations' )
+			. '-' . self::range_slug( $range ) . '.csv';
 
 		self::send_headers( $filename );
 
@@ -190,7 +312,11 @@ class Kivun_Export {
 
 		$headings = array( 'ID', 'קורס / סדנה' );
 		if ( $show_source ) {
-			$headings[] = 'מקור';
+			// Each UTM value in a column of its own. They were already stored
+			// that way and only ever left as one line of prose, which is
+			// readable and cannot be summed, sorted or pivoted — the three
+			// things a spreadsheet is opened for.
+			$headings = array_merge( $headings, array( 'מקור', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content' ) );
 		}
 		$headings = array_merge( $headings, array( 'שם', 'אימייל', 'טלפון', 'עיר', 'מגדר', 'אישור דיוור', 'סוג', 'הערות', 'הערות פנימיות', 'סטטוס', 'תאריך' ) );
 
@@ -209,6 +335,10 @@ class Kivun_Export {
 			$line = array( $r['id'], $r['post_name'] );
 			if ( $show_source ) {
 				$line[] = $r['source'] ?? '';
+				$line[] = $r['utm_source'] ?? '';
+				$line[] = $r['utm_medium'] ?? '';
+				$line[] = $r['utm_campaign'] ?? '';
+				$line[] = $r['utm_content'] ?? '';
 			}
 
 			fputcsv(
@@ -335,6 +465,188 @@ class Kivun_Export {
 		header( 'Content-Disposition: attachment; filename="' . $filename . '"' );
 		header( 'Pragma: no-cache' );
 		header( 'Expires: 0' );
+	}
+
+	// ── Campaigns CSV ─────────────────────────────────────────────────────────.
+
+	/**
+	 * Stream one row per campaign link: what it cost to look at, and what
+	 * came back.
+	 *
+	 * A row per link rather than per campaign, because the link is the unit
+	 * somebody is paid against — one campaign with four publishers under it
+	 * is four questions, not one. The campaign name rides on every row, so
+	 * the file pivots either way in a spreadsheet.
+	 *
+	 * The lead count is the same join the screen shows, so the report and
+	 * the screen cannot disagree. Clicks are counted on the short link, so a
+	 * link whose address was shared without going through it reads zero
+	 * entries and still shows its leads.
+	 *
+	 * @param array{from:string,to:string} $range Date range, on the lead.
+	 * @return void
+	 */
+	private static function export_campaigns( array $range ): void {
+		$campaigns = Kivun_Campaigns::all();
+		$links     = Kivun_Campaigns::links_by_campaign();
+		$leads     = Kivun_Campaigns::link_lead_counts( $range['from'], $range['to'] );
+
+		$only = self::slices()['campaign_id'];
+		if ( $only ) {
+			$campaigns = array_values(
+				array_filter(
+					$campaigns,
+					static function ( $camp ) use ( $only ) {
+						return (int) $camp->id === $only;
+					}
+				)
+			);
+		}
+
+		self::send_headers( 'campaigns-' . self::range_slug( $range ) . '.csv' );
+
+		$out = fopen( 'php://output', 'w' );
+		fputs( $out, "\xEF\xBB\xBF" ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fputs
+
+		fputcsv(
+			$out,
+			array(
+				'קמפיין',
+				'utm_campaign',
+				'בארכיון',
+				'מפרסם / קישור',
+				'utm_source',
+				'utm_medium',
+				'utm_content',
+				'קישור קצר',
+				'כניסות',
+				'לידים',
+				'אחוז המרה',
+				'נוצר',
+			)
+		);
+
+		foreach ( $campaigns as $camp ) {
+			foreach ( $links[ (int) $camp->id ] ?? array() as $link ) {
+				$clicks = (int) ( $link->clicks ?? 0 );
+				$count  = (int) ( $leads[ (int) $link->id ] ?? 0 );
+
+				fputcsv(
+					$out,
+					array_map(
+						array( __CLASS__, 'csv_safe' ),
+						array(
+							$camp->label,
+							$camp->utm_campaign,
+							Kivun_Campaigns::is_archived( $camp ) ? 'כן' : 'לא',
+							$link->label,
+							$link->utm_source,
+							$link->utm_medium,
+							$link->utm_content,
+							Kivun_Short_Links::url_for( (string) ( $link->slug ?? '' ) ),
+							$clicks,
+							$count,
+							// Left empty rather than shown as 0% where nobody
+							// has clicked: a rate out of nothing is not zero,
+							// it is unknown, and 0% reads as a verdict.
+							$clicks > 0 ? round( $count / $clicks * 100, 1 ) . '%' : '',
+							$link->created_at ?? '',
+						)
+					)
+				);
+			}
+		}
+
+		fclose( $out ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose
+		exit;
+	}
+
+	// ── Tracking numbers CSV ──────────────────────────────────────────────────.
+
+	/**
+	 * Stream one row per tracking number assignment, with its calls counted.
+	 *
+	 * The call log already exports in full; this is the other question —
+	 * not "which calls came in" but "what did each number bring", which is
+	 * what a number is rented for.
+	 *
+	 * @param array{from:string,to:string} $range Date range, on the call.
+	 * @return void
+	 */
+	private static function export_numbers( array $range ): void {
+		global $wpdb;
+
+		$period = self::range_sql( $range, 'k.started_at' );
+
+		$sql = "SELECT a.id, n.number, n.label AS number_label, a.label AS assignment_label,
+			       a.media, c.label AS campaign_label, c.utm_campaign, a.created_at,
+			       COUNT( k.id ) AS calls,
+			       SUM( CASE WHEN k.answered = 1 THEN 1 ELSE 0 END ) AS answered,
+			       SUM( k.talk_time ) AS talk_time
+			 FROM {$wpdb->prefix}kivun_phone_assignments a
+			 LEFT JOIN {$wpdb->prefix}kivun_phone_numbers n ON n.id = a.number_id
+			 LEFT JOIN {$wpdb->prefix}kivun_campaigns c ON c.id = a.campaign_id
+			 LEFT JOIN {$wpdb->prefix}kivun_calls k ON k.assignment_id = a.id{$period['sql']}
+			 GROUP BY a.id
+			 ORDER BY n.number ASC, a.created_at DESC";
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+		$rows = $wpdb->get_results(
+			$period['args'] ? $wpdb->prepare( $sql, $period['args'] ) : $sql,
+			ARRAY_A
+		);
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+
+		self::send_headers( 'numbers-' . self::range_slug( $range ) . '.csv' );
+
+		$out = fopen( 'php://output', 'w' );
+		fputs( $out, "\xEF\xBB\xBF" ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fputs
+
+		// The answered columns only where the switchboard reports a talk
+		// time. "Answered" is worked out from it, so on a switchboard that
+		// sends only the start of a call every row would read as missed —
+		// and a report that says every call went unanswered is not a
+		// cautious report, it is a wrong one. The call log already draws
+		// this line; the same line belongs here.
+		$knows = Kivun_Phones::has_answer_data();
+
+		$headings = array( 'מספר', 'שם המספר', 'שיוך', 'מדיה', 'קמפיין', 'utm_campaign', 'שיחות' );
+		if ( $knows ) {
+			$headings = array_merge( $headings, array( 'נענו', 'לא נענו', 'דקות שיחה' ) );
+		}
+		$headings[] = 'נוצר';
+
+		fputcsv( $out, $headings );
+
+		foreach ( (array) $rows as $r ) {
+			$calls    = (int) $r['calls'];
+			$answered = (int) $r['answered'];
+
+			$line = array(
+				$r['number'],
+				$r['number_label'],
+				$r['assignment_label'],
+				$r['media'],
+				$r['campaign_label'],
+				$r['utm_campaign'],
+				$calls,
+			);
+
+			if ( $knows ) {
+				$line[] = $answered;
+				$line[] = $calls - $answered;
+				// Minutes, because an hour of calls in seconds is a number
+				// nobody reads.
+				$line[] = round( (int) $r['talk_time'] / 60, 1 );
+			}
+
+			$line[] = $r['created_at'];
+
+			fputcsv( $out, array_map( array( __CLASS__, 'csv_safe' ), $line ) );
+		}
+
+		fclose( $out ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose
+		exit;
 	}
 
 	// ── URL builders (used by admin metaboxes) ────────────────────────────────.

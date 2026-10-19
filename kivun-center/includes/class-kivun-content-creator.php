@@ -3629,7 +3629,31 @@ class Kivun_Content_Creator {
 				);
 				?>
 				<a class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost" href="<?php echo esc_url( $export_url ); ?>">
-					<?php echo kivun_icon( 'download' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?><?php esc_html_e( 'ייצוא CSV', 'kivun' ); ?>
+					<?php echo kivun_icon( 'download' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?><?php esc_html_e( 'ייצוא שיחות', 'kivun' ); ?>
+				</a>
+				<?php
+				// The other question about the same numbers: not which calls
+				// came in, but what each number brought — which is what a
+				// number is rented for. Same dates as the log above it.
+				// The screen's own names for the dates are prefixed; the export
+				// reads them unprefixed. Translated here rather than hoped
+				// for — an intersection on the wrong keys finds nothing and
+				// downloads all of time while the screen shows one month,
+				// and nothing in the file says which it is.
+				$kivun_numbers_dates = array();
+				foreach ( array(
+					'kivun_call_from' => 'from',
+					'kivun_call_to'   => 'to',
+				) as $kivun_screen_key => $kivun_export_key ) {
+					if ( isset( $call_args[ $kivun_screen_key ] ) && '' !== $call_args[ $kivun_screen_key ] ) {
+						$kivun_numbers_dates[ $kivun_export_key ] = $call_args[ $kivun_screen_key ];
+					}
+				}
+
+				$kivun_numbers_url = add_query_arg( $kivun_numbers_dates, Kivun_Export::url( 'numbers' ) );
+				?>
+				<a class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost" href="<?php echo esc_url( $kivun_numbers_url ); ?>">
+					<?php echo kivun_icon( 'download' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?><?php esc_html_e( 'דוח מספרים', 'kivun' ); ?>
 				</a>
 			</form>
 
@@ -4188,6 +4212,33 @@ class Kivun_Content_Creator {
 					<?php esc_html_e( 'קמפיין הוא מסגרת אחת — אירוע, מבצע או תוכן שמקדמים. תחתיו יוצרים קישור נפרד לכל מפרסם, וכך רואים בדיוק מי הביא כמה פניות.', 'kivun' ); ?>
 				</p>
 			</div>
+
+			<?php
+			// The dates are the report. "How did last month go" is the
+			// question people actually bring, and the answer used to be to
+			// download everything and cut it up in a spreadsheet.
+			?>
+			<form class="kivun-report-bar" method="get" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+				<input type="hidden" name="action" value="kivun_export_csv">
+				<input type="hidden" name="type" value="campaigns">
+				<?php wp_nonce_field( 'kivun_export', '_wpnonce', false ); ?>
+				<label class="kivun-cc-sub" for="kivun-camp-from"><?php esc_html_e( 'דוח קמפיינים', 'kivun' ); ?></label>
+				<span class="kivun-report-bar__row">
+					<input type="date" id="kivun-camp-from" name="from" aria-label="<?php esc_attr_e( 'מתאריך', 'kivun' ); ?>">
+					<span aria-hidden="true">–</span>
+					<input type="date" name="to" aria-label="<?php esc_attr_e( 'עד תאריך', 'kivun' ); ?>">
+					<select name="campaign_id" aria-label="<?php esc_attr_e( 'קמפיין', 'kivun' ); ?>">
+						<option value="0"><?php esc_html_e( 'כל הקמפיינים', 'kivun' ); ?></option>
+						<?php foreach ( $campaigns as $kivun_rep_camp ) : ?>
+							<option value="<?php echo esc_attr( (string) $kivun_rep_camp->id ); ?>"><?php echo esc_html( $kivun_rep_camp->label ); ?></option>
+						<?php endforeach; ?>
+					</select>
+					<button type="submit" class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost">
+						<?php echo kivun_icon( 'download' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?><?php esc_html_e( 'ייצוא CSV', 'kivun' ); ?>
+					</button>
+				</span>
+				<p class="kivun-field-hint"><?php esc_html_e( 'שורה לכל קישור: כניסות, לידים ואחוז המרה. התאריכים חותכים את הלידים; השאירו ריק להכל.', 'kivun' ); ?></p>
+			</form>
 
 			<details class="kivun-cc-card kivun-camp-new">
 				<summary class="kivun-camp-summary"><?php esc_html_e( '+ קמפיין חדש', 'kivun' ); ?></summary>

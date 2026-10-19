@@ -954,6 +954,25 @@ td.kivun-app-contact a { display: block; }
 .kivun-cc-console .kivun-cc-head { margin-bottom: 1.1rem; }
 .kivun-cc-console .kivun-cc-title { font-size: 1.3rem; font-weight: 800; margin: 0 0 .2rem; }
 .kivun-cc-console .kivun-cc-lead { font-size: .88rem; color: var(--kivun-muted); margin: 0; line-height: 1.6; }
+/* The report bar: a pair of dates and a button, reading as one control
+   rather than three things that happen to sit together. */
+.kivun-cc-console .kivun-report-bar { margin: 0 0 1.2rem; }
+.kivun-cc-console .kivun-report-bar__row {
+	display: flex;
+	gap: .4rem;
+	align-items: center;
+	flex-wrap: wrap;
+	margin-top: .3rem;
+}
+.kivun-cc-console .kivun-report-bar input[type="date"] {
+	padding: .4rem .55rem;
+	border: 1px solid var(--kivun-border);
+	border-radius: 8px;
+	font: inherit;
+	direction: ltr;
+}
+.kivun-cc-console .kivun-report-bar .kivun-field-hint { margin-top: .35rem; }
+
 /* Put away: at the bottom of its tab, shut, and quieter than the list above
    it. Set apart by a line rather than by a box inside a box — the cards it
    holds are already cards. */

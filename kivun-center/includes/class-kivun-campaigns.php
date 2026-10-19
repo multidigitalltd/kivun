@@ -931,14 +931,28 @@ class Kivun_Campaigns {
 	 * Leads captured before those columns existed are still matched the old
 	 * way, on the label at the end of their source text.
 	 *
+	 * @param string $from Optional Y-m-d, counting leads from this day on.
+	 * @param string $to   Optional Y-m-d, counting leads up to and including it.
 	 * @return array<int,int> Lead count keyed by link id.
 	 */
-	public static function link_lead_counts(): array {
+	public static function link_lead_counts( string $from = '', string $to = '' ): array {
 		global $wpdb;
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$rows = $wpdb->get_results(
-			"SELECT l.id AS link_id, COUNT(r.id) AS total
+		// The dates belong in the join rather than a WHERE: a link with no
+		// leads in the period has to stay in the result with a zero, and a
+		// WHERE on the lead's date would drop the row with it.
+		$period = '';
+		$args   = array();
+		if ( '' !== $from ) {
+			$period .= ' AND r.created_at >= %s';
+			$args[]  = $from . ' 00:00:00';
+		}
+		if ( '' !== $to ) {
+			$period .= ' AND r.created_at <= %s';
+			$args[]  = $to . ' 23:59:59';
+		}
+
+		$sql = "SELECT l.id AS link_id, COUNT(r.id) AS total
 			 FROM {$wpdb->prefix}kivun_campaign_links l
 			 INNER JOIN {$wpdb->prefix}kivun_campaigns c ON c.id = l.campaign_id
 			 LEFT JOIN {$wpdb->prefix}kivun_registrations r ON (
@@ -954,9 +968,12 @@ class Kivun_Campaigns {
 			       AND l.utm_label <> ''
 			       AND r.source LIKE CONCAT('%UTM: ', l.utm_label)
 			     )
-			 )
-			 GROUP BY l.id"
-		);
+			 ){$period}
+			 GROUP BY l.id";
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+		$rows = $wpdb->get_results( $args ? $wpdb->prepare( $sql, $args ) : $sql );
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
 
 		$counts = array();
 		foreach ( (array) $rows as $row ) {
