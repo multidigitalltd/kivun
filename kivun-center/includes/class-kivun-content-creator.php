@@ -4245,12 +4245,13 @@ class Kivun_Content_Creator {
 								</button>
 								<button
 									type="button"
-									class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost kivun-archive-campaign"
+									class="kivun-cc-iconbtn kivun-archive-campaign"
 									data-id="<?php echo esc_attr( $camp->id ); ?>"
 									data-archived="<?php echo $kivun_is_away ? '0' : '1'; ?>"
 									title="<?php echo $kivun_is_away ? esc_attr__( 'החזרה מהארכיון', 'kivun' ) : esc_attr__( 'העברה לארכיון — הקישורים ימשיכו לעבוד', 'kivun' ); ?>"
 								>
-									<?php echo $kivun_is_away ? esc_html__( 'החזרה מהארכיון', 'kivun' ) : esc_html__( 'העברה לארכיון', 'kivun' ); ?>
+									<?php echo kivun_icon( $kivun_is_away ? 'restore' : 'archive' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?>
+									<span class="kivun-sr-only"><?php echo $kivun_is_away ? esc_html__( 'החזרה מהארכיון', 'kivun' ) : esc_html__( 'העברה לארכיון', 'kivun' ); ?></span>
 								</button>
 								<button
 									type="button"
