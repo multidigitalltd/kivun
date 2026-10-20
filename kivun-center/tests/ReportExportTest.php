@@ -313,4 +313,86 @@ final class ReportExportTest extends TestCase {
 		$this->assertStringContainsString( "'from'        => 'kivun_call_from',", $source );
 		$this->assertStringContainsString( "'to'          => 'kivun_call_to',", $source );
 	}
+
+	// ── One row per channel ──────────────────────────────────────────────────
+
+	/**
+	 * A campaign's phone numbers get rows of their own.
+	 *
+	 * A campaign advertised on a billboard and by a link produces two kinds
+	 * of result, and a file that knows only about links answers half the
+	 * question.
+	 *
+	 * @return void
+	 */
+	public function test_a_number_gets_its_own_row(): void {
+		$source = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-export.php' );
+		$start  = (int) strpos( $source, 'function export_campaigns' );
+		$body   = substr( $source, $start, 5000 );
+
+		$this->assertStringContainsString( "'ערוץ',", $body, 'nothing says which kind of row this is' );
+		$this->assertStringContainsString( "'קישור',", $body );
+		$this->assertStringContainsString( "'מספר טלפון',", $body );
+		$this->assertStringContainsString( 'Kivun_Phones::by_campaign()', $body );
+	}
+
+	/**
+	 * Every row is as wide as the heading.
+	 *
+	 * Two row shapes and a column that appears only sometimes: one short
+	 * row shifts every value after it, and a spreadsheet shows the result
+	 * without complaint — enquiries landing under "calls" and nothing to
+	 * say so.
+	 *
+	 * @return void
+	 */
+	public function test_every_row_matches_the_heading_width(): void {
+		$source = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-export.php' );
+		$start  = (int) strpos( $source, 'function export_campaigns' );
+		$body   = substr( $source, $start, 5000 );
+
+		// The conditional column is added to the heading and to each row,
+		// all three behind the same flag — so they cannot drift apart.
+		$this->assertSame(
+			3,
+			substr_count( $body, 'if ( $knows ) {' ),
+			'the answered column is added to the heading and the rows in different numbers'
+		);
+	}
+
+	/**
+	 * The campaign-wide call total is gone from the link rows.
+	 *
+	 * Repeated down a column it could not be summed: adding it up
+	 * multiplied one campaign's calls by its number of links. The figure
+	 * lives on the number rows now, where the column adds up.
+	 *
+	 * @return void
+	 */
+	public function test_the_unsummable_total_is_gone(): void {
+		$this->assertStringNotContainsString(
+			'שיחות לקמפיין',
+			(string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-export.php' )
+		);
+	}
+
+	/**
+	 * A number row carries the period it ran for.
+	 *
+	 * Numbers are recycled, so without it an assignment that closed last
+	 * year reads exactly like one running now — and somebody prints a
+	 * number that has moved to another campaign. Found in review.
+	 *
+	 * @return void
+	 */
+	public function test_a_number_row_says_when_it_ran(): void {
+		$source = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-export.php' );
+
+		$this->assertStringContainsString( "'תקופה',", $source );
+		$this->assertStringContainsString( "\$period .= ' – ' . (string) \$assign->ends_on;", $source );
+
+		// And the screen says the same.
+		$creator = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-content-creator.php' );
+		$this->assertStringContainsString( 'kivun-camp-ended', $creator, 'an ended assignment is not marked on the screen' );
+	}
 }

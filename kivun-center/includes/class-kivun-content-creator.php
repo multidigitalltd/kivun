@@ -2196,6 +2196,38 @@ class Kivun_Content_Creator {
 			</header>
 
 			<div class="kivun-cc-stats">
+				<?php
+				// An agency's headline is what its campaigns produced. The
+				// site's own totals are not its business and would read as
+				// its own result, which they are not: enquiries arrive from
+				// organic search and from the newsletter too, and counting
+				// those here would credit the agency for them.
+				if ( $agency ) :
+					$kivun_agency_leads = array_sum( Kivun_Campaigns::campaign_lead_counts() );
+					$kivun_agency_calls = array_sum( Kivun_Campaigns::campaign_call_counts() );
+
+					$kivun_agency_clicks = 0;
+					foreach ( Kivun_Campaigns::links_by_campaign() as $kivun_camp_links ) {
+						foreach ( $kivun_camp_links as $kivun_one_link ) {
+							$kivun_agency_clicks += (int) ( $kivun_one_link->clicks ?? 0 );
+						}
+					}
+					?>
+					<div class="kivun-cc-stat">
+						<span class="kivun-cc-stat__num"><?php echo esc_html( number_format_i18n( $kivun_agency_clicks ) ); ?></span>
+						<span class="kivun-cc-stat__label"><?php esc_html_e( 'כניסות', 'kivun' ); ?></span>
+					</div>
+					<div class="kivun-cc-stat">
+						<span class="kivun-cc-stat__num"><?php echo esc_html( number_format_i18n( $kivun_agency_leads ) ); ?></span>
+						<span class="kivun-cc-stat__label"><?php esc_html_e( 'פניות מהקמפיינים', 'kivun' ); ?></span>
+					</div>
+					<div class="kivun-cc-stat">
+						<span class="kivun-cc-stat__num"><?php echo esc_html( number_format_i18n( $kivun_agency_calls ) ); ?></span>
+						<span class="kivun-cc-stat__label"><?php esc_html_e( 'שיחות', 'kivun' ); ?></span>
+					</div>
+					<?php
+				endif;
+				?>
 				<?php if ( ! $leads_only && ! $agency ) : ?>
 					<div class="kivun-cc-stat">
 						<span class="kivun-cc-stat__num"><?php echo esc_html( number_format_i18n( $stats['published'] ) ); ?></span>
@@ -4217,6 +4249,11 @@ class Kivun_Content_Creator {
 		// Counted once for the whole screen rather than per campaign.
 		$kivun_call_counts = Kivun_Campaigns::campaign_call_counts();
 
+		// The tracked numbers each campaign is running on, so a campaign
+		// advertised by phone and by link is read in one place.
+		$kivun_numbers_by_camp = Kivun_Phones::by_campaign();
+		$kivun_knows_answers   = Kivun_Phones::has_answer_data();
+
 		// Links here are built from the page's own address. add_query_arg() with
 		// no base builds on the CURRENT one, which drags every stale parameter
 		// along: a leftover kivun_group forces the console back to the publish
@@ -4557,6 +4594,68 @@ class Kivun_Content_Creator {
 							</div>
 						<?php else : ?>
 							<p class="kivun-field-hint"><?php esc_html_e( 'אין עדיין קישורים בקמפיין הזה. הוסיפו קישור לכל מפרסם כדי לדעת מי מביא פניות.', 'kivun' ); ?></p>
+						<?php endif; ?>
+
+						<?php
+						// The campaign's phone numbers, under its links. A
+						// campaign on a billboard and in a newsletter is one
+						// campaign: the printed number and the link are two
+						// of its channels, and reading them off two screens
+						// leaves somebody adding up by hand to answer how it
+						// went.
+						$kivun_camp_numbers = $kivun_numbers_by_camp[ (int) $camp->id ] ?? array();
+						?>
+						<?php if ( $kivun_camp_numbers ) : ?>
+							<div class="kivun-cc-tablewrap kivun-camp-numbers">
+								<table class="kivun-cc-table">
+									<thead>
+										<tr>
+											<th scope="col"><?php esc_html_e( 'מספר מעקב', 'kivun' ); ?></th>
+											<th scope="col"><?php esc_html_e( 'מדיה', 'kivun' ); ?></th>
+											<th scope="col"><?php esc_html_e( 'תקופה', 'kivun' ); ?></th>
+											<th scope="col"><?php esc_html_e( 'שיחות', 'kivun' ); ?></th>
+											<?php if ( $kivun_knows_answers ) : ?>
+												<th scope="col"><?php esc_html_e( 'נענו', 'kivun' ); ?></th>
+											<?php endif; ?>
+										</tr>
+									</thead>
+									<tbody>
+									<?php foreach ( $kivun_camp_numbers as $kivun_assign ) : ?>
+										<tr>
+											<td>
+												<strong dir="ltr"><?php echo esc_html( (string) $kivun_assign->number ); ?></strong>
+												<?php if ( ! empty( $kivun_assign->label ) ) : ?>
+													<br><span class="kivun-cc-source"><?php echo esc_html( (string) $kivun_assign->label ); ?></span>
+												<?php endif; ?>
+											</td>
+											<td><?php echo esc_html( Kivun_Phones::media_label( (string) $kivun_assign->media ) ); ?></td>
+											<?php
+											// A number is reusable, so a row here may be a
+											// period that has closed. Shown as such: an
+											// ended assignment that reads like a live one
+											// is a number somebody prints on a flyer after
+											// it has moved to another campaign.
+											$kivun_ends = (string) ( $kivun_assign->ends_on ?? '' );
+											$kivun_over = '' !== $kivun_ends && $kivun_ends < gmdate( 'Y-m-d' );
+											?>
+											<td>
+												<?php echo esc_html( kivun_local_date( (string) $kivun_assign->starts_on ) ); ?>
+												<?php if ( '' !== $kivun_ends ) : ?>
+													– <?php echo esc_html( kivun_local_date( $kivun_ends ) ); ?>
+												<?php endif; ?>
+												<?php if ( $kivun_over ) : ?>
+													<br><span class="kivun-cc-badge kivun-camp-ended"><?php esc_html_e( 'הסתיים', 'kivun' ); ?></span>
+												<?php endif; ?>
+											</td>
+											<td><?php echo esc_html( number_format_i18n( (int) $kivun_assign->calls ) ); ?></td>
+											<?php if ( $kivun_knows_answers ) : ?>
+												<td><?php echo esc_html( number_format_i18n( (int) $kivun_assign->answered ) ); ?></td>
+											<?php endif; ?>
+										</tr>
+									<?php endforeach; ?>
+									</tbody>
+								</table>
+							</div>
 						<?php endif; ?>
 
 						<?php if ( ! $kivun_read_only ) : ?>

@@ -493,7 +493,8 @@ class Kivun_Export {
 		$campaigns = Kivun_Campaigns::all();
 		$links     = Kivun_Campaigns::links_by_campaign();
 		$leads     = Kivun_Campaigns::link_lead_counts( $range['from'], $range['to'] );
-		$calls     = Kivun_Campaigns::campaign_call_counts( $range['from'], $range['to'] );
+		$numbers   = Kivun_Phones::by_campaign();
+		$knows     = Kivun_Phones::has_answer_data();
 
 		$only = self::slices()['campaign_id'];
 		if ( $only ) {
@@ -512,58 +513,106 @@ class Kivun_Export {
 		$out = fopen( 'php://output', 'w' );
 		fputs( $out, "\xEF\xBB\xBF" ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fputs
 
-		fputcsv(
-			$out,
-			array(
-				'קמפיין',
-				'utm_campaign',
-				'בארכיון',
-				'מפרסם / קישור',
-				'utm_source',
-				'utm_medium',
-				'utm_content',
-				'קישור קצר',
-				'כניסות',
-				'לידים',
-				'אחוז המרה',
-				'שיחות לקמפיין',
-				'נוצר',
-			)
+		// One row per channel, not per link: a campaign advertised by a
+		// printed number and by a link has two kinds of result, and a file
+		// that only knows about links answers half the question.
+		//
+		// The campaign total that used to ride on every link row is gone
+		// with them. Repeated down a column it could not be summed — adding
+		// it up multiplied one campaign's calls by its number of links —
+		// and the call figures now sit on rows of their own, where the
+		// column adds up to what actually happened.
+		$headings = array(
+			'קמפיין',
+			'utm_campaign',
+			'בארכיון',
+			'ערוץ',
+			'מפרסם / שיוך',
+			'utm_source',
+			'utm_medium',
+			'utm_content',
+			'כתובת / מספר',
+			'מדיה',
+			'תקופה',
+			'כניסות',
+			'לידים',
+			'אחוז המרה',
+			'שיחות',
 		);
+		if ( $knows ) {
+			$headings[] = 'נענו';
+		}
+		$headings[] = 'נוצר';
+
+		fputcsv( $out, $headings );
 
 		foreach ( $campaigns as $camp ) {
+			$archived = Kivun_Campaigns::is_archived( $camp ) ? 'כן' : 'לא';
+
 			foreach ( $links[ (int) $camp->id ] ?? array() as $link ) {
 				$clicks = (int) ( $link->clicks ?? 0 );
 				$count  = (int) ( $leads[ (int) $link->id ] ?? 0 );
 
-				fputcsv(
-					$out,
-					array_map(
-						array( __CLASS__, 'csv_safe' ),
-						array(
-							$camp->label,
-							$camp->utm_campaign,
-							Kivun_Campaigns::is_archived( $camp ) ? 'כן' : 'לא',
-							$link->label,
-							$link->utm_source,
-							$link->utm_medium,
-							$link->utm_content,
-							Kivun_Short_Links::url_for( (string) ( $link->slug ?? '' ) ),
-							$clicks,
-							$count,
-							// Left empty rather than shown as 0% where nobody
-							// has clicked: a rate out of nothing is not zero,
-							// it is unknown, and 0% reads as a verdict.
-							$clicks > 0 ? round( $count / $clicks * 100, 1 ) . '%' : '',
-							// A campaign-level figure repeated on each of its
-							// rows: calls arrive on a tracked number, which
-							// belongs to the campaign and not to one link.
-							// Summing this column would multiply it.
-							(int) ( $calls[ (int) $camp->id ] ?? 0 ),
-							$link->created_at ?? '',
-						)
-					)
+				$row = array(
+					$camp->label,
+					$camp->utm_campaign,
+					$archived,
+					'קישור',
+					$link->label,
+					$link->utm_source,
+					$link->utm_medium,
+					$link->utm_content,
+					Kivun_Short_Links::url_for( (string) ( $link->slug ?? '' ) ),
+					'',
+					'',
+					$clicks,
+					$count,
+					// Left empty rather than shown as 0% where nobody has
+					// clicked: a rate out of nothing is not zero, it is
+					// unknown, and 0% reads as a verdict.
+					$clicks > 0 ? round( $count / $clicks * 100, 1 ) . '%' : '',
+					'',
 				);
+				if ( $knows ) {
+					$row[] = '';
+				}
+				$row[] = $link->created_at ?? '';
+
+				fputcsv( $out, array_map( array( __CLASS__, 'csv_safe' ), $row ) );
+			}
+
+			// The same campaign's phone channels. A number is reusable, so
+			// the period it ran for is part of the row: without it an
+			// assignment that closed last year reads like one running now.
+			foreach ( $numbers[ (int) $camp->id ] ?? array() as $assign ) {
+				$period = (string) $assign->starts_on;
+				if ( ! empty( $assign->ends_on ) ) {
+					$period .= ' – ' . (string) $assign->ends_on;
+				}
+
+				$row = array(
+					$camp->label,
+					$camp->utm_campaign,
+					$archived,
+					'מספר טלפון',
+					$assign->label,
+					'',
+					'',
+					'',
+					$assign->number,
+					Kivun_Phones::media_label( (string) $assign->media ),
+					$period,
+					'',
+					'',
+					'',
+					(int) $assign->calls,
+				);
+				if ( $knows ) {
+					$row[] = (int) $assign->answered;
+				}
+				$row[] = $assign->starts_on;
+
+				fputcsv( $out, array_map( array( __CLASS__, 'csv_safe' ), $row ) );
 			}
 		}
 
