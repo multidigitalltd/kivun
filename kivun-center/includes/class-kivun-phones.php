@@ -237,6 +237,47 @@ class Kivun_Phones {
 	}
 
 	/**
+	 * The tracked numbers working for each campaign, with their calls.
+	 *
+	 * A campaign advertised on a billboard and in a newsletter is one
+	 * campaign: the number printed on the billboard and the link in the
+	 * newsletter are two channels of it, and reading them off two screens
+	 * leaves somebody adding up by hand to answer "how did it go".
+	 *
+	 * Calls are counted through the assignment they were stamped with,
+	 * which is what makes a number reusable: one advertised for March and
+	 * again in June gives March's calls to March's campaign.
+	 *
+	 * @return array<int,array<int,object>> Campaign id => its assignments,
+	 *                                      each with number, calls and
+	 *                                      answered.
+	 */
+	public static function by_campaign(): array {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$rows = $wpdb->get_results(
+			"SELECT a.id, a.campaign_id, a.media, a.label, a.starts_on,
+			        n.number, n.label AS number_label,
+			        COUNT( k.id ) AS calls,
+			        SUM( CASE WHEN k.answered = 1 THEN 1 ELSE 0 END ) AS answered
+			 FROM {$wpdb->prefix}kivun_phone_assignments a
+			 LEFT JOIN {$wpdb->prefix}kivun_phone_numbers n ON n.id = a.number_id
+			 LEFT JOIN {$wpdb->prefix}kivun_calls k ON k.assignment_id = a.id
+			 WHERE a.campaign_id > 0
+			 GROUP BY a.id
+			 ORDER BY a.starts_on DESC, a.id DESC"
+		);
+
+		$out = array();
+		foreach ( (array) $rows as $row ) {
+			$out[ (int) $row->campaign_id ][] = $row;
+		}
+
+		return $out;
+	}
+
+	/**
 	 * The headline numbers for the call-tracking screen.
 	 *
 	 * Counted through the assignment each call was stamped with, never through

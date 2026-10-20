@@ -954,6 +954,15 @@ td.kivun-app-contact a { display: block; }
 .kivun-cc-console .kivun-cc-head { margin-bottom: 1.1rem; }
 .kivun-cc-console .kivun-cc-title { font-size: 1.3rem; font-weight: 800; margin: 0 0 .2rem; }
 .kivun-cc-console .kivun-cc-lead { font-size: .88rem; color: var(--kivun-muted); margin: 0; line-height: 1.6; }
+/* The campaign's tracked numbers, under its links. Set apart by a gap and
+   a line so the two read as two channels of one campaign rather than as one
+   table that changed its columns halfway down. */
+.kivun-cc-console .kivun-camp-numbers {
+	margin-top: 1rem;
+	padding-top: .9rem;
+	border-top: 1px dashed var(--kivun-border);
+}
+
 /* The settlement warning: said plainly, in the colour of a caution rather
    than an error — nothing here is refused, and a job with an unknown
    settlement still publishes on this site. */

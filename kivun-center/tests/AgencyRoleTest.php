@@ -295,4 +295,64 @@ final class AgencyRoleTest extends TestCase {
 			'the enquiry count is still an anchor into the leads tab'
 		);
 	}
+
+	// ── One campaign, all of its channels ────────────────────────────────────
+
+	/**
+	 * An agency sees totals of its own, not the site's.
+	 *
+	 * The strip above the tabs was built for a content manager, so with
+	 * every one of its figures withheld an agency got an empty band and no
+	 * headline at all. The numbers it is owed are what its campaigns
+	 * produced — not the site's total enquiries, which arrive from organic
+	 * search and the newsletter too and would credit the agency for them.
+	 *
+	 * @return void
+	 */
+	public function test_an_agency_gets_its_own_headline(): void {
+		$source = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-content-creator.php' );
+		$at     = (int) strpos( $source, 'class="kivun-cc-stats"' );
+		$strip  = substr( $source, $at, 2600 );
+
+		$this->assertStringContainsString( 'array_sum( Kivun_Campaigns::campaign_lead_counts() )', $strip );
+		$this->assertStringContainsString( 'array_sum( Kivun_Campaigns::campaign_call_counts() )', $strip );
+		$this->assertStringContainsString( 'פניות מהקמפיינים', $strip, 'the label does not say the figure is the campaigns\' own' );
+	}
+
+	/**
+	 * A campaign shows its phone numbers beside its links.
+	 *
+	 * A campaign on a billboard and in a newsletter is one campaign. The
+	 * printed number and the link are two of its channels, and reading them
+	 * off two screens leaves somebody adding up by hand to answer how it
+	 * went.
+	 *
+	 * @return void
+	 */
+	public function test_a_campaign_shows_its_numbers_with_its_links(): void {
+		$this->assertTrue( method_exists( 'Kivun_Phones', 'by_campaign' ) );
+
+		$source = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-content-creator.php' );
+		$this->assertStringContainsString( 'Kivun_Phones::by_campaign()', $source );
+		$this->assertStringContainsString( 'kivun-camp-numbers', $source );
+	}
+
+	/**
+	 * And the answered column keeps the rule the call log already follows.
+	 *
+	 * On a switchboard that reports only the start of a call every row
+	 * carries answered = 0, and a column of zeros is a false report rather
+	 * than a cautious one.
+	 *
+	 * @return void
+	 */
+	public function test_the_answered_column_is_withheld_when_unknown(): void {
+		$source = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-content-creator.php' );
+
+		$this->assertStringContainsString( '$kivun_knows_answers   = Kivun_Phones::has_answer_data();', $source );
+
+		$at    = (int) strpos( $source, 'kivun-camp-numbers' );
+		$block = substr( $source, $at, 2200 );
+		$this->assertStringContainsString( 'if ( $kivun_knows_answers ) : ?>', $block );
+	}
 }
