@@ -4612,6 +4612,7 @@ class Kivun_Content_Creator {
 										<tr>
 											<th scope="col"><?php esc_html_e( 'מספר מעקב', 'kivun' ); ?></th>
 											<th scope="col"><?php esc_html_e( 'מדיה', 'kivun' ); ?></th>
+											<th scope="col"><?php esc_html_e( 'תקופה', 'kivun' ); ?></th>
 											<th scope="col"><?php esc_html_e( 'שיחות', 'kivun' ); ?></th>
 											<?php if ( $kivun_knows_answers ) : ?>
 												<th scope="col"><?php esc_html_e( 'נענו', 'kivun' ); ?></th>
@@ -4628,6 +4629,24 @@ class Kivun_Content_Creator {
 												<?php endif; ?>
 											</td>
 											<td><?php echo esc_html( Kivun_Phones::media_label( (string) $kivun_assign->media ) ); ?></td>
+											<?php
+											// A number is reusable, so a row here may be a
+											// period that has closed. Shown as such: an
+											// ended assignment that reads like a live one
+											// is a number somebody prints on a flyer after
+											// it has moved to another campaign.
+											$kivun_ends = (string) ( $kivun_assign->ends_on ?? '' );
+											$kivun_over = '' !== $kivun_ends && $kivun_ends < gmdate( 'Y-m-d' );
+											?>
+											<td>
+												<?php echo esc_html( kivun_local_date( (string) $kivun_assign->starts_on ) ); ?>
+												<?php if ( '' !== $kivun_ends ) : ?>
+													– <?php echo esc_html( kivun_local_date( $kivun_ends ) ); ?>
+												<?php endif; ?>
+												<?php if ( $kivun_over ) : ?>
+													<br><span class="kivun-cc-badge kivun-camp-ended"><?php esc_html_e( 'הסתיים', 'kivun' ); ?></span>
+												<?php endif; ?>
+											</td>
 											<td><?php echo esc_html( number_format_i18n( (int) $kivun_assign->calls ) ); ?></td>
 											<?php if ( $kivun_knows_answers ) : ?>
 												<td><?php echo esc_html( number_format_i18n( (int) $kivun_assign->answered ) ); ?></td>

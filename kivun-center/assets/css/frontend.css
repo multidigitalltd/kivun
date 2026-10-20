@@ -962,6 +962,10 @@ td.kivun-app-contact a { display: block; }
 	padding-top: .9rem;
 	border-top: 1px dashed var(--kivun-border);
 }
+.kivun-cc-console .kivun-camp-ended {
+	background: #fef3c7;
+	color: #92400e;
+}
 
 /* The settlement warning: said plainly, in the colour of a caution rather
    than an error — nothing here is refused, and a job with an unknown

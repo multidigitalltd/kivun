@@ -272,9 +272,14 @@ final class AgencyRoleTest extends TestCase {
 		$creator = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-content-creator.php' );
 		$this->assertStringContainsString( 'Kivun_Campaigns::campaign_call_counts()', $creator );
 
-		// ...and in the file.
+		// ...and in the file, now as a row per number rather than a campaign
+		// total repeated across the link rows. The repeated total could not
+		// be summed: adding the column up multiplied one campaign's calls by
+		// its number of links.
 		$export = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-export.php' );
-		$this->assertStringContainsString( 'שיחות לקמפיין', $export );
+		$this->assertStringContainsString( "'מספר טלפון',", $export, 'the report has no row per tracked number' );
+		$this->assertStringContainsString( '(int) $assign->calls,', $export );
+		$this->assertStringNotContainsString( 'שיחות לקמפיין', $export, 'the unsummable campaign total is back' );
 	}
 
 	/**

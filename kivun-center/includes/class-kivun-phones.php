@@ -257,7 +257,7 @@ class Kivun_Phones {
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$rows = $wpdb->get_results(
-			"SELECT a.id, a.campaign_id, a.media, a.label, a.starts_on,
+			"SELECT a.id, a.campaign_id, a.media, a.label, a.starts_on, a.ends_on,
 			        n.number, n.label AS number_label,
 			        COUNT( k.id ) AS calls,
 			        SUM( CASE WHEN k.answered = 1 THEN 1 ELSE 0 END ) AS answered
