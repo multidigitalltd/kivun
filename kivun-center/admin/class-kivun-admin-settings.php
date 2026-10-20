@@ -155,6 +155,38 @@ class Kivun_Admin_Settings {
 	}
 
 	/**
+	 * The checklist rows, with a distinguishing mark where a name is not enough.
+	 *
+	 * Some plugins register two top-level menus under one name — Elementor puts
+	 * up both "Elementor" and its app under the same word. Two identical rows
+	 * are a coin toss: unticking one and watching the menu stay put reads as
+	 * the setting being broken, which is exactly what happened here.
+	 *
+	 * So where a name is shared, each row also carries the menu's own
+	 * identifier, which is what the removal actually works on.
+	 *
+	 * @param array<string,string>|null $menus Slug => label; the live menus when null.
+	 * @return array<int,array{slug:string,label:string,hint:string}>
+	 */
+	public static function menu_choices( ?array $menus = null ): array {
+		$menus  = null === $menus ? self::all_admin_menus() : $menus;
+		$counts = array_count_values( array_map( 'strval', array_values( $menus ) ) );
+
+		$rows = array();
+		foreach ( $menus as $slug => $label ) {
+			$slug   = (string) $slug;
+			$label  = (string) $label;
+			$rows[] = array(
+				'slug'  => $slug,
+				'label' => $label,
+				// A label equal to its own slug is already as distinct as it gets.
+				'hint'  => ( ( $counts[ $label ] ?? 0 ) > 1 && $label !== $slug ) ? $slug : '',
+			);
+		}
+		return $rows;
+	}
+
+	/**
 	 * Remove every admin menu the operator chose to hide (core, plugins, or this
 	 * plugin's own). Runs late so all menus are registered first.
 	 *
@@ -409,18 +441,22 @@ class Kivun_Admin_Settings {
 					<td>
 						<?php
 						$kivun_menu_hidden = (array) $o( 'admin_menu_hidden', array() );
-						$kivun_all_menus   = self::all_admin_menus();
+						$kivun_menu_rows   = self::menu_choices();
 						?>
 						<fieldset style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:4px 20px;max-width:820px;max-height:340px;overflow:auto;padding:10px 12px;border:1px solid #dcdcde;border-radius:8px;background:#fff">
-							<?php foreach ( $kivun_all_menus as $kivun_slug => $kivun_label ) : ?>
+							<?php foreach ( $kivun_menu_rows as $kivun_row ) : ?>
 								<label style="display:flex;align-items:center;gap:7px;margin:0">
-									<input type="checkbox" name="menu_show[]" value="<?php echo esc_attr( $kivun_slug ); ?>" <?php checked( ! in_array( $kivun_slug, $kivun_menu_hidden, true ) ); ?>>
-									<input type="hidden" name="menu_all[]" value="<?php echo esc_attr( $kivun_slug ); ?>">
-									<span><?php echo esc_html( $kivun_label ); ?></span>
+									<input type="checkbox" name="menu_show[]" value="<?php echo esc_attr( $kivun_row['slug'] ); ?>" <?php checked( ! in_array( $kivun_row['slug'], $kivun_menu_hidden, true ) ); ?>>
+									<input type="hidden" name="menu_all[]" value="<?php echo esc_attr( $kivun_row['slug'] ); ?>">
+									<span><?php echo esc_html( $kivun_row['label'] ); ?></span>
+									<?php if ( '' !== $kivun_row['hint'] ) : ?>
+										<code dir="ltr" style="font-size:11px;opacity:.6;background:none;padding:0"><?php echo esc_html( $kivun_row['hint'] ); ?></code>
+									<?php endif; ?>
 								</label>
 							<?php endforeach; ?>
 						</fieldset>
 						<p class="description"><?php esc_html_e( 'מסומן = מוצג בתפריט. הסירו סימון כדי להסתיר. ברירת מחדל: הכל מוצג.', 'kivun' ); ?></p>
+						<p class="description"><?php esc_html_e( 'כששני תפריטים נושאים את אותו שם — אלמנטור, למשל, רושם שניים — מופיע לצידם גם השם הפנימי שלהם, כדי שאפשר יהיה לדעת איזה מהם מוסתר.', 'kivun' ); ?></p>
 					</td>
 				</tr>
 				<tr>
