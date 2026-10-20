@@ -88,6 +88,13 @@ final class Kivun_Test_State {
 	public static array $mail = array();
 
 	/**
+	 * Whether wp_mail should report that it could not accept the message.
+	 *
+	 * @var bool
+	 */
+	public static bool $mail_fails = false;
+
+	/**
 	 * Rows written by $wpdb->update(), newest last.
 	 *
 	 * @var array<int,array<string,mixed>>
@@ -111,9 +118,19 @@ final class Kivun_Test_State {
 		self::$transients = array();
 		self::$posts    = array();
 		self::$caps     = array();
-		self::$mail     = array();
-		self::$updates  = array();
-		self::$timezone = 'Asia/Jerusalem';
+		self::$mail       = array();
+		self::$mail_fails = false;
+		self::$updates    = array();
+		self::$timezone   = 'Asia/Jerusalem';
+
+		// Whether an address has already been written to is remembered for
+		// the rest of the request, which across tests is the rest of the run.
+		if ( class_exists( 'Kivun_Mailer' ) ) {
+			Kivun_Mailer::forget_notified();
+		}
+		if ( class_exists( 'Kivun_Forms_Router' ) ) {
+			Kivun_Forms_Router::forget_routing();
+		}
 
 		// The rota remembers its last pick for the rest of the request, which
 		// across tests is the rest of the run: one test choosing a
@@ -962,6 +979,9 @@ function get_site_icon_url( int $size = 512 ): string {
  * @return bool
  */
 function wp_mail( $to, string $subject, string $message, $headers = '', array $attachments = array() ): bool {
+	if ( Kivun_Test_State::$mail_fails ) {
+		return false;
+	}
 	Kivun_Test_State::$mail[] = compact( 'to', 'subject', 'message', 'headers', 'attachments' );
 	return true;
 }

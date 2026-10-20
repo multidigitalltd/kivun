@@ -33,6 +33,27 @@ class Kivun_Forms_Router {
 	private static bool $routed = false;
 
 	/**
+	 * Whether the form that brought us here carries one of our own actions.
+	 *
+	 * Elementor fires its global hook and runs a form's actions in an order
+	 * this plugin does not control, so when a Kivun action is on the form the
+	 * dedicated letter may not have been sent yet — and may never be, if the
+	 * registration turns out to be a duplicate, the course is full, or it is
+	 * a paid one that redirects to checkout. Only the end of the request
+	 * knows, so that is where the decision is made.
+	 *
+	 * @var bool
+	 */
+	private static bool $pipeline_pending = false;
+
+	/**
+	 * Letters held back until the end of the request.
+	 *
+	 * @var array<int,array{email:string,form:string,fields:array<string,mixed>}>
+	 */
+	private static array $deferred = array();
+
+	/**
 	 * Register the routing hooks.
 	 *
 	 * @return void
@@ -97,6 +118,8 @@ class Kivun_Forms_Router {
 			return;
 		}
 
+		self::$pipeline_pending = self::carries_own_action( $record );
+
 		self::route(
 			self::email_for_post( self::post_from_url( $page_url ) ),
 			$form_name,
@@ -104,6 +127,26 @@ class Kivun_Forms_Router {
 			$page_url,
 			self::rota_applies( $page_url, $form_name, $form_id, $posted_id )
 		);
+	}
+
+	/**
+	 * Whether this form is one of ours — a form whose own action files the
+	 * submission and sends the letter written for it.
+	 *
+	 * @param mixed $record The Elementor Form_Record.
+	 * @return bool
+	 */
+	private static function carries_own_action( $record ): bool {
+		if ( ! is_object( $record ) || ! method_exists( $record, 'get_form_settings' ) ) {
+			return false;
+		}
+
+		$actions = $record->get_form_settings( 'submit_actions' );
+		if ( ! is_array( $actions ) ) {
+			return false;
+		}
+
+		return (bool) array_intersect( array( 'kivun_course_registration', 'kivun_lead' ), $actions );
 	}
 
 	/**
@@ -293,12 +336,35 @@ class Kivun_Forms_Router {
 
 		$result = 'skipped';
 		if ( '' !== trim( $email ) && is_email( $email ) ) {
-			$result = self::send_email( $email, $form_name, $fields ) ? 'sent' : 'failed';
+			if ( Kivun_Mailer::already_notified( $email ) ) {
+				// This inbox already has the letter written for this
+				// submission — a course registration or a landing page's
+				// lead, sent a line before the hook that brought us here,
+				// to the same per-post address. A second copy of the same
+				// thing, as a bare list of fields, is what people were
+				// reading as the form arriving twice.
+				$result = 'duplicate-skipped';
+			} elseif ( self::$pipeline_pending ) {
+				self::$deferred[] = array(
+					'email'  => $email,
+					'form'   => $form_name,
+					'fields' => $fields,
+				);
+				add_action( 'shutdown', array( __CLASS__, 'flush_deferred' ) );
+				$result = 'deferred';
+			} else {
+				$result = self::send_email( $email, $form_name, $fields ) ? 'sent' : 'failed';
+			}
 		} elseif ( '' !== trim( $email ) ) {
 			$result = 'invalid-email';
 		}
 
 		foreach ( $coordinators as $coordinator ) {
+			// A coordinator who is also the page's own address is the same
+			// inbox, and gets the same second copy.
+			if ( Kivun_Mailer::already_notified( $coordinator ) ) {
+				continue;
+			}
 			$sent = self::send_email( $coordinator, $form_name, $fields );
 			if ( 'sent' !== $result ) {
 				$result = $sent ? 'sent' : 'failed';
@@ -313,6 +379,43 @@ class Kivun_Forms_Router {
 		// Noted either way, so an admin asking why a coordinator did not get a
 		// particular lead can see that it was never theirs to get.
 		self::record( $use_rota ? $result : $result . ' / no-rota', $email );
+	}
+
+	/**
+	 * Forget this request's routing state. For tests.
+	 *
+	 * @return void
+	 */
+	public static function forget_routing(): void {
+		self::$routed           = false;
+		self::$pipeline_pending = false;
+		self::$deferred         = array();
+	}
+
+	/**
+	 * Send what was held back, now that the request is over.
+	 *
+	 * By this point the plugin's own pipeline has either sent its dedicated
+	 * letter to this address or decided not to — a duplicate registration, a
+	 * full course, a paid one that went to checkout, or a send that failed.
+	 * In the first case there is nothing to add; in every other the lead
+	 * would otherwise reach nobody, which is what this router is for.
+	 *
+	 * @return void
+	 */
+	public static function flush_deferred(): void {
+		$held           = self::$deferred;
+		self::$deferred = array();
+
+		foreach ( $held as $letter ) {
+			if ( Kivun_Mailer::already_notified( $letter['email'] ) ) {
+				self::record( 'duplicate-skipped / deferred', $letter['email'] );
+				continue;
+			}
+
+			$sent = self::send_email( $letter['email'], $letter['form'], $letter['fields'] );
+			self::record( $sent ? 'sent / deferred' : 'failed / deferred', $letter['email'] );
+		}
 	}
 
 	/**
