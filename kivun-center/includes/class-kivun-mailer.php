@@ -13,6 +13,71 @@ defined( 'ABSPATH' ) || exit;
 class Kivun_Mailer {
 
 	/**
+	 * Addresses already told about this submission, this request.
+	 *
+	 * The forms router is hooked to the same `kivun_after_lead` /
+	 * `kivun_after_registration` that fire a line after the letters below, and
+	 * it resolves its destination from the very same `_kivun_contact_email`.
+	 * So one registration arrived twice in the same inbox: once as the
+	 * course's own notification and once as a bare list of fields.
+	 *
+	 * Noted only when wp_mail accepted it, because the router is meant to be
+	 * the fallback when a letter does not get out — suppressing it after a
+	 * failed send would leave the lead with nobody.
+	 *
+	 * @var array<string,true>
+	 */
+	private static array $notified = array();
+
+	/**
+	 * Whether this address has already been written to about this submission.
+	 *
+	 * @param string $email The address a second sender is about to use.
+	 * @return bool
+	 */
+	public static function already_notified( string $email ): bool {
+		return isset( self::$notified[ self::key( $email ) ] );
+	}
+
+	/**
+	 * Note that an address has been told, so nobody tells it again.
+	 *
+	 * Open to any sender, not just this class: the forms router writes to
+	 * the same inboxes, and an address it has already used is as spoken for
+	 * as one of ours. Only this register is consulted, so the order senders
+	 * happen to run in never decides which letter is the duplicate.
+	 *
+	 * @param string $email The address that was written to.
+	 * @param bool   $sent  Whether wp_mail accepted the message.
+	 * @return void
+	 */
+	public static function note_notified( string $email, bool $sent ): void {
+		$key = self::key( $email );
+		if ( $sent && '' !== $key ) {
+			self::$notified[ $key ] = true;
+		}
+	}
+
+	/**
+	 * The form an address is compared in: trimmed, and case ignored.
+	 *
+	 * @param string $email The address.
+	 * @return string
+	 */
+	private static function key( string $email ): string {
+		return strtolower( trim( $email ) );
+	}
+
+	/**
+	 * Forget this request's addresses. For tests.
+	 *
+	 * @return void
+	 */
+	public static function forget_notified(): void {
+		self::$notified = array();
+	}
+
+	/**
 	 * Send course registration notification to admin + confirmation to registrant.
 	 *
 	 * @param int   $course_id The course post ID.
@@ -26,12 +91,13 @@ class Kivun_Mailer {
 		$site_name    = get_bloginfo( 'name' );
 
 		// To admin.
-		self::send(
+		$sent = self::send(
 			$admin_email,
 			sprintf( '[%s] הרשמה חדשה לקורס: %s', $site_name, $course_title ),
 			self::course_admin_body( $course_title, $data ),
 			__( 'הרשמה חדשה לקורס', 'kivun' )
 		);
+		self::note_notified( (string) $admin_email, $sent );
 
 		// Confirmation to registrant.
 		self::send(
@@ -95,7 +161,10 @@ class Kivun_Mailer {
 			nl2br( esc_html( $data['message'] ) )
 		);
 
-		self::send( $admin_email, $subject, $body, __( 'פנייה חדשה', 'kivun' ) );
+		// Same story as a course registration: the router is hooked to the
+		// `kivun_after_lead` fired a line after this one, and reads the same
+		// per-post address. A landing page's lead arrived twice too.
+		self::note_notified( (string) $admin_email, self::send( $admin_email, $subject, $body, __( 'פנייה חדשה', 'kivun' ) ) );
 	}
 
 	/**
