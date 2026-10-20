@@ -42,11 +42,16 @@ class Kivun_Mailer {
 	/**
 	 * Note that an address has been told, so nobody tells it again.
 	 *
+	 * Open to any sender, not just this class: the forms router writes to
+	 * the same inboxes, and an address it has already used is as spoken for
+	 * as one of ours. Only this register is consulted, so the order senders
+	 * happen to run in never decides which letter is the duplicate.
+	 *
 	 * @param string $email The address that was written to.
 	 * @param bool   $sent  Whether wp_mail accepted the message.
 	 * @return void
 	 */
-	private static function note_notified( string $email, bool $sent ): void {
+	public static function note_notified( string $email, bool $sent ): void {
 		$key = self::key( $email );
 		if ( $sent && '' !== $key ) {
 			self::$notified[ $key ] = true;

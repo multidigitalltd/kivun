@@ -49,7 +49,11 @@ class Kivun_Forms_Router {
 	/**
 	 * Letters held back until the end of the request.
 	 *
-	 * @var array<int,array{email:string,form:string,fields:array<string,mixed>}>
+	 * Keyed by address, so one inbox is never queued for the same submission
+	 * twice — the page's own address and the coordinator on duty are
+	 * sometimes the same person.
+	 *
+	 * @var array<string,array{email:string,form:string,fields:array<string,mixed>}>
 	 */
 	private static array $deferred = array();
 
@@ -336,38 +340,22 @@ class Kivun_Forms_Router {
 
 		$result = 'skipped';
 		if ( '' !== trim( $email ) && is_email( $email ) ) {
-			if ( Kivun_Mailer::already_notified( $email ) ) {
-				// This inbox already has the letter written for this
-				// submission — a course registration or a landing page's
-				// lead, sent a line before the hook that brought us here,
-				// to the same per-post address. A second copy of the same
-				// thing, as a bare list of fields, is what people were
-				// reading as the form arriving twice.
-				$result = 'duplicate-skipped';
-			} elseif ( self::$pipeline_pending ) {
-				self::$deferred[] = array(
-					'email'  => $email,
-					'form'   => $form_name,
-					'fields' => $fields,
-				);
-				add_action( 'shutdown', array( __CLASS__, 'flush_deferred' ) );
-				$result = 'deferred';
-			} else {
-				$result = self::send_email( $email, $form_name, $fields ) ? 'sent' : 'failed';
-			}
+			$result = self::deliver( $email, $form_name, $fields );
 		} elseif ( '' !== trim( $email ) ) {
 			$result = 'invalid-email';
 		}
 
+		// The coordinator on duty goes the same way as the address above: a
+		// coordinator who is also the page's own address, or the central one,
+		// is one inbox, and two copies of a submission in it read as the form
+		// having fired twice whichever sender put them there.
 		foreach ( $coordinators as $coordinator ) {
-			// A coordinator who is also the page's own address is the same
-			// inbox, and gets the same second copy.
-			if ( Kivun_Mailer::already_notified( $coordinator ) ) {
+			$one = self::deliver( $coordinator, $form_name, $fields );
+			if ( 'duplicate-skipped' === $one ) {
 				continue;
 			}
-			$sent = self::send_email( $coordinator, $form_name, $fields );
 			if ( 'sent' !== $result ) {
-				$result = $sent ? 'sent' : 'failed';
+				$result = $one;
 			}
 			$email = '' !== trim( $email ) ? $email . ', ' . $coordinator : $coordinator;
 		}
@@ -379,6 +367,47 @@ class Kivun_Forms_Router {
 		// Noted either way, so an admin asking why a coordinator did not get a
 		// particular lead can see that it was never theirs to get.
 		self::record( $use_rota ? $result : $result . ' / no-rota', $email );
+	}
+
+	/**
+	 * Write to one inbox — now, or at the end of the request.
+	 *
+	 * Held back when a form of ours is still to run its own action, because
+	 * the letter written for the submission may be sent after this hook, or
+	 * not at all: a duplicate registration, a full course, a paid one that
+	 * went to checkout. Only the end of the request knows which.
+	 *
+	 * @param string              $email     The destination.
+	 * @param string              $form_name The form name.
+	 * @param array<string,mixed> $fields    Submitted fields (label => value).
+	 * @return string What happened: sent, failed, deferred or duplicate-skipped.
+	 */
+	private static function deliver( string $email, string $form_name, array $fields ): string {
+		if ( Kivun_Mailer::already_notified( $email ) ) {
+			return 'duplicate-skipped';
+		}
+
+		$key = strtolower( trim( $email ) );
+
+		if ( self::$pipeline_pending ) {
+			if ( ! isset( self::$deferred[ $key ] ) ) {
+				self::$deferred[ $key ] = array(
+					'email'  => $email,
+					'form'   => $form_name,
+					'fields' => $fields,
+				);
+				add_action( 'shutdown', array( __CLASS__, 'flush_deferred' ) );
+			}
+			return 'deferred';
+		}
+
+		$sent = self::send_email( $email, $form_name, $fields );
+
+		// Noted in the same register the dedicated letters use, so whoever
+		// writes next — here or in the mailer — can see this inbox is done.
+		Kivun_Mailer::note_notified( $email, $sent );
+
+		return $sent ? 'sent' : 'failed';
 	}
 
 	/**

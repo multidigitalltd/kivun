@@ -53,7 +53,7 @@ final class DuplicateNotificationTest extends TestCase {
 	private function route( string $email, bool $use_rota = false ): void {
 		$method = new ReflectionMethod( Kivun_Forms_Router::class, 'route' );
 		$method->setAccessible( true );
-		$method->invoke( null, $email, 'Kivun', array( 'שם' => 'דנה' ), 'https://example.test/course/', $use_rota );
+		$method->invoke( null, $email, 'Kivun', array( 'שם' => 'דנה', 'מגדר' => 'אישה' ), 'https://example.test/course/', $use_rota );
 	}
 
 	/**
@@ -245,6 +245,82 @@ final class DuplicateNotificationTest extends TestCase {
 		Kivun_Forms_Router::flush_deferred();
 
 		$this->assertSame( array( 'courses@example.test' ), array_column( Kivun_Test_State::$mail, 'to' ) );
+	}
+
+	/**
+	 * A coordinator who is also the inbox already told gets no second copy.
+	 *
+	 * The rota's pick and the address a page sends its leads to are
+	 * sometimes the same person, and that person was reading two copies of
+	 * one submission.
+	 *
+	 * @return void
+	 */
+	public function test_a_coordinator_who_was_already_told_is_skipped(): void {
+		Kivun_Test_State::$options['kivun_settings'] = array( 'coordinators_female' => 'dasi@example.test' );
+
+		Kivun_Mailer::note_notified( 'dasi@example.test', true );
+		$this->route( '', true );
+
+		$this->assertSame( array(), array_column( Kivun_Test_State::$mail, 'to' ) );
+	}
+
+	/**
+	 * And a coordinator waits for the end of the request too, when one of
+	 * our own forms still has its action to run.
+	 *
+	 * Deferring only the page's address left this ordering doubling: the
+	 * router wrote to the coordinator at once, and the dedicated letter
+	 * went to the same person a moment later.
+	 *
+	 * @return void
+	 */
+	public function test_a_coordinator_is_held_back_as_well(): void {
+		Kivun_Test_State::$options['kivun_settings'] = array( 'coordinators_female' => 'dasi@example.test' );
+
+		$pending = new ReflectionProperty( Kivun_Forms_Router::class, 'pipeline_pending' );
+		$pending->setAccessible( true );
+		$pending->setValue( null, true );
+
+		$this->route( '', true );
+		$this->assertSame( array(), Kivun_Test_State::$mail, 'the coordinator was written to before the pipeline had run' );
+
+		Kivun_Mailer::note_notified( 'dasi@example.test', true );
+		Kivun_Forms_Router::flush_deferred();
+
+		$this->assertSame( array(), array_column( Kivun_Test_State::$mail, 'to' ), 'the held letter went out on top of the dedicated one' );
+	}
+
+	/**
+	 * One inbox that is both the page's address and the coordinator is
+	 * queued once, not twice.
+	 *
+	 * @return void
+	 */
+	public function test_one_inbox_is_held_once(): void {
+		Kivun_Test_State::$options['kivun_settings'] = array( 'coordinators_female' => 'both@example.test' );
+
+		$pending = new ReflectionProperty( Kivun_Forms_Router::class, 'pipeline_pending' );
+		$pending->setAccessible( true );
+		$pending->setValue( null, true );
+
+		$this->route( 'both@example.test', true );
+		Kivun_Forms_Router::flush_deferred();
+
+		$this->assertSame( array( 'both@example.test' ), array_column( Kivun_Test_State::$mail, 'to' ) );
+	}
+
+	/**
+	 * The same inbox reached twice in one pass is written to once.
+	 *
+	 * @return void
+	 */
+	public function test_one_inbox_is_written_to_once(): void {
+		Kivun_Test_State::$options['kivun_settings'] = array( 'coordinators_female' => 'both@example.test' );
+
+		$this->route( 'both@example.test', true );
+
+		$this->assertSame( array( 'both@example.test' ), array_column( Kivun_Test_State::$mail, 'to' ) );
 	}
 
 	/**
