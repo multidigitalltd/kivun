@@ -1,11 +1,10 @@
 <?php
 /**
  * Plugin Name:  Kivun Center
- * Plugin URI:   https://github.com/multidigitalltd/kivun
  * Description:  לוח משרות, קורסים וסדנאות למרכז כיוון — Elementor Dynamic Tags, CRM מובנה, WooCommerce.
- * Version:      2.29.1
+ * Version:      2.29.2
  * Author:       MultiDigital
- * Author URI:   https://multidigital.co.il
+ * Author URI:   https://m-d.co.il
  * Text Domain:  kivun
  * Domain Path:  /languages
  * Requires PHP: 8.0
@@ -16,7 +15,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'KIVUN_VERSION', '2.29.1' );
+define( 'KIVUN_VERSION', '2.29.2' );
 define( 'KIVUN_FILE', __FILE__ );
 define( 'KIVUN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'KIVUN_URL', plugin_dir_url( __FILE__ ) );

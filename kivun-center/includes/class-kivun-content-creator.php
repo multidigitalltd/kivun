@@ -4513,13 +4513,35 @@ class Kivun_Content_Creator {
 
 												<?php if ( ! empty( $link->whatsapp ) ) : ?>
 													<details class="kivun-link-wa-saved">
-														<summary class="kivun-camp-summary"><?php esc_html_e( 'הצגה ועריכה של ההודעה', 'kivun' ); ?></summary>
+														<summary class="kivun-camp-summary">
+															<?php
+															// A reader who cannot save should not be promised an
+															// edit before the fold has even opened.
+															if ( $kivun_read_only ) {
+																esc_html_e( 'הצגת ההודעה', 'kivun' );
+															} else {
+																esc_html_e( 'הצגה ועריכה של ההודעה', 'kivun' );
+															}
+															?>
+														</summary>
 														<?php
 														// Cleaned on the way out as well as on the way in: a promo
 														// saved by an earlier release still has its markup, and
 														// nobody should have to wait for an upgrade to read it.
 														?>
-														<textarea class="kivun-cc-input kivun-cc-textarea kivun-wa-text" rows="8" dir="rtl"><?php echo esc_textarea( (string) $link->whatsapp ); ?></textarea>
+														<?php
+														// Read-only for an agency, which may take this
+														// message and may not change it. Left editable it
+														// invites a rewrite that cannot be saved and is
+														// gone on the next reload — and worse, one that
+														// gets copied and sent while the message stored
+														// here still says something else.
+														//
+														// readonly rather than disabled: the text stays
+														// selectable and the copy button still reads it,
+														// which is the one thing this reader came for.
+														?>
+														<textarea class="kivun-cc-input kivun-cc-textarea kivun-wa-text" rows="8" dir="rtl" <?php echo $kivun_read_only ? 'readonly' : ''; ?>><?php echo esc_textarea( (string) $link->whatsapp ); ?></textarea>
 														<div class="kivun-wa-actions">
 															<?php if ( ! $kivun_read_only ) : ?>
 																<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-wa-save" data-id="<?php echo esc_attr( (string) $link->id ); ?>"><?php esc_html_e( 'שמירת ההודעה', 'kivun' ); ?></button>
@@ -4528,7 +4550,11 @@ class Kivun_Content_Creator {
 															<a class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost kivun-wa-share" href="https://wa.me/" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'שליחה בוואטסאפ', 'kivun' ); ?></a>
 															<span class="kivun-cc-wa-status" role="status" aria-live="polite"></span>
 														</div>
-														<p class="kivun-field-hint"><?php esc_html_e( 'הקישור המסומן שבתוך ההודעה שייך למפרסם הזה — כדאי לא לשנות אותו. לכתיבת הודעה מחדש מהתוכן שביעד, השתמשו בכפתור העריכה שבסוף השורה.', 'kivun' ); ?></p>
+														<?php if ( $kivun_read_only ) : ?>
+															<p class="kivun-field-hint"><?php esc_html_e( 'ההודעה מוצגת לצפייה ולהעתקה בלבד. הקישור שבתוכה שייך למפרסם הזה, והוא מה שמודד את הכניסות — כדאי להעתיק את ההודעה כפי שהיא.', 'kivun' ); ?></p>
+														<?php else : ?>
+															<p class="kivun-field-hint"><?php esc_html_e( 'הקישור המסומן שבתוך ההודעה שייך למפרסם הזה — כדאי לא לשנות אותו. לכתיבת הודעה מחדש מהתוכן שביעד, השתמשו בכפתור העריכה שבסוף השורה.', 'kivun' ); ?></p>
+														<?php endif; ?>
 													</details>
 												<?php endif; ?>
 											</td>

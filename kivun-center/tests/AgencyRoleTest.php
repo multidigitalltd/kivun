@@ -360,4 +360,63 @@ final class AgencyRoleTest extends TestCase {
 		$block = substr( $source, $at, 2200 );
 		$this->assertStringContainsString( 'if ( $kivun_knows_answers ) : ?>', $block );
 	}
+
+	/**
+	 * The message can be taken, not rewritten.
+	 *
+	 * Left editable the box invites a rewrite that cannot be saved and is
+	 * gone on the next reload — and worse, one that gets copied and sent to
+	 * publishers while the message stored here still says something else.
+	 *
+	 * readonly rather than disabled, so the text stays selectable and the
+	 * copy button still reads it.
+	 *
+	 * @return void
+	 */
+	public function test_the_message_is_readable_but_not_writable(): void {
+		$source = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-content-creator.php' );
+
+		$this->assertStringContainsString(
+			"dir=\"rtl\" <?php echo \$kivun_read_only ? 'readonly' : ''; ?>>",
+			$source,
+			'an agency can type into a message it cannot save'
+		);
+		$this->assertStringNotContainsString(
+			"\$kivun_read_only ? 'disabled'",
+			$source,
+			'disabled would stop the copy button reading the text'
+		);
+	}
+
+	/**
+	 * And nothing on the way in offers an edit that will not be there.
+	 *
+	 * The fold used to be headed "show and edit", with a closing note
+	 * pointing at an edit button the agency does not get. Both are read
+	 * before the box itself, so both have to know who is reading.
+	 *
+	 * @return void
+	 */
+	public function test_nothing_promises_an_edit_the_agency_cannot_make(): void {
+		$source = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-content-creator.php' );
+
+		$open = strpos( $source, '<details class="kivun-link-wa-saved">' );
+		$this->assertNotFalse( $open, 'the fold moved' );
+
+		$close = strpos( $source, '</details>', (int) $open );
+		$fold  = substr( $source, (int) $open, (int) $close - (int) $open );
+
+		foreach ( array( 'הצגה ועריכה של ההודעה', 'השתמשו בכפתור העריכה שבסוף השורה' ) as $promise ) {
+			$at = strpos( $fold, $promise );
+			$this->assertNotFalse( $at, 'the wording moved: ' . $promise );
+
+			$guard = strpos( $fold, '$kivun_read_only' );
+			$this->assertNotFalse( $guard, 'the fold does not ask who is reading' );
+			$this->assertLessThan(
+				$at,
+				$guard,
+				'a reader who cannot save is still offered an edit: ' . $promise
+			);
+		}
+	}
 }
