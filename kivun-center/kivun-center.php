@@ -1,11 +1,10 @@
 <?php
 /**
  * Plugin Name:  Kivun Center
- * Plugin URI:   https://github.com/multidigitalltd/kivun
  * Description:  לוח משרות, קורסים וסדנאות למרכז כיוון — Elementor Dynamic Tags, CRM מובנה, WooCommerce.
  * Version:      2.29.2
  * Author:       MultiDigital
- * Author URI:   https://multidigital.co.il
+ * Author URI:   https://m-d.co.il
  * Text Domain:  kivun
  * Domain Path:  /languages
  * Requires PHP: 8.0

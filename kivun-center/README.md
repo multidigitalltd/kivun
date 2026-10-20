@@ -401,4 +401,4 @@ add_filter( 'kivun_a11y_contact_phone', fn() => '03-1234567' );
 
 ---
 
-© MultiDigital — https://multidigital.co.il
+© MultiDigital — https://m-d.co.il
