@@ -164,17 +164,6 @@ class Kivun_Phones {
 	}
 
 	/**
-	 * The comparable tail of a number — the last nine digits.
-	 *
-	 * @param string $number Any phone number.
-	 * @return string
-	 */
-	public static function tail( string $number ): string {
-		$digits = self::normalise( $number );
-		return mb_substr( $digits, -9 );
-	}
-
-	/**
 	 * One number in the single form everything is compared in: national, with
 	 * neither the country code nor the trunk zero.
 	 *

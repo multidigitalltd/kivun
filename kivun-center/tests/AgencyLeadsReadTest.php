@@ -212,85 +212,23 @@ final class AgencyLeadsReadTest extends TestCase {
 	}
 
 	/**
-	 * An agency sees the enquiries its campaigns produced, and no others.
+	 * An agency reads the whole table.
 	 *
-	 * The rest of the table is the client's: organic search, the newsletter,
-	 * the contact form, the jobs board — the same names, phone numbers and
-	 * internal notes, belonging to nobody the agency works for. Opening the
-	 * tab with no filter chosen handed an outside supplier the lot. Found in
-	 * review.
-	 *
-	 * @return void
-	 */
-	public function test_an_agency_sees_only_what_its_campaigns_brought(): void {
-		$this->as_agency();
-
-		$scope = Kivun_Content_Creator::lead_scope_sql();
-
-		$this->assertNotSame( '', $scope, 'the leads table is read with no boundary at all' );
-		$this->assertStringContainsString( 'utm_campaign', $scope );
-		$this->assertStringContainsString( 'kivun_campaigns', $scope, 'the scope is not tied to the campaigns table' );
-	}
-
-	/**
-	 * And everyone else still sees the whole table.
+	 * It began as the campaign numbers and nothing else, and a first pass at
+	 * this change narrowed the list to the enquiries those campaigns
+	 * produced. The client wants the agency to see the lot, so nothing
+	 * narrows it — what the role cannot do is write, which every test above
+	 * holds.
 	 *
 	 * @return void
 	 */
-	public function test_staff_read_the_whole_table(): void {
-		kivun_test_set_caps( array( 'edit_posts' ) );
-		$this->assertSame( '', Kivun_Content_Creator::lead_scope_sql() );
-
-		kivun_test_set_caps( array( 'kivun_view_leads' ) );
-		$this->assertSame( '', Kivun_Content_Creator::lead_scope_sql() );
-	}
-
-	/**
-	 * The boundary is applied before any filter, so none can clear it.
-	 *
-	 * A scope that arrived as a default filter value would come off with a
-	 * hand-edited URL, which is the one way somebody would try.
-	 *
-	 * @return void
-	 */
-	public function test_the_boundary_is_not_a_filter(): void {
+	public function test_nothing_narrows_what_an_agency_reads(): void {
 		$source = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-content-creator.php' );
 
-		$at    = (int) strpos( $source, '$conds = array();' );
-		$block = substr( $source, $at, 700 );
-
-		$this->assertStringContainsString( 'self::lead_scope_sql()', $block, 'the boundary is not the first thing on the query' );
-
-		// The settlements offered as a filter are read from the same table
-		// and leak the same way, so that query carries it too.
-		$at    = (int) strpos( $source, 'SELECT DISTINCT r.city' );
-		$this->assertNotFalse( $at, 'the settlement list moved' );
-		$before = substr( $source, max( 0, $at - 500 ), min( 500, $at ) );
-		$this->assertStringContainsString( 'lead_scope_sql()', $before, 'the settlement filter lists towns from leads the reader cannot see' );
-	}
-
-	/**
-	 * The headline strip shows one lead figure, and it is the agency's own.
-	 *
-	 * Opening the leads tab turned on the shared pair beside it — the site's
-	 * total enquiries and the ones nobody has reached, both counted across
-	 * the whole table. Beside "פניות מהקמפיינים" that is somebody else's
-	 * number and a second, larger answer to the question the first one just
-	 * answered. Found in review.
-	 *
-	 * @return void
-	 */
-	public function test_the_shared_lead_figures_are_not_shown_to_an_agency(): void {
-		$source = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-content-creator.php' );
-
-		$at = (int) strpos( $source, "number_format_i18n( \$stats['leads'] )" );
-		$this->assertNotFalse( $at, 'the shared leads figure moved' );
-
-		$before = substr( $source, max( 0, $at - 800 ), min( 800, $at ) );
-		$this->assertStringContainsString(
-			'if ( $show_leads && ! $agency ) :',
-			$before,
-			'an agency is shown the whole site\'s enquiry count beside its own'
+		$this->assertStringNotContainsString(
+			'lead_scope_sql',
+			$source,
+			'the leads list is narrowed for a reader the client wants shown everything'
 		);
 	}
 

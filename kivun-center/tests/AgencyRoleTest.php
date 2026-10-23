@@ -248,18 +248,13 @@ final class AgencyRoleTest extends TestCase {
 		$guard  = (int) strrpos( $before, 'if ( ! $leads_only && ! $agency ) :' );
 		$this->assertGreaterThan( 0, $guard, 'the publishing and library panels still render for an agency' );
 
-		// And the same for the figures above them. Both tallies an agency has
-		// no business in — the site's content and the whole leads table — are
-		// not asked for rather than asked for and then withheld, so neither
-		// can reappear by somebody printing a value that was lying around.
+		// And the same for the figures above them, which count site content
+		// an agency cannot open. The leads tally is not among them: the
+		// agency reads that table, so the number belongs to it.
 		$at   = (int) strpos( $source, 'self::console_stats(' );
 		$call = substr( $source, $at, (int) strpos( $source, ';', $at ) - $at );
 
-		$this->assertSame(
-			2,
-			substr_count( $call, '! $agency' ),
-			'the console still counts the site content or the whole leads table for an agency'
-		);
+		$this->assertStringContainsString( '! $agency', $call, 'the console still counts the site content for an agency' );
 	}
 
 	/**

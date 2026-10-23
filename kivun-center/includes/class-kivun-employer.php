@@ -260,18 +260,14 @@ class Kivun_Employer {
 	 * more than it saved: it refused a posting outright over a field this
 	 * board never needed, and the client posts jobs the centre did not write.
 	 * So a job without a settlement is posted and simply not broadcast — the
-	 * field says so, and the sync still reports it.
+	 * field says so, and Kivun_Mercaz_Sync::job_required() still reports it.
 	 *
 	 * @param string $title       The job title.
 	 * @param string $description The description.
-	 * @param string $city        The settlement. Unused; kept so an older
-	 *                            caller cannot silently pass scope as city.
 	 * @param string $scope       The job type.
 	 * @return string
 	 */
-	public static function missing_for_broadcast( string $title, string $description, string $city, string $scope ): string {
-		unset( $city );
-
+	public static function missing_to_post( string $title, string $description, string $scope ): string {
 		$missing = array();
 
 		foreach ( array(
@@ -322,7 +318,7 @@ class Kivun_Employer {
 		$field    = sanitize_text_field( wp_unslash( $_POST['field'] ?? '' ) );
 		$deadline = self::sanitize_deadline( sanitize_text_field( wp_unslash( $_POST['deadline'] ?? '' ) ) );
 
-		$incomplete = self::missing_for_broadcast( $title, $description, $city, $scope );
+		$incomplete = self::missing_to_post( $title, $description, $scope );
 		if ( $incomplete ) {
 			wp_send_json_error( array( 'message' => $incomplete ) );
 		}
@@ -408,7 +404,7 @@ class Kivun_Employer {
 		$region   = sanitize_text_field( wp_unslash( $_POST['region'] ?? '' ) );
 		$field    = sanitize_text_field( wp_unslash( $_POST['field'] ?? '' ) );
 
-		$incomplete = self::missing_for_broadcast( $title, $description, $city, $scope );
+		$incomplete = self::missing_to_post( $title, $description, $scope );
 		if ( $incomplete ) {
 			wp_send_json_error( array( 'message' => $incomplete ) );
 		}

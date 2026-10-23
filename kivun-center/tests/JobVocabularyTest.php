@@ -148,7 +148,7 @@ final class JobVocabularyTest extends TestCase {
 	public function test_a_complete_posting_is_accepted(): void {
 		$this->assertSame(
 			'',
-			Kivun_Employer::missing_for_broadcast( 'מזכיר/ה', 'תיאור', 'ירושלים', 'חלקית' )
+			Kivun_Employer::missing_to_post( 'מזכיר/ה', 'תיאור', 'חלקית' )
 		);
 	}
 
@@ -159,7 +159,7 @@ final class JobVocabularyTest extends TestCase {
 	 * @return void
 	 */
 	public function test_the_refusal_names_what_is_missing(): void {
-		$message = Kivun_Employer::missing_for_broadcast( 'מזכיר/ה', 'תיאור', '', '' );
+		$message = Kivun_Employer::missing_to_post( 'מזכיר/ה', 'תיאור', '' );
 
 		$this->assertStringContainsString( 'סוג משרה', $message );
 		$this->assertStringNotContainsString( 'כותרת', $message );
@@ -178,7 +178,7 @@ final class JobVocabularyTest extends TestCase {
 	public function test_a_job_with_no_settlement_is_still_posted(): void {
 		$this->assertSame(
 			'',
-			Kivun_Employer::missing_for_broadcast( 'מזכיר/ה', 'תיאור', '', 'חלקית' )
+			Kivun_Employer::missing_to_post( 'מזכיר/ה', 'תיאור', 'חלקית' )
 		);
 	}
 
@@ -202,7 +202,7 @@ final class JobVocabularyTest extends TestCase {
 	public function test_whitespace_does_not_pass_for_a_value(): void {
 		$this->assertNotSame(
 			'',
-			Kivun_Employer::missing_for_broadcast( 'מזכיר/ה', 'תיאור', 'ירושלים', '   ' )
+			Kivun_Employer::missing_to_post( 'מזכיר/ה', 'תיאור', '   ' )
 		);
 	}
 
@@ -212,7 +212,7 @@ final class JobVocabularyTest extends TestCase {
 	 * @return void
 	 */
 	public function test_the_old_requirements_still_hold(): void {
-		$message = Kivun_Employer::missing_for_broadcast( '', '', 'ירושלים', 'חלקית' );
+		$message = Kivun_Employer::missing_to_post( '', '', 'חלקית' );
 
 		$this->assertStringContainsString( 'כותרת', $message );
 		$this->assertStringContainsString( 'תיאור', $message );

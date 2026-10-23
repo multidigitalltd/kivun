@@ -1377,35 +1377,6 @@ class Kivun_Content_Creator {
 	}
 
 	/**
-	 * The rows an agency is allowed to see, as a SQL condition on `r`.
-	 *
-	 * An agency reads the enquiries **its campaigns** produced. Everything
-	 * else in the table — organic search, the newsletter, the contact form,
-	 * the jobs board — is the client's and carries the same names, phone
-	 * numbers and internal notes. Without this the leads tab handed an
-	 * outside supplier the lot the moment it opened with no filter chosen.
-	 *
-	 * A lead belongs to a campaign the same way the figures above the table
-	 * credit it to one, so the list and its own headline cannot disagree.
-	 *
-	 * Not a default a filter can clear: it is the boundary, so it is added
-	 * to every query that reads the table rather than offered as a choice.
-	 *
-	 * @return string The condition, or '' when the reader may see everything.
-	 */
-	public static function lead_scope_sql(): string {
-		if ( ! self::is_agency() ) {
-			return '';
-		}
-
-		global $wpdb;
-
-		return "r.utm_campaign <> '' AND r.utm_campaign IN (
-			SELECT utm_campaign FROM {$wpdb->prefix}kivun_campaigns WHERE utm_campaign <> ''
-		)";
-	}
-
-	/**
 	 * The plain-text teaser stored as a post's excerpt.
 	 *
 	 * An excerpt is shown in a card, in a list, in a search result — places
@@ -2179,13 +2150,8 @@ class Kivun_Content_Creator {
 		self::remember_console_url( $page_url );
 
 		$can_delete = current_user_can( 'delete_posts' );
-		// An agency counts no leads here: these tallies read the whole table,
-		// and the figure it is owed — what its own campaigns produced — is
-		// worked out from the campaigns instead. Asked for nothing rather than
-		// asked for and then withheld, so the number cannot reappear on a
-		// screen by somebody printing a value that was lying around.
-		$stats = self::console_stats( $show_leads && ! $agency, $show_jobs, ! $leads_only && ! $agency );
-		$user  = wp_get_current_user();
+		$stats      = self::console_stats( $show_leads, $show_jobs, ! $leads_only && ! $agency );
+		$user       = wp_get_current_user();
 
 		$console_tabs = ( $leads_only || $agency ) ? array() : array(
 			'form'    => array(
@@ -2203,11 +2169,7 @@ class Kivun_Content_Creator {
 			$console_tabs['leads'] = array(
 				'label' => __( 'לידים והרשמות', 'kivun' ),
 				'icon'  => 'leads',
-				// The same figure the tab leads to. console_stats() counts the
-				// whole table, which for an agency is a number of somebody
-				// else's enquiries printed on the way in to a list that will
-				// not contain them.
-				'count' => $agency ? array_sum( Kivun_Campaigns::campaign_lead_counts() ) : $stats['leads'],
+				'count' => $stats['leads'],
 			);
 		}
 		if ( $show_camp ) {
@@ -2296,15 +2258,7 @@ class Kivun_Content_Creator {
 						<span class="kivun-cc-stat__label"><?php esc_html_e( 'ממתינים לפרסום', 'kivun' ); ?></span>
 					</div>
 				<?php endif; ?>
-				<?php
-				// Not for an agency, which has its own figure a few lines
-				// above. These two count the whole table — the site's total
-				// enquiries and the ones nobody has reached — so beside
-				// "פניות מהקמפיינים" they are both somebody else's number and
-				// a second, larger answer to the question the first one just
-				// answered.
-				if ( $show_leads && ! $agency ) :
-					?>
+				<?php if ( $show_leads ) : ?>
 					<div class="kivun-cc-stat">
 						<span class="kivun-cc-stat__num"><?php echo esc_html( number_format_i18n( $stats['leads'] ) ); ?></span>
 						<span class="kivun-cc-stat__label"><?php esc_html_e( 'פניות', 'kivun' ); ?></span>
@@ -5261,15 +5215,6 @@ class Kivun_Content_Creator {
 		}
 
 		$conds = array();
-
-		// First, and not from a filter: what this reader is allowed to see at
-		// all. An agency gets the enquiries its campaigns produced and no
-		// others, whatever the rest of the query says.
-		$kivun_scope = self::lead_scope_sql();
-		if ( '' !== $kivun_scope ) {
-			$conds[] = '( ' . $kivun_scope . ' )';
-		}
-
 		if ( $content_filter ) {
 			// Everything the visitor could have arrived through: a course and
 			// its landing page are one piece of content, so filtering to one of
@@ -5385,15 +5330,11 @@ class Kivun_Content_Creator {
 		// nothing in it returns an empty table. Not filtered by the other
 		// choices on purpose: a list that shrinks as you use it hides the
 		// option you were reaching for.
-		// Read through the same boundary as the rows: a settlement only one
-		// of the client's own enquiries came from is as much theirs as the
-		// enquiry, and a filter listing it says so.
-		$kivun_city_scope = self::lead_scope_sql();
-		$kivun_city_scope = '' !== $kivun_city_scope ? 'AND ( ' . $kivun_city_scope . ' )' : '';
-		$kivun_city_sql   = "SELECT DISTINCT r.city FROM {$wpdb->prefix}kivun_registrations r
-			 WHERE TRIM( r.city ) <> '' {$kivun_city_scope} ORDER BY r.city ASC";
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared
-		$city_list = $wpdb->get_col( $kivun_city_sql );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$city_list = $wpdb->get_col(
+			"SELECT DISTINCT city FROM {$wpdb->prefix}kivun_registrations
+			 WHERE TRIM( city ) <> '' ORDER BY city ASC"
+		);
 
 		$can_delete_rows = current_user_can( 'manage_options' );
 		$show_source     = self::can_see_lead_source();
