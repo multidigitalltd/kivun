@@ -283,21 +283,28 @@ final class AgencyRoleTest extends TestCase {
 	}
 
 	/**
-	 * The count is not offered as a way into the enquiries.
+	 * The count leads where the reader may actually go.
 	 *
-	 * The link opens the leads tab, which the routing sends straight back —
-	 * so it reads as a fault rather than a boundary, and invites the one
-	 * click the role exists to prevent. Found in review.
+	 * It used to be plain text for an agency, because an agency could not
+	 * open the leads tab and an anchor landing back on the page it was
+	 * clicked from reads as a fault rather than a boundary. The client has
+	 * since asked that an agency read those enquiries, so the figure is a
+	 * link again — for whoever can open the tab, and only for them.
 	 *
 	 * @return void
 	 */
-	public function test_the_lead_count_is_not_a_link_for_an_agency(): void {
+	public function test_the_lead_count_links_only_where_the_tab_opens(): void {
 		$source = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-content-creator.php' );
 
 		$this->assertStringContainsString(
-			'<?php if ( $link_leads && ! $kivun_read_only ) : ?>',
+			'<?php if ( $link_leads && $kivun_leads_reachable ) : ?>',
 			$source,
-			'the enquiry count is still an anchor into the leads tab'
+			'the enquiry count is an anchor regardless of who is reading'
+		);
+		$this->assertStringContainsString(
+			'$kivun_leads_reachable = self::can_read_leads();',
+			$source,
+			'the link is decided by something other than who may open the tab'
 		);
 	}
 

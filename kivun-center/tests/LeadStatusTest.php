@@ -34,6 +34,10 @@ final class LeadStatusTest extends TestCase {
 	 */
 	protected function setUp(): void {
 		Kivun_Test_State::reset();
+
+		// These hold the control staff are given. Whoever may not write to
+		// the row is shown the answer without it, which has tests of its own.
+		kivun_test_set_caps( array( 'edit_posts' ) );
 	}
 
 	/**

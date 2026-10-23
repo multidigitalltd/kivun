@@ -2,7 +2,7 @@
 /**
  * Plugin Name:  Kivun Center
  * Description:  לוח משרות, קורסים וסדנאות למרכז כיוון — Elementor Dynamic Tags, CRM מובנה, WooCommerce.
- * Version:      2.29.4
+ * Version:      2.30.0
  * Author:       MultiDigital
  * Author URI:   https://m-d.co.il
  * Text Domain:  kivun
@@ -15,7 +15,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'KIVUN_VERSION', '2.29.4' );
+define( 'KIVUN_VERSION', '2.30.0' );
 define( 'KIVUN_FILE', __FILE__ );
 define( 'KIVUN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'KIVUN_URL', plugin_dir_url( __FILE__ ) );

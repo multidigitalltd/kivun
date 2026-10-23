@@ -1362,6 +1362,21 @@ class Kivun_Content_Creator {
 	}
 
 	/**
+	 * Whether the current user may see the leads table.
+	 *
+	 * Wider than can_manage_leads(), which is the gate on writing: the agency
+	 * reads the enquiries its campaigns produced without touching a status, a
+	 * note or who is handling it. Display asks this one; every write asks the
+	 * other, so a reader is refused at the handler whatever the screen shows.
+	 *
+	 * @return bool
+	 */
+	public static function can_read_leads(): bool {
+		// phpcs:ignore WordPress.WP.Capabilities.Unknown -- Custom plugin capability.
+		return self::can_manage_leads() || current_user_can( 'kivun_read_leads' );
+	}
+
+	/**
 	 * The plain-text teaser stored as a post's excerpt.
 	 *
 	 * An excerpt is shown in a card, in a list, in a search result — places
@@ -2090,7 +2105,7 @@ class Kivun_Content_Creator {
 		if ( '' !== $group && ! $leads_only && ! $agency ) {
 			$tab = 'form';
 		}
-		$show_leads = self::can_manage_leads();
+		$show_leads = self::can_read_leads();
 		// The jobs board is a separate system with its own data (jobs and CV
 		// applications) — it gets its own tab rather than being mixed into the
 		// content leads table.
@@ -2109,8 +2124,13 @@ class Kivun_Content_Creator {
 		// One tab, so a stale URL and an old bookmark both land on it rather
 		// than on something the agency has no business seeing refused.
 		if ( $agency ) {
-			$tab        = 'campaigns';
-			$show_leads = false;
+			// Two tabs: the campaigns, and the enquiries they produced. Any
+			// other tab lands on the campaigns rather than being shown and
+			// refused — a stale URL or an old bookmark reaches nothing it has
+			// no business in.
+			if ( ! in_array( $tab, array( 'campaigns', 'leads' ), true ) ) {
+				$tab = 'campaigns';
+			}
 			$show_jobs  = false;
 			$show_calls = false;
 		}
@@ -4246,6 +4266,13 @@ class Kivun_Content_Creator {
 		// courtesy: a button that cannot work should not be offered.
 		$kivun_read_only = self::is_agency();
 
+		// Whether a lead count is worth making a link of. Separate from the
+		// line above: the agency may now read the enquiries its campaigns
+		// produced even though it writes nothing here, so the figure leads
+		// somewhere for it too — while a reader who cannot open that tab gets
+		// the number alone rather than an anchor back to the page they are on.
+		$kivun_leads_reachable = self::can_read_leads();
+
 		// Counted once for the whole screen rather than per campaign.
 		$kivun_call_counts = Kivun_Campaigns::campaign_call_counts();
 
@@ -4559,7 +4586,7 @@ class Kivun_Content_Creator {
 												<?php endif; ?>
 											</td>
 											<td>
-												<?php if ( $link_leads && ! $kivun_read_only ) : ?>
+												<?php if ( $link_leads && $kivun_leads_reachable ) : ?>
 													<a class="kivun-cc-leadlink" href="
 													<?php
 													echo esc_url(
@@ -4576,10 +4603,9 @@ class Kivun_Content_Creator {
 												<?php elseif ( $link_leads ) : ?>
 													<?php
 													// The number, with nowhere to go. The link opens the
-													// enquiries themselves, which is the one screen this
-													// reader must not reach — and an anchor that lands
-													// back on the page it was clicked from reads as a
-													// fault rather than a boundary.
+													// enquiries themselves, and an anchor that lands back
+													// on the page it was clicked from reads as a fault
+													// rather than a boundary.
 													?>
 													<?php echo esc_html( number_format_i18n( $link_leads ) ); ?>
 												<?php else : ?>
