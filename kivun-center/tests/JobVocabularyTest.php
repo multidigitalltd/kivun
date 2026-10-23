@@ -148,7 +148,7 @@ final class JobVocabularyTest extends TestCase {
 	public function test_a_complete_posting_is_accepted(): void {
 		$this->assertSame(
 			'',
-			Kivun_Employer::missing_for_broadcast( 'מזכיר/ה', 'תיאור', 'ירושלים', 'חלקית' )
+			Kivun_Employer::missing_to_post( 'מזכיר/ה', 'תיאור', 'חלקית' )
 		);
 	}
 
@@ -159,22 +159,71 @@ final class JobVocabularyTest extends TestCase {
 	 * @return void
 	 */
 	public function test_the_refusal_names_what_is_missing(): void {
-		$message = Kivun_Employer::missing_for_broadcast( 'מזכיר/ה', 'תיאור', '', '' );
+		$message = Kivun_Employer::missing_to_post( 'מזכיר/ה', 'תיאור', '' );
 
-		$this->assertStringContainsString( 'עיר', $message );
 		$this->assertStringContainsString( 'סוג משרה', $message );
 		$this->assertStringNotContainsString( 'כותרת', $message );
 	}
 
 	/**
-	 * Whitespace is not a settlement.
+	 * A job with no settlement is posted.
+	 *
+	 * It used to be refused outright, added when the centre's API turned out
+	 * to accept such a job and quietly make it invisible. That refused a
+	 * posting over a field this board never needed, and the client posts jobs
+	 * the centre did not write — so it is posted, and simply not broadcast.
+	 *
+	 * @return void
+	 */
+	public function test_a_job_with_no_settlement_is_still_posted(): void {
+		$this->assertSame(
+			'',
+			Kivun_Employer::missing_to_post( 'מזכיר/ה', 'תיאור', 'חלקית' )
+		);
+	}
+
+	/**
+	 * A job already on their board cannot have its settlement taken away.
+	 *
+	 * Posting one without a settlement is fine — it simply is not broadcast.
+	 * But a job that has already gone is only ever updated by a push, and the
+	 * push stops on the missing field: accepting the edit would leave their
+	 * copy showing the old settlement and the old details, with nothing here
+	 * saying so. Found in review.
+	 *
+	 * @return void
+	 */
+	public function test_a_broadcast_job_keeps_its_settlement(): void {
+		$source = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-employer.php' );
+
+		$this->assertStringContainsString(
+			"if ( '' === trim( \$city ) && get_post_meta( \$job_id, Kivun_Mercaz_Sync::REMOTE_ID, true ) ) {",
+			$source,
+			'a job already on the centre\'s board can have its settlement cleared'
+		);
+	}
+
+	/**
+	 * The sync still knows the settlement is wanted.
+	 *
+	 * Not blocking the posting is not the same as forgetting: a job without
+	 * one cannot be filed where it can be found, and the report says so.
+	 *
+	 * @return void
+	 */
+	public function test_the_sync_still_wants_a_settlement(): void {
+		$this->assertArrayHasKey( 'city', Kivun_Mercaz_Sync::job_required() );
+	}
+
+	/**
+	 * Whitespace is not a value.
 	 *
 	 * @return void
 	 */
 	public function test_whitespace_does_not_pass_for_a_value(): void {
 		$this->assertNotSame(
 			'',
-			Kivun_Employer::missing_for_broadcast( 'מזכיר/ה', 'תיאור', '   ', 'חלקית' )
+			Kivun_Employer::missing_to_post( 'מזכיר/ה', 'תיאור', '   ' )
 		);
 	}
 
@@ -184,7 +233,7 @@ final class JobVocabularyTest extends TestCase {
 	 * @return void
 	 */
 	public function test_the_old_requirements_still_hold(): void {
-		$message = Kivun_Employer::missing_for_broadcast( '', '', 'ירושלים', 'חלקית' );
+		$message = Kivun_Employer::missing_to_post( '', '', 'חלקית' );
 
 		$this->assertStringContainsString( 'כותרת', $message );
 		$this->assertStringContainsString( 'תיאור', $message );

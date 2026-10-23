@@ -651,6 +651,23 @@ class Kivun_Admin {
 	}
 
 	/**
+	 * Whether the current user may write to a row of this table.
+	 *
+	 * The same test the three write handlers run, in one place, so a control
+	 * is on the screen exactly when using it would work. An agency reads the
+	 * leads its campaigns produced and writes none of them; the handlers
+	 * refuse it either way, and this keeps the screen from offering what the
+	 * refusal is waiting to take back.
+	 *
+	 * @param string $table The CRM table key ('registrations' or 'applications').
+	 * @return bool
+	 */
+	public static function may_write_row( string $table ): bool {
+		return current_user_can( 'edit_posts' )
+			|| ( 'registrations' === $table && Kivun_Content_Creator::can_manage_leads() );
+	}
+
+	/**
 	 * Build an escaped notes textarea for a CRM row.
 	 *
 	 * @param string $table The CRM table key ('registrations' or 'applications').
@@ -659,6 +676,15 @@ class Kivun_Admin {
 	 * @return string
 	 */
 	public static function notes_input( string $table, int $id, string $value ): string {
+		if ( ! self::may_write_row( $table ) ) {
+			// A box that takes typing nobody can save is worse than no box:
+			// the words go in, the row keeps what it had, and the reader has
+			// no way of telling. So the note is shown as what it is — text.
+			return '' !== trim( $value )
+				? '<span class="kivun-notes-read">' . nl2br( esc_html( $value ) ) . '</span>'
+				: '<span class="kivun-muted" aria-hidden="true">—</span>';
+		}
+
 		return sprintf(
 			'<textarea class="kivun-notes-input" data-table="%s" data-id="%d" rows="2" placeholder="%s">%s</textarea>',
 			esc_attr( $table ),
@@ -690,10 +716,10 @@ class Kivun_Admin {
 		// Working a lead means writing down what came of it, the same way
 		// marking its status does — so the leads reader keeps a note. That is
 		// as far as it goes: CV applications belong to the jobs board and stay
-		// behind edit_posts.
-		$may_edit = current_user_can( 'edit_posts' )
-			|| ( 'registrations' === $table && Kivun_Content_Creator::can_manage_leads() );
-		if ( ! $may_edit ) {
+		// behind edit_posts, and an agency reads the table without writing to
+		// it. Asked of the one place the screen asks, so the control is shown
+		// exactly where it would work.
+		if ( ! self::may_write_row( $table ) ) {
 			wp_send_json_error();
 		}
 
@@ -875,6 +901,19 @@ class Kivun_Admin {
 	public static function status_select( string $table, int $id, string $current, array $options ): string {
 		$shown = self::is_shown( $table, $current );
 
+		if ( ! self::may_write_row( $table ) ) {
+			// The same answer the badge gives everyone else, without the
+			// control that cannot be used. A row nobody has reached says
+			// nothing rather than inventing a state for it.
+			return $shown
+				? sprintf(
+					'<span class="kivun-status-badge" data-status="%s">%s</span>',
+					esc_attr( $current ),
+					esc_html( $options[ $current ] ?? $current )
+				)
+				: '<span class="kivun-muted" aria-hidden="true">—</span>';
+		}
+
 		$html = sprintf(
 			'<select class="kivun-status-select" data-table="%s" data-id="%d" aria-label="%s">',
 			esc_attr( $table ),
@@ -944,6 +983,16 @@ class Kivun_Admin {
 	public static function handler_select( int $id, string $current ): string {
 		$current = trim( $current );
 		$roster  = Kivun_Coordinators::all();
+
+		if ( ! self::may_write_row( 'registrations' ) ) {
+			// Who has it, as a name where there is one — the address is the
+			// key the column stores, not what a reader needs to see.
+			if ( '' === $current ) {
+				return '<span class="kivun-muted" aria-hidden="true">—</span>';
+			}
+			$name = (string) ( $roster[ $current ]['name'] ?? '' );
+			return '<span class="kivun-handler-read">' . esc_html( '' !== $name ? $name : $current ) . '</span>';
+		}
 
 		$html = sprintf(
 			'<select class="kivun-handler-select" data-id="%d" aria-label="%s">',
@@ -1033,10 +1082,9 @@ class Kivun_Admin {
 
 		// Working a lead means marking where it got to, so the leads reader can
 		// set a status. That is as far as it goes: CV applications belong to the
-		// jobs board and stay behind edit_posts.
-		$may_edit = current_user_can( 'edit_posts' )
-			|| ( 'registrations' === $table && Kivun_Content_Creator::can_manage_leads() );
-		if ( ! $may_edit ) {
+		// jobs board and stay behind edit_posts, and an agency reads the table
+		// without writing to it.
+		if ( ! self::may_write_row( $table ) ) {
 			wp_send_json_error( array( 'message' => __( 'אין לך הרשאה לעדכן את השורה הזו.', 'kivun' ) ), 403 );
 		}
 
@@ -1111,11 +1159,10 @@ class Kivun_Admin {
 			wp_send_json_error( array( 'message' => __( 'בקשה לא תקינה.', 'kivun' ) ), 400 );
 		}
 
-		// Working a lead means saying who is working it, so whoever can read
-		// the leads can set this — the same reasoning as the status and the
-		// note beside it.
-		$may_edit = current_user_can( 'edit_posts' ) || Kivun_Content_Creator::can_manage_leads();
-		if ( ! $may_edit ) {
+		// Working a lead means saying who is working it, so whoever works the
+		// leads can set this — the same reasoning as the status and the note
+		// beside it, and the same test.
+		if ( ! self::may_write_row( 'registrations' ) ) {
 			wp_send_json_error( array( 'message' => __( 'אין לך הרשאה לעדכן את השורה הזו.', 'kivun' ) ), 403 );
 		}
 

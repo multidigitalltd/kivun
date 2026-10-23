@@ -438,8 +438,8 @@ $kivun_user     = wp_get_current_user();
 					<?php endif; ?>
 
 					<div class="kivun-field">
-						<label for="kivun-f-city"><?php esc_html_e( 'יישוב *', 'kivun' ); ?></label>
-						<input type="text" id="kivun-f-city" name="city" list="kivun-city-list" autocomplete="off" required placeholder="<?php esc_attr_e( 'למשל: ירושלים', 'kivun' ); ?>">
+						<label for="kivun-f-city"><?php esc_html_e( 'יישוב', 'kivun' ); ?></label>
+						<input type="text" id="kivun-f-city" name="city" list="kivun-city-list" autocomplete="off" placeholder="<?php esc_attr_e( 'למשל: ירושלים', 'kivun' ); ?>">
 						<datalist id="kivun-city-list"></datalist>
 						<small class="kivun-hint"><?php esc_html_e( 'היישוב שבו מתבצעת העבודה. משרה ללא יישוב לא תופיע בחיפוש לפי מרחק באתר מרכז כיוון.', 'kivun' ); ?></small>
 					</div>

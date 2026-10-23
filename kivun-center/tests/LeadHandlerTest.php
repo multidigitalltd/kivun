@@ -28,6 +28,10 @@ final class LeadHandlerTest extends TestCase {
 	protected function setUp(): void {
 		Kivun_Test_State::reset();
 		Kivun_Coordinators::forget_current();
+
+		// These hold the control staff are given. Whoever may not write to
+		// the row is shown who has it without it, which has a test of its own.
+		kivun_test_set_caps( array( 'edit_posts' ) );
 		Kivun_Test_State::$options['kivun_settings'] = array(
 			'coordinators_male'   => "יהודה, yehudaf@kivun.test = 1\nroim@kivun.test = 1",
 			'coordinators_female' => "dasi@kivun.test = 1\navigaila@kivun.test = 3",

@@ -1234,6 +1234,18 @@ td.kivun-app-contact a { display: block; }
 .kivun-cc-leadfilters input[type="search"] { min-width: 210px; flex: 1 1 210px; }
 
 
+/* The same cells for a reader who cannot write to them: the words, without
+   the control that would take an edit nowhere. Held to the same width as the
+   inputs they stand in for, so the table does not reflow by who is reading. */
+.kivun-notes-read,
+.kivun-handler-read {
+	display: block;
+	font-size: .82rem;
+	line-height: 1.5;
+	overflow-wrap: anywhere;
+}
+.kivun-cc-leadtable .kivun-notes-read { min-width: 90px; max-width: 16rem; }
+
 .kivun-cc-leadtable .kivun-notes-input {
 	box-sizing: border-box;
 	width: 100%;

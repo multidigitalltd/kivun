@@ -244,30 +244,35 @@ class Kivun_Employer {
 	}
 
 	/**
-	 * What a job is missing before it can be broadcast, as a sentence to show,
-	 * or '' when it has everything.
+	 * What a job cannot be posted without, as a sentence to show, or '' when
+	 * it has everything.
 	 *
 	 * Checked on the server as well as marked in the form: `required` in the
 	 * markup is a convenience for somebody filling the form in, not a rule —
 	 * it is absent from an older cached copy of the page and from anything
-	 * that posts to the endpoint directly. The fields are the ones Mercaz
-	 * Kivun needs to file a job where it can be found; their API accepts a job
-	 * without them and quietly makes it invisible, which is how 23 jobs ended
-	 * up on their board findable by nobody.
+	 * that posts to the endpoint directly.
+	 *
+	 * These three are this board's own: a job with no title, no description
+	 * or no scope is not a posting anybody can read.
+	 *
+	 * The settlement used to be a fourth, added when the centre's API turned
+	 * out to accept a job without one and quietly make it invisible. That cost
+	 * more than it saved: it refused a posting outright over a field this
+	 * board never needed, and the client posts jobs the centre did not write.
+	 * So a job without a settlement is posted and simply not broadcast — the
+	 * field says so, and Kivun_Mercaz_Sync::job_required() still reports it.
 	 *
 	 * @param string $title       The job title.
 	 * @param string $description The description.
-	 * @param string $city        The settlement.
 	 * @param string $scope       The job type.
 	 * @return string
 	 */
-	public static function missing_for_broadcast( string $title, string $description, string $city, string $scope ): string {
+	public static function missing_to_post( string $title, string $description, string $scope ): string {
 		$missing = array();
 
 		foreach ( array(
 			__( 'כותרת', 'kivun' )    => $title,
 			__( 'תיאור', 'kivun' )    => $description,
-			__( 'עיר', 'kivun' )      => $city,
 			__( 'סוג משרה', 'kivun' ) => $scope,
 		) as $label => $value ) {
 			if ( '' === trim( $value ) ) {
@@ -281,7 +286,7 @@ class Kivun_Employer {
 
 		return sprintf(
 			/* translators: %s: comma-separated field names. */
-			__( 'חסרים שדות חובה: %s. בלעדיהם המשרה לא תימצא בחיפוש באתר מרכז כיוון.', 'kivun' ),
+			__( 'חסרים שדות חובה: %s.', 'kivun' ),
 			implode( ', ', $missing )
 		);
 	}
@@ -313,7 +318,7 @@ class Kivun_Employer {
 		$field    = sanitize_text_field( wp_unslash( $_POST['field'] ?? '' ) );
 		$deadline = self::sanitize_deadline( sanitize_text_field( wp_unslash( $_POST['deadline'] ?? '' ) ) );
 
-		$incomplete = self::missing_for_broadcast( $title, $description, $city, $scope );
+		$incomplete = self::missing_to_post( $title, $description, $scope );
 		if ( $incomplete ) {
 			wp_send_json_error( array( 'message' => $incomplete ) );
 		}
@@ -399,9 +404,23 @@ class Kivun_Employer {
 		$region   = sanitize_text_field( wp_unslash( $_POST['region'] ?? '' ) );
 		$field    = sanitize_text_field( wp_unslash( $_POST['field'] ?? '' ) );
 
-		$incomplete = self::missing_for_broadcast( $title, $description, $city, $scope );
+		$incomplete = self::missing_to_post( $title, $description, $scope );
 		if ( $incomplete ) {
 			wp_send_json_error( array( 'message' => $incomplete ) );
+		}
+
+		// A job that is already on the centre's board still needs its
+		// settlement. Posting one without is fine — it simply is not
+		// broadcast — but this job has already gone, and their copy is only
+		// ever updated by a push the missing field stops. Accepting the edit
+		// would leave their board showing the old settlement and the old
+		// details, with nothing here saying so.
+		if ( '' === trim( $city ) && get_post_meta( $job_id, Kivun_Mercaz_Sync::REMOTE_ID, true ) ) {
+			wp_send_json_error(
+				array(
+					'message' => __( 'המשרה כבר משודרת למרכז כיוון, ולכן לא ניתן למחוק ממנה את היישוב — בלעדיו העותק שאצלם יישאר עם היישוב הישן. מלאו יישוב, או הסירו את המשרה.', 'kivun' ),
+				)
+			);
 		}
 
 		$post_update = array(

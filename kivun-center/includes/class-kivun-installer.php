@@ -744,11 +744,16 @@ class Kivun_Installer {
 			)
 		);
 
-		// An outside advertising agency: the numbers its campaigns produced,
-		// and nothing else. It holds no editing capability and not
-		// kivun_view_leads, so every write handler and the leads table
-		// already refuse it without being told about this role — the one
-		// capability it does hold opens the campaigns tab and stops there.
+		// An outside advertising agency: the campaigns it runs, the numbers
+		// they produced, and the enquiries that came of them — to read.
+		//
+		// kivun_read_leads opens the table and nothing else. Deliberately not
+		// kivun_view_leads, which is the capability the status, the note and
+		// the handler are written behind: granting that would have opened all
+		// three the moment it was given, and a role defined by what it cannot
+		// do must not be defined with the capability that does it. It holds no
+		// editing capability either, so every other write handler refuses it
+		// without being told this role exists.
 		remove_role( 'kivun_agency' );
 		add_role(
 			'kivun_agency',
@@ -756,6 +761,7 @@ class Kivun_Installer {
 			array(
 				'read'                 => true,
 				'kivun_view_campaigns' => true,
+				'kivun_read_leads'     => true,
 			)
 		);
 
