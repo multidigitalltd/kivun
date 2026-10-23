@@ -183,6 +183,27 @@ final class JobVocabularyTest extends TestCase {
 	}
 
 	/**
+	 * A job already on their board cannot have its settlement taken away.
+	 *
+	 * Posting one without a settlement is fine — it simply is not broadcast.
+	 * But a job that has already gone is only ever updated by a push, and the
+	 * push stops on the missing field: accepting the edit would leave their
+	 * copy showing the old settlement and the old details, with nothing here
+	 * saying so. Found in review.
+	 *
+	 * @return void
+	 */
+	public function test_a_broadcast_job_keeps_its_settlement(): void {
+		$source = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-employer.php' );
+
+		$this->assertStringContainsString(
+			"if ( '' === trim( \$city ) && get_post_meta( \$job_id, Kivun_Mercaz_Sync::REMOTE_ID, true ) ) {",
+			$source,
+			'a job already on the centre\'s board can have its settlement cleared'
+		);
+	}
+
+	/**
 	 * The sync still knows the settlement is wanted.
 	 *
 	 * Not blocking the posting is not the same as forgetting: a job without

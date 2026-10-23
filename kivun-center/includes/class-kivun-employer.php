@@ -409,6 +409,20 @@ class Kivun_Employer {
 			wp_send_json_error( array( 'message' => $incomplete ) );
 		}
 
+		// A job that is already on the centre's board still needs its
+		// settlement. Posting one without is fine — it simply is not
+		// broadcast — but this job has already gone, and their copy is only
+		// ever updated by a push the missing field stops. Accepting the edit
+		// would leave their board showing the old settlement and the old
+		// details, with nothing here saying so.
+		if ( '' === trim( $city ) && get_post_meta( $job_id, Kivun_Mercaz_Sync::REMOTE_ID, true ) ) {
+			wp_send_json_error(
+				array(
+					'message' => __( 'המשרה כבר משודרת למרכז כיוון, ולכן לא ניתן למחוק ממנה את היישוב — בלעדיו העותק שאצלם יישאר עם היישוב הישן. מלאו יישוב, או הסירו את המשרה.', 'kivun' ),
+				)
+			);
+		}
+
 		$post_update = array(
 			'ID'         => $job_id,
 			'post_title' => $title,
