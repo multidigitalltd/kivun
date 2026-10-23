@@ -270,6 +270,31 @@ final class AgencyLeadsReadTest extends TestCase {
 	}
 
 	/**
+	 * The headline strip shows one lead figure, and it is the agency's own.
+	 *
+	 * Opening the leads tab turned on the shared pair beside it — the site's
+	 * total enquiries and the ones nobody has reached, both counted across
+	 * the whole table. Beside "פניות מהקמפיינים" that is somebody else's
+	 * number and a second, larger answer to the question the first one just
+	 * answered. Found in review.
+	 *
+	 * @return void
+	 */
+	public function test_the_shared_lead_figures_are_not_shown_to_an_agency(): void {
+		$source = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-content-creator.php' );
+
+		$at = (int) strpos( $source, "number_format_i18n( \$stats['leads'] )" );
+		$this->assertNotFalse( $at, 'the shared leads figure moved' );
+
+		$before = substr( $source, max( 0, $at - 800 ), min( 800, $at ) );
+		$this->assertStringContainsString(
+			'if ( $show_leads && ! $agency ) :',
+			$before,
+			'an agency is shown the whole site\'s enquiry count beside its own'
+		);
+	}
+
+	/**
 	 * The export is not offered to whoever it refuses.
 	 *
 	 * Kivun_Export turns an agency down, so every press ended at

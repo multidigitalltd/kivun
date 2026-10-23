@@ -2179,8 +2179,13 @@ class Kivun_Content_Creator {
 		self::remember_console_url( $page_url );
 
 		$can_delete = current_user_can( 'delete_posts' );
-		$stats      = self::console_stats( $show_leads, $show_jobs, ! $leads_only && ! $agency );
-		$user       = wp_get_current_user();
+		// An agency counts no leads here: these tallies read the whole table,
+		// and the figure it is owed — what its own campaigns produced — is
+		// worked out from the campaigns instead. Asked for nothing rather than
+		// asked for and then withheld, so the number cannot reappear on a
+		// screen by somebody printing a value that was lying around.
+		$stats = self::console_stats( $show_leads && ! $agency, $show_jobs, ! $leads_only && ! $agency );
+		$user  = wp_get_current_user();
 
 		$console_tabs = ( $leads_only || $agency ) ? array() : array(
 			'form'    => array(
@@ -2291,7 +2296,15 @@ class Kivun_Content_Creator {
 						<span class="kivun-cc-stat__label"><?php esc_html_e( 'ממתינים לפרסום', 'kivun' ); ?></span>
 					</div>
 				<?php endif; ?>
-				<?php if ( $show_leads ) : ?>
+				<?php
+				// Not for an agency, which has its own figure a few lines
+				// above. These two count the whole table — the site's total
+				// enquiries and the ones nobody has reached — so beside
+				// "פניות מהקמפיינים" they are both somebody else's number and
+				// a second, larger answer to the question the first one just
+				// answered.
+				if ( $show_leads && ! $agency ) :
+					?>
 					<div class="kivun-cc-stat">
 						<span class="kivun-cc-stat__num"><?php echo esc_html( number_format_i18n( $stats['leads'] ) ); ?></span>
 						<span class="kivun-cc-stat__label"><?php esc_html_e( 'פניות', 'kivun' ); ?></span>
