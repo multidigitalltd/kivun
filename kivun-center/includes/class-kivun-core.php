@@ -79,6 +79,8 @@ class Kivun_Core {
 		// prevent_caching() for why this is not optional.
 		add_action( 'template_redirect', array( __CLASS__, 'prevent_caching' ), 0 );
 
+		add_filter( 'show_admin_bar', array( __CLASS__, 'admin_bar_for_admins_only' ) );
+
 		add_filter( 'body_class', array( __CLASS__, 'body_classes' ) );
 		add_action( 'wp_enqueue_scripts', array( __CLASS__, 'enqueue_frontend' ) );
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_admin' ) );
@@ -256,6 +258,45 @@ class Kivun_Core {
 		$uris[] = is_string( $path ) ? $path : '';
 
 		return array_values( array_filter( $uris ) );
+	}
+
+	/**
+	 * Keep WordPress's toolbar for administrators, and hide it from everyone
+	 * else.
+	 *
+	 * The black bar across the top is WordPress's own furniture: it says
+	 * "WordPress", it links into wp-admin, and most of what it offers is
+	 * refused to the roles this plugin adds. A publisher, a leads reader, an
+	 * agency and an employer all work from a screen of their own, and a strip
+	 * of somebody else's navigation above it is at best noise and at worst an
+	 * invitation to a page that will turn them away.
+	 *
+	 * An administrator keeps whatever they chose for themselves in their
+	 * profile, which is what $show already carries.
+	 *
+	 * Worth knowing: the toolbar is also where WordPress puts the log-out
+	 * link. Every screen this plugin hands a non-administrator carries its
+	 * own — the console and the employer dashboard both do — so nobody who
+	 * works here loses the way out. Somebody logged in with no role to speak
+	 * of, reading an ordinary page, no longer has one.
+	 *
+	 * @param bool $show Whether WordPress intends to show it.
+	 * @return bool
+	 */
+	public static function admin_bar_for_admins_only( $show ): bool {
+		if ( current_user_can( 'manage_options' ) ) {
+			return (bool) $show;
+		}
+
+		/**
+		 * Whether a non-administrator sees WordPress's toolbar after all.
+		 *
+		 * The escape hatch for a site that wants it back for somebody,
+		 * without editing the plugin.
+		 *
+		 * @param bool $show Whether to show it. Default false.
+		 */
+		return (bool) apply_filters( 'kivun_show_admin_bar', false );
 	}
 
 	/**
