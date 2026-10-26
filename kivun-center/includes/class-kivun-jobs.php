@@ -287,7 +287,15 @@ class Kivun_Jobs {
 			update_post_meta( $job_id, self::FILLED_META, current_time( 'mysql' ) );
 		}
 
-		wp_safe_redirect( wp_get_referer() ? wp_get_referer() : admin_url( 'edit.php?post_type=kivun_job' ) );
+		// Back to the row, not to the top of the page. This is a link rather
+		// than a background save, so the browser makes a fresh navigation and
+		// starts at the top — and the board manager, who marks jobs filled
+		// one after another, was scrolling back down to find their place
+		// every single time.
+		$back = wp_get_referer() ? wp_get_referer() : admin_url( 'edit.php?post_type=kivun_job' );
+		$back = strtok( $back, '#' ) . '#kivun-job-' . $job_id;
+
+		wp_safe_redirect( $back );
 		exit;
 	}
 

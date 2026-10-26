@@ -523,6 +523,12 @@ $kivun_user     = wp_get_current_user();
 					$kivun_expired  = (bool) get_post_meta( $job->ID, '_kivun_expired', true );
 					?>
 					<tr
+						<?php
+						// Where marking a job filled comes back to: that action
+						// is a link to admin-post.php, and a redirect lands at
+						// the top of the page unless it is told otherwise.
+						?>
+						id="kivun-job-<?php echo esc_attr( $job->ID ); ?>"
 						data-job-row="<?php echo esc_attr( $job->ID ); ?>"
 						data-employer="<?php echo esc_attr( $job->post_author ); ?>"
 						data-coordinator="<?php echo esc_attr( get_post_meta( $job->ID, '_kivun_coordinator', true ) ); ?>"
