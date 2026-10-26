@@ -833,12 +833,17 @@ class Kivun_Phones {
 		self::guard();
 		// phpcs:disable WordPress.Security.NonceVerification.Missing -- self::guard() verifies the nonce.
 
-		$number_id   = absint( wp_unslash( $_POST['number_id'] ?? 0 ) );
-		$campaign_id = absint( wp_unslash( $_POST['campaign_id'] ?? 0 ) );
-		$media       = trim( preg_replace( '/\s+/u', ' ', sanitize_text_field( wp_unslash( $_POST['media'] ?? '' ) ) ) ?? '' );
-		$label       = sanitize_text_field( wp_unslash( $_POST['label'] ?? '' ) );
-		$starts      = self::as_date( sanitize_text_field( wp_unslash( $_POST['starts_on'] ?? '' ) ) );
-		$ends        = self::as_date( sanitize_text_field( wp_unslash( $_POST['ends_on'] ?? '' ) ) );
+		// An id means an existing period is being corrected rather than a new
+		// one opened. A number's dates are guessed from a media plan and get
+		// changed once the real run is known, and until now the only way to
+		// change them was to delete the period and lose its calls with it.
+		$assignment_id = absint( wp_unslash( $_POST['id'] ?? 0 ) );
+		$number_id     = absint( wp_unslash( $_POST['number_id'] ?? 0 ) );
+		$campaign_id   = absint( wp_unslash( $_POST['campaign_id'] ?? 0 ) );
+		$media         = trim( preg_replace( '/\s+/u', ' ', sanitize_text_field( wp_unslash( $_POST['media'] ?? '' ) ) ) ?? '' );
+		$label         = sanitize_text_field( wp_unslash( $_POST['label'] ?? '' ) );
+		$starts        = self::as_date( sanitize_text_field( wp_unslash( $_POST['starts_on'] ?? '' ) ) );
+		$ends          = self::as_date( sanitize_text_field( wp_unslash( $_POST['ends_on'] ?? '' ) ) );
 		// phpcs:enable WordPress.Security.NonceVerification.Missing
 
 		if ( ! $number_id || '' === $starts ) {
@@ -856,15 +861,20 @@ class Kivun_Phones {
 		// Two live assignments on one number would make a call ambiguous, and
 		// the report would have to pick one arbitrarily. Refuse instead.
 		$clash_end = '' !== $ends ? $ends : '9999-12-31';
+		// The row being edited is not something for it to overlap with: every
+		// period overlaps itself, so without this exclusion no edit could ever
+		// be saved.
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$clash = $wpdb->get_var(
 			$wpdb->prepare(
 				"SELECT id FROM {$wpdb->prefix}kivun_phone_assignments
 				 WHERE number_id = %d
+				   AND id <> %d
 				   AND starts_on <= %s
 				   AND COALESCE( ends_on, '9999-12-31' ) >= %s
 				 LIMIT 1",
 				$number_id,
+				$assignment_id,
 				$clash_end,
 				$starts
 			)
@@ -877,25 +887,65 @@ class Kivun_Phones {
 			);
 		}
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$wpdb->insert(
-			$wpdb->prefix . 'kivun_phone_assignments',
-			array(
-				'number_id'   => $number_id,
-				'campaign_id' => $campaign_id,
-				'media'       => $media,
-				'label'       => $label,
-				'starts_on'   => $starts,
-				'ends_on'     => '' !== $ends ? $ends : null,
-				'created_by'  => get_current_user_id(),
-			),
-			array( '%d', '%d', '%s', '%s', '%s', '%s', '%d' )
+		$row = array(
+			'number_id'   => $number_id,
+			'campaign_id' => $campaign_id,
+			'media'       => $media,
+			'label'       => $label,
+			'starts_on'   => $starts,
+			'ends_on'     => '' !== $ends ? $ends : null,
 		);
+		$fmt = array( '%d', '%d', '%s', '%s', '%s', '%s' );
 
-		$assignment_id = (int) $wpdb->insert_id;
+		if ( $assignment_id ) {
+			// Only on this number: an id from elsewhere must not be able to
+			// move somebody else's period onto it.
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$updated = $wpdb->update(
+				$wpdb->prefix . 'kivun_phone_assignments',
+				$row,
+				array(
+					'id'        => $assignment_id,
+					'number_id' => $number_id,
+				),
+				$fmt,
+				array( '%d', '%d' )
+			);
+
+			if ( false === $updated ) {
+				wp_send_json_error( array( 'message' => __( 'עדכון השיוך נכשל.', 'kivun' ) ) );
+			}
+
+			// The period moved, so the calls credited to it have to move with
+			// it. A call that is no longer inside the dates goes back to being
+			// unattributed rather than staying on a period that no longer
+			// covers it — a report that counts a call against a week it did
+			// not happen in is worse than one that counts it against nobody.
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$wpdb->query(
+				$wpdb->prepare(
+					"UPDATE {$wpdb->prefix}kivun_calls
+					 SET assignment_id = 0
+					 WHERE assignment_id = %d
+					   AND ( DATE( started_at ) < %s OR DATE( started_at ) > %s )",
+					$assignment_id,
+					$starts,
+					'' !== $ends ? $ends : '9999-12-31'
+				)
+			);
+		} else {
+			$row['created_by'] = get_current_user_id();
+			$fmt[]             = '%d';
+
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$wpdb->insert( $wpdb->prefix . 'kivun_phone_assignments', $row, $fmt );
+			$assignment_id = (int) $wpdb->insert_id;
+		}
 
 		// Calls already recorded in this period arrived before anyone said what
-		// the number was for. Now that it is known, credit them.
+		// the number was for. Now that it is known, credit them. Runs for an
+		// edit too: widening the dates picks up the calls the old period left
+		// out.
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$wpdb->query(
 			$wpdb->prepare(

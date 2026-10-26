@@ -1302,6 +1302,10 @@
 		kivunPhonePost(asForm, {
 			action: 'kivun_save_phone_assignment',
 			nonce: kivun.nonce,
+			// Present on an edit form only. The handler reads it as "correct
+			// this period" rather than "open a new one"; absent, it inserts
+			// exactly as before.
+			id: asForm.dataset.id || 0,
 			number_id: asForm.dataset.number,
 			campaign_id: campaign ? campaign.value : 0,
 			media: media.value,
@@ -1309,6 +1313,24 @@
 			starts_on: start.value,
 			ends_on: end ? end.value : ''
 		}, aErr);
+	});
+
+	// Open the row's edit panel. Same shape as the campaign and link editors:
+	// the fields sit in a hidden row under the one they belong to, already
+	// filled, so nothing has to be fetched to start editing.
+	document.addEventListener('click', function (e) {
+		var editAs = e.target.closest('.kivun-edit-assignment');
+		if (!editAs) { return; }
+		e.preventDefault();
+
+		var panel = document.querySelector('[data-assignment-edit="' + editAs.dataset.id + '"]');
+		if (!panel) { return; }
+
+		panel.hidden = !panel.hidden;
+		if (!panel.hidden) {
+			var first = panel.querySelector('.kivun-as-start');
+			if (first) { first.focus(); }
+		}
 	});
 
 	document.addEventListener('click', function (e) {
