@@ -1353,11 +1353,15 @@
 			id: del.dataset.id
 		})).then(function (res) {
 			if (res.success) {
+				// A period is two rows: the one you see and the editor folded
+				// under it. Taking only the first away leaves a form that can
+				// still be submitted for a period that no longer exists.
 				var sel = isNumber
 					? '[data-phone-row="' + del.dataset.id + '"]'
-					: '[data-assignment-row="' + del.dataset.id + '"]';
-				var row = document.querySelector(sel);
-				if (row) { row.parentNode.removeChild(row); }
+					: '[data-assignment-row="' + del.dataset.id + '"], [data-assignment-edit="' + del.dataset.id + '"]';
+				Array.prototype.forEach.call(document.querySelectorAll(sel), function (row) {
+					row.parentNode.removeChild(row);
+				});
 			} else {
 				del.disabled = false;
 			}

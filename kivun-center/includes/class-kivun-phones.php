@@ -898,8 +898,24 @@ class Kivun_Phones {
 		$fmt = array( '%d', '%d', '%s', '%s', '%s', '%s' );
 
 		if ( $assignment_id ) {
-			// Only on this number: an id from elsewhere must not be able to
-			// move somebody else's period onto it.
+			// Asked for before anything is written, because $wpdb->update()
+			// answers 0 both for "no such row" and for "the values were
+			// already these" — so its result cannot tell a real edit from an
+			// id that belongs to another number or to a period somebody has
+			// since deleted. Both are reachable: the delete leaves nothing on
+			// screen, but a form already open in another tab still posts.
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$owned = (int) $wpdb->get_var(
+				$wpdb->prepare(
+					"SELECT id FROM {$wpdb->prefix}kivun_phone_assignments WHERE id = %d AND number_id = %d",
+					$assignment_id,
+					$number_id
+				)
+			);
+			if ( ! $owned ) {
+				wp_send_json_error( array( 'message' => __( 'השיוך לא נמצא — ייתכן שנמחק. רעננו את הדף.', 'kivun' ) ) );
+			}
+
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$updated = $wpdb->update(
 				$wpdb->prefix . 'kivun_phone_assignments',
@@ -927,8 +943,10 @@ class Kivun_Phones {
 					"UPDATE {$wpdb->prefix}kivun_calls
 					 SET assignment_id = 0
 					 WHERE assignment_id = %d
+					   AND number_id = %d
 					   AND ( DATE( started_at ) < %s OR DATE( started_at ) > %s )",
 					$assignment_id,
+					$number_id,
 					$starts,
 					'' !== $ends ? $ends : '9999-12-31'
 				)

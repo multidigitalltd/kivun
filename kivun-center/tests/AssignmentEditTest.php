@@ -111,11 +111,91 @@ final class AssignmentEditTest extends TestCase {
 	public function test_the_update_is_scoped_to_this_number(): void {
 		$body = $this->handler();
 
-		$at = (int) strpos( $body, '$wpdb->update(' );
-		$this->assertNotFalse( $at );
+		// Anchored on the table, not on the first "$wpdb->update(" in the
+		// file — that string also appears in the prose above the call.
+		$at = (int) strpos( $body, "\$wpdb->prefix . 'kivun_phone_assignments',\n\t\t\t\t\$row," );
+		$this->assertNotFalse( $at, 'the update call moved' );
 
 		$call = substr( $body, $at, 420 );
 		$this->assertStringContainsString( "'number_id' => \$number_id,", $call, 'the update is not scoped to the number it came from' );
+	}
+
+	/**
+	 * A period that is not this number's is refused before anything is written.
+	 *
+	 * $wpdb->update() answers 0 both for "no such row" and for "the values
+	 * were already these", so its result cannot tell a real edit from an id
+	 * belonging to another number or to a period somebody has since deleted.
+	 * Without the lookup, such an id reached the call queries. Found in
+	 * review.
+	 *
+	 * @return void
+	 */
+	public function test_a_period_that_is_not_this_number_s_is_refused(): void {
+		$body = $this->handler();
+
+		$lookup = (int) strpos( $body, 'SELECT id FROM {$wpdb->prefix}kivun_phone_assignments WHERE id = %d AND number_id = %d' );
+		$this->assertNotFalse( $lookup, 'nothing checks the period belongs to this number' );
+
+		$write = (int) strpos( $body, "\$wpdb->prefix . 'kivun_phone_assignments',\n\t\t\t\t\$row," );
+		$this->assertGreaterThan( $lookup, $write, 'the row is written before anyone asks whether it exists' );
+	}
+
+	/**
+	 * And the release cannot reach another number's calls.
+	 *
+	 * @return void
+	 */
+	public function test_the_release_is_scoped_to_this_number(): void {
+		$body = $this->handler();
+
+		$at = (int) strpos( $body, 'SET assignment_id = 0' );
+		$this->assertNotFalse( $at );
+
+		$query = substr( $body, $at, 320 );
+		$this->assertStringContainsString( 'number_id = %d', $query, 'a stray id could release another number\'s calls' );
+	}
+
+	/**
+	 * Deleting a period takes its editor with it.
+	 *
+	 * The editor is a second row, folded under the one on screen. Removing
+	 * only the first leaves a form that still posts, for a period that no
+	 * longer exists. Found in review.
+	 *
+	 * @return void
+	 */
+	public function test_deleting_a_period_removes_its_editor(): void {
+		$js = (string) file_get_contents( KIVUN_DIR . 'assets/js/frontend.js' );
+
+		$this->assertStringContainsString(
+			"'[data-assignment-row=\"' + del.dataset.id + '\"], [data-assignment-edit=\"' + del.dataset.id + '\"]'",
+			$js,
+			'the editor survives its period being deleted'
+		);
+		$this->assertStringContainsString(
+			'document.querySelectorAll(sel)',
+			$js,
+			'only the first of the two rows is removed'
+		);
+	}
+
+	/**
+	 * A hidden editor stays hidden when the table stacks.
+	 *
+	 * Below 782px, and whenever the script stacks a table, every row becomes
+	 * a block — and an author rule for `tr` beats the browser's own
+	 * `[hidden] { display: none }`. Without this every editor stood open on a
+	 * phone and the button meant to open one could not close it. Found in
+	 * review.
+	 *
+	 * @return void
+	 */
+	public function test_a_hidden_row_stays_hidden_when_the_table_stacks(): void {
+		$css = (string) file_get_contents( KIVUN_DIR . 'assets/css/frontend.css' );
+
+		$this->assertStringContainsString( '.kivun-cc-table.is-stacked tr[hidden] { display: none; }', $css );
+		$this->assertStringContainsString( '.kivun-cc-tablewrap > .kivun-cc-table > tbody > tr[hidden] { display: none; }', $css );
 	}
 
 	/**
