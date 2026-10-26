@@ -2394,12 +2394,20 @@ body.kivun-ty-open { overflow: hidden; }
 /* Nothing to scroll once the table is a stack. */
 .kivun-cc-tablewrap:has(> .kivun-cc-table.is-stacked) { overflow-x: visible; }
 
+/* Stacking turns every row into a block, and an author rule for `tr` beats
+   the browser's own `[hidden] { display: none }`. Without this the row-level
+   editors — which ship hidden — all stand open on a phone, and the button
+   meant to open one cannot close it. Specific enough to win against both the
+   stacked rule above and the narrow-screen one below. */
+.kivun-cc-table.is-stacked tr[hidden] { display: none; }
+
 @media (max-width: 782px) {
 	.kivun-cc-tablewrap > .kivun-cc-table { display: block; }
 	.kivun-cc-tablewrap > .kivun-cc-table > tbody,
 	.kivun-cc-tablewrap > .kivun-cc-table > tbody > tr,
 	.kivun-cc-tablewrap > .kivun-cc-table > tbody > tr > td { display: block; width: auto; }
 	.kivun-cc-tablewrap > .kivun-cc-table > thead { display: none; }
+	.kivun-cc-tablewrap > .kivun-cc-table > tbody > tr[hidden] { display: none; }
 }
 
 /* Front-end content creator — delete / danger controls. */

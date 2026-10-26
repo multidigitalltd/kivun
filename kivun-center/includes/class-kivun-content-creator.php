@@ -4078,6 +4078,22 @@ class Kivun_Content_Creator {
 												<td><?php echo esc_html( number_format_i18n( $stat['answered'] ) ); ?></td>
 											<?php endif; ?>
 											<td>
+												<?php
+												// A period's dates are set from a media plan
+												// and change once the real run is known.
+												// Without this the only way to correct them
+												// was to delete the period, which takes its
+												// calls with it.
+												?>
+												<button
+													type="button"
+													class="kivun-cc-iconbtn kivun-edit-assignment"
+													data-id="<?php echo esc_attr( $row->id ); ?>"
+													title="<?php esc_attr_e( 'עריכת השיוך', 'kivun' ); ?>"
+												>
+													<?php echo kivun_icon( 'edit' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?>
+													<span class="kivun-sr-only"><?php esc_html_e( 'עריכת השיוך', 'kivun' ); ?></span>
+												</button>
 												<button
 													type="button"
 													class="kivun-cc-iconbtn kivun-cc-iconbtn--danger kivun-delete-assignment"
@@ -4087,6 +4103,49 @@ class Kivun_Content_Creator {
 													<?php echo kivun_icon( 'trash' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?>
 													<span class="kivun-sr-only"><?php esc_html_e( 'מחיקת השיוך', 'kivun' ); ?></span>
 												</button>
+											</td>
+										</tr>
+										<tr class="kivun-assignment-editrow" data-assignment-edit="<?php echo esc_attr( $row->id ); ?>" hidden>
+											<td colspan="<?php echo esc_attr( $report['knows'] ? '6' : '5' ); ?>">
+												<form class="kivun-assignment-form kivun-assignment-edit" data-number="<?php echo esc_attr( $num->id ); ?>" data-id="<?php echo esc_attr( $row->id ); ?>">
+													<div class="kivun-form-grid">
+														<div class="kivun-form-row">
+															<label><?php esc_html_e( 'מדיה *', 'kivun' ); ?></label>
+															<input type="text" class="kivun-cc-input kivun-as-media" list="kivun-media-list" autocomplete="off" value="<?php echo esc_attr( (string) $row->media ); ?>">
+														</div>
+														<div class="kivun-form-row">
+															<label><?php esc_html_e( 'קמפיין', 'kivun' ); ?></label>
+															<select class="kivun-cc-input kivun-as-campaign">
+																<option value="0"><?php esc_html_e( '— ללא —', 'kivun' ); ?></option>
+																<?php foreach ( $campaigns as $kivun_ec ) : ?>
+																	<option value="<?php echo esc_attr( $kivun_ec->id ); ?>" <?php selected( (int) $row->campaign_id, (int) $kivun_ec->id ); ?>><?php echo esc_html( $kivun_ec->label ); ?></option>
+																<?php endforeach; ?>
+															</select>
+														</div>
+														<div class="kivun-form-row">
+															<label><?php esc_html_e( 'פירוט הפרסום', 'kivun' ); ?></label>
+															<input type="text" class="kivun-cc-input kivun-as-label" value="<?php echo esc_attr( (string) $row->label ); ?>">
+														</div>
+														<div class="kivun-form-row">
+															<label><?php esc_html_e( 'מתאריך *', 'kivun' ); ?></label>
+															<input type="date" class="kivun-cc-input kivun-as-start" dir="ltr" value="<?php echo esc_attr( (string) $row->starts_on ); ?>">
+														</div>
+														<div class="kivun-form-row">
+															<label><?php esc_html_e( 'עד תאריך', 'kivun' ); ?></label>
+															<input type="date" class="kivun-cc-input kivun-as-end" dir="ltr" value="<?php echo esc_attr( (string) ( $row->ends_on ?? '' ) ); ?>">
+															<p class="kivun-field-hint"><?php esc_html_e( 'ריק = ממשיך עד שיוגדר שיוך חדש.', 'kivun' ); ?></p>
+														</div>
+													</div>
+													<?php
+													// Said plainly, because it is the part nobody
+													// expects: the calls follow the dates.
+													?>
+													<p class="kivun-field-hint"><?php esc_html_e( 'שינוי התאריכים מזיז גם את השיחות: שיחה שיצאה מהתקופה חוזרת להיות לא משויכת, ושיחה שנכנסה אליה תיזקף לשיוך הזה.', 'kivun' ); ?></p>
+													<p class="kivun-error kivun-phone-error" style="display:none;color:var(--kivun-error)"></p>
+													<div class="kivun-form-actions">
+														<button type="submit" class="kivun-cc-btn kivun-cc-btn--sm"><?php esc_html_e( 'עדכון השיוך', 'kivun' ); ?></button>
+													</div>
+												</form>
 											</td>
 										</tr>
 									<?php endforeach; ?>
