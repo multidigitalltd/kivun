@@ -744,6 +744,11 @@
 .kivun-new-job-form h3 { margin: 0 0 1.4rem; font-size: 1.2rem; font-weight: 700; color: var(--kc-dark); }
 
 /* Jobs table — same card treatment as the applications table */
+/* A row the browser has just jumped to sits clear of the top of the window
+   rather than flush against it, so the header above it is still readable and
+   the row does not look like the first one in the table. */
+.kivun-jobs-table tr[id] { scroll-margin-top: 5rem; }
+
 .kivun-jobs-table-wrap {
 	overflow-x: auto;
 	background: #fff;

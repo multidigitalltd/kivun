@@ -2092,7 +2092,11 @@
 		);
 	}
 
-	function activateTab(tab, focusIt) {
+	// keepUrl: the URL already names this tab, so leave it alone. Restoring
+	// from ?kivun_tab= must not run the parameter-stripping below — it would
+	// drop kivun_as and the rest from the address of a page already rendered
+	// with them, and the next reload would land somewhere else entirely.
+	function activateTab(tab, focusIt, keepUrl) {
 		if (!tab) { return; }
 		var dash = tabScope(tab);
 		if (!dash) { return; }
@@ -2116,7 +2120,7 @@
 		// Keep the console tab in the URL. Server-side links already use
 		// ?kivun_tab=..., so without this a reload (or anything that reloads on
 		// your behalf) silently throws you back to the default tab.
-		if (dash.classList.contains('kivun-cc-console') && window.history && history.replaceState) {
+		if (!keepUrl && dash.classList.contains('kivun-cc-console') && window.history && history.replaceState) {
 			try {
 				var url = new URL(window.location.href);
 
@@ -2143,6 +2147,50 @@
 		var tab = e.target.closest('.kivun-tab');
 		if (tab) { activateTab(tab, false); }
 	});
+
+	// Come back to the tab the address names.
+	//
+	// activateTab() writes ?kivun_tab= on every switch, and nothing read it
+	// back — so every reload threw you onto the default tab. Marking a
+	// publisher disabled from the publishers tab reloads the page and lands
+	// on the jobs list, at roughly the scroll offset you were at but in a
+	// different table, which reads as the page having jumped.
+	//
+	// Runs before the fragment below, so a row inside a panel that was
+	// hidden at parse time is on screen by the time we scroll to it.
+	(function () {
+		var dash = document.querySelector('.kivun-employer-dashboard, .kivun-cc-console');
+		if (!dash) { return; }
+
+		var name;
+		try { name = new URL(window.location.href).searchParams.get('kivun_tab'); } catch (err) { return; }
+		if (!name) { return; }
+
+		var tab = dash.querySelector('.kivun-tab[data-tab="' + name + '"]');
+		// Already active means the server rendered it, which the content
+		// console does; there is nothing to switch and nothing to restore.
+		if (tab && !tab.classList.contains('is-active')) { activateTab(tab, false, true); }
+	}());
+
+	// And to the row the address names.
+	//
+	// Marking a job filled is a link to admin-post.php, which does the work
+	// and redirects back. That is a fresh navigation, so the browser starts
+	// at the top however far down the row was — the one case a reload does
+	// not already handle. The redirect now carries #kivun-job-<id>, and the
+	// browser's own jump to it has usually already happened by here; this
+	// repeats it for the case where the panel holding the row was hidden
+	// when the page was parsed.
+	(function () {
+		if (!window.location.hash) { return; }
+
+		var target;
+		try { target = document.querySelector(window.location.hash); } catch (err) { return; }
+		if (!target || !target.scrollIntoView) { return; }
+
+		// After the tab switch above has laid the panel out.
+		requestAnimationFrame(function () { target.scrollIntoView({ block: 'center' }); });
+	}());
 
 	// A reload that was asked to land on a specific console tab (see the
 	// campaign save) restores it here, in case the query arg did not survive.
