@@ -520,12 +520,24 @@ class Kivun_Export {
 			return array();
 		}
 
-		$out = array();
+		// A form may legitimately ask two questions with the same wording —
+		// "פרטים נוספים" twice, or a duplicated question nobody renamed. They
+		// are separate questions with separate answers, and keying the
+		// columns by the label alone kept only the last of them: the
+		// spreadsheet showed one answer where the lead gave two, silently.
+		// Numbered from the second, so an ordinary form is untouched.
+		$out  = array();
+		$seen = array();
 		foreach ( $decoded as $answer ) {
 			if ( ! is_array( $answer ) || ! isset( $answer['label'] ) ) {
 				continue;
 			}
-			$out[ (string) $answer['label'] ] = (string) ( $answer['value'] ?? '' );
+
+			$label          = (string) $answer['label'];
+			$seen[ $label ] = ( $seen[ $label ] ?? 0 ) + 1;
+			$heading        = $seen[ $label ] > 1 ? $label . ' (' . $seen[ $label ] . ')' : $label;
+
+			$out[ $heading ] = (string) ( $answer['value'] ?? '' );
 		}
 		return $out;
 	}

@@ -88,6 +88,44 @@ final class CustomFormWiringTest extends TestCase {
 	}
 
 	/**
+	 * Two questions worded alike keep two answers.
+	 *
+	 * A form may ask "פרטים נוספים" twice, or carry a duplicated question
+	 * nobody renamed. They are separate questions with separate answers, and
+	 * keying the columns by the label alone kept only the last — the
+	 * spreadsheet showed one answer where the lead gave two, silently. Found
+	 * in review.
+	 *
+	 * @return void
+	 */
+	public function test_two_questions_worded_alike_keep_both_answers(): void {
+		$stored = (string) wp_json_encode(
+			array(
+				array( 'label' => 'פרטים נוספים', 'value' => 'ראשונה' ),
+				array( 'label' => 'פרטים נוספים', 'value' => 'שנייה' ),
+			)
+		);
+
+		$columns = $this->export( 'question_columns', array( array( array( 'answers' => $stored ) ) ) );
+		$this->assertSame( array( 'פרטים נוספים', 'פרטים נוספים (2)' ), $columns );
+		$this->assertSame( array( 'ראשונה', 'שנייה' ), $this->export( 'answer_cells', array( $stored, $columns ) ) );
+	}
+
+	/**
+	 * And an ordinary form gains no numbering it did not ask for.
+	 *
+	 * @return void
+	 */
+	public function test_an_ordinary_form_is_not_numbered(): void {
+		$columns = $this->export(
+			'question_columns',
+			array( array( array( 'answers' => $this->stored( array( 'מסלול' => 'חשמל', 'ניסיון' => 'ללא' ) ) ) ) )
+		);
+
+		$this->assertSame( array( 'מסלול', 'ניסיון' ), $columns );
+	}
+
+	/**
 	 * A row that never answered a question leaves that cell empty, in the
 	 * right place.
 	 *
