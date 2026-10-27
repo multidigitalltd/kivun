@@ -337,7 +337,13 @@ class Kivun_Export {
 		$question_columns = self::question_columns( $rows );
 		$headings         = array_merge( $headings, $question_columns );
 
-		fputcsv( $out, $headings );
+		// Through csv_safe() like every data cell. Until now a heading was
+		// always a word of ours; a question's heading is whatever the client
+		// typed into the builder, and one beginning = + - or @ is a formula
+		// as far as a spreadsheet is concerned. The raw labels are kept in
+		// $question_columns, because that is what the answers are looked up
+		// by.
+		fputcsv( $out, array_map( array( __CLASS__, 'csv_safe' ), $headings ) );
 
 		$type_labels = array(
 			'registration' => 'הרשמה',

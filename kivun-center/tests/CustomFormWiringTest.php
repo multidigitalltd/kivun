@@ -131,6 +131,51 @@ final class CustomFormWiringTest extends TestCase {
 	}
 
 	/**
+	 * A question's heading cannot carry a formula into a spreadsheet.
+	 *
+	 * Headings were always words of ours until one of them became whatever
+	 * the client typed into the builder. A label beginning = + - or @ is a
+	 * formula as far as Excel is concerned, and sanitize_text_field() does
+	 * not touch it. Found in review.
+	 *
+	 * @return void
+	 */
+	public function test_a_question_heading_cannot_become_a_formula(): void {
+		$safe = new ReflectionMethod( Kivun_Export::class, 'csv_safe' );
+		$safe->setAccessible( true );
+
+		foreach ( array( '=1+1', '+SUM(A1)', '-2', '@cmd' ) as $nasty ) {
+			$this->assertNotSame( $nasty, $safe->invoke( null, $nasty ), $nasty . ' goes into the sheet as written' );
+		}
+
+		$src = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-export.php' );
+		$at  = (int) strpos( $src, '$question_columns = self::question_columns( $rows );' );
+		$this->assertNotFalse( $at, 'the question columns moved' );
+
+		$this->assertStringContainsString(
+			"fputcsv( \$out, array_map( array( __CLASS__, 'csv_safe' ), \$headings ) );",
+			substr( $src, $at, 900 ),
+			'the heading row is written without escaping'
+		);
+	}
+
+	/**
+	 * And the lookup still uses the label as the client wrote it.
+	 *
+	 * Escaping the heading must not change what the answers are matched by,
+	 * or every cell under an escaped heading would come out empty.
+	 *
+	 * @return void
+	 */
+	public function test_escaping_a_heading_does_not_break_its_column(): void {
+		$rows = array( array( 'answers' => $this->stored( array( '=1+1' => 'כן' ) ) ) );
+
+		$columns = $this->export( 'question_columns', array( $rows ) );
+		$this->assertSame( array( '=1+1' ), $columns, 'the lookup label was escaped too' );
+		$this->assertSame( array( 'כן' ), $this->export( 'answer_cells', array( $rows[0]['answers'], $columns ) ) );
+	}
+
+	/**
 	 * And the answers keep their prose column too.
 	 *
 	 * It is the copy that cannot lose anything — including an answer to a
