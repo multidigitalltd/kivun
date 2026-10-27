@@ -260,7 +260,7 @@ final class CustomFormTest extends TestCase {
 		$id     = $this->page( array( array( 'key' => 'track', 'label' => 'מסלול', 'type' => 'select', 'options' => array( 'חשמל' ) ) ) );
 		$answers = Kivun_Custom_Forms::collect( $id, array( 'track' => 'חשמל' ) );
 
-		$this->assertSame( array( array( 'label' => 'מסלול', 'value' => 'חשמל' ) ), $answers );
+		$this->assertSame( array( array( 'key' => 'track', 'label' => 'מסלול', 'value' => 'חשמל' ) ), $answers );
 	}
 
 	/**

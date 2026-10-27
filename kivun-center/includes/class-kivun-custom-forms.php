@@ -316,6 +316,12 @@ class Kivun_Custom_Forms {
 			}
 
 			$answers[] = array(
+				// The question's own key, not only its wording. Two questions
+				// may legitimately be worded alike, and an unanswered one is
+				// simply absent from this list — so a report that lines
+				// answers up by label alone puts one lead's answer under
+				// another lead's question the moment either happens.
+				'key'   => $field['key'],
 				'label' => $field['label'],
 				'value' => $value,
 			);

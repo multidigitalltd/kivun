@@ -465,26 +465,41 @@ class Kivun_Export {
 	/**
 	 * The questions these rows answered, in the order they are first met.
 	 *
+	 * Keyed by the question, not by its wording. Two questions may be worded
+	 * alike, and an unanswered one is simply absent from a row — so lining
+	 * the columns up by label alone put one lead's answer under another
+	 * lead's question as soon as either happened.
+	 *
 	 * @param array<int,array<string,mixed>> $rows The rows being exported.
-	 * @return array<int,string> One heading per question.
+	 * @return array<string,string> Question key => heading.
 	 */
 	private static function question_columns( array $rows ): array {
-		$labels = array();
+		$columns = array();
 		foreach ( $rows as $row ) {
-			foreach ( array_keys( self::answers_of( (string) ( $row['answers'] ?? '' ) ) ) as $label ) {
-				if ( ! in_array( $label, $labels, true ) ) {
-					$labels[] = $label;
+			foreach ( self::answers_of( (string) ( $row['answers'] ?? '' ) ) as $key => $answer ) {
+				if ( ! isset( $columns[ $key ] ) ) {
+					$columns[ $key ] = $answer['label'];
 				}
 			}
 		}
-		return $labels;
+
+		// Two questions worded alike still need telling apart on the sheet,
+		// so the second and later get a number. The columns themselves were
+		// already distinct; this is only what a reader sees.
+		$seen = array();
+		foreach ( $columns as $key => $label ) {
+			$seen[ $label ]  = ( $seen[ $label ] ?? 0 ) + 1;
+			$columns[ $key ] = $seen[ $label ] > 1 ? $label . ' (' . $seen[ $label ] . ')' : $label;
+		}
+
+		return $columns;
 	}
 
 	/**
 	 * One row's answers, lined up under the headings.
 	 *
-	 * @param string            $stored  The row's stored answers, as JSON.
-	 * @param array<int,string> $columns The headings, in order.
+	 * @param string               $stored  The row's stored answers, as JSON.
+	 * @param array<string,string> $columns Question key => heading, in order.
 	 * @return array<int,string> One cell per heading.
 	 */
 	private static function answer_cells( string $stored, array $columns ): array {
@@ -494,21 +509,21 @@ class Kivun_Export {
 
 		$answers = self::answers_of( $stored );
 		$cells   = array();
-		foreach ( $columns as $label ) {
-			$cells[] = $answers[ $label ] ?? '';
+		foreach ( array_keys( $columns ) as $key ) {
+			$cells[] = isset( $answers[ $key ] ) ? $answers[ $key ]['value'] : '';
 		}
 		return $cells;
 	}
 
 	/**
-	 * A row's stored answers as label => value.
+	 * A row's stored answers, keyed by the question each one answers.
 	 *
 	 * Anything that is not the shape this was written in reads as no answers
 	 * rather than stopping the export: a report is not the place to discover
 	 * that one row of three thousand was edited by hand.
 	 *
 	 * @param string $stored The JSON written when the lead was filed.
-	 * @return array<string,string>
+	 * @return array<string,array{label:string,value:string}>
 	 */
 	private static function answers_of( string $stored ): array {
 		if ( '' === trim( $stored ) ) {
@@ -520,24 +535,22 @@ class Kivun_Export {
 			return array();
 		}
 
-		// A form may legitimately ask two questions with the same wording —
-		// "פרטים נוספים" twice, or a duplicated question nobody renamed. They
-		// are separate questions with separate answers, and keying the
-		// columns by the label alone kept only the last of them: the
-		// spreadsheet showed one answer where the lead gave two, silently.
-		// Numbered from the second, so an ordinary form is untouched.
-		$out  = array();
-		$seen = array();
-		foreach ( $decoded as $answer ) {
+		$out = array();
+		foreach ( $decoded as $position => $answer ) {
 			if ( ! is_array( $answer ) || ! isset( $answer['label'] ) ) {
 				continue;
 			}
 
-			$label          = (string) $answer['label'];
-			$seen[ $label ] = ( $seen[ $label ] ?? 0 ) + 1;
-			$heading        = $seen[ $label ] > 1 ? $label . ' (' . $seen[ $label ] . ')' : $label;
+			// A row written before the key was stored falls back to its
+			// position, which is at least stable within that one row.
+			$key = isset( $answer['key'] ) && '' !== (string) $answer['key']
+				? (string) $answer['key']
+				: 'pos_' . $position;
 
-			$out[ $heading ] = (string) ( $answer['value'] ?? '' );
+			$out[ $key ] = array(
+				'label' => (string) $answer['label'],
+				'value' => (string) ( $answer['value'] ?? '' ),
+			);
 		}
 		return $out;
 	}

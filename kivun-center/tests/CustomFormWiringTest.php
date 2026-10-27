@@ -43,13 +43,32 @@ final class CustomFormWiringTest extends TestCase {
 	/**
 	 * One row of answers, as the lead stores them.
 	 *
-	 * @param array<string,string> $pairs Label => value.
+	 * The key is the question's, which is what the columns line up by: a
+	 * label is only what a reader sees.
+	 *
+	 * @param array<string,string> $pairs Label => value; the key is derived.
 	 * @return string
 	 */
 	private function stored( array $pairs ): string {
 		$out = array();
+		$i   = 0;
 		foreach ( $pairs as $label => $value ) {
-			$out[] = array( 'label' => $label, 'value' => $value );
+			++$i;
+			$out[] = array( 'key' => 'q' . $i, 'label' => $label, 'value' => $value );
+		}
+		return (string) wp_json_encode( $out );
+	}
+
+	/**
+	 * One row of answers with the keys spelled out.
+	 *
+	 * @param array<int,array{0:string,1:string,2:string}> $triples key, label, value.
+	 * @return string
+	 */
+	private function stored_keyed( array $triples ): string {
+		$out = array();
+		foreach ( $triples as $t ) {
+			$out[] = array( 'key' => $t[0], 'label' => $t[1], 'value' => $t[2] );
 		}
 		return (string) wp_json_encode( $out );
 	}
@@ -70,7 +89,7 @@ final class CustomFormWiringTest extends TestCase {
 			array( 'answers' => $this->stored( array( 'מסלול' => 'חשמל', 'ניסיון' => 'ללא' ) ) ),
 		);
 
-		$this->assertSame( array( 'מסלול', 'ניסיון' ), $this->export( 'question_columns', array( $rows ) ) );
+		$this->assertSame( array( 'q1' => 'מסלול', 'q2' => 'ניסיון' ), $this->export( 'question_columns', array( $rows ) ) );
 	}
 
 	/**
@@ -84,7 +103,7 @@ final class CustomFormWiringTest extends TestCase {
 			array( 'answers' => $this->stored( array( 'מסלול' => 'מכונות', 'תקציב' => '500' ) ) ),
 		);
 
-		$this->assertSame( array( 'מסלול', 'תקציב' ), $this->export( 'question_columns', array( $rows ) ) );
+		$this->assertSame( array( 'q1' => 'מסלול', 'q2' => 'תקציב' ), $this->export( 'question_columns', array( $rows ) ) );
 	}
 
 	/**
@@ -99,16 +118,42 @@ final class CustomFormWiringTest extends TestCase {
 	 * @return void
 	 */
 	public function test_two_questions_worded_alike_keep_both_answers(): void {
-		$stored = (string) wp_json_encode(
+		$stored = $this->stored_keyed(
 			array(
-				array( 'label' => 'פרטים נוספים', 'value' => 'ראשונה' ),
-				array( 'label' => 'פרטים נוספים', 'value' => 'שנייה' ),
+				array( 'a', 'פרטים נוספים', 'ראשונה' ),
+				array( 'b', 'פרטים נוספים', 'שנייה' ),
 			)
 		);
 
 		$columns = $this->export( 'question_columns', array( array( array( 'answers' => $stored ) ) ) );
-		$this->assertSame( array( 'פרטים נוספים', 'פרטים נוספים (2)' ), $columns );
+		$this->assertSame( array( 'a' => 'פרטים נוספים', 'b' => 'פרטים נוספים (2)' ), $columns );
 		$this->assertSame( array( 'ראשונה', 'שנייה' ), $this->export( 'answer_cells', array( $stored, $columns ) ) );
+	}
+
+	/**
+	 * And a lead who answered only the second stays under the second.
+	 *
+	 * An unanswered question is simply absent from a row, so a counter over
+	 * the answers present numbered this lead's only answer as the first —
+	 * putting it under the other question's column and mixing two questions
+	 * together down the sheet. Found in review, as the consequence of
+	 * numbering answers instead of identifying questions.
+	 *
+	 * @return void
+	 */
+	public function test_answering_only_the_second_stays_under_the_second(): void {
+		$both = $this->stored_keyed(
+			array(
+				array( 'a', 'פרטים נוספים', 'ראשונה' ),
+				array( 'b', 'פרטים נוספים', 'שנייה' ),
+			)
+		);
+		$only = $this->stored_keyed( array( array( 'b', 'פרטים נוספים', 'רק השנייה' ) ) );
+
+		$columns = $this->export( 'question_columns', array( array( array( 'answers' => $both ), array( 'answers' => $only ) ) ) );
+
+		$this->assertSame( array( '', 'רק השנייה' ), $this->export( 'answer_cells', array( $only, $columns ) ) );
+		$this->assertSame( array( 'ראשונה', 'שנייה' ), $this->export( 'answer_cells', array( $both, $columns ) ) );
 	}
 
 	/**
@@ -122,7 +167,7 @@ final class CustomFormWiringTest extends TestCase {
 			array( array( array( 'answers' => $this->stored( array( 'מסלול' => 'חשמל', 'ניסיון' => 'ללא' ) ) ) ) )
 		);
 
-		$this->assertSame( array( 'מסלול', 'ניסיון' ), $columns );
+		$this->assertSame( array( 'q1' => 'מסלול', 'q2' => 'ניסיון' ), $columns );
 	}
 
 	/**
@@ -135,8 +180,8 @@ final class CustomFormWiringTest extends TestCase {
 	 * @return void
 	 */
 	public function test_a_missing_answer_leaves_its_own_cell_empty(): void {
-		$columns = array( 'מסלול', 'תקציב', 'ניסיון' );
-		$cells   = $this->export( 'answer_cells', array( $this->stored( array( 'ניסיון' => 'ללא' ) ), $columns ) );
+		$columns = array( 'k1' => 'מסלול', 'k2' => 'תקציב', 'k3' => 'ניסיון' );
+		$cells   = $this->export( 'answer_cells', array( $this->stored_keyed( array( array( 'k3', 'ניסיון', 'ללא' ) ) ), $columns ) );
 
 		$this->assertSame( array( '', '', 'ללא' ), $cells );
 	}
@@ -165,7 +210,7 @@ final class CustomFormWiringTest extends TestCase {
 			array( 'answers' => $this->stored( array( 'מסלול' => 'חשמל' ) ) ),
 		);
 
-		$this->assertSame( array( 'מסלול' ), $this->export( 'question_columns', array( $rows ) ) );
+		$this->assertSame( array( 'q1' => 'מסלול' ), $this->export( 'question_columns', array( $rows ) ) );
 	}
 
 	/**
@@ -209,7 +254,7 @@ final class CustomFormWiringTest extends TestCase {
 		$rows = array( array( 'answers' => $this->stored( array( '=1+1' => 'כן' ) ) ) );
 
 		$columns = $this->export( 'question_columns', array( $rows ) );
-		$this->assertSame( array( '=1+1' ), $columns, 'the lookup label was escaped too' );
+		$this->assertSame( array( 'q1' => '=1+1' ), $columns, 'the lookup label was escaped too' );
 		$this->assertSame( array( 'כן' ), $this->export( 'answer_cells', array( $rows[0]['answers'], $columns ) ) );
 	}
 
