@@ -1816,53 +1816,22 @@ class Kivun_Content_Creator {
 			wp_send_json_error( array( 'message' => __( 'לא נמצא דף הנחיתה.', 'kivun' ) ), 400 );
 		}
 
-		$new_id = wp_insert_post(
-			array(
-				'post_type'    => 'kivun_workshop',
-				'post_status'  => 'draft',
-				/* translators: %s: the original page's title. */
-				'post_title'   => sprintf( __( '%s — עותק', 'kivun' ), $source->post_title ),
-				'post_content' => $source->post_content,
-				'post_excerpt' => $source->post_excerpt,
-			),
-			true
-		);
-
-		if ( is_wp_error( $new_id ) ) {
-			wp_send_json_error( array( 'message' => $new_id->get_error_message() ) );
-		}
-
-		// Everything the page was given, the form among it. Copied wholesale
-		// rather than field by field, so a meta key added later is carried
-		// without anybody remembering to come back here.
+		// The console's own duplication, not a second one written here. It
+		// already knows what a copy must not inherit — the content group,
+		// the archive mark, the centre's record id and the state around it,
+		// the edit locks — and carries the taxonomies and the thumbnail
+		// besides. Three of those exclusions were found missing from a copy
+		// of this loop one at a time; the fourth would have been found the
+		// same way.
 		//
-		// The remote id is the exception: it names the copy of this page on
-		// the centre's board, and letting the duplicate inherit it would make
-		// the next sync overwrite the original with the copy's content.
-		foreach ( get_post_meta( $post_id ) as $key => $values ) {
-			if ( Kivun_Mercaz_Sync::REMOTE_ID === $key || Kivun_Mercaz_Sync::SYNCED_AT === $key || self::GROUP_META === $key ) {
-				continue;
-			}
-			foreach ( (array) $values as $value ) {
-				// Slashed on the way back in, because add_post_meta()
-				// unslashes: a copied value holding JSON would otherwise lose
-				// the backslashes that make it readable.
-				add_post_meta( (int) $new_id, (string) $key, wp_slash( maybe_unserialize( $value ) ) );
-			}
+		// The form definition rides along with everything else: it is post
+		// meta like the rest, so composing a form once and copying the page
+		// is the point of the button.
+		if ( ! self::clone_post( $post_id, wp_generate_uuid4() ) ) {
+			wp_send_json_error( array( 'message' => __( 'השכפול נכשל.', 'kivun' ) ) );
 		}
 
-		// Its own group, never the original's. The group is what the library
-		// and the editor treat as one piece of content: sharing it would
-		// collapse the two into a single row, point the editor at whichever
-		// is newest, and add the copy's enquiries to the original's count.
-		update_post_meta( (int) $new_id, self::GROUP_META, wp_generate_uuid4() );
-
-		wp_send_json_success(
-			array(
-				'id'      => (int) $new_id,
-				'message' => __( 'הדף שוכפל כטיוטה, עם הטופס שלו.', 'kivun' ),
-			)
-		);
+		wp_send_json_success( array( 'message' => __( 'הדף שוכפל כטיוטה, עם הטופס שלו.', 'kivun' ) ) );
 	}
 
 	/**

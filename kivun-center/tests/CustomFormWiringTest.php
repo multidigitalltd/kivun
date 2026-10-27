@@ -228,57 +228,52 @@ final class CustomFormWiringTest extends TestCase {
 	}
 
 	/**
-	 * A copy does not inherit the original's place on the centre's board.
+	 * Duplication goes through the console's own, not a second copy of it.
 	 *
-	 * The remote id names the original over there. Letting the copy carry it
-	 * would make the next sync overwrite the original with the copy.
+	 * The handler first grew a copy loop of its own, and review found three
+	 * things missing from it one at a time: the content group, which would
+	 * have collapsed the two pages into one library row; the centre's record
+	 * id, which would have made the next sync overwrite the original with
+	 * the copy; and the archive mark, which would have born the new draft
+	 * inside the shut section nobody is looking in. The fourth would have
+	 * been found the same way.
+	 *
+	 * So there is one duplication, and it is the one that already knew.
 	 *
 	 * @return void
 	 */
-	public function test_a_copy_does_not_steal_the_original_s_remote_id(): void {
+	public function test_duplication_reuses_the_console_s_own(): void {
 		$src = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-content-creator.php' );
 
 		$at   = (int) strpos( $src, 'public static function ajax_duplicate_landing' );
 		$this->assertNotFalse( $at, 'the handler moved' );
-		$body = substr( $src, $at, 2600 );
+		$body = substr( $src, $at, 2200 );
 
-		$this->assertStringContainsString( 'Kivun_Mercaz_Sync::REMOTE_ID === $key', $body );
-		$this->assertStringContainsString( "'post_status'  => 'draft',", $body, 'a copy is published without anybody reading it' );
+		$this->assertStringContainsString( 'self::clone_post( $post_id, wp_generate_uuid4() )', $body );
+		$this->assertStringNotContainsString( 'add_post_meta(', $body, 'the handler is copying meta by hand again' );
 	}
 
 	/**
-	 * A copy is its own piece of content, not a second face of the original.
-	 *
-	 * The content group is what the library and the editor treat as one
-	 * item. Sharing it would collapse the two into a single row, point the
-	 * editor at whichever is newest, and add the copy's enquiries to the
-	 * original's count. Found in review.
+	 * And that one knows everything a copy must not inherit.
 	 *
 	 * @return void
 	 */
-	public function test_a_copy_gets_a_content_group_of_its_own(): void {
+	public function test_the_clone_withholds_what_identifies_the_original(): void {
 		$src = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-content-creator.php' );
 
-		$at   = (int) strpos( $src, 'public static function ajax_duplicate_landing' );
-		$body = substr( $src, $at, 3000 );
+		$at   = (int) strpos( $src, 'private static function clone_post' );
+		$this->assertNotFalse( $at, 'the clone moved' );
+		$body = substr( $src, $at, 2000 );
 
-		$this->assertStringContainsString( 'self::GROUP_META === $key', $body, 'the copy inherits the original\'s group' );
-		$this->assertStringContainsString( 'self::GROUP_META, wp_generate_uuid4()', $body, 'the copy is left with no group at all' );
-	}
-
-	/**
-	 * Copied meta is slashed back in.
-	 *
-	 * add_post_meta() unslashes too, so a copied value holding JSON — the
-	 * form definition among them — would lose the backslashes that make it
-	 * readable.
-	 *
-	 * @return void
-	 */
-	public function test_copied_meta_keeps_its_backslashes(): void {
-		$src = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-content-creator.php' );
-
-		$this->assertStringContainsString( 'wp_slash( maybe_unserialize( $value ) )', $src );
+		foreach ( array(
+			'self::GROUP_META,',
+			'self::ARCHIVED_META,',
+			'Kivun_Mercaz_Sync::REMOTE_ID,',
+			'Kivun_Mercaz_Sync::SYNCED_AT,',
+			'Kivun_Mercaz_Sync::LAST_ERROR,',
+		) as $withheld ) {
+			$this->assertStringContainsString( $withheld, $body, 'a copy would inherit ' . $withheld );
+		}
 	}
 
 	/**
