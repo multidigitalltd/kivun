@@ -184,6 +184,71 @@ final class CustomFormTest extends TestCase {
 		$this->assertSame( array(), Kivun_Custom_Forms::fields( 9 ) );
 	}
 
+	/**
+	 * Hebrew survives the trip into the database.
+	 *
+	 * update_post_meta() unslashes what it is given and JSON is made of
+	 * backslashes, so a Hebrew label encoded as \u05de arrives as literal
+	 * u05de unless the whole definition is slashed first. Found in review —
+	 * and missed here until the stubs were made to unslash the way WordPress
+	 * does.
+	 *
+	 * @return void
+	 */
+	public function test_hebrew_survives_being_stored(): void {
+		$id = $this->page( array( array( 'label' => 'באיזה מסלול אתם מתעניינים?', 'type' => 'text' ) ) );
+
+		$fields = Kivun_Custom_Forms::fields( $id );
+		$this->assertCount( 1, $fields, 'the definition came back unreadable' );
+		$this->assertSame( 'באיזה מסלול אתם מתעניינים?', $fields[0]['label'] );
+	}
+
+	/**
+	 * And so does a label with a quotation mark in it.
+	 *
+	 * This is the worse half of the same bug: an unescaped quote does not
+	 * merely garble the label, it makes the whole definition unparseable —
+	 * so the form empties itself and its required questions quietly stop
+	 * being required.
+	 *
+	 * @return void
+	 */
+	public function test_a_quote_in_a_label_does_not_empty_the_form(): void {
+		$id = $this->page(
+			array(
+				array( 'label' => 'מה דעתך על "המסלול המזורז"?', 'type' => 'text', 'required' => true ),
+				array( 'label' => 'שאלה שנייה', 'type' => 'text' ),
+			)
+		);
+
+		$fields = Kivun_Custom_Forms::fields( $id );
+		$this->assertCount( 2, $fields, 'one bad quote took the whole form with it' );
+		$this->assertSame( 'מה דעתך על "המסלול המזורז"?', $fields[0]['label'] );
+
+		// And the question is still required, which is the part that would
+		// have gone unnoticed.
+		$this->assertInstanceOf( WP_Error::class, Kivun_Custom_Forms::collect( $id, array() ) );
+	}
+
+	/**
+	 * A backslash in a label is not multiplied each time it is saved.
+	 *
+	 * Slashing on the way in is right only if nothing slashes twice.
+	 *
+	 * @return void
+	 */
+	public function test_saving_twice_does_not_breed_backslashes(): void {
+		$label = 'מסלול א\\ב';
+
+		$id    = $this->page( array( array( 'label' => $label, 'type' => 'text' ) ) );
+		$once  = Kivun_Custom_Forms::fields( $id );
+
+		Kivun_Custom_Forms::save( $id, $once, array() );
+		$twice = Kivun_Custom_Forms::fields( $id );
+
+		$this->assertSame( $once[0]['label'], $twice[0]['label'] );
+	}
+
 	// ── Answering ────────────────────────────────────────────────────────────
 
 	/**

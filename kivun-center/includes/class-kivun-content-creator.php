@@ -1840,13 +1840,22 @@ class Kivun_Content_Creator {
 		// the centre's board, and letting the duplicate inherit it would make
 		// the next sync overwrite the original with the copy's content.
 		foreach ( get_post_meta( $post_id ) as $key => $values ) {
-			if ( Kivun_Mercaz_Sync::REMOTE_ID === $key || Kivun_Mercaz_Sync::SYNCED_AT === $key ) {
+			if ( Kivun_Mercaz_Sync::REMOTE_ID === $key || Kivun_Mercaz_Sync::SYNCED_AT === $key || self::GROUP_META === $key ) {
 				continue;
 			}
 			foreach ( (array) $values as $value ) {
-				add_post_meta( (int) $new_id, (string) $key, maybe_unserialize( $value ) );
+				// Slashed on the way back in, because add_post_meta()
+				// unslashes: a copied value holding JSON would otherwise lose
+				// the backslashes that make it readable.
+				add_post_meta( (int) $new_id, (string) $key, wp_slash( maybe_unserialize( $value ) ) );
 			}
 		}
+
+		// Its own group, never the original's. The group is what the library
+		// and the editor treat as one piece of content: sharing it would
+		// collapse the two into a single row, point the editor at whichever
+		// is newest, and add the copy's enquiries to the original's count.
+		update_post_meta( (int) $new_id, self::GROUP_META, wp_generate_uuid4() );
 
 		wp_send_json_success(
 			array(

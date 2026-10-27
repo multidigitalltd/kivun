@@ -173,8 +173,15 @@ class Kivun_Custom_Forms {
 		$clean = self::sanitize_fields( $fields );
 		$keep  = array_values( array_intersect( array_keys( self::optional_builtins() ), array_map( 'strval', $builtins ) ) );
 
-		update_post_meta( $post_id, self::FIELDS, wp_json_encode( $clean ) );
-		update_post_meta( $post_id, self::BUILTINS, wp_json_encode( $keep ) );
+		// wp_slash() because update_post_meta() unslashes what it is given,
+		// and JSON is made of backslashes. A Hebrew label encodes to
+		// \u05de..., which arrives in the database as literal u05de; a label
+		// with a quote in it encodes to \" and arrives as a bare quote, which
+		// makes the whole definition unreadable. Either way fields() then
+		// returns nothing — the form empties itself and its required
+		// questions stop being required, without a word.
+		update_post_meta( $post_id, self::FIELDS, wp_slash( (string) wp_json_encode( $clean ) ) );
+		update_post_meta( $post_id, self::BUILTINS, wp_slash( (string) wp_json_encode( $keep ) ) );
 		update_post_meta( $post_id, self::FLAG, '1' );
 
 		return $clean;

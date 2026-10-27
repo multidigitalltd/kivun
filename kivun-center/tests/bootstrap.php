@@ -309,6 +309,19 @@ function is_email( $email ): bool {
  * @param mixed $value The value.
  * @return mixed
  */
+function wp_slash( $value ) {
+	if ( is_array( $value ) ) {
+		return array_map( 'wp_slash', $value );
+	}
+	return is_string( $value ) ? addslashes( $value ) : $value;
+}
+
+/**
+ * Strip slashes the way WordPress does on the way out of a request.
+ *
+ * @param mixed $value The value.
+ * @return mixed
+ */
 function wp_unslash( $value ) {
 	if ( is_array( $value ) ) {
 		return array_map( 'wp_unslash', $value );
@@ -536,7 +549,10 @@ function get_post_meta( int $post_id, string $key = '', bool $single = false ) {
  * @return bool
  */
 function update_post_meta( int $post_id, string $key, $value ): bool {
-	Kivun_Test_State::$meta[ $post_id ][ $key ] = $value;
+	// Unslashed, as update_metadata() does. Storing the value verbatim let a
+	// JSON definition pass a test it would have failed on a real site, where
+	// every backslash in it is eaten on the way in.
+	Kivun_Test_State::$meta[ $post_id ][ $key ] = wp_unslash( $value );
 	return true;
 }
 
@@ -1033,7 +1049,10 @@ function wp_rand( int $min = 0, int $max = 0 ): int {
  * @return string|false
  */
 function wp_json_encode( $data, int $options = 0 ) {
-	return json_encode( $data, $options | JSON_UNESCAPED_UNICODE );
+	// WordPress does not add JSON_UNESCAPED_UNICODE, and forcing it here hid
+	// a real bug: Hebrew really does encode to \u05de..., and whether those
+	// backslashes survive the trip into the database is the whole question.
+	return json_encode( $data, $options ); // phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode
 }
 
 /**

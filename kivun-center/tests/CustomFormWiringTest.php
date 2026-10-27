@@ -216,6 +216,41 @@ final class CustomFormWiringTest extends TestCase {
 	}
 
 	/**
+	 * A copy is its own piece of content, not a second face of the original.
+	 *
+	 * The content group is what the library and the editor treat as one
+	 * item. Sharing it would collapse the two into a single row, point the
+	 * editor at whichever is newest, and add the copy's enquiries to the
+	 * original's count. Found in review.
+	 *
+	 * @return void
+	 */
+	public function test_a_copy_gets_a_content_group_of_its_own(): void {
+		$src = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-content-creator.php' );
+
+		$at   = (int) strpos( $src, 'public static function ajax_duplicate_landing' );
+		$body = substr( $src, $at, 3000 );
+
+		$this->assertStringContainsString( 'self::GROUP_META === $key', $body, 'the copy inherits the original\'s group' );
+		$this->assertStringContainsString( 'self::GROUP_META, wp_generate_uuid4()', $body, 'the copy is left with no group at all' );
+	}
+
+	/**
+	 * Copied meta is slashed back in.
+	 *
+	 * add_post_meta() unslashes too, so a copied value holding JSON — the
+	 * form definition among them — would lose the backslashes that make it
+	 * readable.
+	 *
+	 * @return void
+	 */
+	public function test_copied_meta_keeps_its_backslashes(): void {
+		$src = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-content-creator.php' );
+
+		$this->assertStringContainsString( 'wp_slash( maybe_unserialize( $value ) )', $src );
+	}
+
+	/**
 	 * The tab is there, and is not offered to the roles that cannot publish.
 	 *
 	 * @return void
