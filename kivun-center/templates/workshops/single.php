@@ -65,7 +65,7 @@ $capacity = $f( '_kivun_ws_capacity' );
 		<!-- Registration / lead form -->
 		<?php
 		kivun_get_template(
-			'courses/interest-form.php',
+			Kivun_Custom_Forms::template( (int) $workshop_id ),
 			array(
 				'post_id'   => $workshop_id,
 				'post_type' => 'kivun_workshop',

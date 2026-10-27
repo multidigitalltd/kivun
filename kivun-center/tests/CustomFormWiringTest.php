@@ -154,11 +154,42 @@ final class CustomFormWiringTest extends TestCase {
 	 * @return void
 	 */
 	public function test_the_page_picks_the_form_it_was_given(): void {
-		$tpl = (string) file_get_contents( KIVUN_DIR . 'templates/landing/single.php' );
+		$this->assertSame( 'courses/interest-form.php', Kivun_Custom_Forms::template( 404 ) );
 
-		$this->assertStringContainsString( 'Kivun_Custom_Forms::enabled( (int) $landing_id )', $tpl );
-		$this->assertStringContainsString( "'landing/custom-form.php'", $tpl );
-		$this->assertStringContainsString( "'courses/interest-form.php'", $tpl, 'the fixed form is no longer reachable' );
+		Kivun_Custom_Forms::save( 9, array( array( 'label' => 'שאלה', 'type' => 'text' ) ), array() );
+		$this->assertSame( 'landing/custom-form.php', Kivun_Custom_Forms::template( 9 ) );
+	}
+
+	/**
+	 * And every place that draws a form asks the same question.
+	 *
+	 * A landing page is rendered from more than one template — its own, and
+	 * the workshop single the shortcode uses. One of them showing the fixed
+	 * form while the server validates answers it never offered would refuse
+	 * every submission, with nothing the visitor could do. Found in review.
+	 *
+	 * @return void
+	 */
+	public function test_no_render_site_can_drift_from_the_validation(): void {
+		$sites = array(
+			'templates/landing/single.php',
+			'templates/workshops/single.php',
+			'shortcodes/class-kivun-shortcodes.php',
+		);
+
+		foreach ( $sites as $site ) {
+			$src = (string) file_get_contents( KIVUN_DIR . $site );
+			$this->assertStringContainsString(
+				'Kivun_Custom_Forms::template(',
+				$src,
+				$site . ' picks a form without asking which one the page has'
+			);
+			$this->assertStringNotContainsString(
+				"kivun_get_template(\n\t\t\t'courses/interest-form.php'",
+				$src,
+				$site . ' still hard-codes the fixed form'
+			);
+		}
 	}
 
 	/**

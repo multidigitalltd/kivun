@@ -119,6 +119,23 @@ class Kivun_Custom_Forms {
 	}
 
 	/**
+	 * The template that renders this page's form.
+	 *
+	 * Asked here rather than at each place a form is drawn. A landing page
+	 * is rendered from more than one: its own template, and the workshop
+	 * single that the shortcode uses. A site that got the fixed form from
+	 * one of them while the server was validating answers it had never been
+	 * shown would refuse every submission, with nothing the visitor could do
+	 * about it.
+	 *
+	 * @param int $post_id The page.
+	 * @return string A template path for kivun_get_template().
+	 */
+	public static function template( int $post_id ): string {
+		return self::enabled( $post_id ) ? 'landing/custom-form.php' : 'courses/interest-form.php';
+	}
+
+	/**
 	 * The questions this page asks, in order.
 	 *
 	 * Read through the same sanitiser the save went through: the stored value
