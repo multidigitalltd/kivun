@@ -1194,6 +1194,7 @@ foreach ( array(
 	'class-kivun-content-creator',
 	'class-kivun-admin',
 	'class-kivun-core',
+	'class-kivun-custom-forms',
 ) as $kivun_test_class ) {
 	require_once KIVUN_DIR . 'includes/' . $kivun_test_class . '.php';
 }

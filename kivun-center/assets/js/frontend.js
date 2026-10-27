@@ -2564,4 +2564,255 @@
 		}
 	}
 
+	// ── The form a landing page asks ────────────────────────────────────────
+	//
+	// The questions are edited as a list and posted as one definition. Saving
+	// them one at a time would let a visitor meet a half-applied form, and
+	// the order is itself part of what is being edited.
+
+	var KIVUN_CF_TYPES = {
+		text: 'טקסט קצר',
+		textarea: 'טקסט ארוך',
+		select: 'בחירה מרשימה',
+		radio: 'בחירה יחידה',
+		checkbox: 'בחירה מרובה',
+		date: 'תאריך',
+		number: 'מספר',
+		consent: 'אישור'
+	};
+
+	function kivunCfHasOptions(type) {
+		return type === 'select' || type === 'radio' || type === 'checkbox';
+	}
+
+	// Read the list back out of the DOM rather than keeping a model beside
+	// it: the row IS the question, so the two can never drift apart.
+	function kivunCfRead(form) {
+		var out = [];
+		Array.prototype.forEach.call(form.querySelectorAll('.kivun-cf-row'), function (row) {
+			var label = row.querySelector('.kivun-cf-label');
+			var type = row.querySelector('.kivun-cf-type');
+			var req = row.querySelector('.kivun-cf-required');
+			var opts = row.querySelector('.kivun-cf-options');
+			out.push({
+				key: row.dataset.key || '',
+				label: label ? label.value.trim() : '',
+				type: type ? type.value : 'text',
+				required: !!(req && req.checked),
+				options: opts ? opts.value : ''
+			});
+		});
+		return out;
+	}
+
+	function kivunCfRow(form, field) {
+		var row = document.createElement('div');
+		row.className = 'kivun-cf-row';
+		row.dataset.key = field.key || '';
+
+		var options = Object.keys(KIVUN_CF_TYPES).map(function (t) {
+			return '<option value="' + t + '"' + (t === field.type ? ' selected' : '') + '>' + KIVUN_CF_TYPES[t] + '</option>';
+		}).join('');
+
+		// Built with DOM text nodes for the parts that carry the client's own
+		// words — a label with a quote in it must not be able to end an
+		// attribute.
+		row.innerHTML =
+			'<div class="kivun-cf-row__main">' +
+				'<span class="kivun-cf-handle" aria-hidden="true">⋮⋮</span>' +
+				'<input type="text" class="kivun-cc-input kivun-cf-label" placeholder="נוסח השאלה">' +
+				'<select class="kivun-cc-input kivun-cf-type">' + options + '</select>' +
+				'<label class="kivun-cf-req"><input type="checkbox" class="kivun-cf-required"><span>חובה</span></label>' +
+				'<button type="button" class="kivun-cc-iconbtn kivun-cf-up" title="העלאה" aria-label="העלאה">↑</button>' +
+				'<button type="button" class="kivun-cc-iconbtn kivun-cf-down" title="הורדה" aria-label="הורדה">↓</button>' +
+				'<button type="button" class="kivun-cc-iconbtn kivun-cc-iconbtn--danger kivun-cf-remove" title="מחיקה" aria-label="מחיקת השאלה">✕</button>' +
+			'</div>' +
+			'<div class="kivun-cf-row__options"' + (kivunCfHasOptions(field.type) ? '' : ' hidden') + '>' +
+				'<label class="kivun-cc-sub">אפשרויות — אחת בכל שורה</label>' +
+				'<textarea class="kivun-cc-input kivun-cf-options" rows="3"></textarea>' +
+			'</div>';
+
+		row.querySelector('.kivun-cf-label').value = field.label || '';
+		row.querySelector('.kivun-cf-required').checked = !!field.required;
+		row.querySelector('.kivun-cf-options').value = (field.options || []).join('\n');
+
+		form.querySelector('.kivun-cf-list').appendChild(row);
+		return row;
+	}
+
+	function kivunCfFill(form, fields) {
+		var list = form.querySelector('.kivun-cf-list');
+		if (!list) { return; }
+		list.innerHTML = '';
+		(fields || []).forEach(function (field) { kivunCfRow(form, field); });
+	}
+
+	// Seeded from the definition already saved, so opening the editor shows
+	// the form as it stands rather than an empty one.
+	document.addEventListener('click', function (e) {
+		var open = e.target.closest('.kivun-edit-form');
+		if (!open) { return; }
+		e.preventDefault();
+
+		var panel = document.querySelector('[data-form-edit="' + open.dataset.id + '"]');
+		if (!panel) { return; }
+
+		panel.hidden = !panel.hidden;
+		if (panel.hidden) { return; }
+
+		var form = panel.querySelector('.kivun-form-builder');
+		var seed = form && form.querySelector('.kivun-cf-seed');
+		if (!form || !seed || form.dataset.ready === '1') { return; }
+
+		var fields = [];
+		try { fields = JSON.parse(seed.dataset.fields || '[]'); } catch (err) { fields = []; }
+		kivunCfFill(form, fields);
+		form.dataset.ready = '1';
+	});
+
+	document.addEventListener('click', function (e) {
+		var form = e.target.closest('.kivun-form-builder');
+		if (!form) { return; }
+
+		var add = e.target.closest('.kivun-cf-add-btn');
+		if (add) {
+			var picker = form.querySelector('.kivun-cf-newtype');
+			var type = picker ? picker.value : 'text';
+			var row = kivunCfRow(form, {
+				label: '',
+				type: type,
+				required: false,
+				options: kivunCfHasOptions(type) ? ['אפשרות א', 'אפשרות ב'] : []
+			});
+			var label = row.querySelector('.kivun-cf-label');
+			if (label) { label.focus(); }
+			return;
+		}
+
+		var remove = e.target.closest('.kivun-cf-remove');
+		if (remove) {
+			var dead = remove.closest('.kivun-cf-row');
+			if (dead) { dead.parentNode.removeChild(dead); }
+			return;
+		}
+
+		var move = e.target.closest('.kivun-cf-up, .kivun-cf-down');
+		if (move) {
+			var moving = move.closest('.kivun-cf-row');
+			if (!moving) { return; }
+			var up = move.classList.contains('kivun-cf-up');
+			var sibling = up ? moving.previousElementSibling : moving.nextElementSibling;
+			if (!sibling) { return; }
+			if (up) {
+				moving.parentNode.insertBefore(moving, sibling);
+			} else {
+				moving.parentNode.insertBefore(sibling, moving);
+			}
+		}
+	});
+
+	// A type that takes a list of choices shows the box for them.
+	document.addEventListener('change', function (e) {
+		var type = e.target.closest('.kivun-cf-type');
+		if (!type) { return; }
+		var row = type.closest('.kivun-cf-row');
+		var box = row && row.querySelector('.kivun-cf-row__options');
+		if (!box) { return; }
+
+		box.hidden = !kivunCfHasOptions(type.value);
+		var opts = row.querySelector('.kivun-cf-options');
+		if (!box.hidden && opts && !opts.value.trim()) {
+			opts.value = 'אפשרות א\nאפשרות ב';
+		}
+	});
+
+	document.addEventListener('submit', function (e) {
+		var form = e.target.closest('.kivun-form-builder');
+		if (!form) { return; }
+		e.preventDefault();
+
+		var err = form.querySelector('.kivun-cf-error');
+		var status = form.querySelector('.kivun-cf-status');
+		var fields = kivunCfRead(form);
+
+		// Caught here as well as on the server, because the server drops such
+		// a question silently and somebody would be left wondering which one
+		// went.
+		var blank = fields.filter(function (f) { return !f.label; }).length;
+		if (blank) {
+			showError(err, 'יש שאלה בלי נוסח. מלאו אותה או מחקו אותה.');
+			return;
+		}
+		if (err) { err.style.display = 'none'; }
+
+		var builtins = [];
+		Array.prototype.forEach.call(form.querySelectorAll('.kivun-cf-builtin-box'), function (box) {
+			if (box.checked) { builtins.push(box.value); }
+		});
+
+		var body = new URLSearchParams();
+		body.set('action', 'kivun_save_custom_form');
+		body.set('nonce', kivun.nonce);
+		body.set('post_id', form.dataset.id);
+		body.set('fields', JSON.stringify(fields));
+		builtins.forEach(function (b) { body.append('builtins[]', b); });
+
+		if (status) { status.textContent = 'שומר…'; }
+
+		fetch(kivun.ajax_url, { method: 'POST', credentials: 'same-origin', body: body })
+			.then(function (r) { return r.json(); })
+			.then(function (res) {
+				if (!res || !res.success) {
+					if (status) { status.textContent = ''; }
+					showError(err, (res && res.data && res.data.message) || 'השמירה נכשלה.');
+					return;
+				}
+				// Redrawn from what the server kept, so a question it dropped
+				// stops looking saved.
+				kivunCfFill(form, (res.data && res.data.fields) || []);
+				if (status) {
+					status.textContent = (res.data && res.data.message) || 'נשמר.';
+					setTimeout(function () { status.textContent = ''; }, 2500);
+				}
+			})
+			.catch(function () {
+				if (status) { status.textContent = ''; }
+				showError(err, 'אין חיבור. נסו שוב.');
+			});
+	});
+
+	document.addEventListener('click', function (e) {
+		var dup = e.target.closest('.kivun-duplicate-form');
+		if (!dup) { return; }
+		e.preventDefault();
+
+		var row = dup.closest('tr');
+		var status = row && row.querySelector('.kivun-form-status');
+		dup.disabled = true;
+		if (status) { status.textContent = 'משכפל…'; }
+
+		var body = new URLSearchParams();
+		body.set('action', 'kivun_duplicate_landing');
+		body.set('nonce', kivun.nonce);
+		body.set('post_id', dup.dataset.id);
+
+		fetch(kivun.ajax_url, { method: 'POST', credentials: 'same-origin', body: body })
+			.then(function (r) { return r.json(); })
+			.then(function (res) {
+				if (!res || !res.success) {
+					dup.disabled = false;
+					if (status) { status.textContent = (res && res.data && res.data.message) || 'השכפול נכשל.'; }
+					return;
+				}
+				// The copy belongs in the list, and the list is built on the
+				// server — so the page is reloaded rather than a row invented
+				// here that might not match what was actually created.
+				window.location.reload();
+			})
+			.catch(function () {
+				dup.disabled = false;
+				if (status) { status.textContent = 'אין חיבור.'; }
+			});
+	});
+
 }());

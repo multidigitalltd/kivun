@@ -323,6 +323,20 @@ class Kivun_Export {
 		}
 		$headings = array_merge( $headings, array( 'שם', 'אימייל', 'טלפון', 'עיר', 'מגדר', 'אישור דיוור', 'סוג', 'הערות', 'הערות פנימיות', 'סטטוס', 'תאריך' ) );
 
+		// A landing page may ask questions of its own, and those answers are
+		// the reason this file is opened. Left inside the one "הערות" cell
+		// they can be read and nothing else — not sorted, not counted, not
+		// pivoted.
+		//
+		// The columns are the questions these rows actually answered, so an
+		// export of one page is a clean sheet and an export of everything is
+		// a wide one with gaps. Matched by the question's own words, so the
+		// same question on two pages shares a column. The prose column stays
+		// either way: it is the copy that cannot lose anything, including
+		// answers to a question since deleted.
+		$question_columns = self::question_columns( $rows );
+		$headings         = array_merge( $headings, $question_columns );
+
 		fputcsv( $out, $headings );
 
 		$type_labels = array(
@@ -362,7 +376,8 @@ class Kivun_Export {
 							$r['notes'],
 							$r['status'],
 							$r['created_at'],
-						)
+						),
+						self::answer_cells( $r['answers'] ?? '', $question_columns )
 					)
 				)
 			);
@@ -439,6 +454,74 @@ class Kivun_Export {
 
 		fclose( $out ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose
 		exit;
+	}
+
+	/**
+	 * The questions these rows answered, in the order they are first met.
+	 *
+	 * @param array<int,array<string,mixed>> $rows The rows being exported.
+	 * @return array<int,string> One heading per question.
+	 */
+	private static function question_columns( array $rows ): array {
+		$labels = array();
+		foreach ( $rows as $row ) {
+			foreach ( array_keys( self::answers_of( (string) ( $row['answers'] ?? '' ) ) ) as $label ) {
+				if ( ! in_array( $label, $labels, true ) ) {
+					$labels[] = $label;
+				}
+			}
+		}
+		return $labels;
+	}
+
+	/**
+	 * One row's answers, lined up under the headings.
+	 *
+	 * @param string            $stored  The row's stored answers, as JSON.
+	 * @param array<int,string> $columns The headings, in order.
+	 * @return array<int,string> One cell per heading.
+	 */
+	private static function answer_cells( string $stored, array $columns ): array {
+		if ( ! $columns ) {
+			return array();
+		}
+
+		$answers = self::answers_of( $stored );
+		$cells   = array();
+		foreach ( $columns as $label ) {
+			$cells[] = $answers[ $label ] ?? '';
+		}
+		return $cells;
+	}
+
+	/**
+	 * A row's stored answers as label => value.
+	 *
+	 * Anything that is not the shape this was written in reads as no answers
+	 * rather than stopping the export: a report is not the place to discover
+	 * that one row of three thousand was edited by hand.
+	 *
+	 * @param string $stored The JSON written when the lead was filed.
+	 * @return array<string,string>
+	 */
+	private static function answers_of( string $stored ): array {
+		if ( '' === trim( $stored ) ) {
+			return array();
+		}
+
+		$decoded = json_decode( $stored, true );
+		if ( ! is_array( $decoded ) ) {
+			return array();
+		}
+
+		$out = array();
+		foreach ( $decoded as $answer ) {
+			if ( ! is_array( $answer ) || ! isset( $answer['label'] ) ) {
+				continue;
+			}
+			$out[ (string) $answer['label'] ] = (string) ( $answer['value'] ?? '' );
+		}
+		return $out;
 	}
 
 	/**

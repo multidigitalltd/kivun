@@ -47,6 +47,20 @@ class Kivun_Workshops {
 			'message'           => sanitize_textarea_field( wp_unslash( $_POST['message'] ?? '' ) ),
 		);
 
+		// This page's own questions, if it has any. Read and validated before
+		// the lead is written: a required one that nobody answered must stop
+		// the submission rather than be noticed later in the table.
+		if ( Kivun_Custom_Forms::enabled( $post_id ) ) {
+			// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized per field in collect().
+			$answers = Kivun_Custom_Forms::collect( $post_id, (array) wp_unslash( $_POST['kivun_q'] ?? array() ) );
+			if ( is_wp_error( $answers ) ) {
+				wp_send_json_error( array( 'message' => $answers->get_error_message() ) );
+			}
+
+			$data['answers'] = $answers;
+			$data['message'] = Kivun_Custom_Forms::lines( $answers, $data['message'] );
+		}
+
 		$result = self::save_lead( $post_id, $data );
 		if ( is_wp_error( $result ) ) {
 			wp_send_json_error( array( 'message' => $result->get_error_message() ) );
@@ -167,6 +181,13 @@ class Kivun_Workshops {
 			'type'              => $type,
 			'created_at'        => current_time( 'mysql' ),
 		);
+
+		// Kept structurally as well as in the message, so a report can give
+		// each question its own column without parsing the lines back — a
+		// label with a colon in it would not survive that round trip.
+		if ( ! empty( $data['answers'] ) && is_array( $data['answers'] ) ) {
+			$row['answers'] = (string) wp_json_encode( $data['answers'] );
+		}
 		// The campaign a lead is credited to is read from these columns, not
 		// from the source text above.
 		foreach ( Kivun_Utm::columns() as $column => $value ) {
