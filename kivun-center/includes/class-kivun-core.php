@@ -118,6 +118,7 @@ class Kivun_Core {
 			'class-kivun-forms-router',
 			'class-kivun-coordinators',
 			'class-kivun-form-details',
+			'class-kivun-custom-forms',
 			'class-kivun-lead-capture',
 			'class-kivun-utm',
 			'class-kivun-campaigns',

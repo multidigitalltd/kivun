@@ -60,6 +60,8 @@ class Kivun_Content_Creator {
 		add_action( 'admin_post_kivun_cc_duplicate_front', array( __CLASS__, 'handle_front_duplicate' ) );
 
 		add_action( 'wp_ajax_kivun_archive_content', array( __CLASS__, 'ajax_archive_content' ) );
+		add_action( 'wp_ajax_kivun_save_custom_form', array( __CLASS__, 'ajax_save_custom_form' ) );
+		add_action( 'wp_ajax_kivun_duplicate_landing', array( __CLASS__, 'ajax_duplicate_landing' ) );
 		add_action( 'wp_ajax_kivun_add_leads_viewer', array( __CLASS__, 'ajax_add_leads_viewer' ) );
 		add_action( 'wp_ajax_kivun_remove_leads_viewer', array( __CLASS__, 'ajax_remove_leads_viewer' ) );
 	}
@@ -1750,6 +1752,89 @@ class Kivun_Content_Creator {
 	}
 
 	/**
+	 * AJAX: store the form a landing page asks.
+	 *
+	 * @return void
+	 */
+	public static function ajax_save_custom_form(): void {
+		check_ajax_referer( 'kivun_nonce', 'nonce' );
+
+		if ( ! current_user_can( 'edit_posts' ) ) {
+			wp_send_json_error( array( 'message' => __( 'אין לך הרשאה לערוך תוכן.', 'kivun' ) ), 403 );
+		}
+
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- Verified above.
+		$post_id = absint( wp_unslash( $_POST['post_id'] ?? 0 ) );
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized per field by sanitize_fields().
+		$fields = json_decode( (string) wp_unslash( $_POST['fields'] ?? '[]' ), true );
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized per value by save().
+		$builtins = (array) wp_unslash( $_POST['builtins'] ?? array() );
+		// phpcs:enable WordPress.Security.NonceVerification.Missing
+
+		if ( ! $post_id || 'kivun_workshop' !== get_post_type( $post_id ) ) {
+			wp_send_json_error( array( 'message' => __( 'לא נמצא דף הנחיתה.', 'kivun' ) ), 400 );
+		}
+		if ( ! is_array( $fields ) ) {
+			wp_send_json_error( array( 'message' => __( 'הטופס לא נשלח כראוי. רעננו את הדף ונסו שוב.', 'kivun' ) ), 400 );
+		}
+
+		$stored = Kivun_Custom_Forms::save( $post_id, $fields, $builtins );
+
+		// What was kept, not what was sent: a question dropped for having no
+		// label should disappear from the screen too, rather than sit there
+		// looking saved until the next reload.
+		wp_send_json_success(
+			array(
+				'fields'  => $stored,
+				'message' => __( 'הטופס נשמר.', 'kivun' ),
+			)
+		);
+	}
+
+	/**
+	 * AJAX: copy a landing page, its form included.
+	 *
+	 * Composing a form is the slow part, so a second page that asks the same
+	 * questions is a copy rather than the same work done again. The copy is
+	 * a draft: it carries the original's words, and publishing it before
+	 * anybody has read them is not something to do on the client's behalf.
+	 *
+	 * @return void
+	 */
+	public static function ajax_duplicate_landing(): void {
+		check_ajax_referer( 'kivun_nonce', 'nonce' );
+
+		if ( ! current_user_can( 'edit_posts' ) ) {
+			wp_send_json_error( array( 'message' => __( 'אין לך הרשאה לערוך תוכן.', 'kivun' ) ), 403 );
+		}
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Verified above.
+		$post_id = absint( wp_unslash( $_POST['post_id'] ?? 0 ) );
+		$source  = $post_id ? get_post( $post_id ) : null;
+
+		if ( ! $source || 'kivun_workshop' !== $source->post_type ) {
+			wp_send_json_error( array( 'message' => __( 'לא נמצא דף הנחיתה.', 'kivun' ) ), 400 );
+		}
+
+		// The console's own duplication, not a second one written here. It
+		// already knows what a copy must not inherit — the content group,
+		// the archive mark, the centre's record id and the state around it,
+		// the edit locks — and carries the taxonomies and the thumbnail
+		// besides. Three of those exclusions were found missing from a copy
+		// of this loop one at a time; the fourth would have been found the
+		// same way.
+		//
+		// The form definition rides along with everything else: it is post
+		// meta like the rest, so composing a form once and copying the page
+		// is the point of the button.
+		if ( ! self::clone_post( $post_id, wp_generate_uuid4() ) ) {
+			wp_send_json_error( array( 'message' => __( 'השכפול נכשל.', 'kivun' ) ) );
+		}
+
+		wp_send_json_success( array( 'message' => __( 'הדף שוכפל כטיוטה, עם הטופס שלו.', 'kivun' ) ) );
+	}
+
+	/**
 	 * AJAX: give someone access to the leads table.
 	 *
 	 * @return void
@@ -2136,7 +2221,8 @@ class Kivun_Content_Creator {
 		}
 
 		if (
-			! in_array( $tab, array( 'form', 'library', 'leads', 'jobs', 'campaigns', 'calls' ), true ) ||
+			! in_array( $tab, array( 'form', 'library', 'forms', 'leads', 'jobs', 'campaigns', 'calls' ), true ) ||
+			( 'forms' === $tab && ( $leads_only || $agency ) ) ||
 			( 'leads' === $tab && ! $show_leads ) ||
 			( 'jobs' === $tab && ! $show_jobs ) ||
 			( 'campaigns' === $tab && ! $show_camp ) ||
@@ -2163,6 +2249,11 @@ class Kivun_Content_Creator {
 				'label' => __( 'התכנים שלי', 'kivun' ),
 				'icon'  => 'library',
 				'count' => $stats['content'],
+			),
+			'forms'   => array(
+				'label' => __( 'דפי נחיתה בהתאמה אישית', 'kivun' ),
+				'icon'  => 'publish',
+				'count' => null,
 			),
 		);
 		if ( $show_leads ) {
@@ -2317,6 +2408,12 @@ class Kivun_Content_Creator {
 
 				<section class="kivun-tab-panel <?php echo 'library' === $tab ? 'is-active' : ''; ?>" data-panel="library" id="kivun-ccpanel-library" role="tabpanel" aria-labelledby="kivun-cctab-library" tabindex="0" <?php echo 'library' === $tab ? '' : 'hidden'; ?>>
 					<?php self::front_library( $page_url, $can_delete ); ?>
+				</section>
+			<?php endif; ?>
+
+			<?php if ( ! $leads_only && ! $agency ) : ?>
+				<section class="kivun-tab-panel <?php echo 'forms' === $tab ? 'is-active' : ''; ?>" data-panel="forms" id="kivun-ccpanel-forms" role="tabpanel" aria-labelledby="kivun-cctab-forms" tabindex="0" <?php echo 'forms' === $tab ? '' : 'hidden'; ?>>
+					<?php self::front_custom_forms( $page_url ); ?>
 				</section>
 			<?php endif; ?>
 
@@ -3250,6 +3347,184 @@ class Kivun_Content_Creator {
 				'update_post_term_cache' => false,
 			)
 		);
+	}
+
+	/**
+	 * The landing pages that carry a form of their own.
+	 *
+	 * The page itself is made on the publishing tab like any other — this
+	 * screen is only about its form, which is why it lists the landing pages
+	 * rather than offering a second way to create one.
+	 *
+	 * @param string $page_url The current page URL.
+	 * @return void
+	 */
+	private static function front_custom_forms( string $page_url ): void {
+		$pages = get_posts(
+			array(
+				'post_type'        => 'kivun_workshop',
+				'post_status'      => array( 'publish', 'draft', 'pending', 'private', 'future' ),
+				'posts_per_page'   => 200, // phpcs:ignore WordPress.WP.PostsPerPage.posts_per_page_posts_per_page
+				'orderby'          => 'date',
+				'order'            => 'DESC',
+				'suppress_filters' => false,
+			)
+		);
+		?>
+		<div class="kivun-cc-front">
+			<div class="kivun-cc-head">
+				<h2 class="kivun-cc-title"><?php esc_html_e( 'דפי נחיתה בהתאמה אישית', 'kivun' ); ?></h2>
+				<p class="kivun-cc-lead">
+					<?php
+					printf(
+						/* translators: %s: a link whose text is the name of the publishing tab. */
+						esc_html__( 'אותו דף נחיתה — כותרת, תמונה, תיאור וקמפיין — רק שאת הטופס מרכיבים כאן. דף חדש נוצר בלשונית %s, וכאן בוחרים לו את השאלות.', 'kivun' ),
+						sprintf(
+							'<a href="%s">%s</a>',
+							esc_url( add_query_arg( 'kivun_tab', 'form', $page_url ) ),
+							esc_html__( 'פרסום תוכן', 'kivun' )
+						)
+					);
+					?>
+				</p>
+			</div>
+
+			<?php if ( ! $pages ) : ?>
+				<p class="kivun-cc-note"><?php esc_html_e( 'עדיין אין דפי נחיתה. צרו אחד בלשונית "פרסום תוכן" והוא יופיע כאן.', 'kivun' ); ?></p>
+			<?php else : ?>
+				<div class="kivun-cc-tablewrap">
+					<table class="kivun-cc-table">
+						<thead>
+							<tr>
+								<th scope="col"><?php esc_html_e( 'שם הדף', 'kivun' ); ?></th>
+								<th scope="col"><?php esc_html_e( 'הטופס', 'kivun' ); ?></th>
+								<th scope="col"><?php esc_html_e( 'סטטוס', 'kivun' ); ?></th>
+								<th scope="col"><?php esc_html_e( 'פעולות', 'kivun' ); ?></th>
+							</tr>
+						</thead>
+						<tbody>
+						<?php foreach ( $pages as $kivun_page ) : ?>
+							<?php
+							$kivun_pid    = (int) $kivun_page->ID;
+							$kivun_custom = Kivun_Custom_Forms::enabled( $kivun_pid );
+							$kivun_count  = count( Kivun_Custom_Forms::fields( $kivun_pid ) );
+							?>
+							<tr data-form-row="<?php echo esc_attr( (string) $kivun_pid ); ?>">
+								<td>
+									<strong><?php echo esc_html( get_the_title( $kivun_pid ) ); ?></strong>
+									<span class="kivun-cc-source"><?php echo esc_html( get_the_date( 'd/m/Y', $kivun_pid ) ); ?></span>
+								</td>
+								<td>
+									<?php if ( $kivun_custom ) : ?>
+										<span class="kivun-cc-badge">
+											<?php
+											printf(
+												/* translators: %d: number of questions. */
+												esc_html( _n( '%d שאלה', '%d שאלות', $kivun_count, 'kivun' ) ),
+												(int) $kivun_count
+											);
+											?>
+										</span>
+									<?php else : ?>
+										<span class="kivun-muted"><?php esc_html_e( 'הטופס הקבוע', 'kivun' ); ?></span>
+									<?php endif; ?>
+								</td>
+								<td>
+									<?php if ( 'publish' === $kivun_page->post_status ) : ?>
+										<span class="kivun-cc-badge"><?php esc_html_e( 'פעיל', 'kivun' ); ?></span>
+									<?php else : ?>
+										<span class="kivun-muted"><?php esc_html_e( 'טיוטה', 'kivun' ); ?></span>
+									<?php endif; ?>
+								</td>
+								<td>
+									<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost kivun-edit-form" data-id="<?php echo esc_attr( (string) $kivun_pid ); ?>">
+										<?php echo $kivun_custom ? esc_html__( 'עריכת הטופס', 'kivun' ) : esc_html__( 'בניית טופס', 'kivun' ); ?>
+									</button>
+									<?php
+									// Composing a form is the slow part, so the
+									// way to a second page that asks the same
+									// questions is a copy rather than doing it
+									// again by hand.
+									?>
+									<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost kivun-duplicate-form" data-id="<?php echo esc_attr( (string) $kivun_pid ); ?>">
+										<?php esc_html_e( 'שכפול', 'kivun' ); ?>
+									</button>
+									<a class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost" href="<?php echo esc_url( (string) get_permalink( $kivun_pid ) ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'תצוגה', 'kivun' ); ?></a>
+									<span class="kivun-cc-wa-status kivun-form-status" role="status" aria-live="polite"></span>
+								</td>
+							</tr>
+							<tr class="kivun-form-editrow" data-form-edit="<?php echo esc_attr( (string) $kivun_pid ); ?>" hidden>
+								<td colspan="4">
+									<?php self::custom_form_builder( $kivun_pid ); ?>
+								</td>
+							</tr>
+						<?php endforeach; ?>
+						</tbody>
+					</table>
+				</div>
+			<?php endif; ?>
+		</div>
+		<?php
+	}
+
+	/**
+	 * The builder for one page's form.
+	 *
+	 * The questions are edited as rows and posted as one definition, rather
+	 * than saved one at a time: a half-applied form is a form a visitor can
+	 * meet, and the order of the questions is itself part of what is being
+	 * edited.
+	 *
+	 * @param int $post_id The landing page.
+	 * @return void
+	 */
+	private static function custom_form_builder( int $post_id ): void {
+		$fields   = Kivun_Custom_Forms::fields( $post_id );
+		$builtins = Kivun_Custom_Forms::builtins( $post_id );
+		?>
+		<form class="kivun-form-builder" data-id="<?php echo esc_attr( (string) $post_id ); ?>">
+
+			<h3 class="kivun-cc-sub"><?php esc_html_e( 'שדות קבועים', 'kivun' ); ?></h3>
+			<p class="kivun-field-hint">
+				<?php esc_html_e( 'אלה העמודות של הליד עצמו — לפיהן עובדות חלוקת הרכזים, סינון העיר והשידור למרכז כיוון. שם וטלפון תמיד נשאלים.', 'kivun' ); ?>
+			</p>
+			<div class="kivun-cf-builtins">
+				<?php foreach ( Kivun_Custom_Forms::optional_builtins() as $kivun_key => $kivun_label ) : ?>
+					<label class="kivun-cf-builtin">
+						<input type="checkbox" class="kivun-cf-builtin-box" value="<?php echo esc_attr( $kivun_key ); ?>" <?php checked( in_array( $kivun_key, $builtins, true ) ); ?>>
+						<span><?php echo esc_html( $kivun_label ); ?></span>
+					</label>
+				<?php endforeach; ?>
+			</div>
+
+			<h3 class="kivun-cc-sub"><?php esc_html_e( 'השאלות שלכם', 'kivun' ); ?></h3>
+			<div class="kivun-cf-list"></div>
+
+			<div class="kivun-cf-add">
+				<label class="kivun-cc-sub" for="kivun-cf-type-<?php echo esc_attr( (string) $post_id ); ?>"><?php esc_html_e( 'הוספת שאלה', 'kivun' ); ?></label>
+				<div class="kivun-form-actions">
+					<select id="kivun-cf-type-<?php echo esc_attr( (string) $post_id ); ?>" class="kivun-cc-input kivun-cf-newtype">
+						<?php foreach ( Kivun_Custom_Forms::types() as $kivun_t => $kivun_tl ) : ?>
+							<option value="<?php echo esc_attr( $kivun_t ); ?>"><?php echo esc_html( $kivun_tl ); ?></option>
+						<?php endforeach; ?>
+					</select>
+					<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-cf-add-btn"><?php esc_html_e( '+ הוספה', 'kivun' ); ?></button>
+				</div>
+			</div>
+
+			<p class="kivun-error kivun-cf-error" style="display:none;color:var(--kivun-error)"></p>
+			<div class="kivun-form-actions">
+				<button type="submit" class="kivun-cc-btn kivun-cc-btn--sm"><?php esc_html_e( 'שמירת הטופס', 'kivun' ); ?></button>
+				<span class="kivun-cc-wa-status kivun-cf-status" role="status" aria-live="polite"></span>
+			</div>
+
+			<?php
+			// The definition the script starts from. A data attribute rather
+			// than a script block, so nothing here can be read as code.
+			?>
+			<span class="kivun-cf-seed" hidden data-fields="<?php echo esc_attr( (string) wp_json_encode( $fields ) ); ?>"></span>
+		</form>
+		<?php
 	}
 
 	/**

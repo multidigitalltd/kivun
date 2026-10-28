@@ -323,7 +323,27 @@ class Kivun_Export {
 		}
 		$headings = array_merge( $headings, array( 'שם', 'אימייל', 'טלפון', 'עיר', 'מגדר', 'אישור דיוור', 'סוג', 'הערות', 'הערות פנימיות', 'סטטוס', 'תאריך' ) );
 
-		fputcsv( $out, $headings );
+		// A landing page may ask questions of its own, and those answers are
+		// the reason this file is opened. Left inside the one "הערות" cell
+		// they can be read and nothing else — not sorted, not counted, not
+		// pivoted.
+		//
+		// The columns are the questions these rows actually answered, so an
+		// export of one page is a clean sheet and an export of everything is
+		// a wide one with gaps. Matched by the question's own words, so the
+		// same question on two pages shares a column. The prose column stays
+		// either way: it is the copy that cannot lose anything, including
+		// answers to a question since deleted.
+		$question_columns = self::question_columns( $rows );
+		$headings         = array_merge( $headings, $question_columns );
+
+		// Through csv_safe() like every data cell. Until now a heading was
+		// always a word of ours; a question's heading is whatever the client
+		// typed into the builder, and one beginning = + - or @ is a formula
+		// as far as a spreadsheet is concerned. The raw labels are kept in
+		// $question_columns, because that is what the answers are looked up
+		// by.
+		fputcsv( $out, array_map( array( __CLASS__, 'csv_safe' ), $headings ) );
 
 		$type_labels = array(
 			'registration' => 'הרשמה',
@@ -362,7 +382,8 @@ class Kivun_Export {
 							$r['notes'],
 							$r['status'],
 							$r['created_at'],
-						)
+						),
+						self::answer_cells( $r['answers'] ?? '', $question_columns )
 					)
 				)
 			);
@@ -439,6 +460,99 @@ class Kivun_Export {
 
 		fclose( $out ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose
 		exit;
+	}
+
+	/**
+	 * The questions these rows answered, in the order they are first met.
+	 *
+	 * Keyed by the question, not by its wording. Two questions may be worded
+	 * alike, and an unanswered one is simply absent from a row — so lining
+	 * the columns up by label alone put one lead's answer under another
+	 * lead's question as soon as either happened.
+	 *
+	 * @param array<int,array<string,mixed>> $rows The rows being exported.
+	 * @return array<string,string> Question key => heading.
+	 */
+	private static function question_columns( array $rows ): array {
+		$columns = array();
+		foreach ( $rows as $row ) {
+			foreach ( self::answers_of( (string) ( $row['answers'] ?? '' ) ) as $key => $answer ) {
+				if ( ! isset( $columns[ $key ] ) ) {
+					$columns[ $key ] = $answer['label'];
+				}
+			}
+		}
+
+		// Two questions worded alike still need telling apart on the sheet,
+		// so the second and later get a number. The columns themselves were
+		// already distinct; this is only what a reader sees.
+		$seen = array();
+		foreach ( $columns as $key => $label ) {
+			$seen[ $label ]  = ( $seen[ $label ] ?? 0 ) + 1;
+			$columns[ $key ] = $seen[ $label ] > 1 ? $label . ' (' . $seen[ $label ] . ')' : $label;
+		}
+
+		return $columns;
+	}
+
+	/**
+	 * One row's answers, lined up under the headings.
+	 *
+	 * @param string               $stored  The row's stored answers, as JSON.
+	 * @param array<string,string> $columns Question key => heading, in order.
+	 * @return array<int,string> One cell per heading.
+	 */
+	private static function answer_cells( string $stored, array $columns ): array {
+		if ( ! $columns ) {
+			return array();
+		}
+
+		$answers = self::answers_of( $stored );
+		$cells   = array();
+		foreach ( array_keys( $columns ) as $key ) {
+			$cells[] = isset( $answers[ $key ] ) ? $answers[ $key ]['value'] : '';
+		}
+		return $cells;
+	}
+
+	/**
+	 * A row's stored answers, keyed by the question each one answers.
+	 *
+	 * Anything that is not the shape this was written in reads as no answers
+	 * rather than stopping the export: a report is not the place to discover
+	 * that one row of three thousand was edited by hand.
+	 *
+	 * @param string $stored The JSON written when the lead was filed.
+	 * @return array<string,array{label:string,value:string}>
+	 */
+	private static function answers_of( string $stored ): array {
+		if ( '' === trim( $stored ) ) {
+			return array();
+		}
+
+		$decoded = json_decode( $stored, true );
+		if ( ! is_array( $decoded ) ) {
+			return array();
+		}
+
+		$out = array();
+		foreach ( $decoded as $position => $answer ) {
+			if ( ! is_array( $answer ) || ! isset( $answer['label'] ) ) {
+				continue;
+			}
+
+			// A row written before the key was stored falls back to its
+			// position, which is at least stable within that one row.
+			$key = isset( $answer['key'] ) && '' !== (string) $answer['key']
+				? (string) $answer['key']
+				: 'pos_' . $position;
+
+			$out[ $key ] = array(
+				'label' => (string) $answer['label'],
+				'value' => (string) ( $answer['value'] ?? '' ),
+			);
+		}
+		return $out;
 	}
 
 	/**

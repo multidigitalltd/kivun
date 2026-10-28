@@ -191,6 +191,12 @@ class Kivun_Installer {
 				'utm_medium'        => "varchar(150) NOT NULL DEFAULT ''",
 				'utm_campaign'      => "varchar(150) NOT NULL DEFAULT ''",
 				'utm_content'       => "varchar(150) NOT NULL DEFAULT ''",
+				// The answers to a landing page's own questions, as JSON, so
+				// a report can give each question a column of its own. The
+				// same answers are also written into `message`, which is what
+				// the table and the notification read — this is the machine's
+				// copy, not the only one.
+				'answers'           => 'longtext',
 			),
 		);
 
@@ -287,6 +293,7 @@ class Kivun_Installer {
 				utm_medium   varchar(150)       NOT NULL DEFAULT '',
 				utm_campaign varchar(150)       NOT NULL DEFAULT '',
 				utm_content  varchar(150)       NOT NULL DEFAULT '',
+				answers     longtext            NULL,
 				created_at  datetime            NOT NULL DEFAULT CURRENT_TIMESTAMP,
 				PRIMARY KEY (id),
 				KEY course_id (course_id),

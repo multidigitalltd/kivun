@@ -155,8 +155,11 @@ class Kivun_Shortcodes {
 		}
 
 		ob_start();
+		// A course has no form of its own today, and the guard above keeps
+		// anything else out — but the decision is made in one place so a
+		// render site cannot drift from the validation.
 		kivun_get_template(
-			'courses/interest-form.php',
+			Kivun_Custom_Forms::template( (int) $id ),
 			array(
 				'post_id'   => $id,
 				'post_type' => 'kivun_course',

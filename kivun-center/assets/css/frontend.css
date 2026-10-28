@@ -2401,6 +2401,38 @@ body.kivun-ty-open { overflow: hidden; }
    stacked rule above and the narrow-screen one below. */
 .kivun-cc-table.is-stacked tr[hidden] { display: none; }
 
+/* ── The form a landing page asks ────────────────────────────────────────── */
+.kivun-cf-builtins { display: flex; flex-wrap: wrap; gap: .5rem .9rem; margin: .4rem 0 1.2rem; }
+.kivun-cf-builtin { display: flex; align-items: center; gap: .4rem; font-size: .88rem; }
+
+.kivun-cf-list { display: flex; flex-direction: column; gap: .6rem; }
+.kivun-cf-row {
+	border: 1px solid var(--cc-line, #e3e5e9);
+	border-radius: 10px;
+	padding: .7rem .8rem;
+	background: #fcfcfd;
+}
+.kivun-cf-row__main { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+.kivun-cf-handle { color: #9aa0ab; cursor: default; font-size: .9rem; }
+/* The question's own words get the room; everything beside it is a control
+   of a fixed size, and on a phone they wrap under it rather than squeezing
+   it down to nothing. */
+.kivun-cf-row .kivun-cf-label { flex: 999 1 14rem; min-width: 0; }
+.kivun-cf-row .kivun-cf-type { flex: 0 1 10rem; min-width: 0; }
+.kivun-cf-req { display: flex; align-items: center; gap: .35rem; font-size: .85rem; white-space: nowrap; }
+.kivun-cf-row__options { margin-top: .6rem; padding-inline-start: 1.4rem; }
+.kivun-cf-row__options[hidden] { display: none; }
+.kivun-cf-add { margin-top: 1rem; padding-top: .9rem; border-top: 1px dashed var(--cc-line, #e3e5e9); }
+
+/* The visitor's side: a group of choices reads as one question. */
+.kivun-cf-choices { border: 0; margin: 0 0 1rem; padding: 0; }
+.kivun-cf-choices legend { padding: 0; margin-bottom: .4rem; font-size: .9rem; font-weight: 500; }
+.kivun-cf-choice { display: flex; align-items: center; gap: .5rem; margin-bottom: .35rem; font-size: .92rem; cursor: pointer; }
+/* The form's inputs are full width by default, which a radio inherits too —
+   leaving the button adrift in the middle of the row with its words at the
+   far edge. Same `flex: none` the consent row already uses. */
+.kivun-cf-choice input { flex: none; width: auto; margin: 0; }
+
 @media (max-width: 782px) {
 	.kivun-cc-tablewrap > .kivun-cc-table { display: block; }
 	.kivun-cc-tablewrap > .kivun-cc-table > tbody,

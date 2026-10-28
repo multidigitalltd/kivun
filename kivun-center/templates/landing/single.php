@@ -57,8 +57,10 @@ $kivun_details = array(
 
 	<div class="kivun-landing__form" id="kivun-landing-register">
 		<?php
+		// A page that was given a form of its own shows that one; every other
+		// landing page shows the fixed form exactly as before.
 		kivun_get_template(
-			'courses/interest-form.php',
+			Kivun_Custom_Forms::template( (int) $landing_id ),
 			array(
 				'post_id'   => $landing_id,
 				'post_type' => 'kivun_workshop',
