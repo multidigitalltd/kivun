@@ -219,6 +219,12 @@ class Kivun_Custom_Forms {
 		$out   = array();
 		$seen  = array();
 
+		// Every key the definition already carries, claimed before a single
+		// new one is handed out. A question further down the form owns its key
+		// just as much as the one being read now, and a key given away here
+		// would take its answers with it.
+		$spoken_for = self::keys_in( $raw );
+
 		foreach ( $raw as $field ) {
 			if ( ! is_array( $field ) ) {
 				continue;
@@ -239,7 +245,7 @@ class Kivun_Custom_Forms {
 			// the answers already given to it.
 			$key = sanitize_key( (string) ( $field['key'] ?? '' ) );
 			if ( '' === $key || isset( $seen[ $key ] ) ) {
-				$key = 'q' . ( count( $out ) + 1 ) . '_' . substr( md5( $label . count( $out ) ), 0, 6 );
+				$key = self::fresh_key( $spoken_for + $seen );
 			}
 			$seen[ $key ] = true;
 
@@ -281,6 +287,53 @@ class Kivun_Custom_Forms {
 		}
 
 		return $out;
+	}
+
+	/**
+	 * Every key a definition already carries.
+	 *
+	 * @param array $raw The questions, as given.
+	 * @return array<string,true> Keyed by key, for an `isset()` test.
+	 */
+	private static function keys_in( array $raw ): array {
+		$keys = array();
+
+		foreach ( $raw as $field ) {
+			if ( ! is_array( $field ) ) {
+				continue;
+			}
+
+			$key = sanitize_key( (string) ( $field['key'] ?? '' ) );
+			if ( '' !== $key ) {
+				$keys[ $key ] = true;
+			}
+		}
+
+		return $keys;
+	}
+
+	/**
+	 * A key for a question that does not have one yet.
+	 *
+	 * Drawn at random rather than derived from the label and the position,
+	 * which is how the previous one worked and why it could be stolen: two
+	 * questions worded alike, one of them moved above the other, and the
+	 * newcomer was handed the exact key the older question had been given —
+	 * taking its answers' column with it. A key is an identity, so it cannot
+	 * be computed from anything the editor is free to change.
+	 *
+	 * @param array $spoken_for Keys already claimed, keyed by key.
+	 * @return string
+	 */
+	private static function fresh_key( array $spoken_for ): string {
+		// Ten hex characters against at most MAX_FIELDS claims, so the loop
+		// is here for correctness rather than because it is ever expected to
+		// turn twice.
+		do {
+			$key = 'q' . substr( md5( (string) wp_rand() ), 0, 10 );
+		} while ( isset( $spoken_for[ $key ] ) );
+
+		return $key;
 	}
 
 	/**

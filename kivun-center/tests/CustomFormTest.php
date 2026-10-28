@@ -132,6 +132,83 @@ final class CustomFormTest extends TestCase {
 	}
 
 	/**
+	 * A new question cannot be handed the key an older one is using.
+	 *
+	 * The key used to be derived from the label and the position, so adding a
+	 * second question worded like the first and moving it above meant the
+	 * newcomer was computed into exactly the key the older question already
+	 * held — and the older question, finding its key taken, was given a new
+	 * one. Every answer already given to it then lined up under the new
+	 * question's export column, and every later answer under a third.
+	 *
+	 * @return void
+	 */
+	public function test_a_new_question_does_not_steal_an_older_one_s_key(): void {
+		$id   = $this->page( array( array( 'label' => 'פרטים', 'type' => 'text' ) ) );
+		$mine = Kivun_Custom_Forms::fields( $id )[0]['key'];
+
+		// A second question worded the same, inserted above the first.
+		$after = Kivun_Custom_Forms::sanitize_fields(
+			array(
+				array( 'label' => 'פרטים', 'type' => 'text' ),
+				array( 'key' => $mine, 'label' => 'פרטים', 'type' => 'text' ),
+			)
+		);
+
+		$this->assertCount( 2, $after );
+		$this->assertNotSame( $mine, $after[0]['key'], 'the new question was given the older one\'s key' );
+		$this->assertSame( $mine, $after[1]['key'], 'the older question lost the key its answers are under' );
+	}
+
+	/**
+	 * A key is not computed from anything the editor can change.
+	 *
+	 * This is the root cause of the theft above rather than another symptom
+	 * of it: while the key was derived from the label and the position, any
+	 * question later put at that position under that wording was handed the
+	 * same key — a question deleted months ago included, whose answers are
+	 * still in the table. Two identical forms built independently must not
+	 * come out sharing identities.
+	 *
+	 * @return void
+	 */
+	public function test_a_key_is_not_derived_from_the_label_and_the_position(): void {
+		$form = array(
+			array( 'label' => 'פרטים', 'type' => 'text' ),
+			array( 'label' => 'הערות', 'type' => 'text' ),
+		);
+
+		$first  = Kivun_Custom_Forms::sanitize_fields( $form );
+		$second = Kivun_Custom_Forms::sanitize_fields( $form );
+
+		$this->assertNotSame(
+			array( $first[0]['key'], $first[1]['key'] ),
+			array( $second[0]['key'], $second[1]['key'] ),
+			'the same wording in the same place produced the same identity twice'
+		);
+	}
+
+	/**
+	 * A stored key is kept exactly as it was.
+	 *
+	 * The other half of the same boundary: a key may never be reissued, and
+	 * it may never be rewritten either, or the answers under it are orphaned
+	 * the moment the form is saved again.
+	 *
+	 * @return void
+	 */
+	public function test_a_stored_key_is_left_alone(): void {
+		$fields = Kivun_Custom_Forms::sanitize_fields(
+			array(
+				array( 'key' => 'q2_abc123', 'label' => 'ותיקה', 'type' => 'text' ),
+				array( 'key' => 'q3_def456', 'label' => 'ועוד ותיקה', 'type' => 'text' ),
+			)
+		);
+
+		$this->assertSame( array( 'q2_abc123', 'q3_def456' ), array( $fields[0]['key'], $fields[1]['key'] ) );
+	}
+
+	/**
 	 * A form has a ceiling.
 	 *
 	 * @return void
