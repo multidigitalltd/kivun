@@ -107,6 +107,18 @@ final class Kivun_Test_State {
 	public static string $timezone = 'Asia/Jerusalem';
 
 	/**
+	 * The post being viewed, which get_the_ID() reports.
+	 */
+	public static int $current_post = 0;
+
+	/**
+	 * Templates kivun_get_template() was asked for, in order.
+	 *
+	 * @var array<int,array{template:string,vars:array}>
+	 */
+	public static array $templates = array();
+
+	/**
 	 * Forget everything, so tests do not leak into one another.
 	 *
 	 * @return void
@@ -122,6 +134,8 @@ final class Kivun_Test_State {
 		self::$mail_fails = false;
 		self::$updates    = array();
 		self::$timezone   = 'Asia/Jerusalem';
+		self::$current_post = 0;
+		self::$templates    = array();
 
 		// Whether an address has already been written to is remembered for
 		// the rest of the request, which across tests is the rest of the run.
@@ -622,6 +636,61 @@ function get_the_terms( int $post_id, string $taxonomy ) {
  */
 function get_post_type( int $post_id = 0 ) {
 	return Kivun_Test_State::$posts[ $post_id ]['post_type'] ?? false;
+}
+
+/**
+ * The post being viewed.
+ *
+ * @return int|false
+ */
+function get_the_ID() {
+	return Kivun_Test_State::$current_post ? Kivun_Test_State::$current_post : false;
+}
+
+/**
+ * Shortcode attributes over their defaults.
+ *
+ * Keeps only the keys the shortcode declared, the way WordPress does: an
+ * attribute nobody asked for must not reach the handler.
+ *
+ * @param array  $pairs    The defaults.
+ * @param array  $atts     What was written in the shortcode.
+ * @param string $shortcode The tag.
+ * @return array
+ */
+function shortcode_atts( array $pairs, $atts, string $shortcode = '' ): array {
+	$atts = (array) $atts;
+	$out  = array();
+	foreach ( $pairs as $name => $default ) {
+		$out[ $name ] = array_key_exists( $name, $atts ) ? $atts[ $name ] : $default;
+	}
+	return $out;
+}
+
+/**
+ * Registering a shortcode.
+ *
+ * @param string $tag      The tag.
+ * @param mixed  $callback Its handler.
+ * @return void
+ */
+function add_shortcode( string $tag, $callback ): void {
+	Kivun_Test_State::$options[ 'shortcode:' . $tag ] = $callback;
+}
+
+/**
+ * Load a template — recorded rather than rendered, so a test can ask which
+ * form a render site chose without the template's own output in the way.
+ *
+ * @param string $template The template path.
+ * @param array  $vars     Its variables.
+ * @return void
+ */
+function kivun_get_template( string $template, array $vars = array() ): void {
+	Kivun_Test_State::$templates[] = array(
+		'template' => $template,
+		'vars'     => $vars,
+	);
 }
 
 /**
@@ -1217,6 +1286,8 @@ foreach ( array(
 ) as $kivun_test_class ) {
 	require_once KIVUN_DIR . 'includes/' . $kivun_test_class . '.php';
 }
+
+require_once KIVUN_DIR . 'shortcodes/class-kivun-shortcodes.php';
 
 /**
  * Just enough of a post for code that is handed one.

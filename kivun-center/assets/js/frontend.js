@@ -2581,12 +2581,23 @@
 		consent: 'אישור'
 	};
 
+	// The built-in fields, in the order the form itself draws them. The
+	// preview is only honest if it follows the template rather than the
+	// order the checkboxes happen to be in.
+	var KIVUN_CF_BUILTINS = [
+		{ key: 'email', label: 'אימייל', type: 'text' },
+		{ key: 'city', label: 'עיר', type: 'text' },
+		{ key: 'gender', label: 'מגדר', type: 'select', options: ['זכר', 'נקבה', 'אחר'] }
+	];
+	var KIVUN_CF_TAIL = [
+		{ key: 'message', label: 'הערות חופשיות', type: 'textarea' },
+		{ key: 'marketing_consent', label: 'אישור דיוור', type: 'consent' }
+	];
+
 	function kivunCfHasOptions(type) {
 		return type === 'select' || type === 'radio' || type === 'checkbox';
 	}
 
-	// Read the list back out of the DOM rather than keeping a model beside
-	// it: the row IS the question, so the two can never drift apart.
 	function kivunCfRead(form) {
 		var out = [];
 		Array.prototype.forEach.call(form.querySelectorAll('.kivun-cf-row'), function (row) {
@@ -2605,10 +2616,19 @@
 		return out;
 	}
 
+	function kivunCfBuiltinsOn(form) {
+		var on = [];
+		Array.prototype.forEach.call(form.querySelectorAll('.kivun-cf-builtin-box'), function (box) {
+			if (box.checked) { on.push(box.value); }
+		});
+		return on;
+	}
+
 	function kivunCfRow(form, field) {
 		var row = document.createElement('div');
 		row.className = 'kivun-cf-row';
 		row.dataset.key = field.key || '';
+		row.draggable = true;
 
 		var options = Object.keys(KIVUN_CF_TYPES).map(function (t) {
 			return '<option value="' + t + '"' + (t === field.type ? ' selected' : '') + '>' + KIVUN_CF_TYPES[t] + '</option>';
@@ -2618,17 +2638,20 @@
 		// words — a label with a quote in it must not be able to end an
 		// attribute.
 		row.innerHTML =
-			'<div class="kivun-cf-row__main">' +
-				'<span class="kivun-cf-handle" aria-hidden="true">⋮⋮</span>' +
-				'<input type="text" class="kivun-cc-input kivun-cf-label" placeholder="נוסח השאלה">' +
-				'<select class="kivun-cc-input kivun-cf-type">' + options + '</select>' +
-				'<label class="kivun-cf-req"><input type="checkbox" class="kivun-cf-required"><span>חובה</span></label>' +
-				'<button type="button" class="kivun-cc-iconbtn kivun-cf-up" title="העלאה" aria-label="העלאה">↑</button>' +
-				'<button type="button" class="kivun-cc-iconbtn kivun-cf-down" title="הורדה" aria-label="הורדה">↓</button>' +
+			'<div class="kivun-cf-row__bar">' +
+				'<span class="kivun-cf-handle" title="גרירה לשינוי הסדר" aria-hidden="true">⠿</span>' +
+				'<span class="kivun-cf-num" aria-hidden="true"></span>' +
+				'<input type="text" class="kivun-cc-input kivun-cf-label" placeholder="נוסח השאלה, כפי שהמבקר יקרא אותה">' +
+				'<button type="button" class="kivun-cc-iconbtn kivun-cf-up" title="העלאה" aria-label="העלאת השאלה למעלה">↑</button>' +
+				'<button type="button" class="kivun-cc-iconbtn kivun-cf-down" title="הורדה" aria-label="הורדת השאלה למטה">↓</button>' +
 				'<button type="button" class="kivun-cc-iconbtn kivun-cc-iconbtn--danger kivun-cf-remove" title="מחיקה" aria-label="מחיקת השאלה">✕</button>' +
 			'</div>' +
+			'<div class="kivun-cf-row__meta">' +
+				'<label class="kivun-cf-pick"><span>סוג</span><select class="kivun-cc-input kivun-cf-type">' + options + '</select></label>' +
+				'<label class="kivun-cf-req"><input type="checkbox" class="kivun-cf-required"><span>שאלת חובה</span></label>' +
+			'</div>' +
 			'<div class="kivun-cf-row__options"' + (kivunCfHasOptions(field.type) ? '' : ' hidden') + '>' +
-				'<label class="kivun-cc-sub">אפשרויות — אחת בכל שורה</label>' +
+				'<label class="kivun-cc-sub">אפשרויות לבחירה — אחת בכל שורה</label>' +
 				'<textarea class="kivun-cc-input kivun-cf-options" rows="3"></textarea>' +
 			'</div>';
 
@@ -2640,11 +2663,152 @@
 		return row;
 	}
 
+	// The number badge, the count and the empty note all say the same thing,
+	// so they are refreshed together rather than each by whoever changed the
+	// list.
+	function kivunCfRenumber(form) {
+		var rows = form.querySelectorAll('.kivun-cf-row');
+		Array.prototype.forEach.call(rows, function (row, i) {
+			var num = row.querySelector('.kivun-cf-num');
+			if (num) { num.textContent = String(i + 1); }
+			var up = row.querySelector('.kivun-cf-up');
+			var down = row.querySelector('.kivun-cf-down');
+			if (up) { up.disabled = i === 0; }
+			if (down) { down.disabled = i === rows.length - 1; }
+		});
+
+		var empty = form.querySelector('.kivun-cf-empty');
+		if (empty) { empty.hidden = rows.length > 0; }
+		var note = form.querySelector('.kivun-cf-dragnote');
+		if (note) { note.hidden = rows.length < 2; }
+		var count = form.querySelector('.kivun-cf-count');
+		if (count) { count.textContent = rows.length ? '(' + rows.length + ')' : ''; }
+	}
+
+	// One preview field, inert. Labels and options are set as text, never as
+	// markup: they are the client's own words.
+	function kivunCfPreviewField(field, required) {
+		var wrap = document.createElement('div');
+		wrap.className = 'kivun-cf-pv-field';
+
+		if (field.type === 'consent') {
+			var line = document.createElement('label');
+			line.className = 'kivun-cf-pv-consent';
+			var box = document.createElement('input');
+			box.type = 'checkbox';
+			box.disabled = true;
+			line.appendChild(box);
+			line.appendChild(document.createTextNode(field.label + (required ? ' *' : '')));
+			wrap.appendChild(line);
+			return wrap;
+		}
+
+		var label = document.createElement('span');
+		label.className = 'kivun-cf-pv-label';
+		label.textContent = field.label + (required ? ' *' : '');
+		wrap.appendChild(label);
+
+		var opts = field.options || [];
+		if (field.type === 'radio' || field.type === 'checkbox') {
+			var group = document.createElement('div');
+			group.className = 'kivun-cf-pv-group';
+			opts.forEach(function (opt) {
+				var one = document.createElement('label');
+				var input = document.createElement('input');
+				input.type = field.type === 'radio' ? 'radio' : 'checkbox';
+				input.disabled = true;
+				one.appendChild(input);
+				one.appendChild(document.createTextNode(opt));
+				group.appendChild(one);
+			});
+			wrap.appendChild(group);
+			return wrap;
+		}
+
+		if (field.type === 'select') {
+			var select = document.createElement('select');
+			select.disabled = true;
+			var first = document.createElement('option');
+			first.textContent = 'בחר/י';
+			select.appendChild(first);
+			opts.forEach(function (opt) {
+				var o = document.createElement('option');
+				o.textContent = opt;
+				select.appendChild(o);
+			});
+			wrap.appendChild(select);
+			return wrap;
+		}
+
+		var control = document.createElement(field.type === 'textarea' ? 'textarea' : 'input');
+		if (field.type !== 'textarea') {
+			control.type = field.type === 'date' ? 'date' : (field.type === 'number' ? 'number' : 'text');
+		} else {
+			control.rows = 2;
+		}
+		control.disabled = true;
+		wrap.appendChild(control);
+		return wrap;
+	}
+
+	// Drawn from exactly what a save would post, so the preview cannot show
+	// a form that would not be stored — including a question still missing
+	// its wording, which appears as the gap it is.
+	function kivunCfPreview(form) {
+		var body = form.querySelector('.kivun-cf-preview__body');
+		if (!body) { return; }
+
+		var on = kivunCfBuiltinsOn(form);
+		var asks = function (key) { return on.indexOf(key) !== -1; };
+
+		body.innerHTML = '';
+		body.appendChild(kivunCfPreviewField({ label: 'שם מלא', type: 'text' }, true));
+		body.appendChild(kivunCfPreviewField({ label: 'טלפון', type: 'text' }, true));
+		KIVUN_CF_BUILTINS.forEach(function (b) {
+			if (asks(b.key)) { body.appendChild(kivunCfPreviewField(b, false)); }
+		});
+
+		kivunCfRead(form).forEach(function (field, i) {
+			var shown = {
+				label: field.label || 'שאלה ' + (i + 1) + ' — חסר נוסח',
+				type: field.type,
+				options: (field.options || '').split('\n').map(function (o) { return o.trim(); }).filter(Boolean)
+			};
+			var node = kivunCfPreviewField(shown, field.required);
+			if (!field.label) { node.classList.add('is-blank'); }
+			body.appendChild(node);
+		});
+
+		KIVUN_CF_TAIL.forEach(function (b) {
+			if (asks(b.key)) { body.appendChild(kivunCfPreviewField(b, false)); }
+		});
+
+		var send = document.createElement('span');
+		send.className = 'kivun-cf-pv-send';
+		send.textContent = 'שליחה';
+		body.appendChild(send);
+	}
+
+	// Anything that changed the form refreshes the same three things, so no
+	// caller has to remember which of them its own change affected.
+	function kivunCfTouch(form, dirty) {
+		kivunCfRenumber(form);
+		kivunCfPreview(form);
+		if (dirty) {
+			var flag = form.querySelector('.kivun-cf-dirty');
+			if (flag) { flag.hidden = false; }
+		}
+	}
+
 	function kivunCfFill(form, fields) {
 		var list = form.querySelector('.kivun-cf-list');
 		if (!list) { return; }
 		list.innerHTML = '';
 		(fields || []).forEach(function (field) { kivunCfRow(form, field); });
+		kivunCfRenumber(form);
+		kivunCfPreview(form);
+		var flag = form.querySelector('.kivun-cf-dirty');
+		if (flag) { flag.hidden = true; }
 	}
 
 	// Seeded from the definition already saved, so opening the editor shows
@@ -2674,16 +2838,13 @@
 		var form = e.target.closest('.kivun-form-builder');
 		if (!form) { return; }
 
+		// One button rather than a type to pick and then a button to press:
+		// the wording is what the writer has in mind first, and the type can
+		// be changed inside the question once it is there.
 		var add = e.target.closest('.kivun-cf-add-btn');
 		if (add) {
-			var picker = form.querySelector('.kivun-cf-newtype');
-			var type = picker ? picker.value : 'text';
-			var row = kivunCfRow(form, {
-				label: '',
-				type: type,
-				required: false,
-				options: kivunCfHasOptions(type) ? ['אפשרות א', 'אפשרות ב'] : []
-			});
+			var row = kivunCfRow(form, { label: '', type: 'text', required: false, options: [] });
+			kivunCfTouch(form, true);
 			var label = row.querySelector('.kivun-cf-label');
 			if (label) { label.focus(); }
 			return;
@@ -2692,7 +2853,10 @@
 		var remove = e.target.closest('.kivun-cf-remove');
 		if (remove) {
 			var dead = remove.closest('.kivun-cf-row');
-			if (dead) { dead.parentNode.removeChild(dead); }
+			if (dead) {
+				dead.parentNode.removeChild(dead);
+				kivunCfTouch(form, true);
+			}
 			return;
 		}
 
@@ -2708,22 +2872,80 @@
 			} else {
 				moving.parentNode.insertBefore(sibling, moving);
 			}
+			kivunCfTouch(form, true);
+			move.focus();
 		}
+	});
+
+	// Dragging to reorder. The arrows above stay: a drag cannot be done from
+	// a keyboard, and the order of the questions is part of what is being
+	// edited rather than a convenience.
+	var kivunCfDragged = null;
+
+	document.addEventListener('dragstart', function (e) {
+		var row = e.target.closest && e.target.closest('.kivun-cf-row');
+		if (!row || !row.closest('.kivun-form-builder')) { return; }
+		kivunCfDragged = row;
+		row.classList.add('is-dragging');
+		if (e.dataTransfer) {
+			e.dataTransfer.effectAllowed = 'move';
+			// Firefox starts no drag at all without data set on it.
+			e.dataTransfer.setData('text/plain', '');
+		}
+	});
+
+	document.addEventListener('dragover', function (e) {
+		if (!kivunCfDragged) { return; }
+		var over = e.target.closest && e.target.closest('.kivun-cf-row');
+		if (!over || over === kivunCfDragged) { return; }
+		if (over.parentNode !== kivunCfDragged.parentNode) { return; }
+		e.preventDefault();
+
+		// Past the halfway line the dragged question goes after this one,
+		// which is what makes the list part either side of the pointer.
+		var box = over.getBoundingClientRect();
+		var after = (e.clientY - box.top) > (box.height / 2);
+		over.parentNode.insertBefore(kivunCfDragged, after ? over.nextSibling : over);
+	});
+
+	document.addEventListener('dragend', function () {
+		if (!kivunCfDragged) { return; }
+		var form = kivunCfDragged.closest('.kivun-form-builder');
+		kivunCfDragged.classList.remove('is-dragging');
+		kivunCfDragged = null;
+		if (form) { kivunCfTouch(form, true); }
 	});
 
 	// A type that takes a list of choices shows the box for them.
 	document.addEventListener('change', function (e) {
-		var type = e.target.closest('.kivun-cf-type');
-		if (!type) { return; }
-		var row = type.closest('.kivun-cf-row');
-		var box = row && row.querySelector('.kivun-cf-row__options');
-		if (!box) { return; }
+		var form = e.target.closest('.kivun-form-builder');
+		if (!form) { return; }
 
-		box.hidden = !kivunCfHasOptions(type.value);
-		var opts = row.querySelector('.kivun-cf-options');
-		if (!box.hidden && opts && !opts.value.trim()) {
-			opts.value = 'אפשרות א\nאפשרות ב';
+		var type = e.target.closest('.kivun-cf-type');
+		if (type) {
+			var row = type.closest('.kivun-cf-row');
+			var box = row && row.querySelector('.kivun-cf-row__options');
+			if (box) {
+				box.hidden = !kivunCfHasOptions(type.value);
+				var opts = row.querySelector('.kivun-cf-options');
+				if (!box.hidden && opts && !opts.value.trim()) {
+					opts.value = 'אפשרות א\nאפשרות ב';
+				}
+			}
 		}
+
+		kivunCfTouch(form, true);
+	});
+
+	// Typing a question's wording or its choices shows up in the preview as
+	// it is typed, which is the whole point of having one.
+	document.addEventListener('input', function (e) {
+		var form = e.target.closest('.kivun-form-builder');
+		if (!form) { return; }
+		if (!e.target.closest('.kivun-cf-label, .kivun-cf-options')) { return; }
+		kivunCfPreview(form);
+		var flag = form.querySelector('.kivun-cf-dirty');
+		if (flag) { flag.hidden = false; }
 	});
 
 	document.addEventListener('submit', function (e) {

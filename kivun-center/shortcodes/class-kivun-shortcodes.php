@@ -27,6 +27,7 @@ class Kivun_Shortcodes {
 			'kivun_session_status'     => 'render_session_status',
 			'kivun_event_register'     => 'render_event_register',
 			'kivun_course_interest'    => 'render_course_interest',
+			'kivun_lead_form'          => 'render_lead_form',
 			'kivun_workshops'          => 'render_workshops',
 			'kivun_workshop_single'    => 'render_workshop_single',
 			'kivun_jobs'               => 'render_jobs',
@@ -163,6 +164,42 @@ class Kivun_Shortcodes {
 			array(
 				'post_id'   => $id,
 				'post_type' => 'kivun_course',
+			)
+		);
+		return ob_get_clean();
+	}
+
+	/**
+	 * Render a page's lead form on its own, wherever it is placed.
+	 *
+	 * The plugin draws the built-in landing layout only where a site asked
+	 * for it, and most do not: they design the landing page in Elementor,
+	 * where none of the plugin's own render sites are reached. A page could
+	 * therefore be given a form of its own that it had no way of showing —
+	 * which is exactly what happened. This is the way in: the Elementor
+	 * widget uses it, and so does a Shortcode block anywhere else.
+	 *
+	 * Falls back to the post being viewed, so one Elementor template can
+	 * serve every landing page without naming an id.
+	 *
+	 * @param array $atts Shortcode attributes.
+	 * @return string Rendered HTML markup.
+	 */
+	public static function render_lead_form( array $atts ): string {
+		$atts = shortcode_atts( array( 'id' => 0 ), $atts, 'kivun_lead_form' );
+		$id   = absint( $atts['id'] ) ? absint( $atts['id'] ) : (int) get_the_ID();
+
+		$type = get_post_type( $id );
+		if ( ! in_array( $type, array( 'kivun_workshop', 'kivun_course' ), true ) ) {
+			return '';
+		}
+
+		ob_start();
+		kivun_get_template(
+			Kivun_Custom_Forms::template( $id ),
+			array(
+				'post_id'   => $id,
+				'post_type' => $type,
 			)
 		);
 		return ob_get_clean();
