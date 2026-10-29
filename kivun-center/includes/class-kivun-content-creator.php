@@ -6012,6 +6012,7 @@ class Kivun_Content_Creator {
 									'gender'  => __( 'מגדר', 'kivun' ),
 									'handler' => __( 'רכז/ת מטפל/ת', 'kivun' ),
 									'consent' => __( 'דיוור', 'kivun' ),
+									'privacy' => __( 'פרטיות', 'kivun' ),
 									'message' => __( 'פרטי הפנייה', 'kivun' ),
 									'notes'   => __( 'הערות פנימיות', 'kivun' ),
 									'date'    => __( 'תאריך', 'kivun' ),
@@ -6046,6 +6047,7 @@ class Kivun_Content_Creator {
 							<th scope="col" data-col="gender"><?php esc_html_e( 'מגדר', 'kivun' ); ?></th>
 							<th scope="col" data-col="handler"><?php esc_html_e( 'רכז/ת מטפל/ת', 'kivun' ); ?></th>
 							<th scope="col" data-col="consent"><?php esc_html_e( 'דיוור', 'kivun' ); ?></th>
+							<th scope="col" data-col="privacy"><?php esc_html_e( 'פרטיות', 'kivun' ); ?></th>
 							<th scope="col" data-col="message"><?php esc_html_e( 'פרטי הפנייה', 'kivun' ); ?></th>
 							<th scope="col" data-col="notes"><?php esc_html_e( 'הערות פנימיות', 'kivun' ); ?></th>
 							<th scope="col"><?php esc_html_e( 'תאריך', 'kivun' ); ?></th>
@@ -6136,6 +6138,7 @@ class Kivun_Content_Creator {
 								<?php endif; ?>
 							</td>
 							<td data-label="<?php esc_attr_e( 'דיוור', 'kivun' ); ?>" data-col="consent"><?php echo esc_html( empty( $r->marketing_consent ) ? '—' : '✓' ); ?></td>
+							<td data-label="<?php esc_attr_e( 'פרטיות', 'kivun' ); ?>" data-col="privacy"><?php echo esc_html( empty( $r->privacy_consent ) ? '—' : '✓' ); ?></td>
 							<td data-label="<?php esc_attr_e( 'פרטי הפנייה', 'kivun' ); ?>" data-col="message">
 								<?php echo kivun_submission_details( (string) ( $r->message ?? '' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Helper escapes the saved text and labels. ?>
 							</td>

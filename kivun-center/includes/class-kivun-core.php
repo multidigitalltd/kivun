@@ -119,6 +119,7 @@ class Kivun_Core {
 			'class-kivun-coordinators',
 			'class-kivun-form-details',
 			'class-kivun-custom-forms',
+			'class-kivun-privacy-consent',
 			'class-kivun-lead-capture',
 			'class-kivun-utm',
 			'class-kivun-campaigns',

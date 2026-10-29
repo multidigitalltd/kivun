@@ -49,20 +49,46 @@ $kivun_policy = (string) Kivun_Admin_Settings::get( 'cookie_policy_url', '' );
 		 */
 		$kivun_terms = (string) apply_filters( 'kivun_terms_url', $kivun_privacy );
 		?>
+		<?php
+		// The words here have always been a privacy agreement — "I have read and
+		// agree to the privacy policy and the terms of use" — while the box was
+		// named `marketing_consent`, so anyone who ticked it was recorded as
+		// agreeing to marketing they were never asked about. It records what it
+		// says now.
+		//
+		// This form posts to the same handler as the two lead forms, which is
+		// how a required consent they collected and it did not would have
+		// refused every event registration on the site. Found in review.
+		?>
 		<label class="kivun-ef__consent">
-			<input type="checkbox" name="marketing_consent" value="1">
+			<input type="checkbox" name="privacy_consent" value="1" <?php echo Kivun_Privacy_Consent::asked() ? 'required' : ''; ?>>
 			<span>
-				<?php echo esc_html__( 'אני מאשר/ת שקראתי ואני מסכים/ה ל', 'kivun' ); ?>
-				<?php if ( '' !== $kivun_privacy ) : ?>
-					<a href="<?php echo esc_url( $kivun_privacy ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'מדיניות הפרטיות', 'kivun' ); ?></a>
+				<?php if ( Kivun_Privacy_Consent::asked() ) : ?>
+					<?php
+					echo wp_kses(
+						Kivun_Privacy_Consent::label(),
+						array(
+							'a' => array(
+								'href'   => array(),
+								'target' => array(),
+								'rel'    => array(),
+							),
+						)
+					);
+					?>
 				<?php else : ?>
-					<?php esc_html_e( 'מדיניות הפרטיות', 'kivun' ); ?>
-				<?php endif; ?>
-				<?php echo esc_html__( 'ול', 'kivun' ); ?>
-				<?php if ( '' !== $kivun_terms ) : ?>
-					<a href="<?php echo esc_url( $kivun_terms ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'תנאי השימוש', 'kivun' ); ?></a>
-				<?php else : ?>
-					<?php esc_html_e( 'תנאי השימוש', 'kivun' ); ?>
+					<?php echo esc_html__( 'אני מאשר/ת שקראתי ואני מסכים/ה ל', 'kivun' ); ?>
+					<?php if ( '' !== $kivun_privacy ) : ?>
+						<a href="<?php echo esc_url( $kivun_privacy ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'מדיניות הפרטיות', 'kivun' ); ?></a>
+					<?php else : ?>
+						<?php esc_html_e( 'מדיניות הפרטיות', 'kivun' ); ?>
+					<?php endif; ?>
+					<?php echo esc_html__( 'ול', 'kivun' ); ?>
+					<?php if ( '' !== $kivun_terms ) : ?>
+						<a href="<?php echo esc_url( $kivun_terms ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'תנאי השימוש', 'kivun' ); ?></a>
+					<?php else : ?>
+						<?php esc_html_e( 'תנאי השימוש', 'kivun' ); ?>
+					<?php endif; ?>
 				<?php endif; ?>
 			</span>
 		</label>

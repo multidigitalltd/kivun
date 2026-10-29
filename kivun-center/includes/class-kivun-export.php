@@ -321,7 +321,7 @@ class Kivun_Export {
 			// things a spreadsheet is opened for.
 			$headings = array_merge( $headings, array( 'מקור', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content' ) );
 		}
-		$headings = array_merge( $headings, array( 'שם', 'אימייל', 'טלפון', 'עיר', 'מגדר', 'אישור דיוור', 'סוג', 'הערות', 'הערות פנימיות', 'סטטוס', 'תאריך' ) );
+		$headings = array_merge( $headings, array( 'שם', 'אימייל', 'טלפון', 'עיר', 'מגדר', 'אישור דיוור', 'אישור פרטיות', 'סוג', 'הערות', 'הערות פנימיות', 'סטטוס', 'תאריך' ) );
 
 		// A landing page may ask questions of its own, and those answers are
 		// the reason this file is opened. Left inside the one "הערות" cell
@@ -377,6 +377,7 @@ class Kivun_Export {
 							$r['city'] ?? '',
 							$r['gender'] ?? '',
 							empty( $r['marketing_consent'] ) ? 'לא' : 'כן',
+							empty( $r['privacy_consent'] ) ? 'לא' : 'כן',
 							$type_labels[ $r['type'] ] ?? $r['type'],
 							$r['message'],
 							$r['notes'],

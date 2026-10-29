@@ -63,6 +63,33 @@ $kivun_plain = ! empty( $plain );
 			<span><?php esc_html_e( 'אני מאשר/ת קבלת דיוור ותכנים שיווקיים.', 'kivun' ); ?></span>
 		</label>
 
+		<?php
+		// Last, under everything it is an agreement about. Required when the
+		// site asks it at all — a privacy consent that can be left unticked
+		// collects nothing but the appearance of one. The sentence and its
+		// links come from one place, so the forms cannot word the same
+		// agreement differently.
+		?>
+		<?php if ( Kivun_Privacy_Consent::asked() ) : ?>
+			<label class="kivun-consent-row kivun-consent-row--required">
+				<input type="checkbox" name="privacy_consent" value="1" required>
+				<span>
+				<?php
+				echo wp_kses(
+					Kivun_Privacy_Consent::label(),
+					array(
+						'a' => array(
+							'href'   => array(),
+							'target' => array(),
+							'rel'    => array(),
+						),
+					)
+				);
+				?>
+						</span>
+			</label>
+		<?php endif; ?>
+
 		<p class="kivun-error" style="display:none;color:var(--kivun-error)"></p>
 
 		<button type="submit" class="kivun-btn kivun-btn--outline">

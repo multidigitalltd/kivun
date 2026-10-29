@@ -281,6 +281,9 @@ class Kivun_Admin_Settings {
 				'jobs_per_page'              => absint( $_POST['jobs_per_page'] ?? 10 ),
 				'cookie_banner_enabled'      => ! empty( $_POST['cookie_banner_enabled'] ),
 				'cookie_policy_url'          => esc_url_raw( wp_unslash( $_POST['cookie_policy_url'] ?? '' ) ),
+				'privacy_consent_enabled'    => ! empty( $_POST['privacy_consent_enabled'] ),
+				'privacy_url'                => esc_url_raw( wp_unslash( $_POST['privacy_url'] ?? '' ) ),
+				'terms_url'                  => esc_url_raw( wp_unslash( $_POST['terms_url'] ?? '' ) ),
 				'landing_builtin_single'     => ! empty( $_POST['landing_builtin_single'] ),
 				'allow_cv_upload'            => ! empty( $_POST['allow_cv_upload'] ),
 				'cv_max_size_mb'             => absint( $_POST['cv_max_size_mb'] ?? 5 ),
@@ -480,6 +483,33 @@ class Kivun_Admin_Settings {
 							<?php esc_html_e( 'הצג את המבנה המובנה של התוסף בעמוד דף הנחיתה (תמונה + פרטים + טופס).', 'kivun' ); ?>
 						</label>
 						<p class="description"><?php esc_html_e( 'השאר כבוי אם אתה מעצב את עמוד דף הנחיתה בעצמך (Elementor) — כך התוסף לא ידרוס את התוכן ולא יוסיף טופס.', 'kivun' ); ?></p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'אישור מדיניות פרטיות', 'kivun' ); ?></th>
+					<td>
+						<label>
+							<input type="checkbox" name="privacy_consent_enabled" value="1" <?php checked( (bool) $o( 'privacy_consent_enabled', false ) ); ?>>
+							<?php esc_html_e( 'דרוש אישור מדיניות פרטיות בטפסי הלידים.', 'kivun' ); ?>
+						</label>
+						<p class="description">
+							<?php esc_html_e( 'תיבת סימון חובה בטופס המתעניינים ובטופס המותאם של דף נחיתה. האישור נשמר עם הליד ומופיע בטבלה ובייצוא.', 'kivun' ); ?>
+						</p>
+						<p>
+							<label>
+								<?php esc_html_e( 'קישור למדיניות הפרטיות', 'kivun' ); ?><br>
+								<input type="url" name="privacy_url" value="<?php echo esc_attr( $o( 'privacy_url', '' ) ); ?>" class="regular-text" placeholder="<?php echo esc_attr( function_exists( 'get_privacy_policy_url' ) ? (string) get_privacy_policy_url() : '' ); ?>">
+							</label>
+						</p>
+						<p>
+							<label>
+								<?php esc_html_e( 'קישור לתנאי השימוש (לא חובה)', 'kivun' ); ?><br>
+								<input type="url" name="terms_url" value="<?php echo esc_attr( $o( 'terms_url', '' ) ); ?>" class="regular-text">
+							</label>
+						</p>
+						<p class="description">
+							<?php esc_html_e( 'אם לא ימולא קישור למדיניות — ואין עמוד מדיניות פרטיות מוגדר בוורדפרס — התיבה לא תוצג כלל, כדי שלא תידרש הסכמה למסמך שאין אליו קישור.', 'kivun' ); ?>
+						</p>
 					</td>
 				</tr>
 				<tr>

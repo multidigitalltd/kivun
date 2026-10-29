@@ -1099,6 +1099,25 @@ function wp_nonce_field( string $action = '-1', string $name = '_wpnonce', bool 
 }
 
 /**
+ * Keep only the tags a caller allowed.
+ *
+ * Enough of the real thing for what this plugin asks of it: the allowed tags
+ * survive, everything else is stripped. A stub that let a <script> through
+ * would make an escaping test pass while the escaping was gone.
+ *
+ * @param string $content The markup.
+ * @param array  $allowed Tag name => allowed attributes.
+ * @return string
+ */
+function wp_kses( string $content, array $allowed = array() ): string {
+	$keep = array_keys( $allowed );
+
+	return $keep
+		? strip_tags( $content, '<' . implode( '><', $keep ) . '>' ) // phpcs:ignore
+		: wp_strip_all_tags( $content );
+}
+
+/**
  * Register a script. Nothing is rendered, as in WordPress.
  *
  * @param mixed ...$args Whatever the caller passes.
@@ -1304,6 +1323,7 @@ foreach ( array(
 	'class-kivun-admin',
 	'class-kivun-core',
 	'class-kivun-custom-forms',
+	'class-kivun-privacy-consent',
 ) as $kivun_test_class ) {
 	require_once KIVUN_DIR . 'includes/' . $kivun_test_class . '.php';
 }
