@@ -695,6 +695,101 @@
 .kivun-interest__title { margin: 0 0 .3rem; font-size: 1.15rem; color: var(--kivun-primary); }
 .kivun-interest__sub   { margin: 0 0 1.25rem; font-size: .9rem; color: var(--kivun-muted); }
 
+/* A form placed inside a design that already has its own heading, spacing and
+   type. The plugin's panel — the dashed frame, the pale blue fill, the fixed
+   font sizes — is exactly what makes it read as something bolted on, so none
+   of it applies here. What is left is layout: a label above its field, rows
+   with air between them. Colour, font and weight are inherited, so the fields
+   take the page's own, and the underline uses currentColor rather than a
+   colour of ours, so it follows a light or a dark design without being told
+   which. */
+.kivun-interest--plain {
+	margin-top: 0;
+	border: 0;
+	border-radius: 0;
+	padding: 0;
+	background: none;
+	/* `.kivun-interest` sets the plugin's own font family. Inheriting from
+	   there means inheriting ours, not the page's, so the chain is released
+	   at the wrapper — otherwise `font: inherit` on the fields below faithfully
+	   inherits the wrong font. Caught in the browser, not in review. */
+	font-family: inherit;
+}
+.kivun-interest--plain .kivun-form-row label {
+	font: inherit;
+	font-weight: 500;
+	color: inherit;
+	opacity: .75;
+}
+.kivun-interest--plain .kivun-form-row input,
+.kivun-interest--plain .kivun-form-row textarea,
+.kivun-interest--plain .kivun-form-row select {
+	padding: .45rem .1rem;
+	border: 0;
+	border-bottom: 1px solid currentColor;
+	border-radius: 0;
+	background: none;
+	font: inherit;
+	color: inherit;
+	opacity: .85;
+}
+.kivun-interest--plain .kivun-form-row input:focus,
+.kivun-interest--plain .kivun-form-row textarea:focus,
+.kivun-interest--plain .kivun-form-row select:focus {
+	border-bottom-width: 2px;
+	box-shadow: none;
+	opacity: 1;
+}
+/* A checkbox and a radio are not text boxes, and the rule above would give
+   them an underline and stretch them across the row. */
+.kivun-interest--plain .kivun-form-row input[type="checkbox"],
+.kivun-interest--plain .kivun-form-row input[type="radio"],
+.kivun-interest--plain .kivun-cf-choice input,
+.kivun-interest--plain .kivun-consent-row input {
+	flex: none;
+	width: auto;
+	border: 0;
+	opacity: 1;
+}
+/* A text field shows focus by thickening its underline, which a tickbox has
+   not got. Three rules had each taken away a different part of what would
+   otherwise have shown it — the shared rule drops the browser's outline, the
+   rule above drops the replacement shadow, and the one before it drops the
+   border — so a keyboard user had nothing left to follow. Given back
+   explicitly, in the inherited colour like everything else here. Found in
+   review, and reproduced before it was believed. */
+.kivun-interest--plain .kivun-form-row input[type="checkbox"]:focus-visible,
+.kivun-interest--plain .kivun-form-row input[type="radio"]:focus-visible,
+.kivun-interest--plain .kivun-cf-choice input:focus-visible,
+.kivun-interest--plain .kivun-consent-row input:focus-visible {
+	outline: 2px solid currentColor;
+	outline-offset: 2px;
+}
+
+/* The button is the last thing still wearing the plugin's colours, and a
+   blue one sitting in somebody else's palette is the loudest part of not
+   belonging. Drawn from currentColor instead, so it takes the design's own
+   and reads on a light page or a dark one without being told which. */
+.kivun-interest--plain .kivun-lead-submit {
+	border: 1px solid currentColor;
+	background: none;
+	color: inherit;
+	font: inherit;
+	font-weight: 600;
+}
+.kivun-interest--plain .kivun-lead-submit:hover,
+.kivun-interest--plain .kivun-lead-submit:focus-visible {
+	/* Not `background: currentColor` with a new `color`: both resolve against
+	   the same element, so the label would turn the colour it was just placed
+	   on and disappear. A tint of the inherited colour keeps the text where
+	   it is and still answers the pointer. */
+	background: color-mix(in srgb, currentColor 15%, transparent);
+}
+
+/* What a number box will not say for itself. */
+.kivun-field-note { display: block; margin-top: .3rem; font-size: .82rem; color: var(--kivun-error, #b91c1c); }
+.kivun-field-note[hidden] { display: none; }
+
 /* ── Employer dashboard — modern, clean ──────────────────────────────────── */
 .kivun-employer-dashboard {
 	--kc-accent: var(--kivun-accent);

@@ -17,10 +17,13 @@ $kivun_fields   = Kivun_Custom_Forms::fields( $post_id );
 $kivun_builtins = Kivun_Custom_Forms::builtins( $post_id );
 $kivun_asks     = static fn( string $key ): bool => in_array( $key, $kivun_builtins, true );
 ?>
-<div class="kivun-interest" id="kivun-interest-<?php echo esc_attr( (string) $post_id ); ?>">
-	<h3 class="kivun-interest__title"><?php esc_html_e( 'מתעניין/ת? נחזור אליך', 'kivun' ); ?></h3>
-	<p class="kivun-interest__sub"><?php esc_html_e( 'השאר פרטים ונציג שלנו יצור איתך קשר עם כל המידע.', 'kivun' ); ?></p>
-
+<?php
+// No heading of ours. This form is placed inside a design that already has
+// one, and a second title under the client's own read as a form bolted on
+// rather than part of the page. The chrome goes with it: `--plain` drops the
+// panel and lets the page's own styling reach the fields.
+?>
+<div class="kivun-interest kivun-interest--plain" id="kivun-interest-<?php echo esc_attr( (string) $post_id ); ?>">
 	<form class="kivun-lead-form" novalidate>
 		<?php wp_nonce_field( 'kivun_nonce', '_nonce', false ); ?>
 		<input type="hidden" name="post_id" value="<?php echo esc_attr( (string) $post_id ); ?>">
@@ -113,8 +116,18 @@ $kivun_asks     = static fn( string $key ): bool => in_array( $key, $kivun_built
 							id="<?php echo esc_attr( $kivun_id ); ?>"
 							name="<?php echo esc_attr( $kivun_name ); ?>"
 							<?php echo 'date' === $kivun_field['type'] ? 'dir="ltr"' : ''; ?>
+							<?php echo 'number' === $kivun_field['type'] ? 'inputmode="numeric"' : ''; ?>
 							<?php echo $kivun_field['required'] ? 'required' : ''; ?>
 						>
+						<?php
+						// A number box refuses a letter without saying so — the
+						// key is pressed and nothing appears, which reads as a
+						// broken field rather than a rejected character. The
+						// script fills this in when that happens.
+						?>
+						<?php if ( 'number' === $kivun_field['type'] ) : ?>
+							<span class="kivun-field-note" role="status" aria-live="polite" hidden></span>
+						<?php endif; ?>
 					<?php endif; ?>
 				</div>
 			<?php endif; ?>
