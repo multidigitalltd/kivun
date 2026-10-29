@@ -1439,6 +1439,31 @@ class Kivun_Content_Creator {
 	}
 
 	/**
+	 * Every post the leads filter covers when these contents are chosen.
+	 *
+	 * Everything the visitor could have arrived through: a course and its
+	 * landing page are one piece of content, so filtering to one of them and
+	 * hiding the rest would answer a question nobody asked. With several
+	 * chosen it is every arrival into any of them.
+	 *
+	 * One named thing because two places need the same answer — the table's
+	 * query and the export button beside it. While each worked it out for
+	 * itself they disagreed, and the screen said thirty-five while the
+	 * spreadsheet held one.
+	 *
+	 * @param array<int,int> $content_filter The contents chosen in the filter.
+	 * @return array<int,int> Every post id they cover; empty for no filter.
+	 */
+	public static function content_scope( array $content_filter ): array {
+		$scope = array();
+		foreach ( $content_filter as $chosen_content ) {
+			$scope = array_merge( $scope, self::group_post_ids( (int) $chosen_content ) );
+		}
+
+		return array_values( array_unique( array_map( 'absint', $scope ) ) );
+	}
+
+	/**
 	 * Every post that belongs to the same piece of content as this one.
 	 *
 	 * A course and the landing page built for it are one thing to whoever made
@@ -5577,18 +5602,17 @@ class Kivun_Content_Creator {
 			$per_page = 25;
 		}
 
+		// Worked out once and kept, because the export button below is built
+		// from the same list. It used to carry the chosen contents as they
+		// came, so the table counted a whole piece of content and the
+		// spreadsheet held whatever had been filed against the single post
+		// that was named. Reported from the live site: thirty-five enquiries
+		// on screen, one in the file.
+		$content_scope = self::content_scope( $content_filter );
+
 		$conds = array();
-		if ( $content_filter ) {
-			// Everything the visitor could have arrived through: a course and
-			// its landing page are one piece of content, so filtering to one of
-			// them and hiding the rest would answer a question nobody asked.
-			// With several chosen it is every arrival into any of them.
-			$group_ids = array();
-			foreach ( $content_filter as $chosen_content ) {
-				$group_ids = array_merge( $group_ids, self::group_post_ids( $chosen_content ) );
-			}
-			$group_ids = array_unique( array_map( 'absint', $group_ids ) );
-			$conds[]   = 'r.course_id IN ( ' . implode( ', ', $group_ids ) . ' )';
+		if ( $content_scope ) {
+			$conds[] = 'r.course_id IN ( ' . implode( ', ', $content_scope ) . ' )';
 		}
 		// Only values this screen offers reach the query — a hand-edited URL
 		// asking for a type that does not exist should narrow to nothing
@@ -5851,7 +5875,12 @@ class Kivun_Content_Creator {
 				// "Unauthorized" reads as a fault rather than a boundary.
 				if ( self::can_manage_leads() ) :
 					?>
-					<a class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost" href="<?php echo esc_url( Kivun_Export::url( 'registrations', $content_filter ) ); ?>">
+					<?php
+					// The ids the table above was actually queried with, not
+					// the ones the filter names: the same list, so the two
+					// cannot disagree about what the filter means.
+					?>
+					<a class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost" href="<?php echo esc_url( Kivun_Export::url( 'registrations', $content_scope ) ); ?>">
 						<?php echo kivun_icon( 'download' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?><?php esc_html_e( 'ייצוא CSV', 'kivun' ); ?>
 					</a>
 				<?php endif; ?>
