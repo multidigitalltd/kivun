@@ -2564,6 +2564,68 @@
 		}
 	}
 
+	// ── A number box, saying what it refuses ────────────────────────────────
+	//
+	// A number input drops a letter without a word: the key is pressed, the
+	// character does not appear, and nothing says why. People read that as a
+	// field that has stopped working, not as a character that was rejected —
+	// so the refusal is said out loud, next to the field it happened in.
+
+	function kivunNumberNote(input) {
+		var note = input.parentNode && input.parentNode.querySelector('.kivun-field-note');
+		return note || null;
+	}
+
+	function kivunSayNumbersOnly(input) {
+		var note = kivunNumberNote(input);
+		if (!note) { return; }
+		note.textContent = 'בשדה הזה אפשר להקליד מספרים בלבד.';
+		note.hidden = false;
+	}
+
+	function kivunClearNote(input) {
+		var note = kivunNumberNote(input);
+		if (note) {
+			note.hidden = true;
+			note.textContent = '';
+		}
+	}
+
+	function kivunIsNumberField(el) {
+		return el && el.tagName === 'INPUT' && el.type === 'number' && el.closest('.kivun-lead-form');
+	}
+
+	document.addEventListener('keydown', function (e) {
+		if (!kivunIsNumberField(e.target)) { return; }
+		// Printable keys only: Backspace, Tab, the arrows and shortcuts all
+		// report a longer key name or a modifier, and must pass through.
+		if (e.key.length !== 1 || e.ctrlKey || e.metaKey || e.altKey) { return; }
+		if (/[0-9.,+\-]/.test(e.key)) { return; }
+
+		e.preventDefault();
+		kivunSayNumbersOnly(e.target);
+	});
+
+	document.addEventListener('paste', function (e) {
+		if (!kivunIsNumberField(e.target)) { return; }
+		var text = e.clipboardData && e.clipboardData.getData('text');
+		if (text && /[^0-9.,+\-\s]/.test(text)) {
+			e.preventDefault();
+			kivunSayNumbersOnly(e.target);
+		}
+	});
+
+	document.addEventListener('input', function (e) {
+		if (!kivunIsNumberField(e.target)) { return; }
+		// badInput is what a browser that accepted the letters reports, since
+		// not all of them refuse at the keystroke.
+		if (e.target.validity && e.target.validity.badInput) {
+			kivunSayNumbersOnly(e.target);
+			return;
+		}
+		kivunClearNote(e.target);
+	});
+
 	// ── The form a landing page asks ────────────────────────────────────────
 	//
 	// The questions are edited as a list and posted as one definition. Saving
