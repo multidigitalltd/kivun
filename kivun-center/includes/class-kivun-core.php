@@ -315,6 +315,19 @@ class Kivun_Core {
 			$classes[] = kivun_event_registration_open( $id ) ? 'kivun-event-open' : 'kivun-event-closed';
 			$classes[] = 'kivun-event-mode-' . kivun_event_mode( $id );
 		}
+
+		// One Elementor template serves every landing page, so it cannot
+		// carry a form that only some of them should show: delete the one
+		// drawn in the design and the ordinary pages lose their form, keep it
+		// and the pages with questions of their own show two. The page says
+		// which kind it is here, and the design hides whichever half does not
+		// belong — the same way the event template already works.
+		if ( is_singular( array( 'kivun_workshop', 'kivun_course' ) ) ) {
+			$classes[] = Kivun_Custom_Forms::enabled( (int) get_queried_object_id() )
+				? 'kivun-has-custom-form'
+				: 'kivun-no-custom-form';
+		}
+
 		return $classes;
 	}
 

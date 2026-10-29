@@ -786,6 +786,17 @@
 	background: color-mix(in srgb, currentColor 15%, transparent);
 }
 
+/* Two halves of one Elementor template. Put `kivun-hide-if-custom-form` on
+   the form drawn in the design and it steps aside on a page that asks its
+   own questions; put `kivun-hide-unless-custom-form` on anything that should
+   appear only there. `!important` because these sit on widgets the page
+   builder styles inline, and a rule that loses the cascade here shows two
+   forms rather than one — the failure this exists to prevent. */
+body.kivun-has-custom-form .kivun-hide-if-custom-form,
+body.kivun-no-custom-form .kivun-hide-unless-custom-form {
+	display: none !important;
+}
+
 /* What a number box will not say for itself. */
 .kivun-field-note { display: block; margin-top: .3rem; font-size: .82rem; color: var(--kivun-error, #b91c1c); }
 .kivun-field-note[hidden] { display: none; }

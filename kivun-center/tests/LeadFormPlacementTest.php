@@ -244,6 +244,102 @@ final class LeadFormPlacementTest extends TestCase {
 		$this->assertSame( array(), Kivun_Test_State::$enqueued );
 	}
 
+	// ── One template, two kinds of page ──────────────────────────────────────
+
+	/**
+	 * `only="custom"` draws nothing where the page asks no questions.
+	 *
+	 * One Elementor template serves every landing page, so the form drawn in
+	 * the design cannot simply be deleted: the ordinary pages need it. Both
+	 * halves sit on the template at once and each steps aside where the other
+	 * belongs — this is the half that steps aside.
+	 *
+	 * @return void
+	 */
+	public function test_only_custom_is_silent_on_a_page_without_questions(): void {
+		$id = $this->post( 7, 'kivun_workshop' );
+
+		$this->assertSame( '', Kivun_Shortcodes::render_lead_form( array( 'id' => $id, 'only' => 'custom' ) ) );
+		$this->assertSame( array(), Kivun_Test_State::$templates, 'it drew a form it was told to stay out of' );
+	}
+
+	/**
+	 * And draws where the page does ask them.
+	 *
+	 * @return void
+	 */
+	public function test_only_custom_draws_where_there_are_questions(): void {
+		$id = $this->post( 7, 'kivun_workshop', true );
+
+		Kivun_Shortcodes::render_lead_form( array( 'id' => $id, 'only' => 'custom' ) );
+
+		$this->assertSame( 'landing/custom-form.php', $this->drawn()['template'] );
+	}
+
+	/**
+	 * Without the attribute it still falls back, as it always did.
+	 *
+	 * The default must not change under anyone already using the shortcode
+	 * bare, which is how it was documented when it shipped.
+	 *
+	 * @return void
+	 */
+	public function test_the_default_still_falls_back_to_the_fixed_form(): void {
+		$id = $this->post( 7, 'kivun_workshop' );
+
+		Kivun_Shortcodes::render_lead_form( array( 'id' => $id ) );
+
+		$this->assertSame( 'courses/interest-form.php', $this->drawn()['template'] );
+	}
+
+	/**
+	 * Whichever form is drawn this way is drawn to sit in a design.
+	 *
+	 * The fixed form is the fallback, and left as it is on the plugin's own
+	 * pages it arrives with a heading and a panel — the exact complaint that
+	 * started this. Placed through here it is told it has company.
+	 *
+	 * @return void
+	 */
+	public function test_both_forms_are_drawn_plain_when_placed_in_a_design(): void {
+		foreach ( array( false, true ) as $custom ) {
+			Kivun_Test_State::reset();
+			$id = $this->post( 7, 'kivun_workshop', $custom );
+
+			Kivun_Shortcodes::render_lead_form( array( 'id' => $id ) );
+
+			$this->assertTrue(
+				! empty( $this->drawn()['vars']['plain'] ),
+				( $custom ? 'the custom form' : 'the fixed form' ) . ' was not told it sits inside a design'
+			);
+		}
+	}
+
+	/**
+	 * The page tells the design which kind it is.
+	 *
+	 * The form drawn in the template is hidden by CSS on the pages that carry
+	 * their own, which needs the page to say so on the body — the way the
+	 * event template already works.
+	 *
+	 * @return void
+	 */
+	public function test_the_body_says_whether_the_page_has_its_own_form(): void {
+		$src = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-core.php' );
+
+		$at = strpos( $src, 'function body_classes' );
+		$this->assertNotFalse( $at, 'the body classes moved' );
+		$body = substr( $src, $at, 1400 );
+
+		$this->assertStringContainsString( 'kivun-has-custom-form', $body );
+		$this->assertStringContainsString( 'kivun-no-custom-form', $body );
+
+		// And the stylesheet acts on it, or the class says something nobody
+		// listens to.
+		$css = (string) file_get_contents( KIVUN_DIR . 'assets/css/frontend.css' );
+		$this->assertStringContainsString( 'body.kivun-has-custom-form .kivun-hide-if-custom-form', $css );
+	}
+
 	/**
 	 * The shortcode is registered under the name the widget and the docs use.
 	 *
