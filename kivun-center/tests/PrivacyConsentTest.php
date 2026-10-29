@@ -204,6 +204,48 @@ final class PrivacyConsentTest extends TestCase {
 		}
 	}
 
+	/**
+	 * Every form that posts to that handler collects the agreement.
+	 *
+	 * The refusal is in one handler, and three templates post to it — the two
+	 * lead forms and the event registration, which says so in its own
+	 * docblock. I added the field to two of them and told the client the
+	 * third was a separate path. It is not: turning the setting on would have
+	 * refused every event registration on the site, because that form sends
+	 * no such field however it is filled in.
+	 *
+	 * So this does not name the templates. It finds whatever posts to the
+	 * shared handler and holds all of them to the same rule, which is the
+	 * only version of this test that would have caught the one I missed.
+	 *
+	 * @return void
+	 */
+	public function test_every_form_on_that_handler_collects_it(): void {
+		$dir   = KIVUN_DIR . 'templates';
+		$found = array();
+
+		$files = new RecursiveIteratorIterator( new RecursiveDirectoryIterator( $dir ) );
+		foreach ( $files as $file ) {
+			if ( 'php' !== $file->getExtension() ) {
+				continue;
+			}
+
+			$src = (string) file_get_contents( $file->getPathname() );
+			if ( false === strpos( $src, 'kivun-lead-form' ) ) {
+				continue;
+			}
+
+			$found[] = str_replace( $dir . '/', '', $file->getPathname() );
+			$this->assertStringContainsString(
+				'privacy_consent',
+				$src,
+				$file->getFilename() . ' posts to the lead handler but sends no agreement, so every submission from it would be refused'
+			);
+		}
+
+		$this->assertGreaterThanOrEqual( 3, count( $found ), 'the forms moved; this test found almost none of them' );
+	}
+
 	// ── What is kept ─────────────────────────────────────────────────────────
 
 	/**
