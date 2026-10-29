@@ -119,6 +119,16 @@ final class Kivun_Test_State {
 	public static array $templates = array();
 
 	/**
+	 * Handles passed to wp_enqueue_script()/wp_enqueue_style().
+	 *
+	 * A form drawn without its script submits nothing, and says nothing
+	 * about it, so what was asked for is worth being able to check.
+	 *
+	 * @var array<int,string>
+	 */
+	public static array $enqueued = array();
+
+	/**
 	 * Forget everything, so tests do not leak into one another.
 	 *
 	 * @return void
@@ -136,6 +146,7 @@ final class Kivun_Test_State {
 		self::$timezone   = 'Asia/Jerusalem';
 		self::$current_post = 0;
 		self::$templates    = array();
+		self::$enqueued     = array();
 
 		// Whether an address has already been written to is remembered for
 		// the rest of the request, which across tests is the rest of the run.
@@ -1094,7 +1105,17 @@ function wp_nonce_field( string $action = '-1', string $name = '_wpnonce', bool 
  * @return void
  */
 function wp_enqueue_script( ...$args ): void {
-	unset( $args );
+	Kivun_Test_State::$enqueued[] = (string) ( $args[0] ?? '' );
+}
+
+/**
+ * Enqueue a stylesheet. Recorded for the same reason as the script above.
+ *
+ * @param mixed ...$args Whatever the caller passes.
+ * @return void
+ */
+function wp_enqueue_style( ...$args ): void {
+	Kivun_Test_State::$enqueued[] = (string) ( $args[0] ?? '' );
 }
 
 // ── Miscellaneous ─────────────────────────────────────────────────────────────

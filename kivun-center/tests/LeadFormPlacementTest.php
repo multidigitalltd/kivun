@@ -148,6 +148,103 @@ final class LeadFormPlacementTest extends TestCase {
 	}
 
 	/**
+	 * A form written without attributes does not take the page down.
+	 *
+	 * WordPress hands a shortcode written as `[kivun_lead_form]` an empty
+	 * string rather than an empty array before 6.5, and this plugin supports
+	 * 6.0. An `array` type hint therefore made the one way the shortcode is
+	 * meant to be written a fatal error — and a fatal in a shortcode takes
+	 * the whole page with it. Found in review; the test that called this
+	 * with `array()` never saw it.
+	 *
+	 * @return void
+	 */
+	public function test_a_shortcode_written_without_attributes_still_works(): void {
+		$id                             = $this->post( 31, 'kivun_workshop', true );
+		Kivun_Test_State::$current_post = $id;
+
+		// How WordPress calls it before 6.5.
+		Kivun_Shortcodes::render_lead_form( '' );
+
+		$this->assertSame( 'landing/custom-form.php', $this->drawn()['template'] );
+	}
+
+	/**
+	 * And neither does any other shortcode written the same way.
+	 *
+	 * The defect was not mine alone: every callback in the file declared
+	 * `array $atts`, and six of them fall back to the page being viewed —
+	 * which is to say they are meant to be written bare. Fixed across the
+	 * file rather than only where review happened to point, since one of
+	 * them fataling takes the page down just as thoroughly.
+	 *
+	 * Asserted by calling them the way WordPress does before 6.5 and watching
+	 * for a TypeError, which is the defect itself: the argument being refused
+	 * at the boundary. An archive shortcode that gets past the boundary and
+	 * then wants a WP_Query the harness does not stub has already proved the
+	 * point, so only the TypeError counts.
+	 *
+	 * @return void
+	 */
+	public function test_no_shortcode_fatals_when_written_without_attributes(): void {
+		Kivun_Shortcodes::init();
+
+		$tags = array();
+		foreach ( Kivun_Test_State::$options as $key => $callback ) {
+			if ( 0 === strpos( (string) $key, 'shortcode:' ) ) {
+				$tags[ substr( (string) $key, 10 ) ] = $callback;
+			}
+		}
+		$this->assertNotEmpty( $tags, 'no shortcodes were registered, so this test proves nothing' );
+
+		$refused = array();
+		foreach ( $tags as $tag => $callback ) {
+			Kivun_Test_State::$templates = array();
+			try {
+				$callback( '' );
+			} catch ( TypeError $e ) {
+				$refused[] = $tag;
+			} catch ( Throwable $e ) {
+				continue;
+			}
+		}
+
+		$this->assertSame( array(), $refused, 'these shortcodes fatal when written without attributes' );
+	}
+
+	/**
+	 * The form brings the script that makes it a form.
+	 *
+	 * Without it the browser posts the page instead of calling the lead
+	 * endpoint: the form draws perfectly, the visitor gets no error, and the
+	 * enquiry is simply gone. The shortcode path is covered by the
+	 * `do_shortcode_tag` filter, but the widget calls this method directly
+	 * and that filter never runs. Found in review.
+	 *
+	 * @return void
+	 */
+	public function test_the_form_brings_its_script_with_it(): void {
+		$id = $this->post( 7, 'kivun_workshop', true );
+
+		Kivun_Shortcodes::render_lead_form( array( 'id' => $id ) );
+
+		$this->assertContains( 'kivun-frontend', Kivun_Test_State::$enqueued, 'the form was drawn without its submit handler' );
+	}
+
+	/**
+	 * And nothing is loaded where no form is drawn.
+	 *
+	 * @return void
+	 */
+	public function test_nothing_is_loaded_where_no_form_is_drawn(): void {
+		$this->post( 5, 'page' );
+
+		Kivun_Shortcodes::render_lead_form( array( 'id' => 5 ) );
+
+		$this->assertSame( array(), Kivun_Test_State::$enqueued );
+	}
+
+	/**
 	 * The shortcode is registered under the name the widget and the docs use.
 	 *
 	 * @return void
