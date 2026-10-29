@@ -269,9 +269,16 @@ final class CustomFormWiringTest extends TestCase {
 	public function test_the_prose_column_is_still_there(): void {
 		$src = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-export.php' );
 
-		$at   = (int) strpos( $src, "'אישור דיוור', 'סוג'" );
+		// Anchored on the heading row itself rather than on two headings
+		// happening to sit next to each other: the first version of this
+		// test named the pair 'אישור דיוור', 'סוג' and broke the moment a
+		// column was added between them, which is a change it had no business
+		// objecting to.
+		$at = (int) strpos( $src, 'array_merge( $headings, array( \'שם\'' );
 		$this->assertNotFalse( $at, 'the heading row moved' );
-		$this->assertStringContainsString( "'הערות'", substr( $src, $at, 200 ) );
+
+		$row = substr( $src, $at, 400 );
+		$this->assertStringContainsString( "'הערות'", $row, 'the prose column is gone from the heading row' );
 	}
 
 	// ── The seams ────────────────────────────────────────────────────────────

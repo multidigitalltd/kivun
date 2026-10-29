@@ -182,6 +182,10 @@ class Kivun_Installer {
 				// can see afterwards cannot be checked or argued with.
 				'coordinator'       => "varchar(100) NOT NULL DEFAULT ''",
 				'marketing_consent' => 'tinyint(1) NOT NULL DEFAULT 0',
+				// Agreement to the privacy policy, kept beside the marketing one
+				// because it answers a different question: not whether they want
+				// to hear from us, but whether they agreed to be recorded at all.
+				'privacy_consent'   => 'tinyint(1) NOT NULL DEFAULT 0',
 				'message'           => 'text',
 				'notes'             => 'text',
 				'source'            => "varchar(191) NOT NULL DEFAULT ''",
@@ -284,6 +288,7 @@ class Kivun_Installer {
 				gender      varchar(20)         NOT NULL DEFAULT '',
 				coordinator varchar(100)        NOT NULL DEFAULT '',
 				marketing_consent tinyint(1)    NOT NULL DEFAULT 0,
+				privacy_consent tinyint(1)      NOT NULL DEFAULT 0,
 				message     text,
 				notes       text,
 				source      varchar(191)        NOT NULL DEFAULT '',

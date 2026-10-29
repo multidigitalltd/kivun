@@ -44,8 +44,18 @@ class Kivun_Workshops {
 			'city'              => sanitize_text_field( wp_unslash( $_POST['city'] ?? '' ) ),
 			'gender'            => sanitize_text_field( wp_unslash( $_POST['gender'] ?? '' ) ),
 			'marketing_consent' => empty( $_POST['marketing_consent'] ) ? 0 : 1,
+			'privacy_consent'   => empty( $_POST['privacy_consent'] ) ? 0 : 1,
 			'message'           => sanitize_textarea_field( wp_unslash( $_POST['message'] ?? '' ) ),
 		);
+
+		// Enforced here as well as in the markup: `required` is a convenience
+		// for the person filling the form in, and anything posting to this
+		// endpoint directly never saw it. A consent that can be skipped by
+		// posting around the form is not a record of anything.
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Verified above.
+		if ( Kivun_Privacy_Consent::asked() && ! Kivun_Privacy_Consent::given( wp_unslash( $_POST ) ) ) {
+			wp_send_json_error( array( 'message' => Kivun_Privacy_Consent::refusal() ) );
+		}
 
 		// This page's own questions, if it has any. Read and validated before
 		// the lead is written: a required one that nobody answered must stop
@@ -99,6 +109,7 @@ class Kivun_Workshops {
 		$city    = sanitize_text_field( $data['city'] ?? '' );
 		$gender  = sanitize_text_field( $data['gender'] ?? '' );
 		$consent = empty( $data['marketing_consent'] ) ? 0 : 1;
+		$agreed  = empty( $data['privacy_consent'] ) ? 0 : 1;
 		$message = sanitize_textarea_field( $data['message'] ?? '' );
 
 		if ( ! $name || ! $phone ) {
@@ -175,6 +186,7 @@ class Kivun_Workshops {
 			'city'              => $city,
 			'gender'            => $gender,
 			'marketing_consent' => $consent,
+			'privacy_consent'   => $agreed,
 			'message'           => $message,
 			'source'            => Kivun_Utm::append_source( $title ),
 			'status'            => $status,
@@ -198,7 +210,7 @@ class Kivun_Workshops {
 		// the middle without a placeholder beside it shifts every format
 		// after it onto the wrong value, which $wpdb writes without
 		// complaint. Built from the keys so the two cannot come apart.
-		$integers = array( 'course_id', 'marketing_consent' );
+		$integers = array( 'course_id', 'marketing_consent', 'privacy_consent' );
 		$fmt      = array();
 		foreach ( array_keys( $row ) as $column ) {
 			$fmt[] = in_array( $column, $integers, true ) ? '%d' : '%s';
