@@ -188,15 +188,33 @@ class Kivun_Shortcodes {
 	 * `[kivun_lead_form]`, the way it is meant to be written, a fatal error
 	 * that takes the page down with it. Found in review.
 	 *
+	 * `only="custom"` draws nothing at all on a page that has no questions of
+	 * its own. One Elementor template serves every landing page, so it needs
+	 * both halves on it at once — this one, and the form drawn in the design
+	 * for the ordinary pages — each stepping aside where the other belongs.
+	 *
 	 * @param array|string $atts Shortcode attributes.
 	 * @return string Rendered HTML markup.
 	 */
 	public static function render_lead_form( $atts = array() ): string {
-		$atts = shortcode_atts( array( 'id' => 0 ), (array) $atts, 'kivun_lead_form' );
+		$atts = shortcode_atts(
+			array(
+				'id'   => 0,
+				'only' => '',
+			),
+			(array) $atts,
+			'kivun_lead_form'
+		);
 		$id   = absint( $atts['id'] ) ? absint( $atts['id'] ) : (int) get_the_ID();
 
 		$type = get_post_type( $id );
 		if ( ! in_array( $type, array( 'kivun_workshop', 'kivun_course' ), true ) ) {
+			return '';
+		}
+
+		$custom = Kivun_Custom_Forms::enabled( $id );
+		$only   = sanitize_key( (string) $atts['only'] );
+		if ( ( 'custom' === $only && ! $custom ) || ( 'fixed' === $only && $custom ) ) {
 			return '';
 		}
 
@@ -215,6 +233,11 @@ class Kivun_Shortcodes {
 			array(
 				'post_id'   => $id,
 				'post_type' => $type,
+				// Placed inside a design, whichever of the two forms it turns
+				// out to be. A page with no questions of its own would
+				// otherwise fall back to the fixed form wearing the panel and
+				// the heading — the very thing that was wrong before.
+				'plain'     => true,
 			)
 		);
 		return ob_get_clean();

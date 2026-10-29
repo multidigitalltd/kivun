@@ -95,6 +95,20 @@ class Kivun_Lead_Form_Widget extends \Elementor\Widget_Base {
 			)
 		);
 
+		$this->add_control(
+			'only',
+			array(
+				'label'       => __( 'מתי להציג', 'kivun' ),
+				'description' => __( 'תבנית אחת משרתת את כל דפי הנחיתה, אז אפשר להניח כאן את שני הטפסים: זה, שמוצג רק כשלדף יש שאלות משלו, ולצידו הטופס שעיצבתם — עם המחלקה kivun-hide-if-custom-form, שמסתירה אותו באותם דפים בדיוק.', 'kivun' ),
+				'type'        => \Elementor\Controls_Manager::SELECT,
+				'default'     => 'custom',
+				'options'     => array(
+					'custom' => __( 'רק כשלדף יש טופס מותאם', 'kivun' ),
+					''       => __( 'תמיד (נופל לטופס הקבוע)', 'kivun' ),
+				),
+			)
+		);
+
 		$this->end_controls_section();
 	}
 
@@ -110,17 +124,24 @@ class Kivun_Lead_Form_Widget extends \Elementor\Widget_Base {
 	protected function render(): void {
 		$settings = $this->get_settings_for_display();
 		$id       = absint( $settings['post_id'] ?? 0 );
+		$only     = (string) ( $settings['only'] ?? 'custom' );
 
-		$html = Kivun_Shortcodes::render_lead_form( array( 'id' => $id ) );
+		$html = Kivun_Shortcodes::render_lead_form(
+			array(
+				'id'   => $id,
+				'only' => $only,
+			)
+		);
 
 		if ( '' === $html ) {
-			// Silent on the live page: a template placed on a post with no
-			// form of its own should leave no gap behind. In the editor the
+			// Silent on the live page: drawing nothing is the whole point on
+			// a page this widget was told to stay out of, and a gap left
+			// behind would be as wrong as a second form. In the editor the
 			// silence would look like a broken widget, so it says why.
 			if ( \Elementor\Plugin::$instance->editor->is_edit_mode() ) {
 				printf(
 					'<p class="elementor-descriptor">%s</p>',
-					esc_html__( 'הטופס יופיע בדף נחיתה או בדף קורס. כאן אין מה להציג כי העמוד הזה אינו אחד מהם — אם זו תבנית, אפשר לבחור מזהה דף לתצוגה.', 'kivun' )
+					esc_html__( 'כאן לא מוצג טופס: או שהעמוד אינו דף נחיתה או קורס, או שהוגדר להציג רק כשלדף יש טופס מותאם ולדף הזה אין. בעמוד אמיתי לא יישאר כאן רווח.', 'kivun' )
 				);
 			}
 			return;

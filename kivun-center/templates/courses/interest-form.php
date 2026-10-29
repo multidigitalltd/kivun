@@ -6,10 +6,17 @@
  */
 
 defined( 'ABSPATH' ) || exit;
+
+// `$plain` is set where this form is placed inside somebody else's design,
+// which already has a heading and a look of its own. On the plugin's own
+// pages nothing else supplies either, so the panel stays the default.
+$kivun_plain = ! empty( $plain );
 ?>
-<div class="kivun-interest" id="kivun-interest-<?php echo esc_attr( $post_id ); ?>">
-	<h3 class="kivun-interest__title"><?php esc_html_e( 'מתעניין/ת? נחזור אליך', 'kivun' ); ?></h3>
-	<p class="kivun-interest__sub"><?php esc_html_e( 'השאר פרטים ונציג שלנו יצור איתך קשר עם כל המידע.', 'kivun' ); ?></p>
+<div class="kivun-interest <?php echo $kivun_plain ? 'kivun-interest--plain' : ''; ?>" id="kivun-interest-<?php echo esc_attr( $post_id ); ?>">
+	<?php if ( ! $kivun_plain ) : ?>
+		<h3 class="kivun-interest__title"><?php esc_html_e( 'מתעניין/ת? נחזור אליך', 'kivun' ); ?></h3>
+		<p class="kivun-interest__sub"><?php esc_html_e( 'השאר פרטים ונציג שלנו יצור איתך קשר עם כל המידע.', 'kivun' ); ?></p>
+	<?php endif; ?>
 
 	<form class="kivun-lead-form" novalidate>
 		<?php wp_nonce_field( 'kivun_nonce', '_nonce', false ); ?>
