@@ -751,6 +751,20 @@
 	border: 0;
 	opacity: 1;
 }
+/* A text field shows focus by thickening its underline, which a tickbox has
+   not got. Three rules had each taken away a different part of what would
+   otherwise have shown it — the shared rule drops the browser's outline, the
+   rule above drops the replacement shadow, and the one before it drops the
+   border — so a keyboard user had nothing left to follow. Given back
+   explicitly, in the inherited colour like everything else here. Found in
+   review, and reproduced before it was believed. */
+.kivun-interest--plain .kivun-form-row input[type="checkbox"]:focus-visible,
+.kivun-interest--plain .kivun-form-row input[type="radio"]:focus-visible,
+.kivun-interest--plain .kivun-cf-choice input:focus-visible,
+.kivun-interest--plain .kivun-consent-row input:focus-visible {
+	outline: 2px solid currentColor;
+	outline-offset: 2px;
+}
 
 /* The button is the last thing still wearing the plugin's colours, and a
    blue one sitting in somebody else's palette is the loudest part of not

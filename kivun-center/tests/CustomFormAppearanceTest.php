@@ -132,6 +132,30 @@ final class CustomFormAppearanceTest extends TestCase {
 	}
 
 	/**
+	 * A tickbox still shows a keyboard user where they are.
+	 *
+	 * A text field shows focus by thickening its underline, which a tickbox
+	 * has not got — and three separate rules had each taken away a different
+	 * part of what would otherwise have shown it: the shared rule drops the
+	 * browser's own outline, the plain rule drops the replacement shadow, and
+	 * the tickbox rule drops the border. Nothing was left to follow. Found in
+	 * review and reproduced in a browser before it was believed.
+	 *
+	 * @return void
+	 */
+	public function test_a_tickbox_keeps_a_focus_indicator(): void {
+		$css = (string) file_get_contents( KIVUN_DIR . 'assets/css/frontend.css' );
+
+		$at = strpos( $css, '.kivun-interest--plain .kivun-form-row input[type="checkbox"]:focus-visible' );
+		$this->assertNotFalse( $at, 'choice inputs in the plain form have no focus indicator' );
+		$this->assertStringContainsString(
+			'outline:',
+			substr( $css, $at, 400 ),
+			'the focus rule exists but sets no outline'
+		);
+	}
+
+	/**
 	 * The stylesheet releases the font at the wrapper, not only the fields.
 	 *
 	 * `.kivun-interest` sets the plugin's own font family, so `font: inherit`
