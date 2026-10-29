@@ -2402,27 +2402,137 @@ body.kivun-ty-open { overflow: hidden; }
 .kivun-cc-table.is-stacked tr[hidden] { display: none; }
 
 /* ── The form a landing page asks ────────────────────────────────────────── */
-.kivun-cf-builtins { display: flex; flex-wrap: wrap; gap: .5rem .9rem; margin: .4rem 0 1.2rem; }
-.kivun-cf-builtin { display: flex; align-items: center; gap: .4rem; font-size: .88rem; }
 
-.kivun-cf-list { display: flex; flex-direction: column; gap: .6rem; }
+/* The questions on one side and the form as the visitor will meet it on the
+   other. Below the breakpoint the preview goes under the editor rather than
+   beside it, where it is still the answer to "what did I just build". */
+.kivun-cf-split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 20rem); gap: 1rem; align-items: start; }
+.kivun-cf-edit { display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
+
+.kivun-cf-card {
+	border: 1px solid var(--cc-line, #e3e5e9);
+	border-radius: 12px;
+	padding: .9rem 1rem 1rem;
+	background: #fff;
+}
+.kivun-cf-card__title { margin: 0 0 .2rem; font-size: .95rem; font-weight: 600; }
+.kivun-cf-count { color: #6b7280; font-weight: 400; }
+.kivun-cf-empty {
+	margin: .6rem 0 0;
+	padding: .9rem;
+	border: 1px dashed var(--cc-line, #e3e5e9);
+	border-radius: 10px;
+	color: #6b7280;
+	font-size: .88rem;
+	text-align: center;
+}
+.kivun-cf-empty[hidden], .kivun-cf-dragnote[hidden] { display: none; }
+.kivun-cf-dragnote { margin: .5rem 0 0; }
+
+.kivun-cf-builtins { display: flex; flex-wrap: wrap; gap: .5rem .9rem; margin: .4rem 0 0; }
+.kivun-cf-builtin {
+	display: flex;
+	align-items: center;
+	gap: .4rem;
+	font-size: .88rem;
+	padding: .3rem .6rem;
+	border: 1px solid var(--cc-line, #e3e5e9);
+	border-radius: 999px;
+	cursor: pointer;
+}
+.kivun-cf-builtin input { flex: none; width: auto; margin: 0; }
+.kivun-cf-builtin:has(input:checked) { border-color: #c7d2fe; background: #eef2ff; }
+
+.kivun-cf-list { display: flex; flex-direction: column; gap: .6rem; margin: .6rem 0 .9rem; }
 .kivun-cf-row {
 	border: 1px solid var(--cc-line, #e3e5e9);
 	border-radius: 10px;
 	padding: .7rem .8rem;
 	background: #fcfcfd;
 }
-.kivun-cf-row__main { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
-.kivun-cf-handle { color: #9aa0ab; cursor: default; font-size: .9rem; }
+.kivun-cf-row.is-dragging { opacity: .45; border-style: dashed; }
+.kivun-cf-row__bar { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+.kivun-cf-handle { color: #9aa0ab; cursor: grab; font-size: 1rem; line-height: 1; }
+.kivun-cf-row.is-dragging .kivun-cf-handle { cursor: grabbing; }
+.kivun-cf-num {
+	flex: none;
+	display: grid;
+	place-items: center;
+	width: 1.5rem;
+	height: 1.5rem;
+	border-radius: 999px;
+	background: #eef2ff;
+	color: #4338ca;
+	font-size: .78rem;
+	font-weight: 600;
+}
 /* The question's own words get the room; everything beside it is a control
    of a fixed size, and on a phone they wrap under it rather than squeezing
    it down to nothing. */
-.kivun-cf-row .kivun-cf-label { flex: 999 1 14rem; min-width: 0; }
-.kivun-cf-row .kivun-cf-type { flex: 0 1 10rem; min-width: 0; }
-.kivun-cf-req { display: flex; align-items: center; gap: .35rem; font-size: .85rem; white-space: nowrap; }
-.kivun-cf-row__options { margin-top: .6rem; padding-inline-start: 1.4rem; }
+.kivun-cf-row .kivun-cf-label { flex: 999 1 12rem; min-width: 0; }
+.kivun-cf-row__meta { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .9rem; margin-top: .55rem; }
+.kivun-cf-pick { display: flex; align-items: center; gap: .4rem; font-size: .85rem; }
+.kivun-cf-pick select { width: auto; min-width: 9rem; }
+.kivun-cf-req { display: flex; align-items: center; gap: .35rem; font-size: .85rem; white-space: nowrap; cursor: pointer; }
+.kivun-cf-req input { flex: none; width: auto; margin: 0; }
+.kivun-cf-row__options { margin-top: .6rem; }
 .kivun-cf-row__options[hidden] { display: none; }
-.kivun-cf-add { margin-top: 1rem; padding-top: .9rem; border-top: 1px dashed var(--cc-line, #e3e5e9); }
+
+.kivun-cf-save { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem .9rem; margin-top: 1rem; }
+.kivun-cf-dirty { color: #92400e; font-size: .85rem; }
+.kivun-cf-dirty[hidden] { display: none; }
+
+/* The preview. Inert by construction — every control in it is disabled — so
+   it reads as a picture of the form rather than a second copy of it. */
+.kivun-cf-preview {
+	position: sticky;
+	top: 1rem;
+	border: 1px solid var(--cc-line, #e3e5e9);
+	border-radius: 12px;
+	padding: .9rem 1rem 1.1rem;
+	background: #f9fafb;
+	min-width: 0;
+}
+.kivun-cf-preview__head { display: flex; flex-wrap: wrap; align-items: baseline; gap: .5rem; margin-bottom: .8rem; }
+.kivun-cf-preview__tag {
+	padding: .18rem .55rem;
+	border-radius: 999px;
+	background: #111827;
+	color: #fff;
+	font-size: .72rem;
+	font-weight: 600;
+}
+.kivun-cf-preview__body { display: flex; flex-direction: column; gap: .7rem; }
+.kivun-cf-pv-field { display: flex; flex-direction: column; gap: .25rem; min-width: 0; }
+.kivun-cf-pv-field.is-blank { opacity: .55; }
+.kivun-cf-pv-label { font-size: .82rem; font-weight: 500; color: #374151; }
+.kivun-cf-pv-field input, .kivun-cf-pv-field select, .kivun-cf-pv-field textarea {
+	width: 100%;
+	padding: .4rem .55rem;
+	border: 1px solid #d8dbe0;
+	border-radius: 8px;
+	background: #fff;
+	font-size: .85rem;
+	color: #6b7280;
+}
+.kivun-cf-pv-group { display: flex; flex-wrap: wrap; gap: .3rem .8rem; }
+.kivun-cf-pv-group label, .kivun-cf-pv-consent { display: flex; align-items: center; gap: .35rem; font-size: .82rem; color: #374151; }
+.kivun-cf-pv-group input, .kivun-cf-pv-consent input { flex: none; width: auto; margin: 0; padding: 0; }
+.kivun-cf-pv-send {
+	align-self: flex-start;
+	margin-top: .2rem;
+	padding: .4rem .9rem;
+	border-radius: 8px;
+	background: #111827;
+	color: #fff;
+	font-size: .82rem;
+	font-weight: 600;
+}
+
+@media (max-width: 960px) {
+	.kivun-cf-split { grid-template-columns: minmax(0, 1fr); }
+	.kivun-cf-preview { position: static; }
+}
 
 /* The visitor's side: a group of choices reads as one question. */
 .kivun-cf-choices { border: 0; margin: 0 0 1rem; padding: 0; }

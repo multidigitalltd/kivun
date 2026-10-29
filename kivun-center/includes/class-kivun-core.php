@@ -498,6 +498,7 @@ class Kivun_Core {
 					'kivun_course_single',
 					'kivun_course_register',
 					'kivun_course_interest',
+					'kivun_lead_form',
 					'kivun_workshops',
 					'kivun_workshop_single',
 					'kivun_jobs',

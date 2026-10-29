@@ -27,6 +27,7 @@ class Kivun_Shortcodes {
 			'kivun_session_status'     => 'render_session_status',
 			'kivun_event_register'     => 'render_event_register',
 			'kivun_course_interest'    => 'render_course_interest',
+			'kivun_lead_form'          => 'render_lead_form',
 			'kivun_workshops'          => 'render_workshops',
 			'kivun_workshop_single'    => 'render_workshop_single',
 			'kivun_jobs'               => 'render_jobs',
@@ -50,7 +51,7 @@ class Kivun_Shortcodes {
 	 * @param array $atts Shortcode attributes.
 	 * @return string Rendered HTML markup.
 	 */
-	public static function render_courses( array $atts ): string {
+	public static function render_courses( $atts = array() ): string {
 		$atts = shortcode_atts(
 			array(
 				'category' => '',
@@ -58,7 +59,7 @@ class Kivun_Shortcodes {
 				'columns'  => 3,
 				'orderby'  => 'date',
 			),
-			$atts,
+			(array) $atts,
 			'kivun_courses'
 		);
 
@@ -104,8 +105,8 @@ class Kivun_Shortcodes {
 	 * @param array $atts Shortcode attributes.
 	 * @return string Rendered HTML markup.
 	 */
-	public static function render_course_single( array $atts ): string {
-		$atts = shortcode_atts( array( 'id' => 0 ), $atts, 'kivun_course_single' );
+	public static function render_course_single( $atts = array() ): string {
+		$atts = shortcode_atts( array( 'id' => 0 ), (array) $atts, 'kivun_course_single' );
 		$id   = absint( $atts['id'] ) ? absint( $atts['id'] ) : get_the_ID();
 
 		if ( 'kivun_course' !== get_post_type( $id ) ) {
@@ -125,8 +126,8 @@ class Kivun_Shortcodes {
 	 * @param array $atts Shortcode attributes.
 	 * @return string Rendered HTML markup.
 	 */
-	public static function render_course_register( array $atts ): string {
-		$atts = shortcode_atts( array( 'id' => 0 ), $atts, 'kivun_course_register' );
+	public static function render_course_register( $atts = array() ): string {
+		$atts = shortcode_atts( array( 'id' => 0 ), (array) $atts, 'kivun_course_register' );
 		$id   = absint( $atts['id'] ) ? absint( $atts['id'] ) : get_the_ID();
 
 		if ( get_post_type( $id ) !== 'kivun_course' ) {
@@ -146,8 +147,8 @@ class Kivun_Shortcodes {
 	 * @param array $atts Shortcode attributes.
 	 * @return string Rendered HTML markup.
 	 */
-	public static function render_course_interest( array $atts ): string {
-		$atts = shortcode_atts( array( 'id' => 0 ), $atts, 'kivun_course_interest' );
+	public static function render_course_interest( $atts = array() ): string {
+		$atts = shortcode_atts( array( 'id' => 0 ), (array) $atts, 'kivun_course_interest' );
 		$id   = absint( $atts['id'] ) ? absint( $atts['id'] ) : get_the_ID();
 
 		if ( get_post_type( $id ) !== 'kivun_course' ) {
@@ -168,6 +169,57 @@ class Kivun_Shortcodes {
 		return ob_get_clean();
 	}
 
+	/**
+	 * Render a page's lead form on its own, wherever it is placed.
+	 *
+	 * The plugin draws the built-in landing layout only where a site asked
+	 * for it, and most do not: they design the landing page in Elementor,
+	 * where none of the plugin's own render sites are reached. A page could
+	 * therefore be given a form of its own that it had no way of showing —
+	 * which is exactly what happened. This is the way in: the Elementor
+	 * widget uses it, and so does a Shortcode block anywhere else.
+	 *
+	 * Falls back to the post being viewed, so one Elementor template can
+	 * serve every landing page without naming an id.
+	 *
+	 * `$atts` is deliberately unhinted. WordPress hands a shortcode written
+	 * without attributes an empty string rather than an empty array before
+	 * 6.5, and this plugin supports 6.0 — so `array $atts` would make
+	 * `[kivun_lead_form]`, the way it is meant to be written, a fatal error
+	 * that takes the page down with it. Found in review.
+	 *
+	 * @param array|string $atts Shortcode attributes.
+	 * @return string Rendered HTML markup.
+	 */
+	public static function render_lead_form( $atts = array() ): string {
+		$atts = shortcode_atts( array( 'id' => 0 ), (array) $atts, 'kivun_lead_form' );
+		$id   = absint( $atts['id'] ) ? absint( $atts['id'] ) : (int) get_the_ID();
+
+		$type = get_post_type( $id );
+		if ( ! in_array( $type, array( 'kivun_workshop', 'kivun_course' ), true ) ) {
+			return '';
+		}
+
+		// The form is inert without its script: the submit handler is what
+		// turns it into a lead, and without it the browser posts the page
+		// and nothing is filed. The shortcode path is covered by the
+		// `do_shortcode_tag` filter, but the Elementor widget calls this
+		// method directly and that filter never runs — so a form could draw
+		// perfectly and quietly lose every enquiry. Asked for here, where
+		// every caller passes.
+		Kivun_Core::enqueue_frontend_assets();
+
+		ob_start();
+		kivun_get_template(
+			Kivun_Custom_Forms::template( $id ),
+			array(
+				'post_id'   => $id,
+				'post_type' => $type,
+			)
+		);
+		return ob_get_clean();
+	}
+
 	// ── Workshops archive ─────────────────────────────────────────────────────
 
 	/**
@@ -176,14 +228,14 @@ class Kivun_Shortcodes {
 	 * @param array $atts Shortcode attributes.
 	 * @return string Rendered HTML markup.
 	 */
-	public static function render_workshops( array $atts ): string {
+	public static function render_workshops( $atts = array() ): string {
 		$atts = shortcode_atts(
 			array(
 				'category' => '',
 				'per_page' => 12,
 				'columns'  => 3,
 			),
-			$atts,
+			(array) $atts,
 			'kivun_workshops'
 		);
 
@@ -229,8 +281,8 @@ class Kivun_Shortcodes {
 	 * @param array $atts Shortcode attributes.
 	 * @return string Rendered HTML markup.
 	 */
-	public static function render_workshop_single( array $atts ): string {
-		$atts = shortcode_atts( array( 'id' => 0 ), $atts, 'kivun_workshop_single' );
+	public static function render_workshop_single( $atts = array() ): string {
+		$atts = shortcode_atts( array( 'id' => 0 ), (array) $atts, 'kivun_workshop_single' );
 		$id   = absint( $atts['id'] ) ? absint( $atts['id'] ) : get_the_ID();
 
 		if ( get_post_type( $id ) !== 'kivun_workshop' ) {
@@ -250,7 +302,7 @@ class Kivun_Shortcodes {
 	 * @param array $atts Shortcode attributes.
 	 * @return string Rendered HTML markup.
 	 */
-	public static function render_jobs( array $atts ): string {
+	public static function render_jobs( $atts = array() ): string {
 		$atts = shortcode_atts(
 			array(
 				'show_filters' => 'yes',
@@ -259,7 +311,7 @@ class Kivun_Shortcodes {
 				'region'       => '',
 				'field'        => '',
 			),
-			$atts,
+			(array) $atts,
 			'kivun_jobs'
 		);
 
@@ -317,13 +369,13 @@ class Kivun_Shortcodes {
 	 * @param array $atts Shortcode attributes.
 	 * @return string Rendered HTML markup.
 	 */
-	public static function render_spots_left( array $atts ): string {
+	public static function render_spots_left( $atts = array() ): string {
 		$atts = shortcode_atts(
 			array(
 				'id'        => 0,
 				'full_text' => 'מלא',
 			),
-			$atts,
+			(array) $atts,
 			'kivun_spots_left'
 		);
 		$id   = absint( $atts['id'] ) ? absint( $atts['id'] ) : get_the_ID();
@@ -352,8 +404,8 @@ class Kivun_Shortcodes {
 	 * @param array $atts Shortcode attributes.
 	 * @return string Rendered HTML markup.
 	 */
-	public static function render_apply( array $atts ): string {
-		$atts = shortcode_atts( array( 'id' => 0 ), $atts, 'kivun_apply' );
+	public static function render_apply( $atts = array() ): string {
+		$atts = shortcode_atts( array( 'id' => 0 ), (array) $atts, 'kivun_apply' );
 		$id   = absint( $atts['id'] ) ? absint( $atts['id'] ) : get_the_ID();
 
 		// Fallback for contexts rendered outside the main loop (e.g. an
@@ -435,7 +487,7 @@ class Kivun_Shortcodes {
 				'closed' => '',
 				'open'   => '',
 			),
-			$atts,
+			(array) $atts,
 			'kivun_session_status'
 		);
 
@@ -490,7 +542,7 @@ class Kivun_Shortcodes {
 	 * @return string
 	 */
 	public static function render_event_register( $atts ): string {
-		$atts = shortcode_atts( array( 'id' => 0 ), $atts, 'kivun_event_register' );
+		$atts = shortcode_atts( array( 'id' => 0 ), (array) $atts, 'kivun_event_register' );
 
 		$id = absint( $atts['id'] );
 		if ( ! $id ) {
@@ -578,7 +630,7 @@ class Kivun_Shortcodes {
 	 * @param array $atts Shortcode attributes.
 	 * @return string Rendered HTML markup.
 	 */
-	public static function render_employer_dashboard( array $atts ): string { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- Shortcode callback signature.
+	public static function render_employer_dashboard( $atts = array() ): string { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- Shortcode callback signature.
 		// Said again here, as the console does. The check on template_redirect
 		// can miss a page whose shortcode a builder keeps out of the content,
 		// and this screen shows live data behind a nonce: a cached copy is

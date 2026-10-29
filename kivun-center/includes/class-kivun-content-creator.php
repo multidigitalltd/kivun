@@ -3483,39 +3483,68 @@ class Kivun_Content_Creator {
 		$builtins = Kivun_Custom_Forms::builtins( $post_id );
 		?>
 		<form class="kivun-form-builder" data-id="<?php echo esc_attr( (string) $post_id ); ?>">
+			<div class="kivun-cf-split">
 
-			<h3 class="kivun-cc-sub"><?php esc_html_e( 'שדות קבועים', 'kivun' ); ?></h3>
-			<p class="kivun-field-hint">
-				<?php esc_html_e( 'אלה העמודות של הליד עצמו — לפיהן עובדות חלוקת הרכזים, סינון העיר והשידור למרכז כיוון. שם וטלפון תמיד נשאלים.', 'kivun' ); ?>
-			</p>
-			<div class="kivun-cf-builtins">
-				<?php foreach ( Kivun_Custom_Forms::optional_builtins() as $kivun_key => $kivun_label ) : ?>
-					<label class="kivun-cf-builtin">
-						<input type="checkbox" class="kivun-cf-builtin-box" value="<?php echo esc_attr( $kivun_key ); ?>" <?php checked( in_array( $kivun_key, $builtins, true ) ); ?>>
-						<span><?php echo esc_html( $kivun_label ); ?></span>
-					</label>
-				<?php endforeach; ?>
-			</div>
+				<div class="kivun-cf-edit">
+					<section class="kivun-cf-card">
+						<h3 class="kivun-cf-card__title"><?php esc_html_e( 'שדות קבועים', 'kivun' ); ?></h3>
+						<p class="kivun-field-hint">
+							<?php esc_html_e( 'אלה העמודות של הליד עצמו — לפיהן עובדות חלוקת הרכזים, סינון העיר והשידור למרכז כיוון. שם וטלפון תמיד נשאלים.', 'kivun' ); ?>
+						</p>
+						<div class="kivun-cf-builtins">
+							<?php foreach ( Kivun_Custom_Forms::optional_builtins() as $kivun_key => $kivun_label ) : ?>
+								<label class="kivun-cf-builtin">
+									<input type="checkbox" class="kivun-cf-builtin-box" value="<?php echo esc_attr( $kivun_key ); ?>" <?php checked( in_array( $kivun_key, $builtins, true ) ); ?>>
+									<span><?php echo esc_html( $kivun_label ); ?></span>
+								</label>
+							<?php endforeach; ?>
+						</div>
+					</section>
 
-			<h3 class="kivun-cc-sub"><?php esc_html_e( 'השאלות שלכם', 'kivun' ); ?></h3>
-			<div class="kivun-cf-list"></div>
+					<section class="kivun-cf-card">
+						<h3 class="kivun-cf-card__title">
+							<?php esc_html_e( 'השאלות שלכם', 'kivun' ); ?>
+							<span class="kivun-cf-count" aria-hidden="true"></span>
+						</h3>
 
-			<div class="kivun-cf-add">
-				<label class="kivun-cc-sub" for="kivun-cf-type-<?php echo esc_attr( (string) $post_id ); ?>"><?php esc_html_e( 'הוספת שאלה', 'kivun' ); ?></label>
-				<div class="kivun-form-actions">
-					<select id="kivun-cf-type-<?php echo esc_attr( (string) $post_id ); ?>" class="kivun-cc-input kivun-cf-newtype">
-						<?php foreach ( Kivun_Custom_Forms::types() as $kivun_t => $kivun_tl ) : ?>
-							<option value="<?php echo esc_attr( $kivun_t ); ?>"><?php echo esc_html( $kivun_tl ); ?></option>
-						<?php endforeach; ?>
-					</select>
-					<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-cf-add-btn"><?php esc_html_e( '+ הוספה', 'kivun' ); ?></button>
+						<?php
+						// Shown only while there are no questions, and hidden
+						// by the script the moment one is added.
+						?>
+						<p class="kivun-cf-empty">
+							<?php esc_html_e( 'עדיין אין שאלות. הוסיפו אחת והיא תופיע מיד בתצוגה המקדימה.', 'kivun' ); ?>
+						</p>
+
+						<div class="kivun-cf-list"></div>
+
+						<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-cf-add-btn">
+							<?php esc_html_e( '+ הוספת שאלה', 'kivun' ); ?>
+						</button>
+						<p class="kivun-field-hint kivun-cf-dragnote">
+							<?php esc_html_e( 'אפשר לגרור שאלה כדי לשנות את הסדר, או להזיז אותה בחצים.', 'kivun' ); ?>
+						</p>
+					</section>
 				</div>
+
+				<?php
+				// The preview is built by the script from the same state the
+				// save posts, so it cannot show a form that would not be
+				// saved. Inert: it is there to be read, not filled in.
+				?>
+				<aside class="kivun-cf-preview" aria-label="<?php esc_attr_e( 'תצוגה מקדימה של הטופס', 'kivun' ); ?>">
+					<div class="kivun-cf-preview__head">
+						<span class="kivun-cf-preview__tag"><?php esc_html_e( 'תצוגה מקדימה', 'kivun' ); ?></span>
+						<span class="kivun-field-hint"><?php esc_html_e( 'כך המבקר יראה את הטופס', 'kivun' ); ?></span>
+					</div>
+					<div class="kivun-cf-preview__body" aria-live="polite"></div>
+				</aside>
 			</div>
 
 			<p class="kivun-error kivun-cf-error" style="display:none;color:var(--kivun-error)"></p>
-			<div class="kivun-form-actions">
+			<div class="kivun-cf-save">
 				<button type="submit" class="kivun-cc-btn kivun-cc-btn--sm"><?php esc_html_e( 'שמירת הטופס', 'kivun' ); ?></button>
 				<span class="kivun-cc-wa-status kivun-cf-status" role="status" aria-live="polite"></span>
+				<span class="kivun-cf-dirty" hidden><?php esc_html_e( 'יש שינויים שלא נשמרו', 'kivun' ); ?></span>
 			</div>
 
 			<?php

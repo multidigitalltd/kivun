@@ -30,6 +30,24 @@ class Kivun_Elementor {
 	public static function init(): void {
 		// Wait for Elementor to be fully loaded.
 		add_action( 'elementor/dynamic_tags/register', array( __CLASS__, 'register_tags' ) );
+		add_action( 'elementor/widgets/register', array( __CLASS__, 'register_widgets' ) );
+	}
+
+	/**
+	 * Register the plugin's own Elementor widgets.
+	 *
+	 * Needs plain Elementor rather than Pro, unlike the form actions above.
+	 *
+	 * @param mixed $manager The widgets manager.
+	 * @return void
+	 */
+	public static function register_widgets( $manager ): void {
+		if ( ! class_exists( '\Elementor\Widget_Base' ) || ! is_object( $manager ) ) {
+			return;
+		}
+
+		require_once KIVUN_DIR . 'elementor/class-kivun-lead-form-widget.php';
+		$manager->register( new Kivun_Lead_Form_Widget() );
 	}
 
 	/**
