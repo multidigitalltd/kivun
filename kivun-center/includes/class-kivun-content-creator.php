@@ -3223,7 +3223,7 @@ class Kivun_Content_Creator {
 							<label class="kivun-cc-label"><?php esc_html_e( 'תמונה ראשית', 'kivun' ); ?></label>
 							<div class="kivun-cc-media">
 								<div class="kivun-cc-media__preview" <?php echo $thumb_url ? '' : 'style="display:none"'; ?>><img src="<?php echo esc_url( $thumb_url ); ?>" alt=""></div>
-								<input type="hidden" name="thumbnail_id" value="<?php echo esc_attr( $v['thumb_id'] ); ?>">
+								<input type="hidden" class="kivun-cc-media__id" name="thumbnail_id" value="<?php echo esc_attr( $v['thumb_id'] ); ?>">
 								<input type="hidden" name="remove_thumbnail" value="0" class="kivun-cc-remove-flag">
 								<?php if ( $can_upload ) : ?>
 									<input type="file" name="thumbnail_file" accept="image/*" class="kivun-cc-file">
@@ -3260,7 +3260,7 @@ class Kivun_Content_Creator {
 									<?php esc_html_e( 'לא מוצגת בעמוד. היא מה שרואים כששולחים את הקישור בוואטסאפ או מפרסמים אותו ברשתות. מומלץ 1200×630.', 'kivun' ); ?>
 								</p>
 								<div class="kivun-cc-media__preview" <?php echo $share_url ? '' : 'style="display:none"'; ?>><img src="<?php echo esc_url( $share_url ); ?>" alt=""></div>
-								<input type="hidden" name="share_image_id" value="<?php echo esc_attr( $v['share_id'] ); ?>">
+								<input type="hidden" class="kivun-cc-media__id" name="share_image_id" value="<?php echo esc_attr( $v['share_id'] ); ?>">
 								<input type="hidden" name="remove_share_image" value="0" class="kivun-cc-remove-flag">
 								<?php if ( $can_upload ) : ?>
 									<input type="file" name="share_image_file" accept="image/*" class="kivun-cc-file">

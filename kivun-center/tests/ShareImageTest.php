@@ -190,6 +190,36 @@ final class ShareImageTest extends TestCase {
 	}
 
 	/**
+	 * Each media box drives its own controls.
+	 *
+	 * The handlers used `document.querySelector`, which binds the first
+	 * match on the page. That was invisible while the console had one image
+	 * and wrong the moment a second appeared beside it: the share image's
+	 * file input and remove button got no handlers at all, so its preview
+	 * never updated and its remove button did nothing while looking as
+	 * though it should. Found in review, and reproduced — with the old
+	 * lookups, clicking the share image's remove button changes neither
+	 * image.
+	 *
+	 * @return void
+	 */
+	public function test_each_media_box_drives_its_own_controls(): void {
+		$js = (string) file_get_contents( KIVUN_DIR . 'assets/js/frontend.js' );
+
+		$at = strpos( $js, "document.querySelectorAll('.kivun-cc-media')" );
+		$this->assertNotFalse( $at, 'the media controls are not bound per box' );
+
+		$body = substr( $js, $at, 1400 );
+		foreach ( array( 'kivun-cc-file', 'kivun-cc-media__preview', 'kivun-cc-media__id', 'kivun-cc-remove-flag', 'kivun-cc-media__remove' ) as $part ) {
+			$this->assertStringContainsString(
+				"box.querySelector('." . $part . "')",
+				$body,
+				$part . ' is looked up on the page rather than inside the box it belongs to'
+			);
+		}
+	}
+
+	/**
 	 * And the save writes it on every post of the group.
 	 *
 	 * @return void
