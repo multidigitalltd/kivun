@@ -185,7 +185,7 @@ $kivun_asks     = static fn( string $key ): bool => in_array( $key, $kivun_built
 		<?php // The label and the mark sit in their own elements so the fill can be drawn from the page's colour while the words stay readable on it. ?>
 		<button type="submit" class="kivun-btn kivun-btn--primary kivun-lead-submit">
 			<span class="kivun-lead-submit__label"><?php esc_html_e( 'שליחה', 'kivun' ); ?></span>
-			<span class="kivun-lead-submit__icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="15" height="15" focusable="false"><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8 8 16"/><path d="M8 10.5V16h5.5"/></g></svg></span>
+			<span class="kivun-lead-submit__icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="15" height="15" focusable="false"><g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8 8 16"/><path d="M8 10.5V16h5.5"/></g></svg></span>
 		</button>
 	</form>
 </div>

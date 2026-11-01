@@ -715,10 +715,16 @@
 	   released to `inherit` while the aim was to take whatever the page
 	   used; the site's font is the one wanted, and it is already named. */
 }
+.kivun-interest--plain {
+	/* The design's text is heavier than the browser's default. Set once on
+	   the wrapper so the fields, the choices and the consents all take it,
+	   rather than a weight repeated in five rules that can drift apart. */
+	font-weight: 500;
+}
 .kivun-interest--plain .kivun-form-row label,
 .kivun-interest--plain .kivun-cf-choices legend {
 	font: inherit;
-	font-weight: 500;
+	font-weight: 600;
 	/* Full strength. These were dimmed to .75 to sit quietly beside the
 	   fields, which only made them grey against a design whose headings are
 	   black. */
@@ -800,19 +806,22 @@
 	font-weight: 600;
 	cursor: pointer;
 }
-.kivun-interest--plain .kivun-lead-submit__label,
-.kivun-interest--plain .kivun-lead-submit__icon {
+.kivun-interest--plain .kivun-lead-submit__label {
 	color: var(--kivun-on-fill, #fff);
 }
+/* A filled disc with the arrow cut out of it, as the design draws it: the
+   disc takes the label's colour and the arrow takes the pill's, so the two
+   swap and the mark reads as a hole in the button rather than a sticker on
+   it. The icon deliberately does not join the label rule above — it needs
+   the opposite pair. */
 .kivun-interest--plain .kivun-lead-submit__icon {
 	display: grid;
 	place-items: center;
 	width: 1.7rem;
 	height: 1.7rem;
 	border-radius: 999px;
-	/* Drawn from the label's own colour, so the badge follows it without a
-	   second value to keep in step. */
-	border: 1.5px solid currentColor;
+	background: var(--kivun-on-fill, #fff);
+	color: inherit;
 }
 .kivun-interest--plain .kivun-lead-submit:hover,
 .kivun-interest--plain .kivun-lead-submit:focus-visible {
