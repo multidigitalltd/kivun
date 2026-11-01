@@ -2410,6 +2410,30 @@
 		});
 		kivunUpdateNonEvent();
 
+		// The parts of one media box, named once. Two things need them: the
+		// box's own buttons, and the AI button further down that fills the
+		// featured image in. Both ask for them the same way, so neither can
+		// reach for the first match on the page by accident.
+		var kivunCcParts = function (box) {
+			if (!box) { return null; }
+			var preview = box.querySelector('.kivun-cc-media__preview');
+			return {
+				file: box.querySelector('.kivun-cc-file'),
+				id: box.querySelector('.kivun-cc-media__id'),
+				flag: box.querySelector('.kivun-cc-remove-flag'),
+				remove: box.querySelector('.kivun-cc-media__remove'),
+				preview: preview,
+				img: preview ? preview.querySelector('img') : null
+			};
+		};
+
+		// The box a given field belongs to, for a caller that means one of
+		// them in particular rather than all of them.
+		var kivunCcBoxFor = function (name) {
+			var field = document.querySelector('.kivun-cc-media__id[name="' + name + '"]');
+			return field ? kivunCcParts(field.closest('.kivun-cc-media')) : null;
+		};
+
 		// One media box at a time, and every lookup inside it. These used to
 		// be `document.querySelector`, which binds the first match on the
 		// page — fine while the console had a single image, and silently
@@ -2418,12 +2442,13 @@
 		// its preview never updated and its remove button did nothing while
 		// looking as though it should. Found in review.
 		document.querySelectorAll('.kivun-cc-media').forEach(function (box) {
-			var file = box.querySelector('.kivun-cc-file'),
-				preview = box.querySelector('.kivun-cc-media__preview'),
-				img = preview ? preview.querySelector('img') : null,
-				idEl = box.querySelector('.kivun-cc-media__id'),
-				flag = box.querySelector('.kivun-cc-remove-flag'),
-				remove = box.querySelector('.kivun-cc-media__remove');
+			var parts = kivunCcParts(box),
+				file = parts.file,
+				preview = parts.preview,
+				img = parts.img,
+				idEl = parts.id,
+				flag = parts.flag,
+				remove = parts.remove;
 
 			if (file) {
 				file.addEventListener('change', function () {
@@ -2489,15 +2514,27 @@
 					.then(function (res) {
 						ccAi.disabled = false;
 						if (res && res.success && res.data) {
-							var idEl = document.querySelector('.kivun-cc-front [name="thumbnail_id"]'),
-								box = document.querySelector('.kivun-cc-media__preview'),
-								img = box ? box.querySelector('img') : null;
-							if (idEl) { idEl.value = res.data.id; }
-							if (img) { img.src = res.data.url; box.style.display = ''; }
-							var rmFlag = document.querySelector('.kivun-cc-remove-flag'),
-								rmBtn = document.querySelector('.kivun-cc-media__remove');
-							if (rmFlag) { rmFlag.value = '0'; }
-							if (rmBtn) { rmBtn.hidden = false; }
+							// Say which box this fills. Reaching for the first
+							// preview on the page found the event's, which
+							// comes earlier in the form: the generated picture
+							// appeared on the event's thumbnail while the
+							// featured image stayed empty and hidden, so a
+							// generation that worked looked like one that did
+							// nothing. The remove flag and button happened to
+							// be right, by the order they sit in — this stops
+							// that being luck.
+							var shot = kivunCcBoxFor('thumbnail_id');
+							if (shot) {
+								if (shot.id) { shot.id.value = res.data.id; }
+								if (shot.img) { shot.img.src = res.data.url; }
+								if (shot.preview) { shot.preview.style.display = ''; }
+								if (shot.flag) { shot.flag.value = '0'; }
+								if (shot.remove) { shot.remove.hidden = false; }
+								// A file still staged here would overrule the
+								// image just generated, because the save takes
+								// an upload over an id.
+								if (shot.file) { shot.file.value = ''; }
+							}
 							if (ccStatus) { ccStatus.textContent = '✓ נוצרה תמונה'; }
 						} else if (ccStatus) {
 							ccStatus.textContent = (res && res.data && res.data.message) ? res.data.message : 'יצירת התמונה נכשלה';
