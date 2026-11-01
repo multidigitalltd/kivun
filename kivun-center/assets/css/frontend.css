@@ -715,11 +715,14 @@
 	   released to `inherit` while the aim was to take whatever the page
 	   used; the site's font is the one wanted, and it is already named. */
 }
-.kivun-interest--plain .kivun-form-row label {
+.kivun-interest--plain .kivun-form-row label,
+.kivun-interest--plain .kivun-cf-choices legend {
 	font: inherit;
 	font-weight: 500;
+	/* Full strength. These were dimmed to .75 to sit quietly beside the
+	   fields, which only made them grey against a design whose headings are
+	   black. */
 	color: inherit;
-	opacity: .75;
 }
 .kivun-interest--plain .kivun-form-row input,
 .kivun-interest--plain .kivun-form-row textarea,
@@ -731,14 +734,17 @@
 	background: none;
 	font: inherit;
 	color: inherit;
-	opacity: .85;
+	/* No opacity on the field either: it dimmed what the visitor typed along
+	   with the line under it. The line alone is softened, by mixing the
+	   inherited colour rather than fading the whole control. */
+	border-bottom-color: color-mix( in srgb, currentColor 35%, transparent );
 }
 .kivun-interest--plain .kivun-form-row input:focus,
 .kivun-interest--plain .kivun-form-row textarea:focus,
 .kivun-interest--plain .kivun-form-row select:focus {
 	border-bottom-width: 2px;
+	border-bottom-color: currentColor;
 	box-shadow: none;
-	opacity: 1;
 }
 /* A checkbox and a radio are not text boxes, and the rule above would give
    them an underline and stretch them across the row. */
