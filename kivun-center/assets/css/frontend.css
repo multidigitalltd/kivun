@@ -709,11 +709,11 @@
 	border-radius: 0;
 	padding: 0;
 	background: none;
-	/* `.kivun-interest` sets the plugin's own font family. Inheriting from
-	   there means inheriting ours, not the page's, so the chain is released
-	   at the wrapper — otherwise `font: inherit` on the fields below faithfully
-	   inherits the wrong font. Caught in the browser, not in review. */
-	font-family: inherit;
+	/* No font-family here. `.kivun-interest` already sets `--kivun-font`,
+	   which starts at the site's own ploni (after Elementor's global text
+	   font, where one is set), and the fields below inherit it. It was
+	   released to `inherit` while the aim was to take whatever the page
+	   used; the site's font is the one wanted, and it is already named. */
 }
 .kivun-interest--plain .kivun-form-row label {
 	font: inherit;
@@ -775,7 +775,12 @@
    their own colour, which is the page's background — overridable in one
    place for a design where that guess is wrong. */
 .kivun-interest--plain .kivun-lead-submit {
-	display: inline-flex;
+	/* Block-level flex, not inline: an inline box ignores an auto margin, and
+	   that margin is what puts the pill at the far end where the form is not
+	   a grid — on a phone it sat at the start however the rule below was
+	   written. `fit-content` keeps it the width of its words. */
+	display: flex;
+	width: fit-content;
 	align-items: center;
 	gap: .6rem;
 	padding: .55rem .6rem .55rem 1.3rem;
@@ -807,13 +812,15 @@
 .kivun-interest--plain .kivun-lead-submit:focus-visible {
 	opacity: .88;
 }
-/* A pill the width of its words. The plugin's buttons stretch to the form,
-   and inside the grid below it would stretch across both columns as well —
-   which is a banner, not the button the design draws. */
+/* A pill the width of its words, at the far end of the row — bottom left in
+   a right-to-left form, as the design draws it. The plugin's buttons stretch
+   to the form, and inside the grid below it would stretch across both
+   columns as well, which is a banner rather than a button. `justify-self`
+   places it in the grid and the auto margin does the same where the form is
+   not one, so the two layouts agree. */
 .kivun-interest--plain .kivun-lead-submit {
-	width: auto;
-	align-self: start;
-	justify-self: start;
+	justify-self: end;
+	margin-inline-start: auto;
 }
 
 

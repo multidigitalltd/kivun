@@ -256,24 +256,29 @@ final class CustomFormAppearanceTest extends TestCase {
 	}
 
 	/**
-	 * The stylesheet releases the font at the wrapper, not only the fields.
+	 * The form is set in the site's own font, named rather than inherited.
 	 *
-	 * `.kivun-interest` sets the plugin's own font family, so `font: inherit`
-	 * on the fields inherits ours rather than the page's and the form keeps
-	 * looking foreign while every other rule says it should not. Found in the
-	 * browser, which is the only place it was visible.
+	 * It was released to `inherit` while the aim was to take whatever font
+	 * the page around it used. The site's font is ploni, and the plugin's
+	 * own `--kivun-font` already starts there — so the wrapper keeps that
+	 * chain and the fields inherit it, instead of a second rule saying the
+	 * same thing from somewhere else.
 	 *
 	 * @return void
 	 */
-	public function test_the_font_chain_is_released_at_the_wrapper(): void {
+	public function test_the_form_is_set_in_the_site_s_font(): void {
 		$css = (string) file_get_contents( KIVUN_DIR . 'assets/css/frontend.css' );
 
+		// The chain itself begins at ploni.
+		$this->assertStringContainsString( "'ploni'", $css, 'the font chain no longer names the site font' );
+
+		// And the plain wrapper does not take itself out of it.
 		$at = strpos( $css, '.kivun-interest--plain {' );
 		$this->assertNotFalse( $at, 'the plain wrapper rule moved' );
-		$this->assertStringContainsString(
+		$this->assertStringNotContainsString(
 			'font-family: inherit',
 			substr( $css, $at, 600 ),
-			'the fields inherit the plugin font instead of the page font'
+			'the form releases the font again and will not be set in ploni'
 		);
 	}
 }
