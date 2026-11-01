@@ -2649,7 +2649,7 @@
 	var KIVUN_CF_BUILTINS = [
 		{ key: 'email', label: 'אימייל', type: 'text' },
 		{ key: 'city', label: 'עיר', type: 'text' },
-		{ key: 'gender', label: 'מגדר', type: 'select', options: ['זכר', 'נקבה', 'אחר'] }
+		{ key: 'gender', label: 'מגדר', type: 'radio', options: ['זכר', 'נקבה'] }
 	];
 	var KIVUN_CF_TAIL = [
 		{ key: 'message', label: 'הערות חופשיות', type: 'textarea' },

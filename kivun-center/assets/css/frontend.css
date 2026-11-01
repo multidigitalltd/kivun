@@ -766,24 +766,73 @@
 	outline-offset: 2px;
 }
 
-/* The button is the last thing still wearing the plugin's colours, and a
-   blue one sitting in somebody else's palette is the loudest part of not
-   belonging. Drawn from currentColor instead, so it takes the design's own
-   and reads on a light page or a dark one without being told which. */
+/* A filled pill with a mark in it, the way the client's own design draws it.
+   The fill is currentColor, so it takes the page's text colour rather than
+   one of ours and reads on a light design or a dark one. That is also why
+   the label lives in its own element: `background: currentColor` with a new
+   `color` on the same element resolves both to the same value and the words
+   disappear into the fill. The label and the mark sit a level down and set
+   their own colour, which is the page's background — overridable in one
+   place for a design where that guess is wrong. */
 .kivun-interest--plain .kivun-lead-submit {
-	border: 1px solid currentColor;
-	background: none;
+	display: inline-flex;
+	align-items: center;
+	gap: .6rem;
+	padding: .55rem .6rem .55rem 1.3rem;
+	border: 0;
+	border-radius: 999px;
+	/* Before the fill: `.kivun-btn--primary` sets `color: #fff`, so without
+	   this `currentColor` is white and the pill fills white on a white page. */
 	color: inherit;
+	background: currentColor;
 	font: inherit;
 	font-weight: 600;
+	cursor: pointer;
+}
+.kivun-interest--plain .kivun-lead-submit__label,
+.kivun-interest--plain .kivun-lead-submit__icon {
+	color: var(--kivun-on-fill, #fff);
+}
+.kivun-interest--plain .kivun-lead-submit__icon {
+	display: grid;
+	place-items: center;
+	width: 1.7rem;
+	height: 1.7rem;
+	border-radius: 999px;
+	/* Drawn from the label's own colour, so the badge follows it without a
+	   second value to keep in step. */
+	border: 1.5px solid currentColor;
 }
 .kivun-interest--plain .kivun-lead-submit:hover,
 .kivun-interest--plain .kivun-lead-submit:focus-visible {
-	/* Not `background: currentColor` with a new `color`: both resolve against
-	   the same element, so the label would turn the colour it was just placed
-	   on and disappear. A tint of the inherited colour keeps the text where
-	   it is and still answers the pointer. */
-	background: color-mix(in srgb, currentColor 15%, transparent);
+	opacity: .88;
+}
+/* A pill the width of its words. The plugin's buttons stretch to the form,
+   and inside the grid below it would stretch across both columns as well —
+   which is a banner, not the button the design draws. */
+.kivun-interest--plain .kivun-lead-submit {
+	width: auto;
+	align-self: start;
+	justify-self: start;
+}
+
+
+/* Two to a line, as the design has them. Only the short fields pair up: a
+   message, a group of choices and a consent each want the width, and the
+   `:has()` is what tells a row with a textarea in it from a row with a box.
+   Below the breakpoint everything is one column, which is the only thing
+   that works in an Elementor sidebar. */
+@media (min-width: 620px) {
+	.kivun-interest--plain .kivun-lead-form {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 0 1.5rem;
+	}
+	.kivun-interest--plain .kivun-lead-form > :not(.kivun-form-row),
+	.kivun-interest--plain .kivun-lead-form > fieldset.kivun-form-row,
+	.kivun-interest--plain .kivun-lead-form > .kivun-form-row:has( textarea ) {
+		grid-column: 1 / -1;
+	}
 }
 
 /* What a number box will not say for itself. */
@@ -2630,9 +2679,16 @@ body.kivun-ty-open { overflow: hidden; }
 }
 
 /* The visitor's side: a group of choices reads as one question. */
-.kivun-cf-choices { border: 0; margin: 0 0 1rem; padding: 0; }
+/* Block, not the column flex it inherits from .kivun-form-row. As a flex
+   container its children are blockified — the inline-flex below is
+   turned back into flex and every option takes a line of its own. */
+.kivun-cf-choices { display: block; border: 0; margin: 0 0 1rem; padding: 0; }
 .kivun-cf-choices legend { padding: 0; margin-bottom: .4rem; font-size: .9rem; font-weight: 500; }
-.kivun-cf-choice { display: flex; align-items: center; gap: .5rem; margin-bottom: .35rem; font-size: .92rem; cursor: pointer; }
+/* Inline-flex, so short options share a line and long ones still wrap one
+   to a line on their own. Not a flex container on the fieldset: a
+   <legend> inside one lays out differently from browser to browser, and
+   the question's own words are the part that must not move. */
+.kivun-cf-choice { display: inline-flex; align-items: center; gap: .5rem; margin-bottom: .35rem; margin-inline-end: 1.1rem; font-size: .92rem; cursor: pointer; }
 /* The form's inputs are full width by default, which a radio inherits too —
    leaving the button adrift in the middle of the row with its words at the
    far edge. Same `flex: none` the consent row already uses. */
