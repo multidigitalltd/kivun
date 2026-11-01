@@ -48,6 +48,20 @@ final class CustomFormAppearanceTest extends TestCase {
 	}
 
 	/**
+	 * Render the fixed form, as a page of the plugin's own shows it.
+	 *
+	 * @return string The markup.
+	 */
+	private function fixed(): string {
+		$post_id   = 9;
+		$post_type = 'kivun_course';
+
+		ob_start();
+		include KIVUN_DIR . 'templates/courses/interest-form.php';
+		return (string) ob_get_clean();
+	}
+
+	/**
 	 * The form brings no heading of its own.
 	 *
 	 * The design it sits in already has one. A second title under the
@@ -156,24 +170,115 @@ final class CustomFormAppearanceTest extends TestCase {
 	}
 
 	/**
-	 * The stylesheet releases the font at the wrapper, not only the fields.
+	 * Gender is two buttons, and only two.
 	 *
-	 * `.kivun-interest` sets the plugin's own font family, so `font: inherit`
-	 * on the fields inherits ours rather than the page's and the form keeps
-	 * looking foreign while every other rule says it should not. Found in the
-	 * browser, which is the only place it was visible.
+	 * Held for both lead forms at once rather than one each: they are the
+	 * same question, and the rota that splits candidates by it reads whatever
+	 * either of them sends. A third option nobody is offered on one form and
+	 * is on the other is a column of answers that cannot be compared.
 	 *
 	 * @return void
 	 */
-	public function test_the_font_chain_is_released_at_the_wrapper(): void {
+	public function test_gender_is_two_buttons_and_only_two(): void {
+		$forms = array(
+			'landing/custom-form.php'   => $this->render( array(), array( 'gender' ) ),
+			'courses/interest-form.php' => $this->fixed(),
+		);
+
+		foreach ( $forms as $name => $html ) {
+			$this->assertSame(
+				2,
+				substr_count( $html, 'type="radio" name="gender"' ),
+				$name . ' does not offer gender as exactly two buttons'
+			);
+			$this->assertStringNotContainsString( '<option value="אחר"', $html, $name . ' still offers a third' );
+			$this->assertStringNotContainsString( 'select name="gender"', $html, $name . ' still uses a menu' );
+		}
+	}
+
+	/**
+	 * Both values still reach a rota group.
+	 *
+	 * Changing what the form sends is only safe while the rota recognises it;
+	 * a value it cannot place leaves the lead with no coordinator, and
+	 * nothing says so. ("אחר" was exactly that, which is part of why it goes.)
+	 *
+	 * @return void
+	 */
+	public function test_both_values_still_reach_a_rota_group(): void {
+		$this->assertSame( 'male', Kivun_Coordinators::group_of( 'זכר' ) );
+		$this->assertSame( 'female', Kivun_Coordinators::group_of( 'נקבה' ) );
+	}
+
+	/**
+	 * The builder's preview offers what the form offers.
+	 *
+	 * The preview is the whole reason the builder is usable, and a preview
+	 * that shows a menu of three where the page draws two buttons is worse
+	 * than none: it is confidently wrong.
+	 *
+	 * @return void
+	 */
+	public function test_the_preview_offers_what_the_form_offers(): void {
+		$js = (string) file_get_contents( KIVUN_DIR . 'assets/js/frontend.js' );
+
+		$at = strpos( $js, "key: 'gender'" );
+		$this->assertNotFalse( $at, 'the preview no longer knows about gender' );
+		$line = substr( $js, $at, 120 );
+
+		$this->assertStringContainsString( "type: 'radio'", $line, 'the preview still draws a menu' );
+		$this->assertStringNotContainsString( 'אחר', $line, 'the preview still offers a third option' );
+	}
+
+	/**
+	 * The submit button keeps its words out of its own fill.
+	 *
+	 * The pill is filled with `currentColor` so it takes the page's own
+	 * colour. That only works while the label sits in a separate element:
+	 * setting a colour on the button itself resolves the fill to the same
+	 * value and the words vanish into it. Found in the browser the first
+	 * time, which is the only place it shows.
+	 *
+	 * @return void
+	 */
+	public function test_the_button_keeps_its_words_out_of_its_fill(): void {
+		foreach ( array( 'landing/custom-form.php', 'courses/interest-form.php' ) as $template ) {
+			$src = (string) file_get_contents( KIVUN_DIR . 'templates/' . $template );
+			$this->assertStringContainsString(
+				'kivun-lead-submit__label',
+				$src,
+				$template . ' puts the label straight in the button, where the fill would swallow it'
+			);
+		}
+
+		$css = (string) file_get_contents( KIVUN_DIR . 'assets/css/frontend.css' );
+		$this->assertStringContainsString( '.kivun-interest--plain .kivun-lead-submit__label', $css );
+	}
+
+	/**
+	 * The form is set in the site's own font, named rather than inherited.
+	 *
+	 * It was released to `inherit` while the aim was to take whatever font
+	 * the page around it used. The site's font is ploni, and the plugin's
+	 * own `--kivun-font` already starts there — so the wrapper keeps that
+	 * chain and the fields inherit it, instead of a second rule saying the
+	 * same thing from somewhere else.
+	 *
+	 * @return void
+	 */
+	public function test_the_form_is_set_in_the_site_s_font(): void {
 		$css = (string) file_get_contents( KIVUN_DIR . 'assets/css/frontend.css' );
 
+		// The chain itself begins at ploni.
+		$this->assertStringContainsString( "'ploni'", $css, 'the font chain no longer names the site font' );
+
+		// And the plain wrapper does not take itself out of it.
 		$at = strpos( $css, '.kivun-interest--plain {' );
 		$this->assertNotFalse( $at, 'the plain wrapper rule moved' );
-		$this->assertStringContainsString(
+		$this->assertStringNotContainsString(
 			'font-family: inherit',
 			substr( $css, $at, 600 ),
-			'the fields inherit the plugin font instead of the page font'
+			'the form releases the font again and will not be set in ploni'
 		);
 	}
 }

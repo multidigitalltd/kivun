@@ -43,15 +43,16 @@ $kivun_plain = ! empty( $plain );
 			<input type="text" name="city" autocomplete="address-level2">
 		</div>
 
-		<div class="kivun-form-row">
-			<label><?php esc_html_e( 'מגדר', 'kivun' ); ?></label>
-			<select name="gender">
-				<option value=""><?php esc_html_e( 'בחר/י', 'kivun' ); ?></option>
-				<option value="זכר"><?php esc_html_e( 'זכר', 'kivun' ); ?></option>
-				<option value="נקבה"><?php esc_html_e( 'נקבה', 'kivun' ); ?></option>
-				<option value="אחר"><?php esc_html_e( 'אחר', 'kivun' ); ?></option>
-			</select>
-		</div>
+		<?php // Two buttons rather than a menu, and the same markup the choice questions use. ?>
+		<fieldset class="kivun-form-row kivun-cf-choices">
+			<legend><?php esc_html_e( 'מגדר', 'kivun' ); ?></legend>
+			<?php foreach ( array( 'זכר', 'נקבה' ) as $kivun_g ) : ?>
+				<label class="kivun-cf-choice">
+					<input type="radio" name="gender" value="<?php echo esc_attr( $kivun_g ); ?>">
+					<span><?php echo esc_html( $kivun_g ); ?></span>
+				</label>
+			<?php endforeach; ?>
+		</fieldset>
 
 		<div class="kivun-form-row">
 			<label><?php esc_html_e( 'הערות / שאלות', 'kivun' ); ?></label>
@@ -92,8 +93,9 @@ $kivun_plain = ! empty( $plain );
 
 		<p class="kivun-error" style="display:none;color:var(--kivun-error)"></p>
 
-		<button type="submit" class="kivun-btn kivun-btn--outline">
-			<?php esc_html_e( 'שלח פנייה — נחזור אליך', 'kivun' ); ?>
+		<button type="submit" class="kivun-btn kivun-btn--outline kivun-lead-submit">
+			<span class="kivun-lead-submit__label"><?php esc_html_e( 'שלח פנייה — נחזור אליך', 'kivun' ); ?></span>
+			<span class="kivun-lead-submit__icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="15" height="15" focusable="false"><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8 8 16"/><path d="M8 10.5V16h5.5"/></g></svg></span>
 		</button>
 	</form>
 </div>

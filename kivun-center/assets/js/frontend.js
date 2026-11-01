@@ -316,13 +316,24 @@
 
 		var btn = form.querySelector('[type=submit]');
 		var err = form.querySelector('.kivun-error');
-		var originalText = btn ? btn.textContent : '';
+		// The lead forms keep the button's words in their own element, because
+		// the pill is filled with currentColor and text set on the button
+		// itself comes out the colour of the fill. Writing to the button's
+		// textContent would delete that element and the mark beside it, and
+		// "שולח…" would appear in the one colour it cannot be read in — then
+		// the restore would put the plain word back and the button would stay
+		// unreadable for the retry. Every other form has no such element and
+		// falls back to the button, exactly as before. Found in review.
+		var label = btn ? (btn.querySelector('.kivun-lead-submit__label') || btn) : null;
+		var originalText = label ? label.textContent : '';
 
 		if (err) { err.style.display = 'none'; }
-		if (btn) { btn.disabled = true; btn.textContent = kivun.i18n.sending; }
+		if (btn) { btn.disabled = true; }
+		if (label) { label.textContent = kivun.i18n.sending; }
 
 		var restore = function () {
-			if (btn) { btn.disabled = false; btn.textContent = originalText; }
+			if (btn) { btn.disabled = false; }
+			if (label) { label.textContent = originalText; }
 		};
 
 		post(formParams(form, { action: action, nonce: kivun.nonce }))
@@ -2649,7 +2660,7 @@
 	var KIVUN_CF_BUILTINS = [
 		{ key: 'email', label: 'אימייל', type: 'text' },
 		{ key: 'city', label: 'עיר', type: 'text' },
-		{ key: 'gender', label: 'מגדר', type: 'select', options: ['זכר', 'נקבה', 'אחר'] }
+		{ key: 'gender', label: 'מגדר', type: 'radio', options: ['זכר', 'נקבה'] }
 	];
 	var KIVUN_CF_TAIL = [
 		{ key: 'message', label: 'הערות חופשיות', type: 'textarea' },

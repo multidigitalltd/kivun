@@ -54,16 +54,23 @@ $kivun_asks     = static fn( string $key ): bool => in_array( $key, $kivun_built
 			</div>
 		<?php endif; ?>
 
+		<?php
+		// Two buttons rather than a menu: with the choice down to two, a
+		// list that has to be opened to see them is more work than the
+		// answer is worth. The markup is the one the page's own choice
+		// questions use, so it inherits their sizing and their focus ring
+		// instead of growing a second set.
+		?>
 		<?php if ( $kivun_asks( 'gender' ) ) : ?>
-			<div class="kivun-form-row">
-				<label for="kivun-cf-gender-<?php echo esc_attr( (string) $post_id ); ?>"><?php esc_html_e( 'מגדר', 'kivun' ); ?></label>
-				<select id="kivun-cf-gender-<?php echo esc_attr( (string) $post_id ); ?>" name="gender">
-					<option value=""><?php esc_html_e( 'בחר/י', 'kivun' ); ?></option>
-					<option value="זכר"><?php esc_html_e( 'זכר', 'kivun' ); ?></option>
-					<option value="נקבה"><?php esc_html_e( 'נקבה', 'kivun' ); ?></option>
-					<option value="אחר"><?php esc_html_e( 'אחר', 'kivun' ); ?></option>
-				</select>
-			</div>
+			<fieldset class="kivun-form-row kivun-cf-choices">
+				<legend><?php esc_html_e( 'מגדר', 'kivun' ); ?></legend>
+				<?php foreach ( array( 'זכר', 'נקבה' ) as $kivun_g ) : ?>
+					<label class="kivun-cf-choice">
+						<input type="radio" name="gender" value="<?php echo esc_attr( $kivun_g ); ?>">
+						<span><?php echo esc_html( $kivun_g ); ?></span>
+					</label>
+				<?php endforeach; ?>
+			</fieldset>
 		<?php endif; ?>
 
 		<?php
@@ -175,6 +182,10 @@ $kivun_asks     = static fn( string $key ): bool => in_array( $key, $kivun_built
 		<?php endif; ?>
 
 		<p class="kivun-error" style="display:none;color:var(--kivun-error)"></p>
-		<button type="submit" class="kivun-btn kivun-btn--primary kivun-lead-submit"><?php esc_html_e( 'שליחה', 'kivun' ); ?></button>
+		<?php // The label and the mark sit in their own elements so the fill can be drawn from the page's colour while the words stay readable on it. ?>
+		<button type="submit" class="kivun-btn kivun-btn--primary kivun-lead-submit">
+			<span class="kivun-lead-submit__label"><?php esc_html_e( 'שליחה', 'kivun' ); ?></span>
+			<span class="kivun-lead-submit__icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="15" height="15" focusable="false"><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8 8 16"/><path d="M8 10.5V16h5.5"/></g></svg></span>
+		</button>
 	</form>
 </div>
