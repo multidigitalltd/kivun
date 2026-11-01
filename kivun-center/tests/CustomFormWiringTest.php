@@ -296,35 +296,47 @@ final class CustomFormWiringTest extends TestCase {
 	}
 
 	/**
-	 * And every place that draws a form asks the same question.
+	 * Nobody names the fixed form but the one place allowed to.
 	 *
-	 * A landing page is rendered from more than one template — its own, and
-	 * the workshop single the shortcode uses. One of them showing the fixed
-	 * form while the server validates answers it never offered would refuse
-	 * every submission, with nothing the visitor could do. Found in review.
+	 * A page can be drawn from more than one template, and one of them
+	 * showing the fixed form while the server validates answers it never
+	 * offered would refuse every submission with nothing the visitor could
+	 * do. That happened once, in review.
+	 *
+	 * Written as a search rather than a list. The first version named three
+	 * files; one of them has since been deleted and another was added, and a
+	 * list is wrong the moment either happens. What holds is the rule: the
+	 * template's name may appear only inside the function whose job is to
+	 * choose it.
 	 *
 	 * @return void
 	 */
-	public function test_no_render_site_can_drift_from_the_validation(): void {
-		$sites = array(
-			'templates/landing/single.php',
-			'templates/workshops/single.php',
-			'shortcodes/class-kivun-shortcodes.php',
-		);
+	public function test_nobody_names_the_fixed_form_but_the_chooser(): void {
+		$allowed = 'includes/class-kivun-custom-forms.php';
+		$looked  = 0;
 
-		foreach ( $sites as $site ) {
-			$src = (string) file_get_contents( KIVUN_DIR . $site );
-			$this->assertStringContainsString(
-				'Kivun_Custom_Forms::template(',
-				$src,
-				$site . ' picks a form without asking which one the page has'
-			);
-			$this->assertStringNotContainsString(
-				"kivun_get_template(\n\t\t\t'courses/interest-form.php'",
-				$src,
-				$site . ' still hard-codes the fixed form'
-			);
+		foreach ( array( 'templates', 'includes', 'shortcodes', 'elementor' ) as $dir ) {
+			$files = new RecursiveIteratorIterator( new RecursiveDirectoryIterator( KIVUN_DIR . $dir ) );
+			foreach ( $files as $file ) {
+				if ( 'php' !== $file->getExtension() ) {
+					continue;
+				}
+
+				$path = str_replace( KIVUN_DIR, '', $file->getPathname() );
+				if ( $allowed === $path ) {
+					continue;
+				}
+
+				++$looked;
+				$this->assertStringNotContainsString(
+					"'courses/interest-form.php'",
+					(string) file_get_contents( $file->getPathname() ),
+					$path . ' names the fixed form itself instead of asking which form the page has'
+				);
+			}
 		}
+
+		$this->assertGreaterThan( 20, $looked, 'the search found almost nothing; the directories moved' );
 	}
 
 	/**

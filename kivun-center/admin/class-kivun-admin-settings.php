@@ -284,7 +284,6 @@ class Kivun_Admin_Settings {
 				'privacy_consent_enabled'    => ! empty( $_POST['privacy_consent_enabled'] ),
 				'privacy_url'                => esc_url_raw( wp_unslash( $_POST['privacy_url'] ?? '' ) ),
 				'terms_url'                  => esc_url_raw( wp_unslash( $_POST['terms_url'] ?? '' ) ),
-				'landing_builtin_single'     => ! empty( $_POST['landing_builtin_single'] ),
 				'allow_cv_upload'            => ! empty( $_POST['allow_cv_upload'] ),
 				'cv_max_size_mb'             => absint( $_POST['cv_max_size_mb'] ?? 5 ),
 				'webhook_url'                => esc_url_raw( wp_unslash( $_POST['webhook_url'] ?? '' ) ),
@@ -473,16 +472,6 @@ class Kivun_Admin_Settings {
 					<th scope="row"><?php esc_html_e( 'משרות לעמוד בלוח', 'kivun' ); ?></th>
 					<td>
 						<input type="number" name="jobs_per_page" value="<?php echo esc_attr( $o( 'jobs_per_page', 10 ) ); ?>" min="1" max="100" class="small-text">
-					</td>
-				</tr>
-				<tr>
-					<th scope="row"><?php esc_html_e( 'מבנה מובנה לדף נחיתה', 'kivun' ); ?></th>
-					<td>
-						<label>
-							<input type="checkbox" name="landing_builtin_single" value="1" <?php checked( (bool) $o( 'landing_builtin_single', false ) ); ?>>
-							<?php esc_html_e( 'הצג את המבנה המובנה של התוסף בעמוד דף הנחיתה (תמונה + פרטים + טופס).', 'kivun' ); ?>
-						</label>
-						<p class="description"><?php esc_html_e( 'השאר כבוי אם אתה מעצב את עמוד דף הנחיתה בעצמך (Elementor) — כך התוסף לא ידרוס את התוכן ולא יוסיף טופס.', 'kivun' ); ?></p>
 					</td>
 				</tr>
 				<tr>

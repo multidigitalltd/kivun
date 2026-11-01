@@ -155,6 +155,7 @@ class Kivun_Content_Creator {
 			'whatsapp'         => '',
 			'city'             => '',
 			'thumb_id'         => '0',
+			'share_id'         => '0',
 			'course_capacity'  => '',
 			'course_wc'        => '',
 			'session_location' => '',
@@ -183,6 +184,7 @@ class Kivun_Content_Creator {
 		$v['long']     = (string) get_post_field( 'post_content', $primary );
 		$v['status']   = (string) get_post_status( $primary );
 		$v['thumb_id'] = (string) (int) get_post_thumbnail_id( $primary );
+		$v['share_id'] = (string) (int) get_post_meta( $primary, Kivun_Share_Image::META, true );
 		$v['whatsapp'] = (string) get_post_meta( $primary, '_kivun_whatsapp', true );
 		$v['city']     = (string) get_post_meta( $primary, '_kivun_city', true );
 		if ( 'future' === $v['status'] ) {
@@ -308,6 +310,7 @@ class Kivun_Content_Creator {
 			'event'   => __( 'אירוע', 'kivun' ),
 		);
 		$thumb_url     = (int) $v['thumb_id'] ? (string) wp_get_attachment_image_url( (int) $v['thumb_id'], 'medium' ) : '';
+		$share_url     = (int) $v['share_id'] ? (string) wp_get_attachment_image_url( (int) $v['share_id'], 'medium' ) : '';
 		$ev_img_url    = (int) $v['event_image_id'] ? (string) wp_get_attachment_image_url( (int) $v['event_image_id'], 'medium' ) : '';
 		$ai_show       = current_user_can( 'upload_files' );
 		$ai_configured = Kivun_AI_Image::is_configured();
@@ -601,6 +604,18 @@ class Kivun_Content_Creator {
 									</p>
 									<span class="kivun-cc-ai-status" style="font-size:12px;color:#555"></span>
 								<?php endif; ?>
+							</div>
+						</div>
+
+						<div class="kivun-lp-card">
+							<label class="kivun-lp-label"><?php esc_html_e( 'תמונה לשיתוף קישור', 'kivun' ); ?></label>
+							<div class="kivun-lp-media">
+								<p class="kivun-lp-hint"><?php esc_html_e( 'לא מוצגת בעמוד — רק בכרטיסיה שנפתחת כששולחים את הקישור. מומלץ 1200×630. בלעדיה תוצג התמונה הראשית.', 'kivun' ); ?></p>
+								<div class="kivun-lp-media__preview" <?php echo $share_url ? '' : 'style="display:none"'; ?>><img src="<?php echo esc_url( $share_url ); ?>" alt=""></div>
+								<input type="hidden" name="share_image_id" value="<?php echo esc_attr( $v['share_id'] ); ?>">
+								<input type="hidden" name="remove_share_image" value="0">
+								<p class="kivun-lp-hint"><?php esc_html_e( 'העלאת קובץ:', 'kivun' ); ?></p>
+								<input type="file" name="share_image_file" accept="image/*">
 							</div>
 						</div>
 
@@ -1020,6 +1035,7 @@ class Kivun_Content_Creator {
 			$group = wp_generate_uuid4();
 		}
 		$thumb_id = self::resolve_thumbnail();
+		$share_id = self::resolve_image( 'share_image_file', 'share_image_id' );
 
 		$cta = array(
 			'_kivun_cta_title'   => $s['cta_t'],
@@ -1044,7 +1060,8 @@ class Kivun_Content_Creator {
 						'_kivun_contact_email' => $s['email'],
 					),
 					$cta
-				)
+				),
+				$share_id
 			);
 		}
 
@@ -1067,7 +1084,8 @@ class Kivun_Content_Creator {
 						'_kivun_contact_email'   => $s['email'],
 					),
 					$cta
-				)
+				),
+				$share_id
 			);
 		}
 
@@ -1091,7 +1109,8 @@ class Kivun_Content_Creator {
 						'_kivun_session_valid_until' => sanitize_text_field( wp_unslash( $_POST['session_valid_until'] ?? '' ) ),
 					),
 					$cta
-				)
+				),
+				$share_id
 			);
 		}
 
@@ -1121,7 +1140,8 @@ class Kivun_Content_Creator {
 						'_kivun_contact_email'      => $s['email'],
 					),
 					$cta
-				)
+				),
+				$share_id
 			);
 		}
 
@@ -1174,9 +1194,10 @@ class Kivun_Content_Creator {
 	 * @param string $excerpt   Optional excerpt (short description).
 	 * @param int    $thumb_id  Featured image attachment ID (0 = leave as is).
 	 * @param array  $meta       Meta key => value pairs.
+	 * @param int    $share_id  Share-image attachment ID (0 = leave as is).
 	 * @return int The post ID, or 0 on failure.
 	 */
-	private static function upsert( string $group, string $post_type, array $shared, string $excerpt, int $thumb_id, array $meta ): int {
+	private static function upsert( string $group, string $post_type, array $shared, string $excerpt, int $thumb_id, array $meta, int $share_id = 0 ): int {
 		$existing = get_posts(
 			array(
 				'post_type'      => $post_type,
@@ -1241,6 +1262,17 @@ class Kivun_Content_Creator {
 			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified by the caller before run_save().
 		} elseif ( ! empty( $_POST['remove_thumbnail'] ) ) {
 			delete_post_thumbnail( $post_id );
+		}
+
+		// The picture a shared link shows, which never appears on the page.
+		// Both screens that reach this save carry the field, so a save from
+		// either one says what it means; a save from a screen that did not
+		// would read as "none" and quietly clear it.
+		if ( $share_id ) {
+			update_post_meta( $post_id, Kivun_Share_Image::META, $share_id );
+			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified by the caller before run_save().
+		} elseif ( ! empty( $_POST['remove_share_image'] ) ) {
+			delete_post_meta( $post_id, Kivun_Share_Image::META );
 		}
 
 		return $post_id;
@@ -2927,6 +2959,7 @@ class Kivun_Content_Creator {
 		$can_delete    = current_user_can( 'delete_posts' );
 		$ai_configured = Kivun_AI_Image::is_configured();
 		$thumb_url     = (int) $v['thumb_id'] ? (string) wp_get_attachment_image_url( (int) $v['thumb_id'], 'medium' ) : '';
+		$share_url     = (int) $v['share_id'] ? (string) wp_get_attachment_image_url( (int) $v['share_id'], 'medium' ) : '';
 		$ev_img_url    = (int) $v['event_image_id'] ? (string) wp_get_attachment_image_url( (int) $v['event_image_id'], 'medium' ) : '';
 		$sections      = array(
 			'landing' => __( 'דף נחיתה', 'kivun' ),
@@ -3217,6 +3250,25 @@ class Kivun_Content_Creator {
 										<span class="kivun-cc-ai-status" role="status" aria-live="polite"></span>
 									</div>
 								<?php endif; ?>
+							</div>
+						</div>
+
+						<div class="kivun-cc-card" data-step="4" style="order:1">
+							<label class="kivun-cc-label"><?php esc_html_e( 'תמונה לשיתוף קישור', 'kivun' ); ?></label>
+							<div class="kivun-cc-media">
+								<p class="kivun-cc-hint">
+									<?php esc_html_e( 'לא מוצגת בעמוד. היא מה שרואים כששולחים את הקישור בוואטסאפ או מפרסמים אותו ברשתות. מומלץ 1200×630.', 'kivun' ); ?>
+								</p>
+								<div class="kivun-cc-media__preview" <?php echo $share_url ? '' : 'style="display:none"'; ?>><img src="<?php echo esc_url( $share_url ); ?>" alt=""></div>
+								<input type="hidden" name="share_image_id" value="<?php echo esc_attr( $v['share_id'] ); ?>">
+								<input type="hidden" name="remove_share_image" value="0" class="kivun-cc-remove-flag">
+								<?php if ( $can_upload ) : ?>
+									<input type="file" name="share_image_file" accept="image/*" class="kivun-cc-file">
+									<button type="button" class="kivun-cc-media__remove"<?php echo $share_url ? '' : ' hidden'; ?>><?php esc_html_e( 'הסרת התמונה', 'kivun' ); ?></button>
+								<?php endif; ?>
+								<p class="kivun-cc-hint">
+									<?php esc_html_e( 'אם לא נבחרה — תוצג התמונה הראשית.', 'kivun' ); ?>
+								</p>
 							</div>
 						</div>
 

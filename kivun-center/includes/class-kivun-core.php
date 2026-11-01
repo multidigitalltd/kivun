@@ -57,6 +57,7 @@ class Kivun_Core {
 		Kivun_AI_Image::init();
 		Kivun_AI_Content::init();
 		Kivun_Event_Popup::init();
+		Kivun_Share_Image::init();
 
 		// Elementor — only when Elementor Pro is active.
 		add_action(
@@ -120,6 +121,7 @@ class Kivun_Core {
 			'class-kivun-form-details',
 			'class-kivun-custom-forms',
 			'class-kivun-privacy-consent',
+			'class-kivun-share-image',
 			'class-kivun-lead-capture',
 			'class-kivun-utm',
 			'class-kivun-campaigns',

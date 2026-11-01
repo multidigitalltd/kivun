@@ -48,7 +48,6 @@ class Kivun_Landing {
 		add_action( 'load-post.php', array( __CLASS__, 'redirect_native_edit' ) );
 
 		// Render the fixed landing structure on the single page.
-		add_filter( 'the_content', array( __CLASS__, 'render_single_content' ) );
 	}
 
 	/**
@@ -590,41 +589,5 @@ class Kivun_Landing {
 		} else {
 			delete_post_thumbnail( $landing_id );
 		}
-	}
-
-	/**
-	 * Render the fixed landing structure on the single page.
-	 *
-	 * @param string $content The post content.
-	 * @return string
-	 */
-	public static function render_single_content( string $content ): string {
-		if ( is_admin() || ! is_singular( self::POST_TYPE ) || ! in_the_loop() || ! is_main_query() ) {
-			return $content;
-		}
-
-		// Off by default: most sites design the landing single in Elementor and
-		// don't want the plugin to override the content or inject a form. Opt in
-		// from Kivun Center → Settings (or via the filter below).
-		$default = (bool) Kivun_Admin_Settings::get( 'landing_builtin_single', false );
-
-		/**
-		 * Allow forcing/disabling the built-in landing layout.
-		 *
-		 * @param bool $render Whether to render the built-in layout.
-		 */
-		if ( ! apply_filters( 'kivun_render_landing_single', $default ) ) {
-			return $content;
-		}
-
-		ob_start();
-		kivun_get_template(
-			'landing/single.php',
-			array(
-				'landing_id' => get_the_ID(),
-				'long_html'  => $content,
-			)
-		);
-		return (string) ob_get_clean();
 	}
 }

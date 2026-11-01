@@ -640,6 +640,16 @@ function get_the_terms( int $post_id, string $taxonomy ) {
 }
 
 /**
+ * A post's featured image, as WordPress stores it.
+ *
+ * @param int $post_id The post.
+ * @return int
+ */
+function get_post_thumbnail_id( int $post_id = 0 ): int {
+	return (int) ( Kivun_Test_State::$meta[ $post_id ]['_thumbnail_id'] ?? 0 );
+}
+
+/**
  * A post's type.
  *
  * @param int $post_id The post.
@@ -1324,6 +1334,7 @@ foreach ( array(
 	'class-kivun-core',
 	'class-kivun-custom-forms',
 	'class-kivun-privacy-consent',
+	'class-kivun-share-image',
 ) as $kivun_test_class ) {
 	require_once KIVUN_DIR . 'includes/' . $kivun_test_class . '.php';
 }
