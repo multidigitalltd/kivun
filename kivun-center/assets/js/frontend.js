@@ -2410,37 +2410,43 @@
 		});
 		kivunUpdateNonEvent();
 
-		var ccFile = document.querySelector('.kivun-cc-file');
-		if (ccFile) {
-			ccFile.addEventListener('change', function () {
-				var box = document.querySelector('.kivun-cc-media__preview'),
-					img = box ? box.querySelector('img') : null,
-					flag = document.querySelector('.kivun-cc-remove-flag'),
-					rm = document.querySelector('.kivun-cc-media__remove');
-				if (flag) { flag.value = '0'; }
-				if (rm) { rm.hidden = false; }
-				if (ccFile.files && ccFile.files[0] && img && window.FileReader) {
-					var reader = new FileReader();
-					reader.onload = function (e) { img.src = e.target.result; box.style.display = ''; };
-					reader.readAsDataURL(ccFile.files[0]);
-				}
-			});
-		}
+		// One media box at a time, and every lookup inside it. These used to
+		// be `document.querySelector`, which binds the first match on the
+		// page — fine while the console had a single image, and silently
+		// wrong the moment a second one appeared beside it: the share
+		// image's file input and remove button got no handlers at all, so
+		// its preview never updated and its remove button did nothing while
+		// looking as though it should. Found in review.
+		document.querySelectorAll('.kivun-cc-media').forEach(function (box) {
+			var file = box.querySelector('.kivun-cc-file'),
+				preview = box.querySelector('.kivun-cc-media__preview'),
+				img = preview ? preview.querySelector('img') : null,
+				idEl = box.querySelector('.kivun-cc-media__id'),
+				flag = box.querySelector('.kivun-cc-remove-flag'),
+				remove = box.querySelector('.kivun-cc-media__remove');
 
-		var ccRemove = document.querySelector('.kivun-cc-media__remove');
-		if (ccRemove) {
-			ccRemove.addEventListener('click', function () {
-				var idEl = document.querySelector('.kivun-cc-front [name="thumbnail_id"]'),
-					flag = document.querySelector('.kivun-cc-remove-flag'),
-					box = document.querySelector('.kivun-cc-media__preview'),
-					fileEl = document.querySelector('.kivun-cc-file');
-				if (idEl) { idEl.value = ''; }
-				if (flag) { flag.value = '1'; }
-				if (fileEl) { fileEl.value = ''; }
-				if (box) { box.style.display = 'none'; }
-				ccRemove.hidden = true;
-			});
-		}
+			if (file) {
+				file.addEventListener('change', function () {
+					if (flag) { flag.value = '0'; }
+					if (remove) { remove.hidden = false; }
+					if (file.files && file.files[0] && img && window.FileReader) {
+						var reader = new FileReader();
+						reader.onload = function (e) { img.src = e.target.result; preview.style.display = ''; };
+						reader.readAsDataURL(file.files[0]);
+					}
+				});
+			}
+
+			if (remove) {
+				remove.addEventListener('click', function () {
+					if (idEl) { idEl.value = ''; }
+					if (flag) { flag.value = '1'; }
+					if (file) { file.value = ''; }
+					if (preview) { preview.style.display = 'none'; }
+					remove.hidden = true;
+				});
+			}
+		});
 
 		var ccConfirm = 'למחוק את כל התוכן המקושר? הפעולה תעביר לפח את דף הנחיתה, הקורס והסדנה.';
 		document.querySelectorAll('.kivun-cc-delete-form').forEach(function (f) {

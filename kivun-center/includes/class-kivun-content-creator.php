@@ -155,6 +155,7 @@ class Kivun_Content_Creator {
 			'whatsapp'         => '',
 			'city'             => '',
 			'thumb_id'         => '0',
+			'share_id'         => '0',
 			'course_capacity'  => '',
 			'course_wc'        => '',
 			'session_location' => '',
@@ -183,6 +184,7 @@ class Kivun_Content_Creator {
 		$v['long']     = (string) get_post_field( 'post_content', $primary );
 		$v['status']   = (string) get_post_status( $primary );
 		$v['thumb_id'] = (string) (int) get_post_thumbnail_id( $primary );
+		$v['share_id'] = (string) (int) get_post_meta( $primary, Kivun_Share_Image::META, true );
 		$v['whatsapp'] = (string) get_post_meta( $primary, '_kivun_whatsapp', true );
 		$v['city']     = (string) get_post_meta( $primary, '_kivun_city', true );
 		if ( 'future' === $v['status'] ) {
@@ -308,6 +310,7 @@ class Kivun_Content_Creator {
 			'event'   => __( 'אירוע', 'kivun' ),
 		);
 		$thumb_url     = (int) $v['thumb_id'] ? (string) wp_get_attachment_image_url( (int) $v['thumb_id'], 'medium' ) : '';
+		$share_url     = (int) $v['share_id'] ? (string) wp_get_attachment_image_url( (int) $v['share_id'], 'medium' ) : '';
 		$ev_img_url    = (int) $v['event_image_id'] ? (string) wp_get_attachment_image_url( (int) $v['event_image_id'], 'medium' ) : '';
 		$ai_show       = current_user_can( 'upload_files' );
 		$ai_configured = Kivun_AI_Image::is_configured();
@@ -567,7 +570,9 @@ class Kivun_Content_Creator {
 							<label class="kivun-lp-label"><?php esc_html_e( 'תמונה ראשית', 'kivun' ); ?></label>
 							<div class="kivun-lp-media">
 								<div class="kivun-lp-media__preview" <?php echo $thumb_url ? '' : 'style="display:none"'; ?>><img src="<?php echo esc_url( $thumb_url ); ?>" alt=""></div>
-								<input type="hidden" name="thumbnail_id" id="kivun-lp-thumb-id" value="<?php echo esc_attr( $v['thumb_id'] ); ?>">
+								<input type="hidden" class="kivun-lp-media__id" name="thumbnail_id" id="kivun-lp-thumb-id" value="<?php echo esc_attr( $v['thumb_id'] ); ?>">
+								<?php // Without this the remove button beside it emptied the id and nothing else, and the save read that as "unchanged" rather than "remove". Pre-existing; found while giving the share image the same control. ?>
+								<input type="hidden" name="remove_thumbnail" value="0" class="kivun-lp-media__flag">
 								<button type="button" class="button kivun-lp-media__select"><?php esc_html_e( 'בחירת תמונה', 'kivun' ); ?></button>
 								<button type="button" class="button-link kivun-lp-media__remove" <?php echo $thumb_url ? '' : 'style="display:none"'; ?>><?php esc_html_e( 'הסרה', 'kivun' ); ?></button>
 								<p class="kivun-lp-hint"><?php esc_html_e( 'או העלאת קובץ:', 'kivun' ); ?></p>
@@ -601,6 +606,20 @@ class Kivun_Content_Creator {
 									</p>
 									<span class="kivun-cc-ai-status" style="font-size:12px;color:#555"></span>
 								<?php endif; ?>
+							</div>
+						</div>
+
+						<div class="kivun-lp-card">
+							<label class="kivun-lp-label"><?php esc_html_e( 'תמונה לשיתוף קישור', 'kivun' ); ?></label>
+							<div class="kivun-lp-media">
+								<p class="kivun-lp-hint"><?php esc_html_e( 'לא מוצגת בעמוד — רק בכרטיסיה שנפתחת כששולחים את הקישור. מומלץ 1200×630. בלעדיה תוצג התמונה הראשית.', 'kivun' ); ?></p>
+								<div class="kivun-lp-media__preview" <?php echo $share_url ? '' : 'style="display:none"'; ?>><img src="<?php echo esc_url( $share_url ); ?>" alt=""></div>
+								<input type="hidden" class="kivun-lp-media__id" name="share_image_id" value="<?php echo esc_attr( $v['share_id'] ); ?>">
+								<input type="hidden" name="remove_share_image" value="0" class="kivun-lp-media__flag">
+								<button type="button" class="button kivun-lp-media__select"><?php esc_html_e( 'בחירת תמונה', 'kivun' ); ?></button>
+								<button type="button" class="button-link kivun-lp-media__remove" <?php echo $share_url ? '' : 'style="display:none"'; ?>><?php esc_html_e( 'הסרה', 'kivun' ); ?></button>
+								<p class="kivun-lp-hint"><?php esc_html_e( 'או העלאת קובץ:', 'kivun' ); ?></p>
+								<input type="file" name="share_image_file" accept="image/*">
 							</div>
 						</div>
 
@@ -662,35 +681,82 @@ class Kivun_Content_Creator {
 				statusSel.addEventListener( 'change', sync );
 				sync();
 			} )();
-			var frame,
-				selectBtn = document.querySelector( '.kivun-lp-media__select' ),
-				removeBtn = document.querySelector( '.kivun-lp-media__remove' ),
-				idInput   = document.getElementById( 'kivun-lp-thumb-id' ),
-				preview   = document.querySelector( '.kivun-lp-media__preview' ),
-				img       = preview ? preview.querySelector( 'img' ) : null;
-			if ( selectBtn ) {
-				selectBtn.addEventListener( 'click', function ( e ) {
-					e.preventDefault();
-					if ( frame ) { frame.open(); return; }
-					frame = wp.media( { multiple: false } );
-					frame.on( 'select', function () {
-						var att = frame.state().get( 'selection' ).first().toJSON();
-						idInput.value = att.id;
-						if ( img ) { img.src = ( att.sizes && att.sizes.medium ? att.sizes.medium.url : att.url ); }
-						if ( preview ) { preview.style.display = ''; }
-						if ( removeBtn ) { removeBtn.style.display = ''; }
+			// One description of what a media box is made of, because two
+			// things drive one: the buttons inside it, and the AI button
+			// further down that fills the featured image in. While the
+			// parts were plain variables those two shared them by accident
+			// of scope — and the moment a second box made that scope a
+			// loop, the AI handler was reaching for names that no longer
+			// existed. Named once, asked for twice, by whoever needs it.
+			var kivunLpParts = function ( box ) {
+				if ( ! box ) { return null; }
+				var preview = box.querySelector( '.kivun-lp-media__preview' );
+				return {
+					select:  box.querySelector( '.kivun-lp-media__select' ),
+					remove:  box.querySelector( '.kivun-lp-media__remove' ),
+					id:      box.querySelector( '.kivun-lp-media__id' ),
+					flag:    box.querySelector( '.kivun-lp-media__flag' ),
+					file:    box.querySelector( 'input[type="file"]' ),
+					preview: preview,
+					img:     preview ? preview.querySelector( 'img' ) : null
+				};
+			};
+
+			// The box a given field belongs to, for a caller that means one
+			// of them in particular rather than all of them.
+			var kivunLpBoxFor = function ( name ) {
+				var field = document.querySelector( '.kivun-lp-media__id[name="' + name + '"]' );
+				return field ? kivunLpParts( field.closest( '.kivun-lp-media' ) ) : null;
+			};
+
+			document.querySelectorAll( '.kivun-lp-media' ).forEach( function ( box ) {
+				var frame,
+					parts     = kivunLpParts( box ),
+					selectBtn = parts.select,
+					removeBtn = parts.remove,
+					idInput   = parts.id,
+					flag      = parts.flag,
+					fileInput = parts.file,
+					preview   = parts.preview,
+					img       = parts.img;
+
+				if ( ! idInput ) { return; }
+
+				if ( selectBtn ) {
+					selectBtn.addEventListener( 'click', function ( e ) {
+						e.preventDefault();
+						if ( frame ) { frame.open(); return; }
+						frame = wp.media( { multiple: false } );
+						frame.on( 'select', function () {
+							var att = frame.state().get( 'selection' ).first().toJSON();
+							idInput.value = att.id;
+							if ( flag ) { flag.value = '0'; }
+							// resolve_image() takes an uploaded file over a
+							// chosen id, so a file still staged here would
+							// overrule the picture just picked.
+							if ( fileInput ) { fileInput.value = ''; }
+							if ( img ) { img.src = ( att.sizes && att.sizes.medium ? att.sizes.medium.url : att.url ); }
+							if ( preview ) { preview.style.display = ''; }
+							if ( removeBtn ) { removeBtn.style.display = ''; }
+						} );
+						frame.open();
 					} );
-					frame.open();
-				} );
-			}
-			if ( removeBtn ) {
-				removeBtn.addEventListener( 'click', function ( e ) {
-					e.preventDefault();
-					idInput.value = '';
-					if ( preview ) { preview.style.display = 'none'; }
-					removeBtn.style.display = 'none';
-				} );
-			}
+				}
+
+				if ( removeBtn ) {
+					removeBtn.addEventListener( 'click', function ( e ) {
+						e.preventDefault();
+						idInput.value = '';
+						if ( flag ) { flag.value = '1'; }
+						// Same reason as above, and worse here: a file chosen
+						// and then removed before saving would be installed
+						// by the save as though it had never been removed.
+						if ( fileInput ) { fileInput.value = ''; }
+						if ( preview ) { preview.style.display = 'none'; }
+						removeBtn.style.display = 'none';
+					} );
+				}
+			} );
 
 			var aiBtn = document.querySelector( '.kivun-cc-ai-btn' );
 			if ( aiBtn ) {
@@ -726,10 +792,14 @@ class Kivun_Content_Creator {
 						.then( function ( res ) {
 							aiBtn.disabled = false;
 							if ( res && res.success && res.data ) {
-								if ( idInput ) { idInput.value = res.data.id; }
-								if ( img ) { img.src = res.data.url; }
-								if ( preview ) { preview.style.display = ''; }
-								if ( removeBtn ) { removeBtn.style.display = ''; }
+								var shot = kivunLpBoxFor( 'thumbnail_id' );
+								if ( shot ) {
+									if ( shot.id ) { shot.id.value = res.data.id; }
+									if ( shot.flag ) { shot.flag.value = '0'; }
+									if ( shot.img ) { shot.img.src = res.data.url; }
+									if ( shot.preview ) { shot.preview.style.display = ''; }
+									if ( shot.remove ) { shot.remove.style.display = ''; }
+								}
 								if ( status ) { status.textContent = '<?php echo esc_js( __( '✓ נוצרה תמונה', 'kivun' ) ); ?>'; }
 							} else {
 								if ( status ) { status.textContent = ( res && res.data && res.data.message ) ? res.data.message : '<?php echo esc_js( __( 'יצירת התמונה נכשלה', 'kivun' ) ); ?>'; }
@@ -1020,6 +1090,7 @@ class Kivun_Content_Creator {
 			$group = wp_generate_uuid4();
 		}
 		$thumb_id = self::resolve_thumbnail();
+		$share_id = self::resolve_image( 'share_image_file', 'share_image_id' );
 
 		$cta = array(
 			'_kivun_cta_title'   => $s['cta_t'],
@@ -1044,7 +1115,8 @@ class Kivun_Content_Creator {
 						'_kivun_contact_email' => $s['email'],
 					),
 					$cta
-				)
+				),
+				$share_id
 			);
 		}
 
@@ -1067,7 +1139,8 @@ class Kivun_Content_Creator {
 						'_kivun_contact_email'   => $s['email'],
 					),
 					$cta
-				)
+				),
+				$share_id
 			);
 		}
 
@@ -1091,7 +1164,8 @@ class Kivun_Content_Creator {
 						'_kivun_session_valid_until' => sanitize_text_field( wp_unslash( $_POST['session_valid_until'] ?? '' ) ),
 					),
 					$cta
-				)
+				),
+				$share_id
 			);
 		}
 
@@ -1121,7 +1195,8 @@ class Kivun_Content_Creator {
 						'_kivun_contact_email'      => $s['email'],
 					),
 					$cta
-				)
+				),
+				$share_id
 			);
 		}
 
@@ -1174,9 +1249,10 @@ class Kivun_Content_Creator {
 	 * @param string $excerpt   Optional excerpt (short description).
 	 * @param int    $thumb_id  Featured image attachment ID (0 = leave as is).
 	 * @param array  $meta       Meta key => value pairs.
+	 * @param int    $share_id  Share-image attachment ID (0 = leave as is).
 	 * @return int The post ID, or 0 on failure.
 	 */
-	private static function upsert( string $group, string $post_type, array $shared, string $excerpt, int $thumb_id, array $meta ): int {
+	private static function upsert( string $group, string $post_type, array $shared, string $excerpt, int $thumb_id, array $meta, int $share_id = 0 ): int {
 		$existing = get_posts(
 			array(
 				'post_type'      => $post_type,
@@ -1241,6 +1317,17 @@ class Kivun_Content_Creator {
 			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified by the caller before run_save().
 		} elseif ( ! empty( $_POST['remove_thumbnail'] ) ) {
 			delete_post_thumbnail( $post_id );
+		}
+
+		// The picture a shared link shows, which never appears on the page.
+		// Both screens that reach this save carry the field, so a save from
+		// either one says what it means; a save from a screen that did not
+		// would read as "none" and quietly clear it.
+		if ( $share_id ) {
+			update_post_meta( $post_id, Kivun_Share_Image::META, $share_id );
+			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified by the caller before run_save().
+		} elseif ( ! empty( $_POST['remove_share_image'] ) ) {
+			delete_post_meta( $post_id, Kivun_Share_Image::META );
 		}
 
 		return $post_id;
@@ -2927,6 +3014,7 @@ class Kivun_Content_Creator {
 		$can_delete    = current_user_can( 'delete_posts' );
 		$ai_configured = Kivun_AI_Image::is_configured();
 		$thumb_url     = (int) $v['thumb_id'] ? (string) wp_get_attachment_image_url( (int) $v['thumb_id'], 'medium' ) : '';
+		$share_url     = (int) $v['share_id'] ? (string) wp_get_attachment_image_url( (int) $v['share_id'], 'medium' ) : '';
 		$ev_img_url    = (int) $v['event_image_id'] ? (string) wp_get_attachment_image_url( (int) $v['event_image_id'], 'medium' ) : '';
 		$sections      = array(
 			'landing' => __( 'דף נחיתה', 'kivun' ),
@@ -3190,7 +3278,7 @@ class Kivun_Content_Creator {
 							<label class="kivun-cc-label"><?php esc_html_e( 'תמונה ראשית', 'kivun' ); ?></label>
 							<div class="kivun-cc-media">
 								<div class="kivun-cc-media__preview" <?php echo $thumb_url ? '' : 'style="display:none"'; ?>><img src="<?php echo esc_url( $thumb_url ); ?>" alt=""></div>
-								<input type="hidden" name="thumbnail_id" value="<?php echo esc_attr( $v['thumb_id'] ); ?>">
+								<input type="hidden" class="kivun-cc-media__id" name="thumbnail_id" value="<?php echo esc_attr( $v['thumb_id'] ); ?>">
 								<input type="hidden" name="remove_thumbnail" value="0" class="kivun-cc-remove-flag">
 								<?php if ( $can_upload ) : ?>
 									<input type="file" name="thumbnail_file" accept="image/*" class="kivun-cc-file">
@@ -3217,6 +3305,25 @@ class Kivun_Content_Creator {
 										<span class="kivun-cc-ai-status" role="status" aria-live="polite"></span>
 									</div>
 								<?php endif; ?>
+							</div>
+						</div>
+
+						<div class="kivun-cc-card" data-step="4" style="order:1">
+							<label class="kivun-cc-label"><?php esc_html_e( 'תמונה לשיתוף קישור', 'kivun' ); ?></label>
+							<div class="kivun-cc-media">
+								<p class="kivun-cc-hint">
+									<?php esc_html_e( 'לא מוצגת בעמוד. היא מה שרואים כששולחים את הקישור בוואטסאפ או מפרסמים אותו ברשתות. מומלץ 1200×630.', 'kivun' ); ?>
+								</p>
+								<div class="kivun-cc-media__preview" <?php echo $share_url ? '' : 'style="display:none"'; ?>><img src="<?php echo esc_url( $share_url ); ?>" alt=""></div>
+								<input type="hidden" class="kivun-cc-media__id" name="share_image_id" value="<?php echo esc_attr( $v['share_id'] ); ?>">
+								<input type="hidden" name="remove_share_image" value="0" class="kivun-cc-remove-flag">
+								<?php if ( $can_upload ) : ?>
+									<input type="file" name="share_image_file" accept="image/*" class="kivun-cc-file">
+									<button type="button" class="kivun-cc-media__remove"<?php echo $share_url ? '' : ' hidden'; ?>><?php esc_html_e( 'הסרת התמונה', 'kivun' ); ?></button>
+								<?php endif; ?>
+								<p class="kivun-cc-hint">
+									<?php esc_html_e( 'אם לא נבחרה — תוצג התמונה הראשית.', 'kivun' ); ?>
+								</p>
 							</div>
 						</div>
 
