@@ -206,15 +206,23 @@ final class ShareImageTest extends TestCase {
 	public function test_each_media_box_drives_its_own_controls(): void {
 		$js = (string) file_get_contents( KIVUN_DIR . 'assets/js/frontend.js' );
 
-		$at = strpos( $js, "document.querySelectorAll('.kivun-cc-media')" );
-		$this->assertNotFalse( $at, 'the media controls are not bound per box' );
+		$this->assertStringContainsString(
+			"document.querySelectorAll('.kivun-cc-media')",
+			$js,
+			'the media controls are not bound per box'
+		);
 
-		$body = substr( $js, $at, 1400 );
+		// Stated as the property rather than as a place in the file: an
+		// earlier version of this test listed the lookups inside the loop
+		// body, and broke the moment they moved into a shared helper that
+		// does exactly the same thing. What matters is that nowhere in the
+		// script does one of these come off the page at large, whichever
+		// function holds the lookup.
 		foreach ( array( 'kivun-cc-file', 'kivun-cc-media__preview', 'kivun-cc-media__id', 'kivun-cc-remove-flag', 'kivun-cc-media__remove' ) as $part ) {
-			$this->assertStringContainsString(
-				"box.querySelector('." . $part . "')",
-				$body,
-				$part . ' is looked up on the page rather than inside the box it belongs to'
+			$this->assertStringNotContainsString(
+				"document.querySelector('." . $part . "')",
+				$js,
+				$part . ' is taken from the page at large, which binds whichever box happens to come first'
 			);
 		}
 	}
@@ -370,6 +378,96 @@ final class ShareImageTest extends TestCase {
 			"file.value = ''",
 			substr( $js, $from, 400 ),
 			'the console remove button leaves a staged file behind'
+		);
+	}
+
+	/**
+	 * The console's AI button says which box it fills, too.
+	 *
+	 * Same mistake as the admin screen's, found the same way and left for
+	 * its own change: the handler took the first `.kivun-cc-media__preview`
+	 * on the page. That is the event's, which sits earlier in the form —
+	 * so on a group with an event image the generated picture appeared on
+	 * the event's thumbnail while the featured image stayed empty and
+	 * hidden. The status line said the image was made, nothing appeared
+	 * where the editor was looking, and the save set it correctly, so it
+	 * only showed up after a reload. Reproduced in a browser against the
+	 * built file before and after.
+	 *
+	 * The remove flag and button were right, but only because they sit
+	 * after the event section; naming the box stops that being luck.
+	 *
+	 * @return void
+	 */
+	public function test_the_console_ai_button_resolves_the_box_it_fills(): void {
+		$js = (string) file_get_contents( KIVUN_DIR . 'assets/js/frontend.js' );
+
+		$at = strpos( $js, "var ccAi = document.querySelector('.kivun-cc-ai-btn');" );
+		$this->assertNotFalse( $at, 'the console AI button moved' );
+		$end = strpos( $js, "var ccGen = document.querySelector('.kivun-cc-gen-btn');", $at );
+		$this->assertNotFalse( $end, 'the console AI handler no longer ends where this test expects' );
+		$body = substr( $js, $at, $end - $at );
+
+		$this->assertStringContainsString(
+			"kivunCcBoxFor('thumbnail_id')",
+			$body,
+			'the console AI handler does not say which box it fills'
+		);
+
+		// And it must not go back to taking whichever one comes first.
+		foreach ( array( '.kivun-cc-media__preview', '.kivun-cc-remove-flag', '.kivun-cc-media__remove' ) as $loose ) {
+			$this->assertStringNotContainsString(
+				"document.querySelector('" . $loose . "')",
+				$body,
+				'the console AI handler takes the first ' . $loose . ' on the page, which is the event section\'s'
+			);
+		}
+
+		$this->assertStringContainsString(
+			"shot.file.value = ''",
+			$body,
+			'a file staged before generating would be installed over the generated image'
+		);
+	}
+
+	/**
+	 * And the helper it asks actually finds the parts.
+	 *
+	 * Both the loop and the AI button guard on each part being there, so a
+	 * helper that returns an object without them leaves every write a
+	 * no-op — the fix present in the source and dead at runtime, which is
+	 * exactly how the admin version first slipped past its own test.
+	 *
+	 * @return void
+	 */
+	public function test_the_console_helper_finds_the_parts(): void {
+		$js = (string) file_get_contents( KIVUN_DIR . 'assets/js/frontend.js' );
+
+		$at = strpos( $js, 'var kivunCcParts = function (box) {' );
+		$this->assertNotFalse( $at, 'the console parts helper moved' );
+		$parts = substr( $js, $at, 600 );
+
+		foreach ( array( '.kivun-cc-file', '.kivun-cc-media__id', '.kivun-cc-remove-flag', '.kivun-cc-media__remove', '.kivun-cc-media__preview' ) as $part ) {
+			$this->assertStringContainsString(
+				"box.querySelector('" . $part . "')",
+				$parts,
+				$part . ' is not among the parts, so every write to it is a no-op'
+			);
+		}
+
+		// And the box is chosen by the field it holds, not by position.
+		$this->assertStringContainsString(
+			".kivun-cc-media__id[name=\"' + name + '\"]",
+			$js,
+			'the console box is not resolved by the field it holds'
+		);
+
+		// The loop must use the same helper, or there are two ways to do
+		// this again and only one of them is tested.
+		$this->assertStringContainsString(
+			'parts = kivunCcParts(box)',
+			$js,
+			'the per-box loop looks its parts up separately from the helper'
 		);
 	}
 
