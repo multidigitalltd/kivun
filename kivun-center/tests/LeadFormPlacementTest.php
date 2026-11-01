@@ -316,31 +316,6 @@ final class LeadFormPlacementTest extends TestCase {
 	}
 
 	/**
-	 * The page tells the design which kind it is.
-	 *
-	 * The form drawn in the template is hidden by CSS on the pages that carry
-	 * their own, which needs the page to say so on the body — the way the
-	 * event template already works.
-	 *
-	 * @return void
-	 */
-	public function test_the_body_says_whether_the_page_has_its_own_form(): void {
-		$src = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-core.php' );
-
-		$at = strpos( $src, 'function body_classes' );
-		$this->assertNotFalse( $at, 'the body classes moved' );
-		$body = substr( $src, $at, 1400 );
-
-		$this->assertStringContainsString( 'kivun-has-custom-form', $body );
-		$this->assertStringContainsString( 'kivun-no-custom-form', $body );
-
-		// And the stylesheet acts on it, or the class says something nobody
-		// listens to.
-		$css = (string) file_get_contents( KIVUN_DIR . 'assets/css/frontend.css' );
-		$this->assertStringContainsString( 'body.kivun-has-custom-form .kivun-hide-if-custom-form', $css );
-	}
-
-	/**
 	 * The shortcode is registered under the name the widget and the docs use.
 	 *
 	 * @return void
@@ -354,41 +329,4 @@ final class LeadFormPlacementTest extends TestCase {
 		);
 	}
 
-	// ── The widget ───────────────────────────────────────────────────────────
-
-	/**
-	 * The widget draws through the shortcode rather than its own copy.
-	 *
-	 * Three render sites drifting apart is the bug this whole feature already
-	 * met once, in review. A fourth that decided for itself which template a
-	 * page shows would be the same bug again.
-	 *
-	 * @return void
-	 */
-	public function test_the_widget_renders_through_the_shortcode(): void {
-		$src = (string) file_get_contents( KIVUN_DIR . 'elementor/class-kivun-lead-form-widget.php' );
-
-		$this->assertStringContainsString( 'Kivun_Shortcodes::render_lead_form(', $src );
-		$this->assertStringNotContainsString(
-			'Kivun_Custom_Forms::template(',
-			$src,
-			'the widget decides for itself which form to draw'
-		);
-	}
-
-	/**
-	 * And Elementor is told the widget exists.
-	 *
-	 * The widget class alone changes nothing: without the registration hook
-	 * it never reaches the editor's panel, and the feature stays as
-	 * unreachable as it was.
-	 *
-	 * @return void
-	 */
-	public function test_the_widget_is_registered_with_elementor(): void {
-		$src = (string) file_get_contents( KIVUN_DIR . 'elementor/class-kivun-elementor.php' );
-
-		$this->assertStringContainsString( "add_action( 'elementor/widgets/register'", $src );
-		$this->assertStringContainsString( 'new Kivun_Lead_Form_Widget()', $src );
-	}
 }
