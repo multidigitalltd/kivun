@@ -681,18 +681,42 @@ class Kivun_Content_Creator {
 				statusSel.addEventListener( 'change', sync );
 				sync();
 			} )();
-			// Each media box on its own, with every control found inside it.
-			// There are two now — the featured image and the one a shared
-			// link shows — and a lookup across the page would bind the
-			// first of each and leave the second a set of dead buttons.
+			// One description of what a media box is made of, because two
+			// things drive one: the buttons inside it, and the AI button
+			// further down that fills the featured image in. While the
+			// parts were plain variables those two shared them by accident
+			// of scope — and the moment a second box made that scope a
+			// loop, the AI handler was reaching for names that no longer
+			// existed. Named once, asked for twice, by whoever needs it.
+			var kivunLpParts = function ( box ) {
+				if ( ! box ) { return null; }
+				var preview = box.querySelector( '.kivun-lp-media__preview' );
+				return {
+					select:  box.querySelector( '.kivun-lp-media__select' ),
+					remove:  box.querySelector( '.kivun-lp-media__remove' ),
+					id:      box.querySelector( '.kivun-lp-media__id' ),
+					flag:    box.querySelector( '.kivun-lp-media__flag' ),
+					preview: preview,
+					img:     preview ? preview.querySelector( 'img' ) : null
+				};
+			};
+
+			// The box a given field belongs to, for a caller that means one
+			// of them in particular rather than all of them.
+			var kivunLpBoxFor = function ( name ) {
+				var field = document.querySelector( '.kivun-lp-media__id[name="' + name + '"]' );
+				return field ? kivunLpParts( field.closest( '.kivun-lp-media' ) ) : null;
+			};
+
 			document.querySelectorAll( '.kivun-lp-media' ).forEach( function ( box ) {
 				var frame,
-					selectBtn = box.querySelector( '.kivun-lp-media__select' ),
-					removeBtn = box.querySelector( '.kivun-lp-media__remove' ),
-					idInput   = box.querySelector( '.kivun-lp-media__id' ),
-					flag      = box.querySelector( '.kivun-lp-media__flag' ),
-					preview   = box.querySelector( '.kivun-lp-media__preview' ),
-					img       = preview ? preview.querySelector( 'img' ) : null;
+					parts     = kivunLpParts( box ),
+					selectBtn = parts.select,
+					removeBtn = parts.remove,
+					idInput   = parts.id,
+					flag      = parts.flag,
+					preview   = parts.preview,
+					img       = parts.img;
 
 				if ( ! idInput ) { return; }
 
@@ -758,10 +782,14 @@ class Kivun_Content_Creator {
 						.then( function ( res ) {
 							aiBtn.disabled = false;
 							if ( res && res.success && res.data ) {
-								if ( idInput ) { idInput.value = res.data.id; }
-								if ( img ) { img.src = res.data.url; }
-								if ( preview ) { preview.style.display = ''; }
-								if ( removeBtn ) { removeBtn.style.display = ''; }
+								var shot = kivunLpBoxFor( 'thumbnail_id' );
+								if ( shot ) {
+									if ( shot.id ) { shot.id.value = res.data.id; }
+									if ( shot.flag ) { shot.flag.value = '0'; }
+									if ( shot.img ) { shot.img.src = res.data.url; }
+									if ( shot.preview ) { shot.preview.style.display = ''; }
+									if ( shot.remove ) { shot.remove.style.display = ''; }
+								}
 								if ( status ) { status.textContent = '<?php echo esc_js( __( '✓ נוצרה תמונה', 'kivun' ) ); ?>'; }
 							} else {
 								if ( status ) { status.textContent = ( res && res.data && res.data.message ) ? res.data.message : '<?php echo esc_js( __( 'יצירת התמונה נכשלה', 'kivun' ) ); ?>'; }

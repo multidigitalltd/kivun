@@ -250,6 +250,42 @@ final class ShareImageTest extends TestCase {
 	}
 
 	/**
+	 * The AI button resolves the box it fills.
+	 *
+	 * The controls used to be plain variables in the script's outer scope,
+	 * and two things read them: the buttons in the box, and the AI button
+	 * further down. They shared those names by accident, and the moment a
+	 * second box turned that scope into a loop, the AI handler was reaching
+	 * for names that no longer existed — a ReferenceError its own catch
+	 * reported as a network failure, so a generated image looked like a
+	 * dead connection. My regression, found in review.
+	 *
+	 * @return void
+	 */
+	public function test_the_ai_button_resolves_the_box_it_fills(): void {
+		$src = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-content-creator.php' );
+
+		$at = strpos( $src, "var aiBtn = document.querySelector( '.kivun-cc-ai-btn' );" );
+		$this->assertNotFalse( $at, 'the AI button moved' );
+		$body = substr( $src, $at, 2000 );
+
+		$this->assertStringContainsString(
+			"kivunLpBoxFor( 'thumbnail_id' )",
+			$body,
+			'the AI handler does not say which box it fills'
+		);
+
+		// And it must not lean on the loop's own names, which do not reach here.
+		foreach ( array( 'idInput', 'removeBtn' ) as $gone ) {
+			$this->assertDoesNotMatchRegularExpression(
+				'/\b' . $gone . '\b/',
+				$body,
+				'the AI handler still reads ' . $gone . ', which now lives inside the per-box loop'
+			);
+		}
+	}
+
+	/**
 	 * And the save writes it on every post of the group.
 	 *
 	 * @return void
