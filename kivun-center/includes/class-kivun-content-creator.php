@@ -696,6 +696,7 @@ class Kivun_Content_Creator {
 					remove:  box.querySelector( '.kivun-lp-media__remove' ),
 					id:      box.querySelector( '.kivun-lp-media__id' ),
 					flag:    box.querySelector( '.kivun-lp-media__flag' ),
+					file:    box.querySelector( 'input[type="file"]' ),
 					preview: preview,
 					img:     preview ? preview.querySelector( 'img' ) : null
 				};
@@ -715,6 +716,7 @@ class Kivun_Content_Creator {
 					removeBtn = parts.remove,
 					idInput   = parts.id,
 					flag      = parts.flag,
+					fileInput = parts.file,
 					preview   = parts.preview,
 					img       = parts.img;
 
@@ -729,6 +731,10 @@ class Kivun_Content_Creator {
 							var att = frame.state().get( 'selection' ).first().toJSON();
 							idInput.value = att.id;
 							if ( flag ) { flag.value = '0'; }
+							// resolve_image() takes an uploaded file over a
+							// chosen id, so a file still staged here would
+							// overrule the picture just picked.
+							if ( fileInput ) { fileInput.value = ''; }
 							if ( img ) { img.src = ( att.sizes && att.sizes.medium ? att.sizes.medium.url : att.url ); }
 							if ( preview ) { preview.style.display = ''; }
 							if ( removeBtn ) { removeBtn.style.display = ''; }
@@ -742,6 +748,10 @@ class Kivun_Content_Creator {
 						e.preventDefault();
 						idInput.value = '';
 						if ( flag ) { flag.value = '1'; }
+						// Same reason as above, and worse here: a file chosen
+						// and then removed before saving would be installed
+						// by the save as though it had never been removed.
+						if ( fileInput ) { fileInput.value = ''; }
 						if ( preview ) { preview.style.display = 'none'; }
 						removeBtn.style.display = 'none';
 					} );

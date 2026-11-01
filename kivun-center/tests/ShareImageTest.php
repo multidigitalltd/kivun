@@ -286,6 +286,94 @@ final class ShareImageTest extends TestCase {
 	}
 
 	/**
+	 * Choosing or removing an image drops a file still waiting to upload.
+	 *
+	 * The save prefers an uploaded file over a chosen id, which is right —
+	 * a file the editor just picked is the newer intent. But the admin box
+	 * lets both happen without a reload: pick a file, then change your mind
+	 * and choose from the library, or remove the image altogether, and the
+	 * file is still sitting in the input. The save then installs it, so the
+	 * screen comes back showing the picture that was just replaced or
+	 * removed. Clearing the input is what makes the last click the one that
+	 * counts. Raised in review for the remove button; it is the same on the
+	 * select button, for the same reason.
+	 *
+	 * @return void
+	 */
+	public function test_choosing_or_removing_drops_a_file_waiting_to_upload(): void {
+		$src = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-content-creator.php' );
+
+		$at = strpos( $src, "document.querySelectorAll( '.kivun-lp-media' ).forEach" );
+		$this->assertNotFalse( $at, 'the admin media loop moved' );
+		$end = strpos( $src, "var aiBtn = document.querySelector( '.kivun-cc-ai-btn' );", $at );
+		$this->assertNotFalse( $end, 'the admin media loop no longer ends where this test expects' );
+		$loop = substr( $src, $at, $end - $at );
+
+		$this->assertStringContainsString(
+			'fileInput = parts.file',
+			$loop,
+			'the box does not resolve its own file input, so neither handler can empty it'
+		);
+
+		// And the parts must actually find it. Both handlers guard on it
+		// being there, so a `parts` without a file lookup leaves them
+		// reading undefined and clearing nothing — the fix present in the
+		// source and dead at runtime, which is the worst of the three
+		// states to be in.
+		$parts = strpos( $src, 'var kivunLpParts = function ( box ) {' );
+		$this->assertNotFalse( $parts, 'the parts helper moved' );
+		$this->assertStringContainsString(
+			'input[type="file"]',
+			substr( $src, $parts, $at - $parts ),
+			'the box never looks up its file input, so clearing it is a no-op'
+		);
+
+		// Each handler in turn, so that clearing it in one does not read as
+		// clearing it in both.
+		$handlers = array(
+			'choosing from the library' => array( "frame.on( 'select'", 'frame.open();' ),
+			'removing the image'        => array( 'removeBtn.addEventListener', 'removeBtn.style.display' ),
+		);
+
+		foreach ( $handlers as $what => $bounds ) {
+			$from = strpos( $loop, $bounds[0] );
+			$this->assertNotFalse( $from, 'the handler for ' . $what . ' moved' );
+			$to = strpos( $loop, $bounds[1], $from + strlen( $bounds[0] ) );
+			$this->assertNotFalse( $to, 'the handler for ' . $what . ' moved' );
+
+			$this->assertStringContainsString(
+				"fileInput.value = ''",
+				substr( $loop, $from, $to - $from ),
+				$what . ' leaves a staged file behind, and the save installs it over what was just asked for'
+			);
+		}
+	}
+
+	/**
+	 * The console box does the same.
+	 *
+	 * It has no library picker, so there is one handler to check rather than
+	 * two — but a file picked and then removed before saving would come back
+	 * exactly as it does on the admin screen.
+	 *
+	 * @return void
+	 */
+	public function test_the_console_box_drops_it_too(): void {
+		$js = (string) file_get_contents( KIVUN_DIR . 'assets/js/frontend.js' );
+
+		$at = strpos( $js, "document.querySelectorAll('.kivun-cc-media')" );
+		$this->assertNotFalse( $at, 'the console media loop moved' );
+		$from = strpos( $js, "remove.addEventListener('click'", $at );
+		$this->assertNotFalse( $from, 'the console remove handler moved' );
+
+		$this->assertStringContainsString(
+			"file.value = ''",
+			substr( $js, $from, 400 ),
+			'the console remove button leaves a staged file behind'
+		);
+	}
+
+	/**
 	 * And the save writes it on every post of the group.
 	 *
 	 * @return void
