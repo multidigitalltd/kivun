@@ -570,7 +570,9 @@ class Kivun_Content_Creator {
 							<label class="kivun-lp-label"><?php esc_html_e( 'תמונה ראשית', 'kivun' ); ?></label>
 							<div class="kivun-lp-media">
 								<div class="kivun-lp-media__preview" <?php echo $thumb_url ? '' : 'style="display:none"'; ?>><img src="<?php echo esc_url( $thumb_url ); ?>" alt=""></div>
-								<input type="hidden" name="thumbnail_id" id="kivun-lp-thumb-id" value="<?php echo esc_attr( $v['thumb_id'] ); ?>">
+								<input type="hidden" class="kivun-lp-media__id" name="thumbnail_id" id="kivun-lp-thumb-id" value="<?php echo esc_attr( $v['thumb_id'] ); ?>">
+								<?php // Without this the remove button beside it emptied the id and nothing else, and the save read that as "unchanged" rather than "remove". Pre-existing; found while giving the share image the same control. ?>
+								<input type="hidden" name="remove_thumbnail" value="0" class="kivun-lp-media__flag">
 								<button type="button" class="button kivun-lp-media__select"><?php esc_html_e( 'בחירת תמונה', 'kivun' ); ?></button>
 								<button type="button" class="button-link kivun-lp-media__remove" <?php echo $thumb_url ? '' : 'style="display:none"'; ?>><?php esc_html_e( 'הסרה', 'kivun' ); ?></button>
 								<p class="kivun-lp-hint"><?php esc_html_e( 'או העלאת קובץ:', 'kivun' ); ?></p>
@@ -612,9 +614,11 @@ class Kivun_Content_Creator {
 							<div class="kivun-lp-media">
 								<p class="kivun-lp-hint"><?php esc_html_e( 'לא מוצגת בעמוד — רק בכרטיסיה שנפתחת כששולחים את הקישור. מומלץ 1200×630. בלעדיה תוצג התמונה הראשית.', 'kivun' ); ?></p>
 								<div class="kivun-lp-media__preview" <?php echo $share_url ? '' : 'style="display:none"'; ?>><img src="<?php echo esc_url( $share_url ); ?>" alt=""></div>
-								<input type="hidden" name="share_image_id" value="<?php echo esc_attr( $v['share_id'] ); ?>">
-								<input type="hidden" name="remove_share_image" value="0">
-								<p class="kivun-lp-hint"><?php esc_html_e( 'העלאת קובץ:', 'kivun' ); ?></p>
+								<input type="hidden" class="kivun-lp-media__id" name="share_image_id" value="<?php echo esc_attr( $v['share_id'] ); ?>">
+								<input type="hidden" name="remove_share_image" value="0" class="kivun-lp-media__flag">
+								<button type="button" class="button kivun-lp-media__select"><?php esc_html_e( 'בחירת תמונה', 'kivun' ); ?></button>
+								<button type="button" class="button-link kivun-lp-media__remove" <?php echo $share_url ? '' : 'style="display:none"'; ?>><?php esc_html_e( 'הסרה', 'kivun' ); ?></button>
+								<p class="kivun-lp-hint"><?php esc_html_e( 'או העלאת קובץ:', 'kivun' ); ?></p>
 								<input type="file" name="share_image_file" accept="image/*">
 							</div>
 						</div>
@@ -677,35 +681,48 @@ class Kivun_Content_Creator {
 				statusSel.addEventListener( 'change', sync );
 				sync();
 			} )();
-			var frame,
-				selectBtn = document.querySelector( '.kivun-lp-media__select' ),
-				removeBtn = document.querySelector( '.kivun-lp-media__remove' ),
-				idInput   = document.getElementById( 'kivun-lp-thumb-id' ),
-				preview   = document.querySelector( '.kivun-lp-media__preview' ),
-				img       = preview ? preview.querySelector( 'img' ) : null;
-			if ( selectBtn ) {
-				selectBtn.addEventListener( 'click', function ( e ) {
-					e.preventDefault();
-					if ( frame ) { frame.open(); return; }
-					frame = wp.media( { multiple: false } );
-					frame.on( 'select', function () {
-						var att = frame.state().get( 'selection' ).first().toJSON();
-						idInput.value = att.id;
-						if ( img ) { img.src = ( att.sizes && att.sizes.medium ? att.sizes.medium.url : att.url ); }
-						if ( preview ) { preview.style.display = ''; }
-						if ( removeBtn ) { removeBtn.style.display = ''; }
+			// Each media box on its own, with every control found inside it.
+			// There are two now — the featured image and the one a shared
+			// link shows — and a lookup across the page would bind the
+			// first of each and leave the second a set of dead buttons.
+			document.querySelectorAll( '.kivun-lp-media' ).forEach( function ( box ) {
+				var frame,
+					selectBtn = box.querySelector( '.kivun-lp-media__select' ),
+					removeBtn = box.querySelector( '.kivun-lp-media__remove' ),
+					idInput   = box.querySelector( '.kivun-lp-media__id' ),
+					flag      = box.querySelector( '.kivun-lp-media__flag' ),
+					preview   = box.querySelector( '.kivun-lp-media__preview' ),
+					img       = preview ? preview.querySelector( 'img' ) : null;
+
+				if ( ! idInput ) { return; }
+
+				if ( selectBtn ) {
+					selectBtn.addEventListener( 'click', function ( e ) {
+						e.preventDefault();
+						if ( frame ) { frame.open(); return; }
+						frame = wp.media( { multiple: false } );
+						frame.on( 'select', function () {
+							var att = frame.state().get( 'selection' ).first().toJSON();
+							idInput.value = att.id;
+							if ( flag ) { flag.value = '0'; }
+							if ( img ) { img.src = ( att.sizes && att.sizes.medium ? att.sizes.medium.url : att.url ); }
+							if ( preview ) { preview.style.display = ''; }
+							if ( removeBtn ) { removeBtn.style.display = ''; }
+						} );
+						frame.open();
 					} );
-					frame.open();
-				} );
-			}
-			if ( removeBtn ) {
-				removeBtn.addEventListener( 'click', function ( e ) {
-					e.preventDefault();
-					idInput.value = '';
-					if ( preview ) { preview.style.display = 'none'; }
-					removeBtn.style.display = 'none';
-				} );
-			}
+				}
+
+				if ( removeBtn ) {
+					removeBtn.addEventListener( 'click', function ( e ) {
+						e.preventDefault();
+						idInput.value = '';
+						if ( flag ) { flag.value = '1'; }
+						if ( preview ) { preview.style.display = 'none'; }
+						removeBtn.style.display = 'none';
+					} );
+				}
+			} );
 
 			var aiBtn = document.querySelector( '.kivun-cc-ai-btn' );
 			if ( aiBtn ) {

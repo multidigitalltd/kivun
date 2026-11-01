@@ -220,6 +220,36 @@ final class ShareImageTest extends TestCase {
 	}
 
 	/**
+	 * Both screens can take the image off again.
+	 *
+	 * An image that can be set and not unset is a trap: the fallback to the
+	 * featured image is advertised and unreachable. Each box needs the
+	 * button and the flag — the button alone empties the id, which the save
+	 * reads as "unchanged" rather than "remove", and nothing happens. That
+	 * was true of the admin screen's featured image before this too, found
+	 * while giving the share image the same control.
+	 *
+	 * @return void
+	 */
+	public function test_every_media_box_can_be_emptied(): void {
+		$src = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-content-creator.php' );
+
+		// The console: a flag per box.
+		$this->assertSame(
+			2,
+			substr_count( $src, 'class="kivun-cc-remove-flag"' ),
+			'one of the console boxes cannot be emptied'
+		);
+
+		// The admin screen: the same, under its own class.
+		$this->assertSame(
+			2,
+			substr_count( $src, 'class="kivun-lp-media__flag"' ),
+			'one of the admin boxes has a remove button that sets no flag, so removing does nothing'
+		);
+	}
+
+	/**
 	 * And the save writes it on every post of the group.
 	 *
 	 * @return void
