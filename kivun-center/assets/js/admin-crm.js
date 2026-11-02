@@ -438,5 +438,9 @@
 	document.addEventListener('click', function (e) {
 		if (e.target.closest('.kivun-tab, .kivun-cc-seg')) { fitTablesSoon(); }
 	});
+	// Nor does a table whose wrapper the search had hidden for having no
+	// matches. Clearing the search brings it back with no click to notice,
+	// so the filter says so itself.
+	document.addEventListener('kivun:tables-shown', fitTablesSoon);
 
 }());

@@ -2491,6 +2491,7 @@
 
 			var ccApplyFilter = function () {
 				var term = (ccSearch ? ccSearch.value : '').trim().toLowerCase();
+				var revealed = false;
 
 				ccPanes.forEach(function (pane) {
 					var shown = 0;
@@ -2527,8 +2528,22 @@
 					var empty = pane.querySelector('.kivun-cc-noresults');
 					if (empty) { empty.hidden = shown !== 0; }
 					var wrap = pane.querySelector('.kivun-cc-tablewrap');
-					if (wrap) { wrap.hidden = shown === 0; }
+					if (wrap) {
+						// A table in a hidden wrapper has no width, so the
+						// script that measures tables skips it. Search for
+						// something the archive does not have, open the
+						// archive, then clear the search: the wrapper comes
+						// back and nothing has told anyone to measure it,
+						// leaving it unstacked on a phone. Noted here, where
+						// the revealing happens.
+						if (wrap.hidden && shown !== 0) { revealed = true; }
+						wrap.hidden = shown === 0;
+					}
 				});
+
+				// Said once per pass rather than per pane, and only when
+				// something actually came back into view.
+				if (revealed) { document.dispatchEvent(new CustomEvent('kivun:tables-shown')); }
 			};
 
 			if (ccSearch) { ccSearch.addEventListener('input', ccApplyFilter); }

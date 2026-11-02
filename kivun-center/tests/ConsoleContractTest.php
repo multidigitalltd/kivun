@@ -376,6 +376,42 @@ final class ConsoleContractTest extends TestCase {
 	}
 
 	/**
+	 * A table the search brings back gets measured.
+	 *
+	 * The filter hides a pane's wrapper when nothing matches, and a table
+	 * in a hidden wrapper has no width, so `fitTables()` skips it. Search
+	 * for a title the archive does not have, open the archive, then clear
+	 * the search: the wrapper returns and nothing has told anyone to
+	 * measure it. Reproduced at 390px — the archive came back `stacked:
+	 * false`, which on a phone is the unlabelled fallback.
+	 *
+	 * A click could not carry this one: the reveal happens on an input
+	 * event, in the other script. So the filter says so itself.
+	 *
+	 * @return void
+	 */
+	public function test_a_table_the_search_brings_back_gets_measured(): void {
+		$js  = (string) file_get_contents( KIVUN_DIR . 'assets/js/frontend.js' );
+		$crm = (string) file_get_contents( KIVUN_DIR . 'assets/js/admin-crm.js' );
+
+		$this->assertStringContainsString(
+			"dispatchEvent(new CustomEvent('kivun:tables-shown'))",
+			$js,
+			'the filter reveals a wrapper without telling anyone to measure it'
+		);
+		$this->assertMatchesRegularExpression(
+			'/if \(wrap\.hidden && shown !== 0\) \{ revealed = true; \}/',
+			$js,
+			'nothing notices that a hidden wrapper came back'
+		);
+		$this->assertStringContainsString(
+			"document.addEventListener('kivun:tables-shown', fitTablesSoon);",
+			$crm,
+			'nobody is listening, so the table stays unmeasured'
+		);
+	}
+
+	/**
 	 * A cell that spans the row is not one column's value.
 	 *
 	 * `labelCells()` names each cell after the column above it. A cell with
