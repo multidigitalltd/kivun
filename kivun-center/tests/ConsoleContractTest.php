@@ -407,6 +407,25 @@ final class ConsoleContractTest extends TestCase {
 			$block,
 			'nothing resets the flex bases, so each control is as tall as it was wide'
 		);
+
+		/*
+		 * Height was only half of it. In a column of stretched items the
+		 * widest child sets the content width, and the date range — two
+		 * labels and two date inputs side by side — comes to 339px. Every
+		 * control in a 252px card was drawn 339px wide and hung 87px off
+		 * its left edge. Measured: twelve children overflowing, then one,
+		 * then none.
+		 */
+		$this->assertStringContainsString(
+			'.kivun-cc-daterange { flex-wrap: wrap;',
+			$block,
+			'the date range cannot wrap, so it sets a width every other control is stretched to'
+		);
+		$this->assertMatchesRegularExpression(
+			'/kivun-cc-filterbar__read \{[^}]*flex-wrap: wrap/',
+			$block,
+			'the two read-outs stay side by side and run off the card'
+		);
 	}
 
 	/**

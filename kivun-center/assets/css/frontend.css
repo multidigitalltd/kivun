@@ -3192,7 +3192,17 @@ body.kivun-ty-open { overflow: hidden; }
 	.kivun-cc-console .kivun-cc-leadfilters .kivun-pick-src,
 	.kivun-cc-console .kivun-cc-leadfilters > select,
 	.kivun-cc-console .kivun-cc-leadfilters input[type="search"] { flex: 0 0 auto; }
-	.kivun-cc-console .kivun-cc-leadfilters .kivun-cc-filterbar__read { white-space: normal; }
+	.kivun-cc-console .kivun-cc-leadfilters .kivun-cc-filterbar__read { white-space: normal; flex-wrap: wrap; }
+	/*
+	 * And the date range sets the width of everything. In a column with
+	 * stretched items, the widest child decides the content width — the two
+	 * labels and two date inputs come to 339px side by side, so every
+	 * control in a 252px card was 339px wide and hung 87px off its left
+	 * edge. Let it wrap, and the card fits again.
+	 */
+	.kivun-cc-console .kivun-cc-leadfilters .kivun-cc-daterange { flex-wrap: wrap; min-width: 0; }
+	.kivun-cc-console .kivun-cc-leadfilters .kivun-cc-daterange input[type="date"] { flex: 1 1 7rem; min-width: 0; }
+	.kivun-cc-console .kivun-cc-leadfilters > * { min-width: 0; max-width: 100%; }
 }
 
 /* As a table, the cells wrap rather than hold a column open. An address or a
