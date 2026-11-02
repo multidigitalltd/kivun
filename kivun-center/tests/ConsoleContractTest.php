@@ -376,6 +376,241 @@ final class ConsoleContractTest extends TestCase {
 	}
 
 	/**
+	 * A menu pushed to the edge opens back inward.
+	 *
+	 * The columns menu anchors its inline-start to its button, which is
+	 * right while the button sits at the start of the bar. Moving the
+	 * button to the far end made that anchor point outward: the menu is
+	 * wider than the button, so it hung 98px past the console's left edge
+	 * — and the console clips, so half of it and the reset button were
+	 * simply not there. Measured with the menu open, before and after.
+	 *
+	 * @return void
+	 */
+	public function test_a_menu_pushed_to_the_edge_opens_inward(): void {
+		$css = (string) file_get_contents( KIVUN_DIR . 'assets/css/frontend.css' );
+
+		// The push, and the re-anchoring that has to travel with it.
+		$at = strpos( $css, '.kivun-cc-console .kivun-cc-viewbar > :last-child { margin-inline-start: auto; }' );
+		$this->assertNotFalse( $at, 'nothing pushes the columns button to the end of the bar any more' );
+
+		$after = substr( $css, $at, 900 );
+		$this->assertStringContainsString(
+			'inset-inline-end: 0;',
+			$after,
+			'the columns menu still anchors outward from a button that now sits at the edge, so the console clips it'
+		);
+		$this->assertStringContainsString(
+			'inset-inline-start: auto;',
+			$after,
+			'the old inline-start anchor is still in force, so the menu is pinned both ways'
+		);
+
+		// And the console does clip — which is what makes this matter.
+		$this->assertMatchesRegularExpression(
+			'/\.kivun-cc-console \{[^}]*overflow: hidden/s',
+			$css,
+			'this test assumes the console clips its overflow; if it no longer does, the reasoning needs rechecking'
+		);
+	}
+
+	/**
+	 * A width stops being a width when the bar turns on its side.
+	 *
+	 * The filter bar is a row on a desktop and a column under 782px, and a
+	 * `flex-basis` follows the main axis: the 18rem that lets the read-out
+	 * take the slack across a row becomes an 18rem *height* down a column.
+	 * Measured at 390px before the fix — the read-out 288px tall, every
+	 * picker 144px, the bar 1591px in total. Four screens of nothing before
+	 * you reach a lead.
+	 *
+	 * @return void
+	 */
+	public function test_the_filter_widths_do_not_become_heights(): void {
+		$css = (string) file_get_contents( KIVUN_DIR . 'assets/css/frontend.css' );
+
+		// The column layout, and what it has to undo.
+		$at = strpos( $css, '.kivun-cc-leadfilters { flex-direction: column' );
+		$this->assertNotFalse( $at, 'the filter bar no longer becomes a column on a narrow screen' );
+		$block = substr( $css, $at, 1400 );
+
+		foreach ( array( 'kivun-cc-filterbar__read', 'kivun-pick-src', 'input[type="search"]' ) as $sized ) {
+			$this->assertStringContainsString(
+				$sized,
+				$block,
+				$sized . ' keeps a row-shaped flex-basis in the column layout, where it reads as a height'
+			);
+		}
+		$this->assertStringContainsString(
+			'flex: 0 0 auto;',
+			$block,
+			'nothing resets the flex bases, so each control is as tall as it was wide'
+		);
+
+		/*
+		 * Height was only half of it. In a column of stretched items the
+		 * widest child sets the content width, and the date range — two
+		 * labels and two date inputs side by side — comes to 339px. Every
+		 * control in a 252px card was drawn 339px wide and hung 87px off
+		 * its left edge. Measured: twelve children overflowing, then one,
+		 * then none.
+		 */
+		$this->assertStringContainsString(
+			'.kivun-cc-daterange { flex-wrap: wrap;',
+			$block,
+			'the date range cannot wrap, so it sets a width every other control is stretched to'
+		);
+		$this->assertMatchesRegularExpression(
+			'/kivun-cc-filterbar__read \{[^}]*flex-wrap: wrap/',
+			$block,
+			'the two read-outs stay side by side and run off the card'
+		);
+	}
+
+	/**
+	 * The status pill is coloured by what the select actually holds.
+	 *
+	 * A status that looks "enrolled" while the row says "new" is worse than
+	 * no colour at all, so the colour cannot come from an attribute someone
+	 * has to keep in step. `:has(option:checked)` follows the live
+	 * selection — measured, the pill repainted on every change with no
+	 * script involved, and each colour matched the badge that states the
+	 * same status where it is read-only.
+	 *
+	 * @return void
+	 */
+	public function test_the_status_pill_is_coloured_by_the_live_selection(): void {
+		$css = (string) file_get_contents( KIVUN_DIR . 'assets/css/frontend.css' );
+
+		$this->assertMatchesRegularExpression(
+			'/\.kivun-status-select:has\(option\[value="[a-z_]+"\]:checked\)/',
+			$css,
+			'the status colour no longer reads the live selection, so it can disagree with the value underneath it'
+		);
+
+		// Every status the badge gives a colour to, the select gets too —
+		// the two say the same thing about the same row.
+		preg_match_all( '/\.kivun-status-badge\[data-status="([a-z_]+)"\]/', $css, $badged );
+		preg_match_all( '/\.kivun-status-select:has\(option\[value="([a-z_]+)"\]:checked\)/', $css, $pilled );
+
+		$this->assertNotEmpty( $badged[1], 'the status badge colours are gone' );
+		$missing = array_diff( array_unique( $badged[1] ), array_unique( $pilled[1] ) );
+		$this->assertSame(
+			array(),
+			array_values( $missing ),
+			'these statuses are coloured on the read-only badge but not on the editable pill, so the same row reads differently depending on who is looking: ' . implode( ', ', $missing )
+		);
+
+		// Scoped, because the same helper draws this select on the WP-admin
+		// leads screen, which keeps its own look.
+		$this->assertStringContainsString(
+			'.kivun-cc-console .kivun-status-select',
+			$css,
+			'the status pill is unscoped, so it redraws the WP-admin leads screen too'
+		);
+	}
+
+	/**
+	 * Every filter the leads screen submits still has a field.
+	 *
+	 * Written down before that screen is redesigned, for the same reason
+	 * the saved fields were. These ten travel in the query string: the
+	 * reader bookmarks a filtered view, or presses back to it, and the
+	 * screen rebuilds itself from them. A field dropped in a redesign does
+	 * not raise anything — the filter simply stops narrowing, and a list
+	 * that should have shown eleven leads shows twelve hundred.
+	 *
+	 * @return void
+	 */
+	public function test_every_lead_filter_still_has_a_field(): void {
+		$src = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-content-creator.php' );
+
+		$filters = array(
+			'kivun_content[]' => 'which content the lead came from',
+			'kivun_ltype[]'   => 'the kind of content',
+			'kivun_lstatus[]' => 'the lead status',
+			'kivun_lgender[]' => 'gender',
+			'kivun_lcity[]'   => 'city',
+			'kivun_lfrom'     => 'the start of the date range',
+			'kivun_lto'       => 'the end of the date range',
+			'kivun_ls'        => 'the free-text search',
+			'kivun_lpp'       => 'how many rows per page',
+		);
+
+		foreach ( $filters as $name => $what ) {
+			$this->assertStringContainsString(
+				'name="' . $name . '"',
+				$src,
+				'nothing on the leads screen submits ' . $name . ' (' . $what . '), so that filter silently stops narrowing'
+			);
+		}
+
+		/*
+		 * And the forms that carry them have to stay GETs, or a bookmarked
+		 * or shared filtered view stops being a thing you can link to.
+		 *
+		 * There are two: the leads screen and the tracking-numbers screen
+		 * share this class and this behaviour. Counted rather than found
+		 * once, because the second one is easy to forget when restyling the
+		 * first — a rule written without a scope reaches it too.
+		 */
+		$bars = substr_count( $src, 'class="kivun-cc-leadfilters"' );
+		$this->assertGreaterThan( 0, $bars, 'the filter form is gone' );
+		$this->assertSame(
+			$bars,
+			substr_count( $src, '<form class="kivun-cc-leadfilters" method="get"' ),
+			'one of the filter forms no longer travels in the URL'
+		);
+	}
+
+	/**
+	 * And every control the leads scripts reach for is still emitted.
+	 *
+	 * The same guard the console-wide classes already have, extended to
+	 * this screen before it is restyled. Each of these is bound by name
+	 * from `admin-crm.js` or `frontend.js`: change the row that draws one
+	 * and the control stays on screen, looking live, doing nothing.
+	 *
+	 * @return void
+	 */
+	public function test_every_leads_control_the_scripts_bind_is_still_emitted(): void {
+		/*
+		 * Both files, because the console's leads rows are not all its own:
+		 * the status select, the coordinator select and the note come from
+		 * Kivun_Admin helpers that the WP-admin leads screen uses too. Worth
+		 * knowing before restyling them — a rule written without a scope
+		 * would redraw that screen as well.
+		 */
+		$php = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-content-creator.php' )
+			. (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-admin.php' );
+
+		$bound = array(
+			'kivun-status-select'  => 'changing a lead status',
+			'kivun-handler-select' => 'assigning a coordinator',
+			'kivun-notes-input'    => 'the note on a lead',
+			'kivun-pick-src'       => 'the multi-select filters',
+			'kivun-viewer-form'    => 'inviting someone to view the leads',
+			'kivun-viewer-email'   => 'the invite address',
+			'kivun-remove-viewer'  => 'withdrawing access',
+			'kivun-cc-leadfilters' => 'the filter form itself',
+		);
+
+		foreach ( $bound as $class => $what ) {
+			$this->assertMatchesRegularExpression(
+				'/(?<![a-z0-9_-])' . preg_quote( $class, '/' ) . '(?![a-z0-9_-])/',
+				$php,
+				$class . ' is gone, so ' . $what . ' is wired to nothing'
+			);
+		}
+
+		// The column picker and the table/cards switch are driven by
+		// attributes rather than classes, so a hand-rebuilt row would drop
+		// them without renaming anything.
+		$this->assertStringContainsString( 'data-col=', $php, 'the columns can no longer be put away individually' );
+		$this->assertStringContainsString( 'data-col-toggle', $php, 'the column picker has nothing to toggle' );
+	}
+
+	/**
 	 * A table the search brings back gets measured.
 	 *
 	 * The filter hides a pane's wrapper when nothing matches, and a table

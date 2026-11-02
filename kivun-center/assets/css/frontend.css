@@ -1706,34 +1706,91 @@ td.kivun-cc-rowactions > form > * {
 .kivun-cc-source { display: block; font-size: .74rem; color: var(--kivun-muted); margin-top: .15rem; }
 .kivun-cc-date { white-space: nowrap; font-size: .8rem; color: var(--kivun-muted); }
 
-.kivun-cc-leadbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem; margin-bottom: .9rem; }
+/* The row of things you can do to the list, rather than to the filter:
+   who may read it, and taking it away as a file. */
+.kivun-cc-leadbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: .6rem; margin-bottom: .9rem; }
 .kivun-cc-leadbar .kivun-stat {
 	padding: .4rem .9rem;
 	background: #f1f5f9;
 	border-radius: 999px;
 	font-size: .85rem;
 }
+.kivun-cc-console .kivun-cc-leadbar > .kivun-cc-btn {
+	padding: .6rem 1.2rem;
+	border-radius: 999px;
+	background: var(--cc-shell);
+	border: 0;
+	color: #fff;
+	font-size: .88rem;
+}
+.kivun-cc-console .kivun-cc-leadbar > .kivun-cc-btn:hover { background: #000; color: #fff; filter: none; }
+
+/* The filter, as one card: what you are looking at on one side of its last
+   row, and how to change it on the other. */
 .kivun-cc-leadfilters {
 	display: flex;
 	flex-wrap: wrap;
-	gap: .5rem;
+	gap: .55rem;
 	align-items: center;
-	padding: .9rem 1rem;
+	padding: 1.1rem 1.2rem;
 	margin-bottom: 1rem;
-	background: #f8fafc;
-	border: 1px solid var(--kivun-border);
-	border-radius: 12px;
+	background: var(--cc-field, #f8fafc);
+	border: 0;
+	border-radius: var(--cc-radius, 12px);
 }
 .kivun-cc-leadfilters select,
-.kivun-cc-leadfilters input[type="search"] {
-	padding: .5rem .7rem;
-	border: 1px solid var(--kivun-border);
-	border-radius: 9px;
-	background: #fff;
+.kivun-cc-leadfilters input[type="search"],
+.kivun-cc-leadfilters input[type="date"] {
+	padding: .62rem .85rem;
+	border: 1px solid transparent;
+	border-radius: 999px;
+	background: var(--cc-surface, #fff);
 	font: inherit;
 	font-size: .87rem;
 }
 .kivun-cc-leadfilters input[type="search"] { min-width: 210px; flex: 1 1 210px; }
+.kivun-cc-console .kivun-cc-leadfilters select:focus,
+.kivun-cc-console .kivun-cc-leadfilters input:focus {
+	outline: none;
+	border-color: var(--cc-brand);
+	box-shadow: 0 0 0 4px color-mix(in srgb, var(--cc-brand) 12%, transparent);
+}
+/* The read-out takes the rest of the row, so the controls beside it sit at
+   the far end whatever the filter happens to say. */
+/* The read-out keeps to one line and takes the slack, so whatever shares
+   its row is pushed to the far end — which is where the design puts the
+   page size and the filter button. */
+.kivun-cc-filterbar__read {
+	display: flex;
+	align-items: baseline;
+	gap: .55rem;
+	flex: 1 1 18rem;
+	white-space: nowrap;
+}
+/* The fields share the width rather than each taking only what its longest
+   option needs, which left one picker stranded on a row of its own. */
+.kivun-cc-console .kivun-cc-leadfilters .kivun-pick-src,
+.kivun-cc-console .kivun-cc-leadfilters > select { flex: 1 1 9rem; min-width: 0; }
+.kivun-cc-console .kivun-cc-leadfilters input[type="search"] { flex: 1 1 16rem; }
+.kivun-cc-console .kivun-cc-leadfilters .kivun-cc-daterange { flex: 0 1 auto; }
+.kivun-cc-console .kivun-cc-leadfilters .kivun-stat { background: none; padding: 0; font-size: .85rem; color: var(--kivun-muted); }
+.kivun-cc-console .kivun-cc-leadfilters .kivun-stat strong { color: var(--cc-ink); font-weight: 800; }
+/* The two read-outs are one sentence with a pause in it, not two chips. */
+.kivun-cc-console .kivun-cc-leadfilters .kivun-freshness::before {
+	content: "";
+	display: inline-block;
+	width: 5px;
+	height: 5px;
+	margin-inline-end: .55rem;
+	border-radius: 50%;
+	background: var(--cc-note-dot);
+	vertical-align: middle;
+}
+.kivun-cc-console .kivun-cc-leadfilters .kivun-cc-btn {
+	padding: .6rem 1.3rem;
+	border-radius: 999px;
+	font-size: .87rem;
+}
 
 
 /* The same cells for a reader who cannot write to them: the words, without
@@ -3123,6 +3180,29 @@ body.kivun-ty-open { overflow: hidden; }
 	.kivun-cc-table th, .kivun-cc-table td { padding: .55rem .5rem; }
 	.kivun-cc-leadfilters { flex-direction: column; align-items: stretch; }
 	.kivun-cc-leadfilters input[type="search"] { min-width: 0; }
+	/*
+	 * The widths above are widths only while this is a row. Turned on its
+	 * side, a flex-basis is a HEIGHT — so the 18rem that lets the read-out
+	 * take the slack became a 288px tall block, every 9rem picker became
+	 * 144px, and the whole bar measured 1591px on a 390px phone: four
+	 * screens of nothing before you reach a lead. They size to their
+	 * content here.
+	 */
+	.kivun-cc-console .kivun-cc-leadfilters .kivun-cc-filterbar__read,
+	.kivun-cc-console .kivun-cc-leadfilters .kivun-pick-src,
+	.kivun-cc-console .kivun-cc-leadfilters > select,
+	.kivun-cc-console .kivun-cc-leadfilters input[type="search"] { flex: 0 0 auto; }
+	.kivun-cc-console .kivun-cc-leadfilters .kivun-cc-filterbar__read { white-space: normal; flex-wrap: wrap; }
+	/*
+	 * And the date range sets the width of everything. In a column with
+	 * stretched items, the widest child decides the content width — the two
+	 * labels and two date inputs come to 339px side by side, so every
+	 * control in a 252px card was 339px wide and hung 87px off its left
+	 * edge. Let it wrap, and the card fits again.
+	 */
+	.kivun-cc-console .kivun-cc-leadfilters .kivun-cc-daterange { flex-wrap: wrap; min-width: 0; }
+	.kivun-cc-console .kivun-cc-leadfilters .kivun-cc-daterange input[type="date"] { flex: 1 1 7rem; min-width: 0; }
+	.kivun-cc-console .kivun-cc-leadfilters > * { min-width: 0; max-width: 100%; }
 }
 
 /* As a table, the cells wrap rather than hold a column open. An address or a
@@ -3158,6 +3238,32 @@ body.kivun-ty-open { overflow: hidden; }
 	border: 1px solid var(--kivun-border);
 	border-radius: 999px;
 }
+/* The same segmented control as the library's, so "table or cards" and
+   "live or archive" are one gesture learned once. The columns button goes
+   to the far end — it changes what a row shows rather than which rows. */
+.kivun-cc-console .kivun-cc-viewbar { gap: .6rem; margin-bottom: .9rem; }
+.kivun-cc-console .kivun-cc-viewbar > :last-child { margin-inline-start: auto; }
+/*
+ * …and whatever was pushed there has to open back inward. The columns
+ * menu anchors its inline-start to its button, which is right while the
+ * button sits at the start of the bar and wrong once it is at the end:
+ * the menu is wider than the button, so it hung 98px past the console's
+ * left edge — and the console clips, so half of it and the reset button
+ * were simply gone. Measured before the fix, with the menu open.
+ */
+.kivun-cc-console .kivun-cc-viewbar > :last-child .kivun-cc-colpicker__menu,
+.kivun-cc-console .kivun-cc-viewbar > .kivun-cc-colpicker:last-child .kivun-cc-colpicker__menu {
+	inset-inline-start: auto;
+	inset-inline-end: 0;
+}
+.kivun-cc-console .kivun-cc-viewtoggle {
+	padding: .25rem;
+	background: var(--cc-field);
+	border: 0;
+}
+.kivun-cc-console .kivun-cc-viewbtn { padding: .5rem 1rem; font-weight: 700; }
+.kivun-cc-console .kivun-cc-viewbtn.is-active,
+.kivun-cc-console .kivun-cc-viewbtn[aria-pressed="true"] { background: var(--cc-shell); color: #fff; }
 .kivun-cc-viewbtn {
 	display: inline-flex;
 	align-items: center;
@@ -3865,3 +3971,59 @@ body.kivun-ty-open { overflow: hidden; }
 .kivun-status-badge[data-status="no_answer"],
 .kivun-status-badge[data-status="pending"] { background: #fff5f8; color: #b81843; }
 .kivun-status-badge[data-status="next_cycle"] { background: #fef3c7; color: #92400e; }
+
+/*
+ * The editable status, wearing the same colours as the badge that states a
+ * read-only one — so a row you can change and a row you cannot say the same
+ * thing in the same voice.
+ *
+ * Read from the select's own chosen option rather than from an attribute
+ * somebody has to keep in step. `:checked` on an <option> follows the live
+ * selection, so the colour is right the moment it is changed and cannot
+ * drift from the value underneath it — which an attribute written once by
+ * the server would, the first time anyone picked a new status.
+ *
+ * Scoped to the console: the same helper draws this select on the WP-admin
+ * leads screen, which has no design of its own yet.
+ */
+.kivun-cc-console .kivun-status-select {
+	padding: .45rem 2rem .45rem 1rem;
+	border: 0;
+	border-radius: 999px;
+	font-weight: 700;
+	font-size: .82rem;
+	background-color: var(--cc-field);
+	color: var(--cc-ink);
+	cursor: pointer;
+}
+.kivun-cc-console .kivun-status-select:focus-visible { outline: 2px solid var(--cc-brand); outline-offset: 2px; }
+
+.kivun-cc-console .kivun-status-select:has(option[value="closed"]:checked),
+.kivun-cc-console .kivun-status-select:has(option[value="enrolled"]:checked),
+.kivun-cc-console .kivun-status-select:has(option[value="hired"]:checked) { background-color: #dcfce7; color: #14702f; }
+
+.kivun-cc-console .kivun-status-select:has(option[value="not_relevant"]:checked),
+.kivun-cc-console .kivun-status-select:has(option[value="rejected"]:checked) { background-color: #f1f2f4; color: #52525b; }
+
+.kivun-cc-console .kivun-status-select:has(option[value="contacted"]:checked),
+.kivun-cc-console .kivun-status-select:has(option[value="viewed"]:checked),
+.kivun-cc-console .kivun-status-select:has(option[value="interview"]:checked),
+.kivun-cc-console .kivun-status-select:has(option[value="interested"]:checked) { background-color: #dbeafe; color: #1d4ed8; }
+
+.kivun-cc-console .kivun-status-select:has(option[value="new"]:checked),
+.kivun-cc-console .kivun-status-select:has(option[value="new_lead"]:checked),
+.kivun-cc-console .kivun-status-select:has(option[value="no_answer"]:checked),
+.kivun-cc-console .kivun-status-select:has(option[value="pending"]:checked) { background-color: #fff5f8; color: #b81843; }
+
+.kivun-cc-console .kivun-status-select:has(option[value="next_cycle"]:checked) { background-color: #fef3c7; color: #92400e; }
+
+/* The coordinator picker and the note sit beside it, so they read as one
+   row of controls rather than three different kinds of field. */
+.kivun-cc-console .kivun-handler-select,
+.kivun-cc-console .kivun-notes-input {
+	padding: .45rem .9rem;
+	border: 1px solid var(--cc-line);
+	border-radius: 999px;
+	background: var(--cc-surface);
+	font-size: .82rem;
+}
