@@ -1558,8 +1558,17 @@ td.kivun-app-contact a { display: block; }
 	font-size: .9rem;
 }
 /* A row the search ruled out. An attribute rather than `hidden`, so it never
-   argues with the stacked table's own `tr[hidden]` rule. */
-.kivun-cc-table tbody tr[data-filtered] { display: none; }
+   argues with the stacked table's own `tr[hidden]` rule.
+ *
+ * `!important` because "filtered out" has to beat every layout rule that
+ * sets a display on these rows, and one of them already did: the
+ * narrow-screen fallback's `… > tbody > tr { display: block }` carries three
+ * classes to this rule's two and won below 782px, so searching the archive
+ * on a phone marked the rows and still showed them. Winning that on
+ * specificity alone would mean re-raising this every time a layout rule is
+ * added. Same reasoning as `.kivun-step-off` above.
+ */
+.kivun-cc-table tbody tr[data-filtered] { display: none !important; }
 
 /* What a row IS, under its title: status first, then each type it was
    published as. They were two columns of their own before. */

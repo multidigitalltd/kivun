@@ -356,6 +356,52 @@ final class ConsoleContractTest extends TestCase {
 	}
 
 	/**
+	 * A row the search ruled out is actually hidden.
+	 *
+	 * Two rules set a display on these rows. The narrow-screen fallback's
+	 * `… > tbody > tr { display: block }` carries three classes to the
+	 * filter's two, so below 782px it won: the row was marked, counted as
+	 * filtered, and still drawn. Measured at 390px — searching the archive
+	 * for something absent left the row marked and visible.
+	 *
+	 * @return void
+	 */
+	public function test_a_filtered_row_is_actually_hidden(): void {
+		$css = (string) file_get_contents( KIVUN_DIR . 'assets/css/frontend.css' );
+
+		$this->assertMatchesRegularExpression(
+			'/tr\[data-filtered\]\s*\{\s*display:\s*none\s*!important/',
+			$css,
+			'a filtered row can be out-specified by a layout rule and stay on screen'
+		);
+	}
+
+	/**
+	 * Revealing the archive measures its table.
+	 *
+	 * `fitTables()` cannot measure a table whose wrapper has no width, so a
+	 * pane that starts hidden is skipped and never gets the labelled card
+	 * layout — it opens as the unlabelled fallback, or overflows. The
+	 * archive used to live in a `<details>`, whose toggle event triggered
+	 * the remeasure; the segmented control that replaced it fires no such
+	 * event, and quietly took the remeasure with it.
+	 *
+	 * @return void
+	 */
+	public function test_revealing_the_archive_measures_its_table(): void {
+		$js = (string) file_get_contents( KIVUN_DIR . 'assets/js/admin-crm.js' );
+
+		$at = strpos( $js, 'function fitTablesSoon' );
+		$this->assertNotFalse( $at, 'the table-fitting helper moved' );
+
+		$this->assertMatchesRegularExpression(
+			'/closest\(\'[^\']*\.kivun-cc-seg[^\']*\'\)\s*\)\s*\{\s*fitTablesSoon\(\)/',
+			substr( $js, $at ),
+			'switching to the archive no longer remeasures it, so it opens unstacked'
+		);
+	}
+
+	/**
 	 * The actions cell stays a table cell.
 	 *
 	 * `display: flex` on a `<td>` takes it out of table layout, so it stops

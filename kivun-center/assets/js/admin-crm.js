@@ -421,11 +421,13 @@
 	window.addEventListener('resize', fitTablesSoon);
 	// A table inside a <details> has no width until the panel is opened.
 	document.addEventListener('toggle', fitTablesSoon, true);
-	// Nor does one on a tab that was not the open tab. The switch happens in
-	// another script, so this waits for the panel to be shown rather than
-	// assuming which listener runs first.
+	// Nor does one on a tab that was not the open tab, nor the archive behind
+	// the library's segmented control — which replaced a <details> that used
+	// to fire the toggle above, and so quietly took its remeasure with it.
+	// The switch happens in another script, so this waits for the panel to be
+	// shown rather than assuming which listener runs first.
 	document.addEventListener('click', function (e) {
-		if (e.target.closest('.kivun-tab')) { fitTablesSoon(); }
+		if (e.target.closest('.kivun-tab, .kivun-cc-seg')) { fitTablesSoon(); }
 	});
 
 }());
