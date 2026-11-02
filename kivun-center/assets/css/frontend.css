@@ -1474,6 +1474,169 @@ td.kivun-app-contact a { display: block; }
    because it is the one row state on the calls screen worth chasing. */
 .kivun-cc-badge--warn { color: #b45309; background: #fef3c7; }
 
+/* ── The library screen ──────────────────────────────────────────────────── */
+
+/* Heading, filter bar and table in one card, as the design has them. */
+.kivun-cc-console .kivun-cc-panel {
+	padding: 1.6rem 1.7rem 1.7rem;
+	background: var(--cc-surface);
+	border-radius: var(--cc-radius);
+	box-shadow: var(--cc-shadow);
+}
+.kivun-cc-console .kivun-cc-panel .kivun-cc-tablewrap { box-shadow: none; border-radius: 0; }
+.kivun-cc-console .kivun-cc-panel .kivun-cc-table thead th { background: var(--cc-field); }
+.kivun-cc-console .kivun-cc-panel .kivun-cc-table thead th:first-child { border-start-start-radius: var(--cc-radius-sm); border-end-start-radius: var(--cc-radius-sm); }
+.kivun-cc-console .kivun-cc-panel .kivun-cc-table thead th:last-child { border-start-end-radius: var(--cc-radius-sm); border-end-end-radius: var(--cc-radius-sm); }
+
+.kivun-cc-filterbar {
+	display: flex;
+	align-items: center;
+	gap: .7rem;
+	flex-wrap: wrap;
+	margin: 1.2rem 0 1.1rem;
+}
+.kivun-cc-search {
+	position: relative;
+	display: flex;
+	align-items: center;
+	gap: .55rem;
+	flex: 1 1 14rem;
+	padding: 0 1rem;
+	background: var(--cc-surface);
+	border: 1px solid var(--cc-line);
+	border-radius: 999px;
+}
+.kivun-cc-search svg { width: 16px; height: 16px; flex: 0 0 auto; color: var(--kivun-muted); }
+.kivun-cc-search__input {
+	flex: 1;
+	min-width: 0;
+	padding: .7rem 0;
+	border: 0;
+	background: none;
+	font: inherit;
+	font-size: .9rem;
+	color: var(--cc-ink);
+}
+.kivun-cc-search__input:focus { outline: none; }
+.kivun-cc-search:focus-within { border-color: var(--cc-brand); box-shadow: 0 0 0 4px color-mix(in srgb, var(--cc-brand) 12%, transparent); }
+
+.kivun-cc-segmented {
+	display: inline-flex;
+	gap: .2rem;
+	padding: .25rem;
+	background: var(--cc-field);
+	border-radius: 999px;
+}
+.kivun-cc-seg {
+	display: inline-flex;
+	align-items: center;
+	gap: .45rem;
+	padding: .5rem 1rem;
+	border: 0;
+	border-radius: 999px;
+	background: none;
+	font: inherit;
+	font-size: .87rem;
+	font-weight: 700;
+	color: var(--kivun-muted);
+	cursor: pointer;
+}
+.kivun-cc-seg.is-active { background: var(--cc-shell); color: #fff; }
+.kivun-cc-seg__count {
+	padding: .05rem .45rem;
+	background: rgba(0,0,0,.07);
+	border-radius: 999px;
+	font-size: .72rem;
+}
+.kivun-cc-seg.is-active .kivun-cc-seg__count { background: var(--cc-brand); color: #fff; }
+
+.kivun-cc-noresults {
+	margin: 0;
+	padding: 2.2rem 1rem;
+	text-align: center;
+	color: var(--kivun-muted);
+	font-size: .9rem;
+}
+/* A row the search ruled out. An attribute rather than `hidden`, so it never
+   argues with the stacked table's own `tr[hidden]` rule. */
+.kivun-cc-table tbody tr[data-filtered] { display: none; }
+
+/* What a row IS, under its title: status first, then each type it was
+   published as. They were two columns of their own before. */
+.kivun-cc-facts { display: flex; flex-wrap: wrap; gap: .2rem .9rem; margin-top: .3rem; }
+.kivun-cc-fact {
+	display: inline-flex;
+	align-items: center;
+	gap: .35rem;
+	font-size: .78rem;
+	font-weight: 600;
+	color: var(--kivun-muted);
+}
+.kivun-cc-fact::before {
+	content: "";
+	width: 6px;
+	height: 6px;
+	flex: 0 0 auto;
+	border-radius: 50%;
+	background: var(--cc-brand);
+}
+.kivun-cc-fact--publish::before { background: var(--cc-note-dot); }
+.kivun-cc-fact--draft::before,
+.kivun-cc-fact--pending::before { background: #f0b429; }
+.kivun-cc-fact--private::before,
+.kivun-cc-fact--future::before { background: var(--kivun-muted); }
+
+/* Date, whether it reached מרכז כיוון, and the button that sends it — one
+   cell, stacked. */
+.kivun-cc-when { line-height: 1.5; }
+.kivun-cc-when .kivun-cc-date { display: block; }
+.kivun-cc-when .kivun-mercaz-status { display: block; font-size: .78rem; color: var(--kivun-muted); }
+.kivun-cc-when .kivun-mercaz-status.is-error { color: var(--cc-brand); }
+.kivun-cc-linkbtn {
+	padding: 0;
+	border: 0;
+	background: none;
+	font: inherit;
+	font-size: .78rem;
+	font-weight: 700;
+	color: var(--cc-ink);
+	text-decoration: underline;
+	cursor: pointer;
+}
+.kivun-cc-linkbtn:hover { color: var(--cc-brand); }
+
+/* One action keeps its word; the rest are marks.
+   Named by where it sits, because `.kivun-cc-console .kivun-cc-btn` further
+   down matches this button too and would otherwise win on source order —
+   which is how it first rendered in the brand colour instead of the shell's. */
+.kivun-cc-console .kivun-cc-rowactions .kivun-cc-act--edit {
+	gap: .4rem;
+	padding: .5rem 1.1rem;
+	background: var(--cc-shell);
+	border-radius: 999px;
+	color: #fff;
+	font-size: .84rem;
+}
+.kivun-cc-console .kivun-cc-rowactions .kivun-cc-act--edit:hover { background: #000; color: #fff; filter: none; }
+.kivun-cc-console .kivun-cc-rowactions .kivun-cc-act--edit svg { width: 14px; height: 14px; }
+.kivun-cc-icon-btn {
+	display: inline-grid;
+	place-items: center;
+	width: 34px;
+	height: 34px;
+	padding: 0;
+	background: var(--cc-field);
+	border: 0;
+	border-radius: 50%;
+	color: var(--kivun-muted);
+	cursor: pointer;
+	transition: background .15s, color .15s;
+}
+.kivun-cc-icon-btn:hover { background: var(--cc-chip); color: var(--cc-chip-ink); }
+.kivun-cc-icon-btn svg { width: 15px; height: 15px; }
+.kivun-cc-icon-btn--danger { color: var(--kivun-error); }
+.kivun-cc-icon-btn--danger:hover { background: #fde7e7; color: var(--kivun-error); }
+
 .kivun-cc-rowactions { display: flex; flex-wrap: wrap; gap: .35rem; align-items: center; }
 .kivun-cc-rowactions form { display: inline; margin: 0; }
 /*
@@ -1492,12 +1655,7 @@ td.kivun-cc-rowactions > form > * {
 	vertical-align: middle;
 	margin: .15rem 0 .15rem .35rem;
 }
-/* Stacked into a card, the cell is a two-track grid and every child of it
-   becomes a grid item — so four buttons filled the label track and the value
-   track alternately, landing wherever the flow put them. Held to the value
-   column, they read as the list of things you can do to this row. */
-.kivun-cc-table.is-stacked td.kivun-cc-rowactions > *,
-.kivun-cc-table.is-stacked td.kivun-cc-rowactions > form { grid-column: 2; margin-inline-start: 0; }
+.kivun-cc-table.is-stacked td.kivun-cc-rowactions > * { margin-inline-start: 0; }
 /* Row actions as small text pills. They were nearly drawn as round icon
    buttons to match the rest of the design — but every one of them carries a
    word (צפייה, עריכה, מחיקה, העברה לארכיון), and a 32px circle would have
@@ -3092,6 +3250,26 @@ body.kivun-ty-open { overflow: hidden; }
 /* A cell with no label of its own would leave the first track empty. */
 .kivun-cc-table.is-stacked td:not([data-label]) { display: block; }
 .kivun-cc-table.is-stacked td:not([data-label])::before { content: none; }
+
+/*
+ * Every part of a value belongs in the value track.
+ *
+ * The cell is a two-track grid and each of its children is a grid item, so
+ * the label takes the first cell, the first part of the value takes the
+ * second — and the SECOND part wraps onto the next row and lands back under
+ * the label. Reproduced at 390px across all three shapes a cell takes here:
+ * two badges, two links (the leads contact cell, email then phone), and loose
+ * text followed by a link. In each one the second part sat in the label
+ * track.
+ *
+ * Pinned to the value column, they stack under one another where they belong.
+ * This reaches elements; a bare run of text between them is an anonymous item
+ * that no selector can name, and it places itself in the first free cell —
+ * which is the right one as long as it comes first, as it does in every cell
+ * here today.
+ */
+.kivun-cc-table.is-stacked td[data-label] > *,
+.kivun-cc-table.is-stacked td[data-label] > form { grid-column: 2; }
 
 /* Controls take the card's width rather than a column's share. Border-box
    too: at 100% of the track, content-box sizing pushes the padding and

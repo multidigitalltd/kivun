@@ -2784,21 +2784,47 @@ class Kivun_Content_Creator {
 	}
 
 	/**
+	 * The button's insides, for an action drawn as an icon.
+	 *
+	 * An icon-only control still has to say what it is. The word that used
+	 * to be on the button becomes the accessible name and the tooltip, so
+	 * nothing is lost to a screen reader or to someone who hovers to check
+	 * before clicking — only to the pixels.
+	 *
+	 * @param string $icon  Icon name, or '' to keep the label as text.
+	 * @param string $label The word.
+	 * @return array{0:string,1:string} The extra attributes, and the content.
+	 */
+	private static function icon_button_parts( string $icon, string $label ): array {
+		if ( '' === $icon ) {
+			return array( '', esc_html( $label ) );
+		}
+
+		return array(
+			' aria-label="' . esc_attr( $label ) . '" title="' . esc_attr( $label ) . '"',
+			kivun_icon( $icon ),
+		);
+	}
+
+	/**
 	 * Build a small stand-alone delete form (posts outside the main form).
 	 *
 	 * @param string $group     The content group id.
 	 * @param string $page_url  Redirect target after deletion.
 	 * @param string $label     Button label.
 	 * @param string $btn_class Button CSS classes.
+	 * @param string $icon      Icon name to draw instead of the label, or ''.
 	 * @return string Escaped HTML.
 	 */
-	private static function delete_form( string $group, string $page_url, string $label, string $btn_class ): string {
+	private static function delete_form( string $group, string $page_url, string $label, string $btn_class, string $icon = '' ): string {
+		list( $attrs, $content ) = self::icon_button_parts( $icon, $label );
+
 		return '<form class="kivun-cc-delete-form" method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">'
 			. '<input type="hidden" name="action" value="kivun_delete_content_front">'
 			. '<input type="hidden" name="group" value="' . esc_attr( $group ) . '">'
 			. '<input type="hidden" name="redirect" value="' . esc_url( $page_url ) . '">'
 			. '<input type="hidden" name="kivun_cc_del_nonce" value="' . esc_attr( wp_create_nonce( 'kivun_delete_content_front' ) ) . '">'
-			. '<button type="submit" class="' . esc_attr( $btn_class ) . '">' . esc_html( $label ) . '</button>'
+			. '<button type="submit" class="' . esc_attr( $btn_class ) . '"' . $attrs . '>' . $content . '</button>'
 			. '</form>';
 	}
 
@@ -2808,15 +2834,18 @@ class Kivun_Content_Creator {
 	 * @param int    $post_id   The specific post to duplicate.
 	 * @param string $page_url  Redirect target after duplication.
 	 * @param string $btn_class Button CSS classes.
+	 * @param string $icon      Icon name to draw instead of the label, or ''.
 	 * @return string Escaped HTML.
 	 */
-	private static function duplicate_form( int $post_id, string $page_url, string $btn_class ): string {
+	private static function duplicate_form( int $post_id, string $page_url, string $btn_class, string $icon = '' ): string {
+		list( $attrs, $content ) = self::icon_button_parts( $icon, __( 'שכפל', 'kivun' ) );
+
 		return '<form class="kivun-cc-dup-form" method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">'
 			. '<input type="hidden" name="action" value="kivun_cc_duplicate_front">'
 			. '<input type="hidden" name="post" value="' . (int) $post_id . '">'
 			. '<input type="hidden" name="redirect" value="' . esc_url( $page_url ) . '">'
 			. '<input type="hidden" name="kivun_cc_dup_nonce" value="' . esc_attr( wp_create_nonce( 'kivun_cc_duplicate_front' ) ) . '">'
-			. '<button type="submit" class="' . esc_attr( $btn_class ) . '">' . esc_html__( 'שכפל', 'kivun' ) . '</button>'
+			. '<button type="submit" class="' . esc_attr( $btn_class ) . '"' . $attrs . '>' . $content . '</button>'
 			. '</form>';
 	}
 
@@ -3736,6 +3765,7 @@ class Kivun_Content_Creator {
 		$lead_counts = self::leads_per_content();
 		?>
 		<div class="kivun-cc-front">
+			<div class="kivun-cc-panel">
 			<div class="kivun-cc-head">
 				<h2 class="kivun-cc-title"><?php esc_html_e( 'התכנים שלי', 'kivun' ); ?></h2>
 				<p class="kivun-cc-lead"><?php esc_html_e( 'כל התכנים שנוצרו כאן — עריכה, שכפול, צפייה ומחיקה, ומספר הפניות שהתקבלו לכל תוכן.', 'kivun' ); ?></p>
@@ -3744,30 +3774,66 @@ class Kivun_Content_Creator {
 			<?php if ( ! $groups && ! $put_away ) : ?>
 				<div class="kivun-cc-note"><?php esc_html_e( 'עדיין לא נוצרו תכנים. עברו ללשונית "פרסום תוכן" כדי להתחיל.', 'kivun' ); ?></div>
 			<?php else : ?>
-				<?php self::library_table( $groups, $lead_counts, $page_url, $can_delete, false ); ?>
+				<?php
+				/*
+				 * Both lists are already here — the archive used to sit below
+				 * the table in a shut <details>, which is why switching
+				 * between them needs nothing from the server. The search
+				 * filters the rows that are on the page for the same reason.
+				 *
+				 * Archiving leaves the content itself untouched: its pages
+				 * are still published and still taking enquiries. This is
+				 * only where it is listed.
+				 */
+				?>
+				<div class="kivun-cc-filterbar">
+					<?php
+					/*
+					 * The field is named with aria-label rather than a
+					 * visually-hidden <span>. `.screen-reader-text` is a
+					 * theme's class, not ours — the plugin ships no rule for
+					 * it — so on a theme that does not define it the label
+					 * would simply be drawn next to the box.
+					 */
+					?>
+					<div class="kivun-cc-search">
+						<?php echo kivun_icon( 'filter' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?>
+						<input
+							type="search"
+							class="kivun-cc-search__input"
+							placeholder="<?php esc_attr_e( 'חיפוש לפי כותרת', 'kivun' ); ?>"
+							aria-label="<?php esc_attr_e( 'חיפוש לפי כותרת', 'kivun' ); ?>"
+							autocomplete="off"
+						>
+					</div>
+
+					<?php if ( $put_away ) : ?>
+						<div class="kivun-cc-segmented" role="tablist">
+							<button type="button" class="kivun-cc-seg is-active" data-shows="live" role="tab" aria-selected="true">
+								<?php esc_html_e( 'פעילים', 'kivun' ); ?>
+								<span class="kivun-cc-seg__count"><?php echo esc_html( number_format_i18n( count( $groups ) ) ); ?></span>
+							</button>
+							<button type="button" class="kivun-cc-seg" data-shows="archive" role="tab" aria-selected="false">
+								<?php esc_html_e( 'ארכיון', 'kivun' ); ?>
+								<span class="kivun-cc-seg__count"><?php echo esc_html( number_format_i18n( count( $put_away ) ) ); ?></span>
+							</button>
+						</div>
+					<?php endif; ?>
+				</div>
+
+				<div class="kivun-cc-pane" data-pane="live">
+					<?php self::library_table( $groups, $lead_counts, $page_url, $can_delete, false ); ?>
+					<p class="kivun-cc-noresults" hidden><?php esc_html_e( 'אין תוכן שמתאים לחיפוש.', 'kivun' ); ?></p>
+				</div>
 
 				<?php if ( $put_away ) : ?>
-					<?php
-					// Put away, at the bottom, shut. The content itself is
-					// untouched: its pages are still published and still
-					// taking enquiries — this is only where it is listed.
-					?>
-					<details class="kivun-archive">
-						<summary class="kivun-camp-summary">
-							<?php
-							echo esc_html(
-								sprintf(
-									/* translators: %s: how many content groups are archived. */
-									__( 'ארכיון (%s)', 'kivun' ),
-									number_format_i18n( count( $put_away ) )
-								)
-							);
-							?>
-						</summary>
+					<div class="kivun-cc-pane" data-pane="archive" hidden>
 						<?php self::library_table( $put_away, $lead_counts, $page_url, $can_delete, true ); ?>
-					</details>
+						<p class="kivun-cc-noresults" hidden><?php esc_html_e( 'אין תוכן שמתאים לחיפוש.', 'kivun' ); ?></p>
+					</div>
 				<?php endif; ?>
 			<?php endif; ?>
+			</div>
 		</div>
 		<?php
 	}
@@ -3847,13 +3913,16 @@ class Kivun_Content_Creator {
 					<thead>
 						<tr>
 							<th scope="col"><?php esc_html_e( 'כותרת', 'kivun' ); ?></th>
-							<th scope="col"><?php esc_html_e( 'סוגים', 'kivun' ); ?></th>
-							<th scope="col" data-col="status"><?php esc_html_e( 'סטטוס', 'kivun' ); ?></th>
 							<th scope="col"><?php esc_html_e( 'פניות', 'kivun' ); ?></th>
-							<th scope="col" data-col="date"><?php esc_html_e( 'תאריך', 'kivun' ); ?></th>
-							<?php if ( Kivun_Mercaz::configured() ) : ?>
-								<th scope="col"><?php esc_html_e( 'מרכז כיוון', 'kivun' ); ?></th>
-							<?php endif; ?>
+							<th scope="col" data-col="date">
+								<?php
+								echo esc_html(
+									Kivun_Mercaz::configured()
+										? __( 'תאריך ומרכז כיוון', 'kivun' )
+										: __( 'תאריך', 'kivun' )
+								);
+								?>
+							</th>
 							<th scope="col"><?php esc_html_e( 'פעולות', 'kivun' ); ?></th>
 						</tr>
 					</thead>
@@ -3874,28 +3943,38 @@ class Kivun_Content_Creator {
 						);
 						?>
 						<tr>
-							<td><strong><?php echo esc_html( $g['title'] ); ?></strong></td>
-							<td>
-								<?php foreach ( array_unique( $g['types'] ) as $type_label ) : ?>
-									<span class="kivun-cc-badge"><?php echo esc_html( $type_label ); ?></span>
-								<?php endforeach; ?>
-							</td>
-							<td>
-								<?php
-								$status_labels = array(
-									'publish' => __( 'פורסם', 'kivun' ),
-									'draft'   => __( 'טיוטה', 'kivun' ),
-									'pending' => __( 'ממתין לאישור', 'kivun' ),
-									'private' => __( 'פרטי', 'kivun' ),
-									'future'  => __( 'מתוזמן', 'kivun' ),
-								);
-								?>
-								<span class="kivun-status kivun-status--<?php echo esc_attr( $g['status'] ); ?>">
-									<?php echo esc_html( $status_labels[ $g['status'] ] ?? $g['status'] ); ?>
+							<?php
+							$status_labels = array(
+								'publish' => __( 'פורסם', 'kivun' ),
+								'draft'   => __( 'טיוטה', 'kivun' ),
+								'pending' => __( 'ממתין לאישור', 'kivun' ),
+								'private' => __( 'פרטי', 'kivun' ),
+								'future'  => __( 'מתוזמן', 'kivun' ),
+							);
+							?>
+							<?php
+							/*
+							 * Status and types used to be two columns of their
+							 * own. They say what this row IS rather than
+							 * carrying a value you scan down a column for, so
+							 * they read better as a line under the title —
+							 * which is also what buys the table room for four
+							 * columns instead of seven.
+							 */
+							?>
+							<td data-search="<?php echo esc_attr( $g['title'] ); ?>">
+								<strong><?php echo esc_html( $g['title'] ); ?></strong>
+								<span class="kivun-cc-facts">
+									<span class="kivun-cc-fact kivun-cc-fact--<?php echo esc_attr( $g['status'] ); ?>">
+										<?php echo esc_html( $status_labels[ $g['status'] ] ?? $g['status'] ); ?>
+									</span>
+									<?php foreach ( array_unique( $g['types'] ) as $type_label ) : ?>
+										<span class="kivun-cc-fact"><?php echo esc_html( $type_label ); ?></span>
+									<?php endforeach; ?>
+									<?php if ( ! empty( $g['scheduled'] ) && 'future' === $g['status'] ) : ?>
+										<span class="kivun-cc-fact"><?php echo esc_html( $g['scheduled'] ); ?></span>
+									<?php endif; ?>
 								</span>
-								<?php if ( ! empty( $g['scheduled'] ) && 'future' === $g['status'] ) : ?>
-									<span class="kivun-cc-source"><?php echo esc_html( $g['scheduled'] ); ?></span>
-								<?php endif; ?>
 							</td>
 							<td>
 								<?php if ( $group_leads ) : ?>
@@ -3918,44 +3997,71 @@ class Kivun_Content_Creator {
 									<span class="kivun-muted" aria-hidden="true">—</span>
 								<?php endif; ?>
 							</td>
-							<td><?php echo esc_html( $g['date'] ); ?></td>
-							<?php if ( Kivun_Mercaz::configured() ) : ?>
-								<?php
-								$kivun_push_id = (int) $g['view_id'];
-								$kivun_synced  = (string) get_post_meta( $kivun_push_id, Kivun_Mercaz_Sync::SYNCED_AT, true );
-								$kivun_failed  = (string) get_post_meta( $kivun_push_id, Kivun_Mercaz_Sync::LAST_ERROR, true );
-								?>
-								<td class="kivun-mercaz-cell">
-									<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost kivun-mercaz-push" data-id="<?php echo esc_attr( (string) $kivun_push_id ); ?>">
-										<?php echo $kivun_synced ? esc_html__( 'שליחה מחדש', 'kivun' ) : esc_html__( 'שליחה', 'kivun' ); ?>
-									</button>
+							<?php
+							/*
+							 * When it was sent to מרכז כיוון is a fact about
+							 * this date, not a column of its own — so the two
+							 * share a cell, with the button that sends it
+							 * underneath them.
+							 */
+							?>
+							<td class="kivun-cc-when<?php echo Kivun_Mercaz::configured() ? ' kivun-mercaz-cell' : ''; ?>">
+								<span class="kivun-cc-date"><?php echo esc_html( $g['date'] ); ?></span>
+								<?php if ( Kivun_Mercaz::configured() ) : ?>
+									<?php
+									$kivun_push_id = (int) $g['view_id'];
+									$kivun_synced  = (string) get_post_meta( $kivun_push_id, Kivun_Mercaz_Sync::SYNCED_AT, true );
+									$kivun_failed  = (string) get_post_meta( $kivun_push_id, Kivun_Mercaz_Sync::LAST_ERROR, true );
+									?>
 									<span class="kivun-mercaz-status <?php echo $kivun_failed ? 'is-error' : ''; ?>">
 										<?php
 										if ( $kivun_failed ) {
 											echo esc_html( $kivun_failed );
 										} elseif ( $kivun_synced ) {
 											echo esc_html( sprintf( /* translators: %s: date and time. */ __( 'נשלח ב-%s', 'kivun' ), kivun_local_date( (string) $kivun_synced ) ) );
+										} else {
+											esc_html_e( 'עוד לא נשלח', 'kivun' );
 										}
 										?>
 									</span>
-								</td>
-							<?php endif; ?>
+									<button type="button" class="kivun-cc-linkbtn kivun-mercaz-push" data-id="<?php echo esc_attr( (string) $kivun_push_id ); ?>">
+										<?php echo $kivun_synced ? esc_html__( 'שליחה מחדש', 'kivun' ) : esc_html__( 'שליחה', 'kivun' ); ?>
+									</button>
+								<?php endif; ?>
+							</td>
+							<?php
+							/*
+							 * One action carries its word and the rest are
+							 * icons. Editing is what this row is mostly for,
+							 * so it keeps the label and the fill; the others
+							 * are recognisable enough as marks and would push
+							 * the row to two lines if they all kept theirs.
+							 *
+							 * Each icon-only control still says what it is —
+							 * `aria-label` and `title` carry the word that is
+							 * no longer drawn, so it is lost to the pixels and
+							 * not to a screen reader or a hover.
+							 */
+							$kivun_archive_label = $archived ? __( 'החזרה מהארכיון', 'kivun' ) : __( 'העברה לארכיון', 'kivun' );
+							?>
 							<td class="kivun-cc-rowactions">
+								<a class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-act kivun-cc-act--edit" href="<?php echo esc_url( $edit_url ); ?>"><?php echo kivun_icon( 'edit' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?><?php esc_html_e( 'עריכה', 'kivun' ); ?></a>
 								<?php if ( '' !== $view_url ) : ?>
-									<a class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost" href="<?php echo esc_url( $view_url ); ?>" target="_blank" rel="noopener"><?php echo kivun_icon( 'external' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?><?php esc_html_e( 'צפייה', 'kivun' ); ?></a>
+									<a class="kivun-cc-icon-btn" href="<?php echo esc_url( $view_url ); ?>" target="_blank" rel="noopener" aria-label="<?php esc_attr_e( 'צפייה', 'kivun' ); ?>" title="<?php esc_attr_e( 'צפייה', 'kivun' ); ?>"><?php echo kivun_icon( 'eye' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?></a>
 								<?php endif; ?>
-								<a class="kivun-cc-btn kivun-cc-btn--sm" href="<?php echo esc_url( $edit_url ); ?>"><?php esc_html_e( 'עריכה', 'kivun' ); ?></a>
-								<?php echo self::duplicate_form( (int) ( $g['view_id'] ?? 0 ), $page_url, 'kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built from escaped parts in duplicate_form(). ?>
-								<?php if ( $can_delete ) : ?>
-									<?php echo self::delete_form( (string) $gid, $page_url, __( 'מחיקה', 'kivun' ), 'kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--danger' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built from escaped parts in delete_form(). ?>
-								<?php endif; ?>
+								<?php echo self::duplicate_form( (int) ( $g['view_id'] ?? 0 ), $page_url, 'kivun-cc-icon-btn', 'copy' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built from escaped parts in duplicate_form(). ?>
 								<?php if ( current_user_can( 'edit_posts' ) ) : ?>
 									<button
 										type="button"
-										class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost kivun-archive-content"
+										class="kivun-cc-icon-btn kivun-archive-content"
 										data-group="<?php echo esc_attr( (string) $gid ); ?>"
 										data-archived="<?php echo $archived ? '0' : '1'; ?>"
-									><?php echo $archived ? esc_html__( 'החזרה מהארכיון', 'kivun' ) : esc_html__( 'העברה לארכיון', 'kivun' ); ?></button>
+										aria-label="<?php echo esc_attr( $kivun_archive_label ); ?>"
+										title="<?php echo esc_attr( $kivun_archive_label ); ?>"
+									><?php echo kivun_icon( $archived ? 'restore' : 'archive' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?></button>
+								<?php endif; ?>
+								<?php if ( $can_delete ) : ?>
+									<?php echo self::delete_form( (string) $gid, $page_url, __( 'מחיקה', 'kivun' ), 'kivun-cc-icon-btn kivun-cc-icon-btn--danger', 'trash' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built from escaped parts in delete_form(). ?>
 								<?php endif; ?>
 							</td>
 						</tr>

@@ -269,6 +269,93 @@ final class ConsoleContractTest extends TestCase {
 	}
 
 	/**
+	 * An action drawn as an icon still says what it is.
+	 *
+	 * The library's row actions lost their words to the design — view,
+	 * duplicate, archive and delete are marks now, and only editing keeps
+	 * its label. A mark with no accessible name is a button that a screen
+	 * reader announces as "button" and a hover explains not at all, and
+	 * four of them in a row would be unusable. The word has to survive the
+	 * pixels.
+	 *
+	 * @return void
+	 */
+	public function test_an_icon_action_still_says_what_it_is(): void {
+		$src = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-content-creator.php' );
+
+		// Each icon-only control in the row, and the word it must still carry.
+		$at = strpos( $src, 'class="kivun-cc-rowactions"' );
+		$this->assertNotFalse( $at, 'the library row actions moved' );
+		$cell = substr( $src, $at, 2600 );
+
+		$this->assertMatchesRegularExpression(
+			'/aria-label="[^"]*צפייה/u',
+			$cell,
+			'the view action is an icon with no accessible name'
+		);
+
+		// Archiving says one of two things depending on where the row is, so
+		// its name comes from a variable rather than a literal — which is
+		// still a name, as long as it reaches the attribute.
+		$this->assertMatchesRegularExpression(
+			'/aria-label="<\?php echo esc_attr\( \$kivun_archive_label \)/',
+			$cell,
+			'the archive action is an icon with no accessible name'
+		);
+		$this->assertMatchesRegularExpression(
+			'/\$kivun_archive_label\s*=\s*\$archived\s*\?\s*__\( \'החזרה מהארכיון\'.*__\( \'העברה לארכיון\'/u',
+			$src,
+			'the archive action names itself from something other than the word it used to show'
+		);
+
+		// Duplicate and delete are built by helpers, which name the button
+		// from the same word they would have printed on it.
+		$this->assertStringContainsString(
+			"self::icon_button_parts( \$icon,",
+			$src,
+			'the form helpers no longer route their label into an accessible name'
+		);
+		$this->assertMatchesRegularExpression(
+			'/aria-label="\' \. esc_attr\( \$label \)[^;]*title="\' \. esc_attr\( \$label \)/s',
+			$src,
+			'an icon-only form button carries neither a label nor a tooltip'
+		);
+
+		// And the one action that kept its word still has it.
+		$this->assertStringContainsString( "esc_html_e( 'עריכה', 'kivun' )", $cell, 'the edit action lost its label too' );
+	}
+
+	/**
+	 * The library's filter works on what is already on the page.
+	 *
+	 * Both lists are rendered server-side — the archive used to sit below
+	 * the table in a shut `<details>` — which is the whole reason the
+	 * search and the pane switch can be client-side and instant. If the
+	 * archive ever stopped being rendered, the toggle would quietly show an
+	 * empty pane rather than fetching anything.
+	 *
+	 * @return void
+	 */
+	public function test_both_lists_are_on_the_page_for_the_filter(): void {
+		$src = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-content-creator.php' );
+
+		$this->assertSame(
+			2,
+			substr_count( $src, 'class="kivun-cc-pane"' ),
+			'the two panes the segmented control switches between are not both rendered'
+		);
+		$this->assertStringContainsString( 'self::library_table( $put_away,', $src, 'the archive list is no longer rendered' );
+
+		// The search reads the title off the cell rather than the row, so
+		// that searching "קורס" does not match every row that happens to be
+		// one.
+		$this->assertStringContainsString( 'data-search="', $src, 'nothing marks which text the search should match' );
+
+		$js = (string) file_get_contents( KIVUN_DIR . 'assets/js/frontend.js' );
+		$this->assertStringContainsString( "querySelector('[data-search]')", $js, 'the search no longer reads the title cell' );
+	}
+
+	/**
 	 * The actions cell stays a table cell.
 	 *
 	 * `display: flex` on a `<td>` takes it out of table layout, so it stops

@@ -2473,6 +2473,57 @@
 			}
 		});
 
+		// The library's filter bar. Both lists are already on the page — the
+		// archive used to sit below the table in a shut <details> — so
+		// switching panes and filtering rows is all that is needed, and
+		// neither touches the server.
+		var ccFilterBar = document.querySelector('.kivun-cc-filterbar');
+		if (ccFilterBar) {
+			var ccPanes = document.querySelectorAll('.kivun-cc-pane');
+			var ccSearch = ccFilterBar.querySelector('.kivun-cc-search__input');
+
+			var ccApplyFilter = function () {
+				var term = (ccSearch ? ccSearch.value : '').trim().toLowerCase();
+
+				ccPanes.forEach(function (pane) {
+					var shown = 0;
+					pane.querySelectorAll('.kivun-cc-table tbody tr').forEach(function (row) {
+						// The title is on the cell that holds it, so the test
+						// is against the title alone and not against every
+						// word in the row — searching for "קורס" should not
+						// match every row that happens to be one.
+						var cell = row.querySelector('[data-search]');
+						var title = (cell ? cell.getAttribute('data-search') : row.textContent) || '';
+						var hit = !term || title.toLowerCase().indexOf(term) !== -1;
+						// The rows ship visible; only a miss sets the flag, so
+						// a row the script never saw is never left hidden.
+						if (hit) { row.removeAttribute('data-filtered'); } else { row.setAttribute('data-filtered', ''); }
+						if (hit) { shown++; }
+					});
+
+					var empty = pane.querySelector('.kivun-cc-noresults');
+					if (empty) { empty.hidden = shown !== 0; }
+					var wrap = pane.querySelector('.kivun-cc-tablewrap');
+					if (wrap) { wrap.hidden = shown === 0; }
+				});
+			};
+
+			if (ccSearch) { ccSearch.addEventListener('input', ccApplyFilter); }
+
+			ccFilterBar.querySelectorAll('.kivun-cc-seg').forEach(function (seg) {
+				seg.addEventListener('click', function () {
+					var wanted = seg.dataset.shows;
+					ccFilterBar.querySelectorAll('.kivun-cc-seg').forEach(function (other) {
+						var on = other === seg;
+						other.classList.toggle('is-active', on);
+						other.setAttribute('aria-selected', on ? 'true' : 'false');
+					});
+					ccPanes.forEach(function (pane) { pane.hidden = pane.dataset.pane !== wanted; });
+					ccApplyFilter();
+				});
+			});
+		}
+
 		var ccConfirm = 'למחוק את כל התוכן המקושר? הפעולה תעביר לפח את דף הנחיתה, הקורס והסדנה.';
 		document.querySelectorAll('.kivun-cc-delete-form').forEach(function (f) {
 			f.addEventListener('submit', function (e) {
