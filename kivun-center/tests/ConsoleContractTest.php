@@ -376,6 +376,106 @@ final class ConsoleContractTest extends TestCase {
 	}
 
 	/**
+	 * Every filter the leads screen submits still has a field.
+	 *
+	 * Written down before that screen is redesigned, for the same reason
+	 * the saved fields were. These ten travel in the query string: the
+	 * reader bookmarks a filtered view, or presses back to it, and the
+	 * screen rebuilds itself from them. A field dropped in a redesign does
+	 * not raise anything — the filter simply stops narrowing, and a list
+	 * that should have shown eleven leads shows twelve hundred.
+	 *
+	 * @return void
+	 */
+	public function test_every_lead_filter_still_has_a_field(): void {
+		$src = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-content-creator.php' );
+
+		$filters = array(
+			'kivun_content[]' => 'which content the lead came from',
+			'kivun_ltype[]'   => 'the kind of content',
+			'kivun_lstatus[]' => 'the lead status',
+			'kivun_lgender[]' => 'gender',
+			'kivun_lcity[]'   => 'city',
+			'kivun_lfrom'     => 'the start of the date range',
+			'kivun_lto'       => 'the end of the date range',
+			'kivun_ls'        => 'the free-text search',
+			'kivun_lpp'       => 'how many rows per page',
+		);
+
+		foreach ( $filters as $name => $what ) {
+			$this->assertStringContainsString(
+				'name="' . $name . '"',
+				$src,
+				'nothing on the leads screen submits ' . $name . ' (' . $what . '), so that filter silently stops narrowing'
+			);
+		}
+
+		/*
+		 * And the forms that carry them have to stay GETs, or a bookmarked
+		 * or shared filtered view stops being a thing you can link to.
+		 *
+		 * There are two: the leads screen and the tracking-numbers screen
+		 * share this class and this behaviour. Counted rather than found
+		 * once, because the second one is easy to forget when restyling the
+		 * first — a rule written without a scope reaches it too.
+		 */
+		$bars = substr_count( $src, 'class="kivun-cc-leadfilters"' );
+		$this->assertGreaterThan( 0, $bars, 'the filter form is gone' );
+		$this->assertSame(
+			$bars,
+			substr_count( $src, '<form class="kivun-cc-leadfilters" method="get"' ),
+			'one of the filter forms no longer travels in the URL'
+		);
+	}
+
+	/**
+	 * And every control the leads scripts reach for is still emitted.
+	 *
+	 * The same guard the console-wide classes already have, extended to
+	 * this screen before it is restyled. Each of these is bound by name
+	 * from `admin-crm.js` or `frontend.js`: change the row that draws one
+	 * and the control stays on screen, looking live, doing nothing.
+	 *
+	 * @return void
+	 */
+	public function test_every_leads_control_the_scripts_bind_is_still_emitted(): void {
+		/*
+		 * Both files, because the console's leads rows are not all its own:
+		 * the status select, the coordinator select and the note come from
+		 * Kivun_Admin helpers that the WP-admin leads screen uses too. Worth
+		 * knowing before restyling them — a rule written without a scope
+		 * would redraw that screen as well.
+		 */
+		$php = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-content-creator.php' )
+			. (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-admin.php' );
+
+		$bound = array(
+			'kivun-status-select'  => 'changing a lead status',
+			'kivun-handler-select' => 'assigning a coordinator',
+			'kivun-notes-input'    => 'the note on a lead',
+			'kivun-pick-src'       => 'the multi-select filters',
+			'kivun-viewer-form'    => 'inviting someone to view the leads',
+			'kivun-viewer-email'   => 'the invite address',
+			'kivun-remove-viewer'  => 'withdrawing access',
+			'kivun-cc-leadfilters' => 'the filter form itself',
+		);
+
+		foreach ( $bound as $class => $what ) {
+			$this->assertMatchesRegularExpression(
+				'/(?<![a-z0-9_-])' . preg_quote( $class, '/' ) . '(?![a-z0-9_-])/',
+				$php,
+				$class . ' is gone, so ' . $what . ' is wired to nothing'
+			);
+		}
+
+		// The column picker and the table/cards switch are driven by
+		// attributes rather than classes, so a hand-rebuilt row would drop
+		// them without renaming anything.
+		$this->assertStringContainsString( 'data-col=', $php, 'the columns can no longer be put away individually' );
+		$this->assertStringContainsString( 'data-col-toggle', $php, 'the column picker has nothing to toggle' );
+	}
+
+	/**
 	 * A table the search brings back gets measured.
 	 *
 	 * The filter hides a pane's wrapper when nothing matches, and a table
