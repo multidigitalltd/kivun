@@ -376,6 +376,40 @@ final class ConsoleContractTest extends TestCase {
 	}
 
 	/**
+	 * A width stops being a width when the bar turns on its side.
+	 *
+	 * The filter bar is a row on a desktop and a column under 782px, and a
+	 * `flex-basis` follows the main axis: the 18rem that lets the read-out
+	 * take the slack across a row becomes an 18rem *height* down a column.
+	 * Measured at 390px before the fix — the read-out 288px tall, every
+	 * picker 144px, the bar 1591px in total. Four screens of nothing before
+	 * you reach a lead.
+	 *
+	 * @return void
+	 */
+	public function test_the_filter_widths_do_not_become_heights(): void {
+		$css = (string) file_get_contents( KIVUN_DIR . 'assets/css/frontend.css' );
+
+		// The column layout, and what it has to undo.
+		$at = strpos( $css, '.kivun-cc-leadfilters { flex-direction: column' );
+		$this->assertNotFalse( $at, 'the filter bar no longer becomes a column on a narrow screen' );
+		$block = substr( $css, $at, 1400 );
+
+		foreach ( array( 'kivun-cc-filterbar__read', 'kivun-pick-src', 'input[type="search"]' ) as $sized ) {
+			$this->assertStringContainsString(
+				$sized,
+				$block,
+				$sized . ' keeps a row-shaped flex-basis in the column layout, where it reads as a height'
+			);
+		}
+		$this->assertStringContainsString(
+			'flex: 0 0 auto;',
+			$block,
+			'nothing resets the flex bases, so each control is as tall as it was wide'
+		);
+	}
+
+	/**
 	 * The status pill is coloured by what the select actually holds.
 	 *
 	 * A status that looks "enrolled" while the row says "new" is worse than

@@ -3180,6 +3180,19 @@ body.kivun-ty-open { overflow: hidden; }
 	.kivun-cc-table th, .kivun-cc-table td { padding: .55rem .5rem; }
 	.kivun-cc-leadfilters { flex-direction: column; align-items: stretch; }
 	.kivun-cc-leadfilters input[type="search"] { min-width: 0; }
+	/*
+	 * The widths above are widths only while this is a row. Turned on its
+	 * side, a flex-basis is a HEIGHT — so the 18rem that lets the read-out
+	 * take the slack became a 288px tall block, every 9rem picker became
+	 * 144px, and the whole bar measured 1591px on a 390px phone: four
+	 * screens of nothing before you reach a lead. They size to their
+	 * content here.
+	 */
+	.kivun-cc-console .kivun-cc-leadfilters .kivun-cc-filterbar__read,
+	.kivun-cc-console .kivun-cc-leadfilters .kivun-pick-src,
+	.kivun-cc-console .kivun-cc-leadfilters > select,
+	.kivun-cc-console .kivun-cc-leadfilters input[type="search"] { flex: 0 0 auto; }
+	.kivun-cc-console .kivun-cc-leadfilters .kivun-cc-filterbar__read { white-space: normal; }
 }
 
 /* As a table, the cells wrap rather than hold a column open. An address or a
