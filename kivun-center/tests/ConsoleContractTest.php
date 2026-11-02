@@ -376,6 +376,41 @@ final class ConsoleContractTest extends TestCase {
 	}
 
 	/**
+	 * A cell that spans the row is not one column's value.
+	 *
+	 * `labelCells()` names each cell after the column above it. A cell with
+	 * a colspan sits under all of them and belongs to none, and labelling
+	 * it made the stacked layout treat it as a value: the custom forms
+	 * table puts each page's whole form builder in such a cell, and the
+	 * two-track grid squeezed the builder into 84px of a 244px card.
+	 * Unlabelled, it takes the exemption that already exists for cells
+	 * without a label and keeps the row's width.
+	 *
+	 * @return void
+	 */
+	public function test_a_spanning_cell_is_not_given_a_column_label(): void {
+		$js = (string) file_get_contents( KIVUN_DIR . 'assets/js/admin-crm.js' );
+
+		$at = strpos( $js, 'function labelCells' );
+		$this->assertNotFalse( $at, 'the cell labeller moved' );
+		$body = substr( $js, $at, 1400 );
+
+		$this->assertMatchesRegularExpression(
+			'/colSpan\s*>\s*1[\s\S]{0,40}return/',
+			$body,
+			'a cell spanning the row is still given a column heading, which squeezes it into the value track'
+		);
+
+		// And the exemption it falls back on has to still be there.
+		$css = (string) file_get_contents( KIVUN_DIR . 'assets/css/frontend.css' );
+		$this->assertStringContainsString(
+			'.kivun-cc-table.is-stacked td:not([data-label]) { display: block; }',
+			$css,
+			'an unlabelled cell no longer escapes the two-track grid'
+		);
+	}
+
+	/**
 	 * Each filter bar owns only the panes in its own panel.
 	 *
 	 * Every tab's panel is in the response, hidden rather than left out, so

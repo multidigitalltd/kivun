@@ -246,6 +246,15 @@
 
 		Array.prototype.forEach.call(table.querySelectorAll('tbody tr'), function (row) {
 			Array.prototype.forEach.call(row.children, function (cell, i) {
+				// A cell that spans the row is not one column's value, so no
+				// column's heading names it. The custom forms table puts each
+				// page's whole form builder in a colspan cell like this, and
+				// labelling it made the stacked layout treat the builder as a
+				// value: a two-track grid squeezed it into 84px of a 244px
+				// card. Left unlabelled, it takes the exemption further down
+				// and keeps the row's width.
+				if (cell.colSpan > 1) { return; }
+
 				// A label written into the markup wins — it was chosen on purpose.
 				if (!cell.hasAttribute('data-label') && heads[i]) {
 					cell.setAttribute('data-label', (heads[i].textContent || '').trim());
