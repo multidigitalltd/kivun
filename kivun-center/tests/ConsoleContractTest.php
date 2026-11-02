@@ -376,6 +376,49 @@ final class ConsoleContractTest extends TestCase {
 	}
 
 	/**
+	 * The status pill is coloured by what the select actually holds.
+	 *
+	 * A status that looks "enrolled" while the row says "new" is worse than
+	 * no colour at all, so the colour cannot come from an attribute someone
+	 * has to keep in step. `:has(option:checked)` follows the live
+	 * selection — measured, the pill repainted on every change with no
+	 * script involved, and each colour matched the badge that states the
+	 * same status where it is read-only.
+	 *
+	 * @return void
+	 */
+	public function test_the_status_pill_is_coloured_by_the_live_selection(): void {
+		$css = (string) file_get_contents( KIVUN_DIR . 'assets/css/frontend.css' );
+
+		$this->assertMatchesRegularExpression(
+			'/\.kivun-status-select:has\(option\[value="[a-z_]+"\]:checked\)/',
+			$css,
+			'the status colour no longer reads the live selection, so it can disagree with the value underneath it'
+		);
+
+		// Every status the badge gives a colour to, the select gets too —
+		// the two say the same thing about the same row.
+		preg_match_all( '/\.kivun-status-badge\[data-status="([a-z_]+)"\]/', $css, $badged );
+		preg_match_all( '/\.kivun-status-select:has\(option\[value="([a-z_]+)"\]:checked\)/', $css, $pilled );
+
+		$this->assertNotEmpty( $badged[1], 'the status badge colours are gone' );
+		$missing = array_diff( array_unique( $badged[1] ), array_unique( $pilled[1] ) );
+		$this->assertSame(
+			array(),
+			array_values( $missing ),
+			'these statuses are coloured on the read-only badge but not on the editable pill, so the same row reads differently depending on who is looking: ' . implode( ', ', $missing )
+		);
+
+		// Scoped, because the same helper draws this select on the WP-admin
+		// leads screen, which keeps its own look.
+		$this->assertStringContainsString(
+			'.kivun-cc-console .kivun-status-select',
+			$css,
+			'the status pill is unscoped, so it redraws the WP-admin leads screen too'
+		);
+	}
+
+	/**
 	 * Every filter the leads screen submits still has a field.
 	 *
 	 * Written down before that screen is redesigned, for the same reason

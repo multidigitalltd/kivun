@@ -6115,21 +6115,6 @@ class Kivun_Content_Creator {
 			<?php endif; ?>
 
 			<div class="kivun-cc-leadbar">
-				<span class="kivun-stat"><strong><?php echo esc_html( number_format_i18n( $found ) ); ?></strong> <?php esc_html_e( 'רשומות בתצוגה', 'kivun' ); ?></span>
-				<?php
-				// A page served from a cache shows the moment the copy was taken,
-				// not now — so if this time does not change on reload, something
-				// is caching the screen and the table cannot be trusted.
-				?>
-				<span class="kivun-stat kivun-freshness" title="<?php esc_attr_e( 'אם השעה לא משתנה ברענון — הדף מוגש ממטמון והנתונים אינם מעודכנים.', 'kivun' ); ?>">
-					<?php
-					printf(
-						/* translators: %s: time the page was generated. */
-						esc_html__( 'עודכן %s', 'kivun' ),
-						esc_html( wp_date( 'H:i:s' ) )
-					);
-					?>
-				</span>
 				<?php
 				// Not offered to whoever the export refuses. An agency reads
 				// this table and does not take it away, so the handler turns
@@ -6202,6 +6187,29 @@ class Kivun_Content_Creator {
 					<label for="kivun-lf-to"><?php esc_html_e( 'עד', 'kivun' ); ?></label>
 					<input type="date" id="kivun-lf-to" name="kivun_lto" dir="ltr" value="<?php echo esc_attr( $date_to ); ?>">
 				</span>
+
+				<?php
+				/*
+				 * What the filter is currently showing, inside the card that
+				 * sets it, rather than in a bar above it. The freshness clock
+				 * comes along because it qualifies the same number: a page
+				 * served from a cache shows the moment the copy was taken,
+				 * so if this time does not change on reload, the count cannot
+				 * be trusted either.
+				 */
+				?>
+				<div class="kivun-cc-filterbar__read">
+					<span class="kivun-stat"><strong><?php echo esc_html( number_format_i18n( $found ) ); ?></strong> <?php esc_html_e( 'רשומות בתצוגה', 'kivun' ); ?></span>
+					<span class="kivun-stat kivun-freshness" title="<?php esc_attr_e( 'אם השעה לא משתנה ברענון — הדף מוגש ממטמון והנתונים אינם מעודכנים.', 'kivun' ); ?>">
+						<?php
+						printf(
+							/* translators: %s: time the page was generated. */
+							esc_html__( 'עודכן %s', 'kivun' ),
+							esc_html( wp_date( 'H:i:s' ) )
+						);
+						?>
+					</span>
+				</div>
 
 				<label class="kivun-sr-only" for="kivun-lf-pp"><?php esc_html_e( 'רשומות בעמוד', 'kivun' ); ?></label>
 				<select id="kivun-lf-pp" name="kivun_lpp">
