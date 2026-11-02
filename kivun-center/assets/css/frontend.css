@@ -1105,6 +1105,21 @@ td.kivun-app-contact a { display: block; }
 	--cc-canvas: var(--kivun-card-bg, #f5f5f5);
 	--cc-line: var(--kivun-border);
 	--cc-tint: rgba(0, 0, 0, .04);
+	/* The redesign's own tokens. Every one of them is derived from the brand
+	   colour rather than written as a hex, so the console still re-skins
+	   itself with the site's Elementor palette — the reason --cc-brand exists
+	   in the first place. A fixed red here would have looked right on this
+	   site and wrong on the next one. */
+	--cc-chip: color-mix(in srgb, var(--cc-brand) 13%, #fff);
+	--cc-chip-ink: var(--cc-brand);
+	--cc-field: #f1f1f4;
+	--cc-field-ink: #16161a;
+	--cc-note: #eef7fd;
+	--cc-note-dot: #29b6f6;
+	--cc-shell: #232326;
+	--cc-radius: 18px;
+	--cc-radius-sm: 13px;
+	--cc-shadow: 0 1px 3px rgba(16, 16, 20, .06), 0 8px 24px -16px rgba(16, 16, 20, .22);
 	max-width: 1320px;
 	margin: 0 auto;
 	padding: 1.1rem;
@@ -1191,114 +1206,192 @@ td.kivun-app-contact a { display: block; }
 .kivun-cc-console .kivun-cc-leadlink { color: var(--cc-brand); }
 
 /* Top bar — makes the console read as an application, not a page section. */
+/* The dark shell. It bleeds past the console's own padding to the rounded
+   edge — the console already clips to that radius, so the corners come free
+   — and carries enough bottom padding for the stat cards to sit across its
+   lower edge rather than under it. */
 .kivun-cc-topbar {
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
 	justify-content: space-between;
 	gap: 1rem;
-	padding: 1rem 1.25rem;
-	margin-bottom: 1rem;
-	/* Darkening overlay over the brand colour — works for any brand hue
-	   without needing a second, hard-coded shade. */
-	background: linear-gradient(135deg, rgba(0,0,0,.42), rgba(0,0,0,.02)), var(--cc-brand);
-	border-radius: 16px;
+	margin: -1.1rem -1.1rem 0;
+	padding: 1.5rem 1.7rem 3.1rem;
+	background: var(--cc-shell);
+	border-radius: 0 0 26px 26px;
 	color: #fff;
-	box-shadow: 0 6px 20px rgba(0,0,0,.18);
 }
-.kivun-cc-topbar__brand { display: flex; align-items: center; gap: .85rem; }
+.kivun-cc-topbar__brand { display: flex; align-items: center; gap: .7rem; }
 .kivun-cc-topbar__mark {
 	display: grid;
 	place-items: center;
-	width: 42px;
-	height: 42px;
-	font-size: 1.35rem;
-	background: rgba(255,255,255,.18);
-	border-radius: 12px;
+	width: 10px;
+	height: 10px;
+	border-radius: 50%;
+	background: var(--cc-note-dot);
 	flex: 0 0 auto;
+	overflow: hidden;
+	/* The mark is a dot in this design, not a glyph. The icon inside stays
+	   in the markup — it is what the dot is made of on a browser that will
+	   not paint a background — but it is scaled out of the way here. */
+	font-size: 0;
+	color: transparent;
 }
-.kivun-cc-topbar__title { margin: 0; font-size: 1.15rem; font-weight: 800; color: #fff; line-height: 1.25; }
-.kivun-cc-topbar__sub { margin: .1rem 0 0; font-size: .82rem; color: rgba(255,255,255,.82); }
-.kivun-cc-topbar__user { display: flex; align-items: center; gap: .8rem; font-size: .86rem; }
-.kivun-cc-topbar__hello { color: rgba(255,255,255,.92); font-weight: 600; }
-.kivun-cc-topbar__logout {
+.kivun-cc-topbar__mark svg { width: 0; height: 0; }
+.kivun-cc-topbar__title { margin: 0; font-size: 1.45rem; font-weight: 800; color: #fff; line-height: 1.2; letter-spacing: -.01em; }
+.kivun-cc-topbar__sub { margin: .25rem 0 0; font-size: .85rem; color: rgba(255,255,255,.62); font-weight: 500; }
+.kivun-cc-topbar__user { display: flex; align-items: center; gap: .6rem; font-size: .86rem; }
+.kivun-cc-topbar__hello {
+	display: inline-flex;
+	align-items: center;
+	gap: .55rem;
+	padding: .4rem .5rem .4rem 1rem;
+	background: rgba(255,255,255,.08);
+	border-radius: 999px;
+	color: rgba(255,255,255,.92);
+	font-weight: 600;
+}
+/* The initial, drawn from the name already in the markup rather than added
+   to it: no new field to keep in step with the account. */
+.kivun-cc-topbar__hello::before {
+	content: attr(data-initial);
+	display: grid;
+	place-items: center;
+	width: 30px;
+	height: 30px;
+	flex: 0 0 auto;
+	border-radius: 50%;
+	background: var(--cc-brand);
 	color: #fff;
+	font-size: .85rem;
+	font-weight: 800;
+	text-transform: uppercase;
+}
+.kivun-cc-topbar__logout {
+	color: rgba(255,255,255,.9);
 	text-decoration: none;
-	font-weight: 700;
-	padding: .35rem .8rem;
-	border: 1px solid rgba(255,255,255,.35);
+	font-weight: 600;
+	padding: .5rem 1.1rem;
+	border: 1px solid rgba(255,255,255,.18);
 	border-radius: 999px;
 	transition: background .15s;
 }
-.kivun-cc-topbar__logout:hover { background: rgba(255,255,255,.16); color: #fff; }
+.kivun-cc-topbar__logout:hover { background: rgba(255,255,255,.14); color: #fff; }
 
-/* Stat cards */
+/* Stat cards, sitting across the shell's bottom edge. */
 .kivun-cc-stats {
+	position: relative;
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+	grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
 	gap: .7rem;
-	margin-bottom: 1rem;
+	margin: -2.2rem 0 1rem;
 }
 .kivun-cc-stat {
 	display: flex;
-	flex-direction: column;
-	gap: .15rem;
-	padding: .85rem 1rem;
+	flex-direction: column-reverse;
+	justify-content: flex-end;
+	gap: .5rem;
+	min-height: 92px;
+	padding: .95rem 1.15rem;
 	background: var(--cc-surface);
-	border: 1px solid var(--cc-line);
-	border-radius: 14px;
+	border: 0;
+	border-radius: var(--cc-radius);
+	box-shadow: var(--cc-shadow);
 }
-.kivun-cc-stat__num { font-size: 1.5rem; font-weight: 800; line-height: 1.1; color: var(--cc-ink); }
-.kivun-cc-stat__label { font-size: .78rem; color: var(--kivun-muted); font-weight: 600; }
-.kivun-cc-stat--alert { border-color: #fdba74; background: #fff7ed; }
-.kivun-cc-stat--alert .kivun-cc-stat__num { color: #c2410c; }
+.kivun-cc-stat__num { font-size: 2.1rem; font-weight: 800; line-height: 1; color: var(--cc-ink); letter-spacing: -.02em; }
+.kivun-cc-stat__label {
+	display: flex;
+	align-items: center;
+	gap: .4rem;
+	font-size: .82rem;
+	color: var(--kivun-muted);
+	font-weight: 600;
+}
+.kivun-cc-stat__label::before {
+	content: "";
+	width: 7px;
+	height: 7px;
+	flex: 0 0 auto;
+	border-radius: 50%;
+	background: var(--cc-note-dot);
+}
+.kivun-cc-stat--alert { background: var(--cc-surface); }
+.kivun-cc-stat--alert .kivun-cc-stat__num { color: var(--cc-brand); }
+.kivun-cc-stat--alert .kivun-cc-stat__label::before { background: var(--cc-brand); }
 
 /* Nav tabs — restyled inside the console only. */
 .kivun-cc-console .kivun-cc-tabs {
 	display: flex;
-	flex-wrap: wrap;
-	gap: .35rem;
+	flex-wrap: nowrap;
+	gap: .2rem;
 	margin-bottom: 1.1rem;
-	padding: .35rem;
+	padding: .45rem;
 	background: var(--cc-surface);
-	border: 1px solid var(--cc-line);
-	border-radius: 14px;
+	border: 0;
+	border-radius: var(--cc-radius);
+	box-shadow: var(--cc-shadow);
+	/* Seven tabs do not fit a laptop at this size, and wrapping them made the
+	   bar two and three rows deep. One row that scrolls keeps the bar a fixed
+	   height whatever gets added to it. */
+	overflow-x: auto;
+	scrollbar-width: thin;
 }
 .kivun-cc-console .kivun-cc-tabs .kivun-tab {
 	display: inline-flex;
 	align-items: center;
-	gap: .4rem;
-	padding: .6rem 1.05rem;
+	gap: .5rem;
+	flex: 0 0 auto;
+	padding: .55rem 1rem .55rem .5rem;
 	border: none;
-	border-radius: 10px;
+	border-radius: 999px;
 	background: transparent;
 	font: inherit;
-	font-size: .9rem;
-	font-weight: 700;
-	color: var(--kivun-muted);
+	font-size: .88rem;
+	font-weight: 600;
+	color: var(--cc-ink);
 	cursor: pointer;
+	white-space: nowrap;
+	text-decoration: none;
 	box-shadow: none;
 	transition: background .15s, color .15s;
 }
 .kivun-cc-console .kivun-cc-tabs .kivun-tab:hover { background: var(--cc-tint); color: var(--cc-ink); }
 .kivun-cc-console .kivun-cc-tabs .kivun-tab.is-active {
-	background: var(--cc-brand);
+	background: var(--cc-shell);
 	color: #fff;
-	box-shadow: 0 2px 8px rgba(0,0,0,.18);
 }
+/* The icon is a chip, tinted when the tab is resting and solid brand once it
+   is the one you are on — which is what tells the two apart at a glance on a
+   bar where every tab is otherwise the same shape. */
+.kivun-cc-console .kivun-cc-tabs .kivun-tabicon {
+	display: grid;
+	place-items: center;
+	width: 30px;
+	height: 30px;
+	flex: 0 0 auto;
+	border-radius: 50%;
+	background: var(--cc-chip);
+	color: var(--cc-chip-ink);
+	font-size: .9rem;
+}
+.kivun-cc-console .kivun-cc-tabs .kivun-tabicon svg { width: 15px; height: 15px; }
+.kivun-cc-console .kivun-cc-tabs .kivun-tab.is-active .kivun-tabicon { background: var(--cc-brand); color: #fff; }
 /* Counts on the tabs you are NOT on still have to be readable — they are the
    reason to click through. A tinted chip on the light bar, inverted once the
    tab is active and the bar goes dark. */
 .kivun-cc-console .kivun-cc-tabs .kivun-tab .kivun-tab-badge {
-	background: var(--cc-tint);
-	color: var(--cc-ink);
-	border: 1px solid var(--cc-line);
+	padding: .1rem .5rem;
+	background: var(--cc-field);
+	color: var(--kivun-muted);
+	border: 0;
+	border-radius: 999px;
+	font-size: .72rem;
+	font-weight: 700;
 }
-.kivun-cc-console .kivun-cc-tabs .kivun-tab:hover .kivun-tab-badge { border-color: transparent; }
 .kivun-cc-console .kivun-cc-tabs .kivun-tab.is-active .kivun-tab-badge {
-	background: rgba(255,255,255,.24);
+	background: rgba(255,255,255,.16);
 	color: #fff;
-	border-color: transparent;
 }
 .kivun-cc-tabicon { font-size: 1rem; line-height: 1; }
 
@@ -1487,16 +1580,22 @@ td.kivun-app-contact a { display: block; }
 .kivun-cc-leadbar .kivun-stat strong { display: inline; font-size: 1rem; margin: 0; color: var(--cc-ink); }
 
 /* ── Publishing wizard (multi-step form) ─────────────────────────────────── */
-/* One flow instead of two columns: display:contents lets the main and side
-   groups dissolve so every card orders freely within a single step. */
-/* align-items:start on the two-column grid would stop the cards stretching
-   once the container becomes a single flex column. */
-.kivun-cc-wizard .kivun-cc-grid { display: flex; flex-direction: column; gap: 1rem; align-items: stretch; }
+/*
+ * This used to read `display: flex` on the grid and `display: contents` on
+ * both columns, dissolving them so that cards from either one could be
+ * ordered into a single per-step sequence. That is why every card's `order`
+ * was already numbered across both columns rather than within one.
+ *
+ * The cards now all live in the main column in the markup, so the dissolving
+ * is no longer needed — and `display: contents` on the side would dissolve
+ * the step rail along with it, putting it in the flow between the cards
+ * instead of beside them. The grid is a grid again; the orders did not have
+ * to change, because they were already one sequence.
+ */
+.kivun-cc-wizard .kivun-cc-grid { align-items: start; }
 /* Only one step is on screen at a time, so the page head can sit tighter. */
 .kivun-cc-console .kivun-cc-wizard { margin-top: .25rem; }
 .kivun-cc-console .kivun-cc-front > .kivun-cc-head { margin-bottom: .9rem; }
-.kivun-cc-wizard .kivun-cc-main,
-.kivun-cc-wizard .kivun-cc-side { display: contents; }
 /* Step visibility is a separate axis from the type-based [hidden] on the
    course/session/event cards, so it uses its own class and never clobbers it. */
 .kivun-cc-wizard .kivun-step-off { display: none !important; }
@@ -1579,6 +1678,387 @@ td.kivun-app-contact a { display: block; }
 	font-weight: 600;
 }
 .kivun-wiz-error[hidden] { display: none !important; }
+
+/* ── The publish wizard, redesigned ──────────────────────────────────────────
+ *
+ * Scoped to the wizard form on purpose. `.kivun-cc-card`, `.kivun-cc-input`
+ * and friends are shared with the library, leads, campaigns, numbers and jobs
+ * tabs, which have no design of their own yet — restyling them unscoped would
+ * have redrawn six screens nobody has looked at. The shell, the stat cards and
+ * the tab bar above are deliberately NOT scoped: those are the same furniture
+ * on every tab, and they should change together.
+ * ───────────────────────────────────────────────────────────────────────── */
+
+.kivun-cc-wizard .kivun-cc-grid { grid-template-columns: minmax(0, 1fr) 300px; gap: 1.1rem; }
+.kivun-cc-wizard .kivun-cc-main { gap: 1rem; }
+
+/* The rail */
+.kivun-cc-rail { position: sticky; top: 16px; padding: 1.5rem 1.4rem; }
+.kivun-cc-rail__title { margin: 0 0 .5rem; font-size: 1.25rem; font-weight: 800; color: var(--cc-ink); letter-spacing: -.01em; }
+.kivun-cc-rail__lead { margin: 0 0 1.5rem; font-size: .84rem; line-height: 1.65; color: var(--kivun-muted); }
+
+.kivun-cc-rail .kivun-wiz-steps {
+	display: block;
+	margin: 0 !important;
+	padding: 0 !important;
+}
+.kivun-cc-rail .kivun-wiz-step {
+	position: relative;
+	display: flex;
+	align-items: center;
+	gap: .75rem;
+	flex: none;
+	padding: 0 0 1.5rem;
+	background: none;
+	border: 0;
+	border-radius: 0;
+	box-shadow: none;
+	font-size: .92rem;
+	font-weight: 600;
+	color: var(--kivun-muted);
+}
+.kivun-cc-rail .kivun-wiz-step:last-child { padding-bottom: 0; }
+/* The thread between the circles. Drawn from each step down to the next, so
+   the last one has none and the line never overshoots the list. */
+.kivun-cc-rail .kivun-wiz-step:not(:last-child)::before {
+	content: "";
+	position: absolute;
+	top: 34px;
+	bottom: 6px;
+	inset-inline-start: 16px;
+	width: 2px;
+	margin-inline-start: -1px;
+	background: var(--cc-line);
+}
+.kivun-cc-rail .kivun-wiz-step.is-done::before { background: var(--cc-note-dot); }
+.kivun-cc-rail .kivun-wiz-step__num {
+	width: 34px;
+	height: 34px;
+	background: var(--cc-surface);
+	border: 2px solid var(--cc-line);
+	color: var(--kivun-muted);
+	font-size: .9rem;
+	z-index: 1;
+}
+.kivun-cc-rail .kivun-wiz-step:hover { color: var(--cc-ink); }
+.kivun-cc-rail .kivun-wiz-step.is-current { color: var(--cc-ink); font-weight: 800; }
+.kivun-cc-rail .kivun-wiz-step.is-current .kivun-wiz-step__num {
+	background: var(--cc-brand);
+	border-color: var(--cc-brand);
+	color: #fff;
+}
+.kivun-cc-rail .kivun-wiz-step.is-done { color: var(--cc-ink); }
+.kivun-cc-rail .kivun-wiz-step.is-done .kivun-wiz-step__num {
+	background: var(--cc-note-dot);
+	border-color: var(--cc-note-dot);
+	color: #fff;
+}
+
+/* Cards */
+.kivun-cc-wizard .kivun-cc-card {
+	border: 0;
+	border-radius: var(--cc-radius);
+	box-shadow: var(--cc-shadow);
+	padding: 1.5rem 1.6rem;
+}
+.kivun-cc-wizard .kivun-cc-card.kivun-cc-section[data-type="event"] {
+	border: 0;
+	background: var(--cc-surface);
+	box-shadow: 0 0 0 2px var(--cc-brand), var(--cc-shadow);
+}
+
+/* Headings and labels */
+.kivun-cc-wizard .kivun-cc-label,
+.kivun-cc-wizard .kivun-cc-h3 {
+	display: flex;
+	align-items: center;
+	gap: .65rem;
+	flex-direction: row-reverse;
+	justify-content: flex-end;
+	margin: 0 0 1.25rem;
+	font-size: 1.12rem;
+	font-weight: 800;
+	color: var(--cc-ink);
+	letter-spacing: -.01em;
+}
+.kivun-cc-wizard .kivun-cc-sub {
+	display: flex;
+	align-items: center;
+	gap: .55rem;
+	flex-direction: row-reverse;
+	justify-content: flex-end;
+	margin: 1.1rem 0 .5rem;
+	font-size: .9rem;
+	font-weight: 700;
+	color: var(--cc-ink);
+}
+/* The chip a heading's icon sits in. The icon itself stays optional — a
+   heading without one keeps its text flush, rather than leaving a hole. */
+.kivun-cc-wizard .kivun-cc-chip {
+	display: grid;
+	place-items: center;
+	width: 34px;
+	height: 34px;
+	flex: 0 0 auto;
+	border-radius: 50%;
+	background: var(--cc-chip);
+	color: var(--cc-chip-ink);
+}
+.kivun-cc-wizard .kivun-cc-chip svg { width: 17px; height: 17px; }
+/* The generator is the one thing on these screens that is not the brand
+   doing the work, so the design marks it in the accent blue rather than the
+   brand red — the same blue as the "done" steps and the note dots. */
+.kivun-cc-wizard .kivun-cc-label--ai .kivun-cc-chip {
+	background: color-mix(in srgb, var(--cc-note-dot) 17%, #fff);
+	color: var(--cc-note-dot);
+}
+.kivun-cc-wizard .kivun-cc-sub .kivun-cc-chip { width: 27px; height: 27px; }
+.kivun-cc-wizard .kivun-cc-sub .kivun-cc-chip svg { width: 14px; height: 14px; }
+
+/* Fields */
+.kivun-cc-wizard .kivun-cc-input {
+	min-height: 52px;
+	padding: .85rem 1.05rem;
+	padding-inline-end: 3.5rem;
+	background: var(--cc-field);
+	border: 1px solid transparent;
+	border-radius: var(--cc-radius-sm);
+	color: var(--cc-field-ink);
+	font-size: .95rem;
+}
+.kivun-cc-wizard textarea.kivun-cc-input,
+.kivun-cc-wizard .kivun-cc-textarea { min-height: 96px; line-height: 1.6; }
+.kivun-cc-wizard .kivun-cc-input::placeholder { color: #9b9ba3; }
+.kivun-cc-wizard .kivun-cc-input:focus {
+	background: var(--cc-surface);
+	border-color: var(--cc-brand);
+	box-shadow: 0 0 0 4px color-mix(in srgb, var(--cc-brand) 14%, transparent);
+}
+.kivun-cc-wizard select.kivun-cc-input { padding-inline-end: 1.05rem; }
+
+/* The dictation button. voice.js inserts it as the field's next sibling, so
+   it cannot be positioned against the field itself — there is no shared
+   container to position inside. Floating it and pulling it back up by the
+   field's own height puts it in the field, and works because the height
+   above is set here rather than left to the browser. */
+.kivun-cc-wizard .kivun-cc-input + .kivun-mic {
+	position: relative;
+	z-index: 1;
+	display: grid;
+	place-items: center;
+	float: inline-end;
+	width: 40px;
+	height: 40px;
+	margin-block-start: -46px;
+	margin-inline-end: 6px;
+	padding: 0;
+	background: var(--cc-shell);
+	border: 0;
+	border-radius: 50%;
+	color: #fff;
+	cursor: pointer;
+}
+.kivun-cc-wizard .kivun-mic:hover { background: #000; color: #fff; }
+.kivun-cc-wizard .kivun-mic.is-rec { background: var(--cc-brand); }
+.kivun-cc-wizard .kivun-mic svg { width: 17px; height: 17px; }
+
+/* File pickers: the dashed drop area from the design, with the browser's own
+   button restyled in place. `::file-selector-button` keeps the real input
+   doing the work — no label-and-hidden-input swap, which is what usually
+   breaks keyboard access and form resets. */
+.kivun-cc-wizard input[type="file"] {
+	display: block;
+	width: 100%;
+	box-sizing: border-box;
+	padding: 1.4rem;
+	background: var(--cc-surface);
+	border: 2px dashed var(--cc-line);
+	border-radius: var(--cc-radius-sm);
+	font: inherit;
+	font-size: .88rem;
+	color: var(--kivun-muted);
+	cursor: pointer;
+}
+.kivun-cc-wizard input[type="file"]:hover { border-color: color-mix(in srgb, var(--cc-brand) 40%, transparent); }
+.kivun-cc-wizard input[type="file"]::file-selector-button {
+	margin-inline-end: .9rem;
+	padding: .6rem 1.1rem;
+	background: var(--cc-shell);
+	border: 0;
+	border-radius: 999px;
+	color: #fff;
+	font: inherit;
+	font-weight: 700;
+	font-size: .86rem;
+	cursor: pointer;
+}
+.kivun-cc-wizard input[type="file"]::file-selector-button:hover { background: #000; }
+
+/* Hints: the quiet blue note from the design, and the plain grey line. */
+.kivun-cc-wizard .kivun-cc-hint,
+.kivun-cc-wizard .kivun-field-hint {
+	display: flex;
+	align-items: flex-start;
+	gap: .5rem;
+	margin: .9rem 0 0;
+	padding: .75rem .9rem;
+	background: var(--cc-note);
+	border-radius: var(--cc-radius-sm);
+	font-size: .82rem;
+	line-height: 1.6;
+	color: #44505c;
+}
+.kivun-cc-wizard .kivun-cc-hint::before,
+.kivun-cc-wizard .kivun-field-hint::before {
+	content: "";
+	width: 7px;
+	height: 7px;
+	flex: 0 0 auto;
+	margin-top: .45rem;
+	border-radius: 50%;
+	background: var(--cc-note-dot);
+}
+
+/* What to publish — the four type cards */
+.kivun-cc-wizard .kivun-cc-check {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: flex-end;
+	gap: .7rem;
+	min-height: 118px;
+	margin: 0;
+	padding: 1.1rem .8rem 1rem;
+	background: var(--cc-field);
+	border: 2px solid transparent;
+	border-radius: var(--cc-radius-sm);
+	font-weight: 700;
+	cursor: pointer;
+	transition: border-color .15s, background .15s;
+}
+.kivun-cc-wizard .kivun-cc-check:hover { border-color: color-mix(in srgb, var(--cc-brand) 35%, transparent); }
+.kivun-cc-wizard .kivun-cc-check:has(.kivun-cc-toggle:checked) {
+	background: var(--cc-surface);
+	border-color: var(--cc-brand);
+}
+.kivun-cc-wizard .kivun-cc-check .kivun-cc-toggle {
+	position: absolute;
+	top: .7rem;
+	inset-inline-end: .7rem;
+	width: 20px;
+	height: 20px;
+	margin: 0;
+	accent-color: var(--cc-brand);
+	cursor: pointer;
+}
+.kivun-cc-wizard .kivun-cc-check .kivun-cc-chip { width: 44px; height: 44px; }
+.kivun-cc-wizard .kivun-cc-check .kivun-cc-chip svg { width: 21px; height: 21px; }
+.kivun-cc-wizard .kivun-cc-check > span { font-size: .95rem; }
+.kivun-cc-wizard .kivun-cc-view {
+	position: absolute;
+	top: .7rem;
+	inset-inline-start: .7rem;
+	color: var(--kivun-muted);
+	text-decoration: none;
+}
+/* The checkboxes are a row of cards here rather than a stacked list. */
+.kivun-cc-wizard .kivun-cc-types {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+	gap: .7rem;
+}
+
+/* Buttons */
+.kivun-cc-wizard .kivun-cc-btn {
+	gap: .6rem;
+	padding: .85rem 1.5rem;
+	border-radius: 999px;
+	font-size: .95rem;
+	font-weight: 700;
+}
+.kivun-cc-wizard .kivun-cc-btn--ghost,
+.kivun-cc-wizard .kivun-wiz-prev {
+	background: var(--cc-surface);
+	border: 1px solid var(--cc-line);
+	color: var(--cc-ink);
+}
+.kivun-cc-wizard .kivun-cc-btn--ghost:hover,
+.kivun-cc-wizard .kivun-wiz-prev:hover { background: var(--cc-field); color: var(--cc-ink); filter: none; }
+/* The dark secondary actions from the design: generate, pick a file, send. */
+.kivun-cc-wizard .kivun-cc-ai-btn,
+.kivun-cc-wizard .kivun-cc-gen-btn {
+	background: var(--cc-shell);
+	color: #fff;
+}
+.kivun-cc-wizard .kivun-cc-ai-btn:hover,
+.kivun-cc-wizard .kivun-cc-gen-btn:hover { background: #000; color: #fff; filter: none; }
+
+/* The bottom bar: how far along, and the way on. */
+.kivun-cc-wizard .kivun-wiz-nav {
+	display: flex;
+	align-items: center;
+	gap: .7rem;
+	margin-top: 1.1rem;
+	padding: 1rem 1.2rem;
+	background: var(--cc-surface);
+	border: 0;
+	border-radius: var(--cc-radius);
+	box-shadow: var(--cc-shadow);
+}
+.kivun-cc-wizard .kivun-wiz-progress {
+	display: flex;
+	align-items: center;
+	gap: .9rem;
+	margin-inline-end: auto;
+	font-size: .86rem;
+	font-weight: 700;
+	color: var(--cc-ink);
+}
+/* The bar reads the step off the form's own data-current, which the step
+   handler already keeps up to date — so it moves with the wizard without the
+   script having to know the bar exists. */
+.kivun-cc-wizard .kivun-wiz-progress::after {
+	content: "";
+	width: 190px;
+	max-width: 32vw;
+	height: 6px;
+	border-radius: 999px;
+	/* Filled from the inline start — the right, here — so it grows the way
+	   the steps beside it are read. */
+	background:
+		linear-gradient(var(--cc-brand), var(--cc-brand)) no-repeat
+		right / var(--cc-progress, 25%) 100%,
+		var(--cc-field);
+}
+.kivun-cc-wizard[data-current="1"] { --cc-progress: 25%; }
+.kivun-cc-wizard[data-current="2"] { --cc-progress: 50%; }
+.kivun-cc-wizard[data-current="3"] { --cc-progress: 75%; }
+.kivun-cc-wizard[data-current="4"] { --cc-progress: 100%; }
+
+@media (max-width: 900px) {
+	.kivun-cc-wizard .kivun-cc-grid { grid-template-columns: minmax(0, 1fr); }
+	/* Where am I, before what I am filling in — the rail is written after the
+	   cards so that it is the form that reads first to a screen reader and on
+	   a narrow screen it would otherwise land at the very bottom, past
+	   everything it is meant to orient you in. */
+	.kivun-cc-wizard .kivun-cc-side { order: -1; }
+	.kivun-cc-rail { position: static; padding: 1.2rem 1.3rem; }
+	.kivun-cc-rail .kivun-wiz-steps { display: flex; flex-wrap: wrap; gap: .5rem 1.1rem; }
+	.kivun-cc-rail .kivun-wiz-step { padding-bottom: 0; }
+	.kivun-cc-rail .kivun-wiz-step:not(:last-child)::before { content: none; }
+	.kivun-cc-rail__lead { margin-bottom: 1.1rem; }
+	/* The step bar used to hide its labels this narrow, when it was a row of
+	   four boxes across the top and there was no room. In the rail they are
+	   the only thing that says what a step is, so a bare numbered circle
+	   tells the reader nothing. */
+	.kivun-cc-rail .kivun-wiz-step__label { display: inline; }
+	/* Two across rather than one: five full-width cards is most of a phone
+	   screen before you reach the form. */
+	.kivun-cc-console .kivun-cc-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+	.kivun-cc-console .kivun-cc-stat { min-height: 78px; }
+	.kivun-cc-console .kivun-cc-stat__num { font-size: 1.7rem; }
+}
 
 @media (max-width: 600px) {
 	.kivun-wiz-step__label { display: none; }

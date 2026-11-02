@@ -267,4 +267,42 @@ final class ConsoleContractTest extends TestCase {
 			);
 		}
 	}
+
+	/**
+	 * The step rail stays inside the form.
+	 *
+	 * This one is new, and it is the reason to write it down. The handler
+	 * finds the steps with `form.querySelectorAll('.kivun-wiz-step')` and
+	 * walks back up from a click with `closest('.kivun-cc-wizard')`. The
+	 * rail now sits in a sidebar, which looks like a piece of page
+	 * furniture and invites being moved out next to the heading — and a
+	 * rail outside the form still draws perfectly, still highlights
+	 * nothing, and no longer navigates. Nothing about the markup hints at
+	 * that, so the test says it.
+	 *
+	 * @return void
+	 */
+	public function test_the_step_rail_stays_inside_the_form(): void {
+		$form = $this->console_form();
+
+		$this->assertStringContainsString(
+			'kivun-wiz-steps',
+			$form,
+			'the step rail is outside the form, so clicking a step cannot reach the wizard it belongs to'
+		);
+		$this->assertStringContainsString(
+			'data-gostep=',
+			$form,
+			'the steps no longer say which step they go to'
+		);
+
+		// And the rail must not have become a second copy: two sets of steps
+		// would both be highlighted, and only one would be the one you see.
+		$src = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-content-creator.php' );
+		$this->assertSame(
+			1,
+			substr_count( $src, 'class="kivun-wiz-steps"' ),
+			'there is more than one step rail; both would be driven, and the reader would be told two different things'
+		);
+	}
 }
