@@ -3558,6 +3558,7 @@ class Kivun_Content_Creator {
 		);
 		?>
 		<div class="kivun-cc-front">
+			<div class="kivun-cc-panel">
 			<div class="kivun-cc-head">
 				<h2 class="kivun-cc-title"><?php esc_html_e( 'דפי נחיתה בהתאמה אישית', 'kivun' ); ?></h2>
 				<p class="kivun-cc-lead">
@@ -3578,6 +3579,19 @@ class Kivun_Content_Creator {
 			<?php if ( ! $pages ) : ?>
 				<p class="kivun-cc-note"><?php esc_html_e( 'עדיין אין דפי נחיתה. צרו אחד בלשונית "פרסום תוכן" והוא יופיע כאן.', 'kivun' ); ?></p>
 			<?php else : ?>
+				<div class="kivun-cc-filterbar">
+					<div class="kivun-cc-search">
+						<?php echo kivun_icon( 'filter' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?>
+						<input
+							type="search"
+							class="kivun-cc-search__input"
+							placeholder="<?php esc_attr_e( 'חיפוש לפי שם הדף', 'kivun' ); ?>"
+							aria-label="<?php esc_attr_e( 'חיפוש לפי שם הדף', 'kivun' ); ?>"
+							autocomplete="off"
+						>
+					</div>
+				</div>
+				<div class="kivun-cc-pane" data-pane="forms">
 				<div class="kivun-cc-tablewrap">
 					<table class="kivun-cc-table">
 						<thead>
@@ -3596,13 +3610,13 @@ class Kivun_Content_Creator {
 							$kivun_count  = count( Kivun_Custom_Forms::fields( $kivun_pid ) );
 							?>
 							<tr data-form-row="<?php echo esc_attr( (string) $kivun_pid ); ?>">
-								<td>
+								<td data-search="<?php echo esc_attr( get_the_title( $kivun_pid ) ); ?>">
 									<strong><?php echo esc_html( get_the_title( $kivun_pid ) ); ?></strong>
 									<span class="kivun-cc-source"><?php echo esc_html( get_the_date( 'd/m/Y', $kivun_pid ) ); ?></span>
 								</td>
 								<td>
 									<?php if ( $kivun_custom ) : ?>
-										<span class="kivun-cc-badge">
+										<span class="kivun-cc-fact kivun-cc-fact--own">
 											<?php
 											printf(
 												/* translators: %d: number of questions. */
@@ -3612,19 +3626,19 @@ class Kivun_Content_Creator {
 											?>
 										</span>
 									<?php else : ?>
-										<span class="kivun-muted"><?php esc_html_e( 'הטופס הקבוע', 'kivun' ); ?></span>
+										<span class="kivun-cc-fact kivun-cc-fact--plain"><?php esc_html_e( 'הטופס הקבוע', 'kivun' ); ?></span>
 									<?php endif; ?>
 								</td>
 								<td>
 									<?php if ( 'publish' === $kivun_page->post_status ) : ?>
-										<span class="kivun-cc-badge"><?php esc_html_e( 'פעיל', 'kivun' ); ?></span>
+										<span class="kivun-cc-fact kivun-cc-fact--publish"><?php esc_html_e( 'פעיל', 'kivun' ); ?></span>
 									<?php else : ?>
-										<span class="kivun-muted"><?php esc_html_e( 'טיוטה', 'kivun' ); ?></span>
+										<span class="kivun-cc-fact kivun-cc-fact--draft"><?php esc_html_e( 'טיוטה', 'kivun' ); ?></span>
 									<?php endif; ?>
 								</td>
-								<td>
-									<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost kivun-edit-form" data-id="<?php echo esc_attr( (string) $kivun_pid ); ?>">
-										<?php echo $kivun_custom ? esc_html__( 'עריכת הטופס', 'kivun' ) : esc_html__( 'בניית טופס', 'kivun' ); ?>
+								<td class="kivun-cc-rowactions">
+									<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-act kivun-cc-act--edit kivun-edit-form" data-id="<?php echo esc_attr( (string) $kivun_pid ); ?>">
+										<?php echo kivun_icon( 'landing' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?><?php echo $kivun_custom ? esc_html__( 'עריכת הטופס', 'kivun' ) : esc_html__( 'בניית טופס', 'kivun' ); ?>
 									</button>
 									<?php
 									// Composing a form is the slow part, so the
@@ -3632,10 +3646,8 @@ class Kivun_Content_Creator {
 									// questions is a copy rather than doing it
 									// again by hand.
 									?>
-									<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost kivun-duplicate-form" data-id="<?php echo esc_attr( (string) $kivun_pid ); ?>">
-										<?php esc_html_e( 'שכפול', 'kivun' ); ?>
-									</button>
-									<a class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost" href="<?php echo esc_url( (string) get_permalink( $kivun_pid ) ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'תצוגה', 'kivun' ); ?></a>
+									<a class="kivun-cc-icon-btn" href="<?php echo esc_url( (string) get_permalink( $kivun_pid ) ); ?>" target="_blank" rel="noopener noreferrer" aria-label="<?php esc_attr_e( 'תצוגה', 'kivun' ); ?>" title="<?php esc_attr_e( 'תצוגה', 'kivun' ); ?>"><?php echo kivun_icon( 'eye' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?></a>
+									<button type="button" class="kivun-cc-icon-btn kivun-duplicate-form" data-id="<?php echo esc_attr( (string) $kivun_pid ); ?>" aria-label="<?php esc_attr_e( 'שכפול', 'kivun' ); ?>" title="<?php esc_attr_e( 'שכפול', 'kivun' ); ?>"><?php echo kivun_icon( 'copy' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?></button>
 									<span class="kivun-cc-wa-status kivun-form-status" role="status" aria-live="polite"></span>
 								</td>
 							</tr>
@@ -3648,7 +3660,10 @@ class Kivun_Content_Creator {
 						</tbody>
 					</table>
 				</div>
+				<p class="kivun-cc-noresults" hidden><?php esc_html_e( 'אין דף שמתאים לחיפוש.', 'kivun' ); ?></p>
+				</div>
 			<?php endif; ?>
+			</div>
 		</div>
 		<?php
 	}
@@ -3728,7 +3743,16 @@ class Kivun_Content_Creator {
 
 			<p class="kivun-error kivun-cf-error" style="display:none;color:var(--kivun-error)"></p>
 			<div class="kivun-cf-save">
-				<button type="submit" class="kivun-cc-btn kivun-cc-btn--sm"><?php esc_html_e( 'שמירת הטופס', 'kivun' ); ?></button>
+				<button type="submit" class="kivun-cc-btn kivun-cc-btn--sm kivun-cf-save__go"><?php esc_html_e( 'שמירת הטופס', 'kivun' ); ?></button>
+				<?php
+				/*
+				 * The same button that opened the builder closes it, so this
+				 * is the one at the bottom of a long panel rather than a
+				 * second mechanism — reached by its own data-id, and handled
+				 * by the toggle that already exists.
+				 */
+				?>
+				<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost kivun-edit-form" data-id="<?php echo esc_attr( (string) $post_id ); ?>"><?php esc_html_e( 'סגירה', 'kivun' ); ?></button>
 				<span class="kivun-cc-wa-status kivun-cf-status" role="status" aria-live="polite"></span>
 				<span class="kivun-cf-dirty" hidden><?php esc_html_e( 'יש שינויים שלא נשמרו', 'kivun' ); ?></span>
 			</div>

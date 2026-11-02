@@ -2493,12 +2493,28 @@
 						// word in the row — searching for "קורס" should not
 						// match every row that happens to be one.
 						var cell = row.querySelector('[data-search]');
-						var title = (cell ? cell.getAttribute('data-search') : row.textContent) || '';
-						var hit = !term || title.toLowerCase().indexOf(term) !== -1;
+
+						// Not every <tr> is a row of the list. The custom
+						// forms table puts each page's builder in a row of
+						// its own beneath it, which carries no title and
+						// must follow whatever happened to its parent rather
+						// than be searched on the words inside the builder.
+						if (!cell) {
+							if (row.dataset.formEdit !== undefined) { return; }
+							row.removeAttribute('data-filtered');
+							return;
+						}
+
+						var hit = !term || (cell.getAttribute('data-search') || '').toLowerCase().indexOf(term) !== -1;
 						// The rows ship visible; only a miss sets the flag, so
 						// a row the script never saw is never left hidden.
 						if (hit) { row.removeAttribute('data-filtered'); } else { row.setAttribute('data-filtered', ''); }
 						if (hit) { shown++; }
+
+						var editor = row.nextElementSibling;
+						if (editor && editor.dataset.formEdit !== undefined) {
+							if (hit) { editor.removeAttribute('data-filtered'); } else { editor.setAttribute('data-filtered', ''); }
+						}
 					});
 
 					var empty = pane.querySelector('.kivun-cc-noresults');

@@ -1590,6 +1590,21 @@ td.kivun-app-contact a { display: block; }
 	background: var(--cc-brand);
 }
 .kivun-cc-fact--publish::before { background: var(--cc-note-dot); }
+/* A page with a form of its own, against one on the standard form: the
+   difference is the point of this screen, so it is carried by the chip and
+   not only by the words. */
+.kivun-cc-fact--own {
+	padding: .22rem .7rem;
+	background: var(--cc-chip);
+	border-radius: 999px;
+	color: var(--cc-chip-ink);
+}
+.kivun-cc-fact--plain {
+	padding: .22rem .7rem;
+	background: var(--cc-field);
+	border-radius: 999px;
+}
+.kivun-cc-fact--plain::before { background: var(--kivun-muted); }
 .kivun-cc-fact--draft::before,
 .kivun-cc-fact--pending::before { background: #f0b429; }
 .kivun-cc-fact--private::before,
@@ -3345,7 +3360,56 @@ body.kivun-ty-open { overflow: hidden; }
 	cursor: pointer;
 }
 .kivun-cf-builtin input { flex: none; width: auto; margin: 0; }
-.kivun-cf-builtin:has(input:checked) { border-color: #c7d2fe; background: #eef2ff; }
+/* A field that IS collected reads as a solid pill with a tick; one that is
+   not stays an outline. The checkbox is still the control — it is drawn as
+   the tick rather than replaced, so clicking, focus and the keyboard all
+   keep working. */
+.kivun-cc-console .kivun-cf-builtin {
+	gap: .45rem;
+	flex-direction: row-reverse;
+	padding: .42rem .9rem;
+	border-color: var(--cc-line);
+	font-weight: 600;
+}
+.kivun-cc-console .kivun-cf-builtin input {
+	appearance: none;
+	-webkit-appearance: none;
+	display: grid;
+	place-items: center;
+	width: 17px;
+	height: 17px;
+	border: 1.5px solid var(--cc-line);
+	border-radius: 50%;
+	background: none;
+	cursor: pointer;
+}
+.kivun-cc-console .kivun-cf-builtin input::after {
+	content: "✓";
+	font-size: .66rem;
+	font-weight: 800;
+	line-height: 1;
+	color: transparent;
+}
+.kivun-cc-console .kivun-cf-builtin:has(input:checked) {
+	background: var(--cc-shell);
+	border-color: var(--cc-shell);
+	color: #fff;
+}
+.kivun-cc-console .kivun-cf-builtin:has(input:checked) input {
+	background: var(--cc-brand);
+	border-color: var(--cc-brand);
+}
+.kivun-cc-console .kivun-cf-builtin:has(input:checked) input::after { color: #fff; }
+.kivun-cc-console .kivun-cf-builtin input:focus-visible { outline: 2px solid var(--cc-brand); outline-offset: 2px; }
+
+/* The row whose builder is open. */
+.kivun-cc-console .kivun-form-editrow > td {
+	background: color-mix(in srgb, var(--cc-brand) 4%, #fff);
+	padding: 1.2rem;
+}
+.kivun-cc-console tr:has(+ .kivun-form-editrow:not([hidden])) > td {
+	background: color-mix(in srgb, var(--cc-brand) 6%, #fff);
+}
 
 .kivun-cf-list { display: flex; flex-direction: column; gap: .6rem; margin: .6rem 0 .9rem; }
 .kivun-cf-row {

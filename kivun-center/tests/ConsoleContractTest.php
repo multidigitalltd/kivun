@@ -283,25 +283,36 @@ final class ConsoleContractTest extends TestCase {
 	public function test_an_icon_action_still_says_what_it_is(): void {
 		$src = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-content-creator.php' );
 
-		// Each icon-only control in the row, and the word it must still carry.
-		$at = strpos( $src, 'class="kivun-cc-rowactions"' );
-		$this->assertNotFalse( $at, 'the library row actions moved' );
-		$cell = substr( $src, $at, 2600 );
+		// Every icon-only control in the file, wherever it is. Stated over all
+		// of them rather than over one cell: an earlier version read "the
+		// first `.kivun-cc-rowactions` in the file", and started inspecting a
+		// different screen's actions the moment a second one adopted the
+		// same markup.
+		/*
+		 * PHP blocks come out first. An attribute whose value is an echoed
+		 * PHP block carries that block's own closing angle bracket, so a tag
+		 * pattern that stops at the first one reads half a tag and reports a
+		 * missing attribute that is plainly there.
+		 *
+		 * Written as a block comment on purpose: a line comment holding a
+		 * PHP close tag ends the PHP block, which is what the first version
+		 * of this comment did to the rest of the file.
+		 */
+		$tags = (string) preg_replace( '/<\?php.*?\?>/s', 'PHP', $src );
+		preg_match_all( '/<(?:a|button)\b[^>]*\bclass="[^"]*kivun-cc-icon-btn[^"]*"[^>]*>/', $tags, $m );
+		$this->assertNotEmpty( $m[0], 'there are no icon-only controls; this test now checks nothing' );
 
-		$this->assertMatchesRegularExpression(
-			'/aria-label="[^"]*צפייה/u',
-			$cell,
-			'the view action is an icon with no accessible name'
-		);
+		foreach ( $m[0] as $tag ) {
+			$this->assertStringContainsString(
+				'aria-label=',
+				$tag,
+				"an icon-only control carries no accessible name:\n  " . trim( preg_replace( '/\s+/', ' ', $tag ) )
+			);
+		}
 
 		// Archiving says one of two things depending on where the row is, so
 		// its name comes from a variable rather than a literal — which is
-		// still a name, as long as it reaches the attribute.
-		$this->assertMatchesRegularExpression(
-			'/aria-label="<\?php echo esc_attr\( \$kivun_archive_label \)/',
-			$cell,
-			'the archive action is an icon with no accessible name'
-		);
+		// still a name, as long as the variable holds the words it replaced.
 		$this->assertMatchesRegularExpression(
 			'/\$kivun_archive_label\s*=\s*\$archived\s*\?\s*__\( \'החזרה מהארכיון\'.*__\( \'העברה לארכיון\'/u',
 			$src,
@@ -321,8 +332,17 @@ final class ConsoleContractTest extends TestCase {
 			'an icon-only form button carries neither a label nor a tooltip'
 		);
 
-		// And the one action that kept its word still has it.
-		$this->assertStringContainsString( "esc_html_e( 'עריכה', 'kivun' )", $cell, 'the edit action lost its label too' );
+		// And the one action per row that keeps its word still has it: the
+		// whole point of making the others marks is that one is not.
+		preg_match_all( '/<(?:a|button)\b[^>]*\bclass="[^"]*kivun-cc-act--edit[^"]*"[^>]*>(.*?)<\/(?:a|button)>/s', $src, $labelled );
+		$this->assertNotEmpty( $labelled[0], 'no action keeps its label any more' );
+		foreach ( $labelled[1] as $i => $inside ) {
+			$this->assertMatchesRegularExpression(
+				'/esc_html_e?_?_?\(\s*\'[^\']+\'/',
+				$inside,
+				'the labelled action at position ' . $i . ' shows no word, which leaves the row all marks'
+			);
+		}
 	}
 
 	/**
@@ -339,11 +359,11 @@ final class ConsoleContractTest extends TestCase {
 	public function test_both_lists_are_on_the_page_for_the_filter(): void {
 		$src = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-content-creator.php' );
 
-		$this->assertSame(
-			2,
-			substr_count( $src, 'class="kivun-cc-pane"' ),
-			'the two panes the segmented control switches between are not both rendered'
-		);
+		// The two the segmented control switches between, named rather than
+		// counted — other screens use panes too, and counting them made this
+		// test fail the moment one more appeared.
+		$this->assertStringContainsString( 'data-pane="live"', $src, 'the live pane is gone' );
+		$this->assertStringContainsString( 'data-pane="archive"', $src, 'the archive pane is gone, so the control would switch to nothing' );
 		$this->assertStringContainsString( 'self::library_table( $put_away,', $src, 'the archive list is no longer rendered' );
 
 		// The search reads the title off the cell rather than the row, so
@@ -353,6 +373,36 @@ final class ConsoleContractTest extends TestCase {
 
 		$js = (string) file_get_contents( KIVUN_DIR . 'assets/js/frontend.js' );
 		$this->assertStringContainsString( "querySelector('[data-search]')", $js, 'the search no longer reads the title cell' );
+	}
+
+	/**
+	 * A builder row follows the row it belongs to.
+	 *
+	 * The custom-forms table puts each page's form builder in a row of its
+	 * own beneath it. It carries no title, so searching it as if it were a
+	 * list row would match on whatever words happen to be inside the
+	 * builder — and filtering a page out while leaving its open builder
+	 * behind would strand a panel under somebody else's row.
+	 *
+	 * @return void
+	 */
+	public function test_a_builder_row_follows_its_own_row(): void {
+		$js = (string) file_get_contents( KIVUN_DIR . 'assets/js/frontend.js' );
+
+		$at = strpos( $js, 'var ccFilterBar' );
+		$this->assertNotFalse( $at, 'the library filter moved' );
+		$body = substr( $js, $at, 2600 );
+
+		$this->assertStringContainsString(
+			'formEdit',
+			$body,
+			'the filter treats the builder rows as rows of the list'
+		);
+		$this->assertMatchesRegularExpression(
+			'/nextElementSibling[\s\S]{0,200}formEdit[\s\S]{0,200}data-filtered/',
+			$body,
+			'a filtered row does not take its builder row with it'
+		);
 	}
 
 	/**
