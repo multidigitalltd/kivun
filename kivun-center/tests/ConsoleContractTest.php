@@ -376,6 +376,47 @@ final class ConsoleContractTest extends TestCase {
 	}
 
 	/**
+	 * Each filter bar owns only the panes in its own panel.
+	 *
+	 * Every tab's panel is in the response, hidden rather than left out, so
+	 * more than one filter bar is on the page at once — measured: two.
+	 * Taking the first bar and then every pane in the document meant the
+	 * custom forms search was never wired at all, a library search filtered
+	 * the forms rows too, and clicking a library segment hid the forms pane,
+	 * which matches neither "live" nor "archive" — leaving that tab blank
+	 * until a reload.
+	 *
+	 * @return void
+	 */
+	public function test_each_filter_bar_owns_only_its_own_panes(): void {
+		$js = (string) file_get_contents( KIVUN_DIR . 'assets/js/frontend.js' );
+
+		$this->assertStringContainsString(
+			"document.querySelectorAll('.kivun-cc-filterbar')",
+			$js,
+			'only one filter bar is set up, so a second screen on the page gets no search'
+		);
+		$this->assertStringNotContainsString(
+			"document.querySelector('.kivun-cc-filterbar')",
+			$js,
+			'the filter still takes the first bar on the page'
+		);
+
+		$at = strpos( $js, "document.querySelectorAll('.kivun-cc-filterbar')" );
+		$body = substr( $js, $at, 1200 );
+		$this->assertMatchesRegularExpression(
+			'/closest\(\'\.kivun-tab-panel\'\)/',
+			$body,
+			'a bar collects panes beyond its own panel, so it hides another screen'
+		);
+		$this->assertStringNotContainsString(
+			"document.querySelectorAll('.kivun-cc-pane')",
+			$js,
+			'the panes are still gathered from the whole document'
+		);
+	}
+
+	/**
 	 * A builder row follows the row it belongs to.
 	 *
 	 * The custom-forms table puts each page's form builder in a row of its
@@ -389,9 +430,9 @@ final class ConsoleContractTest extends TestCase {
 	public function test_a_builder_row_follows_its_own_row(): void {
 		$js = (string) file_get_contents( KIVUN_DIR . 'assets/js/frontend.js' );
 
-		$at = strpos( $js, 'var ccFilterBar' );
+		$at = strpos( $js, "document.querySelectorAll('.kivun-cc-filterbar')" );
 		$this->assertNotFalse( $at, 'the library filter moved' );
-		$body = substr( $js, $at, 2600 );
+		$body = substr( $js, $at, 2800 );
 
 		$this->assertStringContainsString(
 			'formEdit',

@@ -2477,9 +2477,16 @@
 		// archive used to sit below the table in a shut <details> — so
 		// switching panes and filtering rows is all that is needed, and
 		// neither touches the server.
-		var ccFilterBar = document.querySelector('.kivun-cc-filterbar');
-		if (ccFilterBar) {
-			var ccPanes = document.querySelectorAll('.kivun-cc-pane');
+		// Every tab's panel is in the response, hidden rather than left out,
+		// so more than one filter bar is on the page at once. Taking the
+		// first bar and then every pane in the document meant the custom
+		// forms search was never wired at all, library searches filtered the
+		// forms rows too, and clicking a library segment hid the forms pane
+		// — it matches neither "live" nor "archive" — leaving that tab blank
+		// until a reload. Each bar now owns the panes in its own panel.
+		document.querySelectorAll('.kivun-cc-filterbar').forEach(function (ccFilterBar) {
+			var scope = ccFilterBar.closest('.kivun-tab-panel') || ccFilterBar.closest('.kivun-cc-front') || document;
+			var ccPanes = scope.querySelectorAll('.kivun-cc-pane');
 			var ccSearch = ccFilterBar.querySelector('.kivun-cc-search__input');
 
 			var ccApplyFilter = function () {
@@ -2538,7 +2545,7 @@
 					ccApplyFilter();
 				});
 			});
-		}
+		});
 
 		var ccConfirm = 'למחוק את כל התוכן המקושר? הפעולה תעביר לפח את דף הנחיתה, הקורס והסדנה.';
 		document.querySelectorAll('.kivun-cc-delete-form').forEach(function (f) {
