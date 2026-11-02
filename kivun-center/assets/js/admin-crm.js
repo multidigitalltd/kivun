@@ -246,6 +246,15 @@
 
 		Array.prototype.forEach.call(table.querySelectorAll('tbody tr'), function (row) {
 			Array.prototype.forEach.call(row.children, function (cell, i) {
+				// A cell that spans the row is not one column's value, so no
+				// column's heading names it. The custom forms table puts each
+				// page's whole form builder in a colspan cell like this, and
+				// labelling it made the stacked layout treat the builder as a
+				// value: a two-track grid squeezed it into 84px of a 244px
+				// card. Left unlabelled, it takes the exemption further down
+				// and keeps the row's width.
+				if (cell.colSpan > 1) { return; }
+
 				// A label written into the markup wins — it was chosen on purpose.
 				if (!cell.hasAttribute('data-label') && heads[i]) {
 					cell.setAttribute('data-label', (heads[i].textContent || '').trim());
@@ -421,11 +430,17 @@
 	window.addEventListener('resize', fitTablesSoon);
 	// A table inside a <details> has no width until the panel is opened.
 	document.addEventListener('toggle', fitTablesSoon, true);
-	// Nor does one on a tab that was not the open tab. The switch happens in
-	// another script, so this waits for the panel to be shown rather than
-	// assuming which listener runs first.
+	// Nor does one on a tab that was not the open tab, nor the archive behind
+	// the library's segmented control — which replaced a <details> that used
+	// to fire the toggle above, and so quietly took its remeasure with it.
+	// The switch happens in another script, so this waits for the panel to be
+	// shown rather than assuming which listener runs first.
 	document.addEventListener('click', function (e) {
-		if (e.target.closest('.kivun-tab')) { fitTablesSoon(); }
+		if (e.target.closest('.kivun-tab, .kivun-cc-seg')) { fitTablesSoon(); }
 	});
+	// Nor does a table whose wrapper the search had hidden for having no
+	// matches. Clearing the search brings it back with no click to notice,
+	// so the filter says so itself.
+	document.addEventListener('kivun:tables-shown', fitTablesSoon);
 
 }());

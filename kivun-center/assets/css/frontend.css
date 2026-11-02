@@ -1137,9 +1137,11 @@ td.kivun-app-contact a { display: block; }
    the theme footer) when the form column is taller than the viewport. */
 .kivun-cc-console .kivun-cc-side { position: static; top: auto; }
 .kivun-cc-console .kivun-cc-front { max-width: none; }
+/* Each tab's own heading, in the rail's voice so the list screens and the
+   wizard sound like one system. */
 .kivun-cc-console .kivun-cc-head { margin-bottom: 1.1rem; }
-.kivun-cc-console .kivun-cc-title { font-size: 1.3rem; font-weight: 800; margin: 0 0 .2rem; }
-.kivun-cc-console .kivun-cc-lead { font-size: .88rem; color: var(--kivun-muted); margin: 0; line-height: 1.6; }
+.kivun-cc-console .kivun-cc-title { font-size: 1.45rem; font-weight: 800; margin: 0 0 .3rem; letter-spacing: -.01em; color: var(--cc-ink); }
+.kivun-cc-console .kivun-cc-lead { font-size: .88rem; color: var(--kivun-muted); margin: 0; line-height: 1.65; }
 /* The campaign's tracked numbers, under its links. Set apart by a gap and
    a line so the two read as two channels of one campaign rather than as one
    table that changed its columns halfway down. */
@@ -1413,30 +1415,40 @@ td.kivun-app-contact a { display: block; }
 	padding: 1.35rem;
 }
 
+/* The table is a card, the same card as the wizard's. All seven of them
+   share this one shape, so the language set here is the language of every
+   list screen in the console. */
 .kivun-cc-tablewrap {
 	overflow-x: auto;
-	border: 1px solid var(--kivun-border);
-	border-radius: 14px;
-	background: #fff;
-	box-shadow: 0 1px 3px rgba(15,23,42,.05);
+	border: 0;
+	border-radius: var(--cc-radius, 18px);
+	background: var(--cc-surface, #fff);
+	box-shadow: var(--cc-shadow, 0 1px 3px rgba(15,23,42,.05));
 }
-.kivun-cc-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: .88rem; }
+.kivun-cc-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: .89rem; }
 .kivun-cc-table th,
-.kivun-cc-table td { padding: .75rem .85rem; text-align: start; border-bottom: 1px solid var(--kivun-border); vertical-align: middle; }
+.kivun-cc-table td {
+	padding: .95rem 1.1rem;
+	text-align: start;
+	border-bottom: 1px solid var(--cc-line, #e5e7eb);
+	vertical-align: middle;
+}
 .kivun-cc-table thead th {
-	background: #f8fafc;
-	font-size: .74rem;
-	font-weight: 800;
-	letter-spacing: .02em;
-	text-transform: uppercase;
-	color: #64748b;
+	background: transparent;
+	font-size: .78rem;
+	font-weight: 700;
+	/* No uppercasing. It does nothing to Hebrew, which is most of what these
+	   headers hold, and shouts in the Latin ones that are mixed in with it. */
+	letter-spacing: 0;
+	color: var(--kivun-muted);
 	white-space: nowrap;
-	border-bottom: 2px solid var(--kivun-border);
+	border-bottom: 1px solid var(--cc-line, #e5e7eb);
 }
 .kivun-cc-table tbody tr:last-child td { border-bottom: none; }
 .kivun-cc-table tbody tr { transition: background .12s; }
-.kivun-cc-table tbody tr:nth-child(even) { background: #fcfcfd; }
-.kivun-cc-table tbody tr:hover { background: var(--cc-tint, rgba(0,0,0,.04)); }
+/* No zebra. The rows sit on a white card now, and striping them fought the
+   flat surfaces everywhere else; one quiet hover says which row you are on. */
+.kivun-cc-table tbody tr:hover { background: var(--cc-field, rgba(0,0,0,.03)); }
 .kivun-cc-table a { color: var(--cc-brand, var(--kivun-accent)); text-decoration: none; font-weight: 600; }
 .kivun-cc-table a:hover { text-decoration: underline; }
 .kivun-cc-table td strong { font-weight: 700; color: var(--cc-ink, #0f172a); }
@@ -1444,8 +1456,8 @@ td.kivun-app-contact a { display: block; }
 .kivun-cc-badge {
 	display: inline-block;
 	margin: 0 0 .2rem .25rem;
-	padding: .12rem .55rem;
-	font-size: .74rem;
+	padding: .2rem .65rem;
+	font-size: .75rem;
 	font-weight: 700;
 	color: var(--cc-brand, var(--kivun-accent));
 	background: #f3f4f6;
@@ -1462,8 +1474,234 @@ td.kivun-app-contact a { display: block; }
    because it is the one row state on the calls screen worth chasing. */
 .kivun-cc-badge--warn { color: #b45309; background: #fef3c7; }
 
-.kivun-cc-rowactions { display: flex; flex-wrap: wrap; gap: .3rem; align-items: center; }
+/* ── The library screen ──────────────────────────────────────────────────── */
+
+/* Heading, filter bar and table in one card, as the design has them. */
+.kivun-cc-console .kivun-cc-panel {
+	padding: 1.6rem 1.7rem 1.7rem;
+	background: var(--cc-surface);
+	border-radius: var(--cc-radius);
+	box-shadow: var(--cc-shadow);
+}
+.kivun-cc-console .kivun-cc-panel .kivun-cc-tablewrap { box-shadow: none; border-radius: 0; }
+.kivun-cc-console .kivun-cc-panel .kivun-cc-table thead th { background: var(--cc-field); }
+.kivun-cc-console .kivun-cc-panel .kivun-cc-table thead th:first-child { border-start-start-radius: var(--cc-radius-sm); border-end-start-radius: var(--cc-radius-sm); }
+.kivun-cc-console .kivun-cc-panel .kivun-cc-table thead th:last-child { border-start-end-radius: var(--cc-radius-sm); border-end-end-radius: var(--cc-radius-sm); }
+
+.kivun-cc-filterbar {
+	display: flex;
+	align-items: center;
+	gap: .7rem;
+	flex-wrap: wrap;
+	margin: 1.2rem 0 1.1rem;
+}
+.kivun-cc-search {
+	position: relative;
+	display: flex;
+	align-items: center;
+	gap: .55rem;
+	flex: 1 1 14rem;
+	padding: 0 1rem;
+	background: var(--cc-surface);
+	border: 1px solid var(--cc-line);
+	border-radius: 999px;
+}
+.kivun-cc-search svg { width: 16px; height: 16px; flex: 0 0 auto; color: var(--kivun-muted); }
+.kivun-cc-search__input {
+	flex: 1;
+	min-width: 0;
+	padding: .7rem 0;
+	border: 0;
+	background: none;
+	font: inherit;
+	font-size: .9rem;
+	color: var(--cc-ink);
+}
+.kivun-cc-search__input:focus { outline: none; }
+.kivun-cc-search:focus-within { border-color: var(--cc-brand); box-shadow: 0 0 0 4px color-mix(in srgb, var(--cc-brand) 12%, transparent); }
+
+.kivun-cc-segmented {
+	display: inline-flex;
+	gap: .2rem;
+	padding: .25rem;
+	background: var(--cc-field);
+	border-radius: 999px;
+}
+.kivun-cc-seg {
+	display: inline-flex;
+	align-items: center;
+	gap: .45rem;
+	padding: .5rem 1rem;
+	border: 0;
+	border-radius: 999px;
+	background: none;
+	font: inherit;
+	font-size: .87rem;
+	font-weight: 700;
+	color: var(--kivun-muted);
+	cursor: pointer;
+}
+.kivun-cc-seg.is-active { background: var(--cc-shell); color: #fff; }
+.kivun-cc-seg__count {
+	padding: .05rem .45rem;
+	background: rgba(0,0,0,.07);
+	border-radius: 999px;
+	font-size: .72rem;
+}
+.kivun-cc-seg.is-active .kivun-cc-seg__count { background: var(--cc-brand); color: #fff; }
+
+.kivun-cc-noresults {
+	margin: 0;
+	padding: 2.2rem 1rem;
+	text-align: center;
+	color: var(--kivun-muted);
+	font-size: .9rem;
+}
+/* A row the search ruled out. An attribute rather than `hidden`, so it never
+   argues with the stacked table's own `tr[hidden]` rule.
+ *
+ * `!important` because "filtered out" has to beat every layout rule that
+ * sets a display on these rows, and one of them already did: the
+ * narrow-screen fallback's `… > tbody > tr { display: block }` carries three
+ * classes to this rule's two and won below 782px, so searching the archive
+ * on a phone marked the rows and still showed them. Winning that on
+ * specificity alone would mean re-raising this every time a layout rule is
+ * added. Same reasoning as `.kivun-step-off` above.
+ */
+.kivun-cc-table tbody tr[data-filtered] { display: none !important; }
+
+/* What a row IS, under its title: status first, then each type it was
+   published as. They were two columns of their own before. */
+.kivun-cc-facts { display: flex; flex-wrap: wrap; gap: .2rem .9rem; margin-top: .3rem; }
+.kivun-cc-fact {
+	display: inline-flex;
+	align-items: center;
+	gap: .35rem;
+	font-size: .78rem;
+	font-weight: 600;
+	color: var(--kivun-muted);
+}
+.kivun-cc-fact::before {
+	content: "";
+	width: 6px;
+	height: 6px;
+	flex: 0 0 auto;
+	border-radius: 50%;
+	background: var(--cc-brand);
+}
+.kivun-cc-fact--publish::before { background: var(--cc-note-dot); }
+/* A page with a form of its own, against one on the standard form: the
+   difference is the point of this screen, so it is carried by the chip and
+   not only by the words. */
+.kivun-cc-fact--own {
+	padding: .22rem .7rem;
+	background: var(--cc-chip);
+	border-radius: 999px;
+	color: var(--cc-chip-ink);
+}
+.kivun-cc-fact--plain {
+	padding: .22rem .7rem;
+	background: var(--cc-field);
+	border-radius: 999px;
+}
+.kivun-cc-fact--plain::before { background: var(--kivun-muted); }
+.kivun-cc-fact--draft::before,
+.kivun-cc-fact--pending::before { background: #f0b429; }
+.kivun-cc-fact--private::before,
+.kivun-cc-fact--future::before { background: var(--kivun-muted); }
+
+/* Date, whether it reached מרכז כיוון, and the button that sends it — one
+   cell, stacked. */
+.kivun-cc-when { line-height: 1.5; }
+.kivun-cc-when .kivun-cc-date { display: block; }
+.kivun-cc-when .kivun-mercaz-status { display: block; font-size: .78rem; color: var(--kivun-muted); }
+.kivun-cc-when .kivun-mercaz-status.is-error { color: var(--cc-brand); }
+.kivun-cc-linkbtn {
+	padding: 0;
+	border: 0;
+	background: none;
+	font: inherit;
+	font-size: .78rem;
+	font-weight: 700;
+	color: var(--cc-ink);
+	text-decoration: underline;
+	cursor: pointer;
+}
+.kivun-cc-linkbtn:hover { color: var(--cc-brand); }
+
+/* One action keeps its word; the rest are marks.
+   Named by where it sits, because `.kivun-cc-console .kivun-cc-btn` further
+   down matches this button too and would otherwise win on source order —
+   which is how it first rendered in the brand colour instead of the shell's. */
+.kivun-cc-console .kivun-cc-rowactions .kivun-cc-act--edit {
+	gap: .4rem;
+	padding: .5rem 1.1rem;
+	background: var(--cc-shell);
+	border-radius: 999px;
+	color: #fff;
+	font-size: .84rem;
+}
+.kivun-cc-console .kivun-cc-rowactions .kivun-cc-act--edit:hover { background: #000; color: #fff; filter: none; }
+.kivun-cc-console .kivun-cc-rowactions .kivun-cc-act--edit svg { width: 14px; height: 14px; }
+.kivun-cc-icon-btn {
+	display: inline-grid;
+	place-items: center;
+	width: 34px;
+	height: 34px;
+	padding: 0;
+	background: var(--cc-field);
+	border: 0;
+	border-radius: 50%;
+	color: var(--kivun-muted);
+	cursor: pointer;
+	transition: background .15s, color .15s;
+}
+.kivun-cc-icon-btn:hover { background: var(--cc-chip); color: var(--cc-chip-ink); }
+.kivun-cc-icon-btn svg { width: 15px; height: 15px; }
+.kivun-cc-icon-btn--danger { color: var(--kivun-error); }
+.kivun-cc-icon-btn--danger:hover { background: #fde7e7; color: var(--kivun-error); }
+
+.kivun-cc-rowactions { display: flex; flex-wrap: wrap; gap: .35rem; align-items: center; }
 .kivun-cc-rowactions form { display: inline; margin: 0; }
+/*
+ * …except when the actions ARE the cell, which is every use of this class in
+ * the console. `display: flex` on a <td> takes it out of table layout, so it
+ * stops stretching to its row: measured at 59px in a row whose other cells
+ * were 64px, which drew its bottom border five pixels above theirs. It was
+ * there before and the zebra striping hid it; with the stripes gone the
+ * separator is the structure, and a broken one shows.
+ *
+ * Back to being a cell, with the spacing carried by the buttons themselves.
+ */
+td.kivun-cc-rowactions { display: table-cell; }
+td.kivun-cc-rowactions > *,
+td.kivun-cc-rowactions > form > * {
+	vertical-align: middle;
+	margin: .15rem 0 .15rem .35rem;
+}
+.kivun-cc-table.is-stacked td.kivun-cc-rowactions > * { margin-inline-start: 0; }
+/* Row actions as small text pills. They were nearly drawn as round icon
+   buttons to match the rest of the design — but every one of them carries a
+   word (צפייה, עריכה, מחיקה, העברה לארכיון), and a 32px circle would have
+   clipped all of them. The shape follows what is in them. */
+.kivun-cc-console .kivun-cc-rowactions .kivun-cc-btn--sm {
+	gap: .35rem;
+	padding: .4rem .85rem;
+	border-radius: 999px;
+	font-size: .8rem;
+	font-weight: 600;
+}
+.kivun-cc-console .kivun-cc-rowactions .kivun-cc-btn--ghost {
+	background: var(--cc-field);
+	border: 0;
+	color: var(--cc-ink);
+}
+.kivun-cc-console .kivun-cc-rowactions .kivun-cc-btn--ghost:hover {
+	background: var(--cc-chip);
+	color: var(--cc-chip-ink);
+	filter: none;
+}
+.kivun-cc-console .kivun-cc-rowactions svg { width: 14px; height: 14px; }
 .kivun-cc-leadlink { font-weight: 700; }
 .kivun-cc-source { display: block; font-size: .74rem; color: var(--kivun-muted); margin-top: .15rem; }
 .kivun-cc-date { white-space: nowrap; font-size: .8rem; color: var(--kivun-muted); }
@@ -1543,8 +1781,23 @@ td.kivun-app-contact a { display: block; }
 	margin-top: .25rem;
 	font-size: .76rem;
 }
-.kivun-cc-pager { display: flex; align-items: center; justify-content: center; gap: .75rem; margin-top: 1rem; }
-.kivun-cc-pager__state { font-size: .85rem; color: var(--kivun-muted); }
+.kivun-cc-pager {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: .75rem;
+	margin-top: 1rem;
+	padding: .8rem 1rem;
+	background: var(--cc-surface, #fff);
+	border-radius: var(--cc-radius, 18px);
+	box-shadow: var(--cc-shadow, none);
+}
+.kivun-cc-pager__state { font-size: .85rem; font-weight: 600; color: var(--kivun-muted); }
+.kivun-cc-console .kivun-cc-pager .kivun-cc-btn {
+	padding: .5rem 1.1rem;
+	border-radius: 999px;
+	font-size: .85rem;
+}
 
 /* Console palette: primary actions carry the brand colour, secondary actions
    stay neutral and destructive stays red. Scoped to the console only. */
@@ -3022,6 +3275,26 @@ body.kivun-ty-open { overflow: hidden; }
 .kivun-cc-table.is-stacked td:not([data-label]) { display: block; }
 .kivun-cc-table.is-stacked td:not([data-label])::before { content: none; }
 
+/*
+ * Every part of a value belongs in the value track.
+ *
+ * The cell is a two-track grid and each of its children is a grid item, so
+ * the label takes the first cell, the first part of the value takes the
+ * second — and the SECOND part wraps onto the next row and lands back under
+ * the label. Reproduced at 390px across all three shapes a cell takes here:
+ * two badges, two links (the leads contact cell, email then phone), and loose
+ * text followed by a link. In each one the second part sat in the label
+ * track.
+ *
+ * Pinned to the value column, they stack under one another where they belong.
+ * This reaches elements; a bare run of text between them is an anonymous item
+ * that no selector can name, and it places itself in the first free cell —
+ * which is the right one as long as it comes first, as it does in every cell
+ * here today.
+ */
+.kivun-cc-table.is-stacked td[data-label] > *,
+.kivun-cc-table.is-stacked td[data-label] > form { grid-column: 2; }
+
 /* Controls take the card's width rather than a column's share. Border-box
    too: at 100% of the track, content-box sizing pushes the padding and
    border out past the card's own edge. */
@@ -3087,7 +3360,56 @@ body.kivun-ty-open { overflow: hidden; }
 	cursor: pointer;
 }
 .kivun-cf-builtin input { flex: none; width: auto; margin: 0; }
-.kivun-cf-builtin:has(input:checked) { border-color: #c7d2fe; background: #eef2ff; }
+/* A field that IS collected reads as a solid pill with a tick; one that is
+   not stays an outline. The checkbox is still the control — it is drawn as
+   the tick rather than replaced, so clicking, focus and the keyboard all
+   keep working. */
+.kivun-cc-console .kivun-cf-builtin {
+	gap: .45rem;
+	flex-direction: row-reverse;
+	padding: .42rem .9rem;
+	border-color: var(--cc-line);
+	font-weight: 600;
+}
+.kivun-cc-console .kivun-cf-builtin input {
+	appearance: none;
+	-webkit-appearance: none;
+	display: grid;
+	place-items: center;
+	width: 17px;
+	height: 17px;
+	border: 1.5px solid var(--cc-line);
+	border-radius: 50%;
+	background: none;
+	cursor: pointer;
+}
+.kivun-cc-console .kivun-cf-builtin input::after {
+	content: "✓";
+	font-size: .66rem;
+	font-weight: 800;
+	line-height: 1;
+	color: transparent;
+}
+.kivun-cc-console .kivun-cf-builtin:has(input:checked) {
+	background: var(--cc-shell);
+	border-color: var(--cc-shell);
+	color: #fff;
+}
+.kivun-cc-console .kivun-cf-builtin:has(input:checked) input {
+	background: var(--cc-brand);
+	border-color: var(--cc-brand);
+}
+.kivun-cc-console .kivun-cf-builtin:has(input:checked) input::after { color: #fff; }
+.kivun-cc-console .kivun-cf-builtin input:focus-visible { outline: 2px solid var(--cc-brand); outline-offset: 2px; }
+
+/* The row whose builder is open. */
+.kivun-cc-console .kivun-form-editrow > td {
+	background: color-mix(in srgb, var(--cc-brand) 4%, #fff);
+	padding: 1.2rem;
+}
+.kivun-cc-console tr:has(+ .kivun-form-editrow:not([hidden])) > td {
+	background: color-mix(in srgb, var(--cc-brand) 6%, #fff);
+}
 
 .kivun-cf-list { display: flex; flex-direction: column; gap: .6rem; margin: .6rem 0 .9rem; }
 .kivun-cf-row {
@@ -3196,11 +3518,25 @@ body.kivun-ty-open { overflow: hidden; }
    far edge. Same `flex: none` the consent row already uses. */
 .kivun-cf-choice input { flex: none; width: auto; margin: 0; }
 
+/*
+ * The no-script fallback for a narrow screen: break the table into blocks so
+ * nothing is cut off. It drops the header, so each value stands on its own
+ * with nothing naming it — which is why it is only the fallback.
+ *
+ * `.is-stacked` is the real answer: admin-crm.js measures each table, copies
+ * every column heading onto its cells as data-label, and the rules further up
+ * lay each row out as a card with its labels. Both target the same cells, and
+ * these selectors carry three elements to that rule's one — so below 782px
+ * the fallback was beating the good pattern wherever it mattered, and the
+ * labels it had just written were rendered inline against their values
+ * ("פניות34", "תאריך15.9.2025"). Excluded here so the measured pattern wins
+ * when it is there, and this still catches the table when it is not.
+ */
 @media (max-width: 782px) {
-	.kivun-cc-tablewrap > .kivun-cc-table { display: block; }
-	.kivun-cc-tablewrap > .kivun-cc-table > tbody,
-	.kivun-cc-tablewrap > .kivun-cc-table > tbody > tr,
-	.kivun-cc-tablewrap > .kivun-cc-table > tbody > tr > td { display: block; width: auto; }
+	.kivun-cc-tablewrap > .kivun-cc-table:not(.is-stacked) { display: block; }
+	.kivun-cc-tablewrap > .kivun-cc-table:not(.is-stacked) > tbody,
+	.kivun-cc-tablewrap > .kivun-cc-table:not(.is-stacked) > tbody > tr,
+	.kivun-cc-tablewrap > .kivun-cc-table:not(.is-stacked) > tbody > tr > td { display: block; width: auto; }
 	.kivun-cc-tablewrap > .kivun-cc-table > thead { display: none; }
 	.kivun-cc-tablewrap > .kivun-cc-table > tbody > tr[hidden] { display: none; }
 }

@@ -2473,6 +2473,95 @@
 			}
 		});
 
+		// The library's filter bar. Both lists are already on the page — the
+		// archive used to sit below the table in a shut <details> — so
+		// switching panes and filtering rows is all that is needed, and
+		// neither touches the server.
+		// Every tab's panel is in the response, hidden rather than left out,
+		// so more than one filter bar is on the page at once. Taking the
+		// first bar and then every pane in the document meant the custom
+		// forms search was never wired at all, library searches filtered the
+		// forms rows too, and clicking a library segment hid the forms pane
+		// — it matches neither "live" nor "archive" — leaving that tab blank
+		// until a reload. Each bar now owns the panes in its own panel.
+		document.querySelectorAll('.kivun-cc-filterbar').forEach(function (ccFilterBar) {
+			var scope = ccFilterBar.closest('.kivun-tab-panel') || ccFilterBar.closest('.kivun-cc-front') || document;
+			var ccPanes = scope.querySelectorAll('.kivun-cc-pane');
+			var ccSearch = ccFilterBar.querySelector('.kivun-cc-search__input');
+
+			var ccApplyFilter = function () {
+				var term = (ccSearch ? ccSearch.value : '').trim().toLowerCase();
+				var revealed = false;
+
+				ccPanes.forEach(function (pane) {
+					var shown = 0;
+					pane.querySelectorAll('.kivun-cc-table tbody tr').forEach(function (row) {
+						// The title is on the cell that holds it, so the test
+						// is against the title alone and not against every
+						// word in the row — searching for "קורס" should not
+						// match every row that happens to be one.
+						var cell = row.querySelector('[data-search]');
+
+						// Not every <tr> is a row of the list. The custom
+						// forms table puts each page's builder in a row of
+						// its own beneath it, which carries no title and
+						// must follow whatever happened to its parent rather
+						// than be searched on the words inside the builder.
+						if (!cell) {
+							if (row.dataset.formEdit !== undefined) { return; }
+							row.removeAttribute('data-filtered');
+							return;
+						}
+
+						var hit = !term || (cell.getAttribute('data-search') || '').toLowerCase().indexOf(term) !== -1;
+						// The rows ship visible; only a miss sets the flag, so
+						// a row the script never saw is never left hidden.
+						if (hit) { row.removeAttribute('data-filtered'); } else { row.setAttribute('data-filtered', ''); }
+						if (hit) { shown++; }
+
+						var editor = row.nextElementSibling;
+						if (editor && editor.dataset.formEdit !== undefined) {
+							if (hit) { editor.removeAttribute('data-filtered'); } else { editor.setAttribute('data-filtered', ''); }
+						}
+					});
+
+					var empty = pane.querySelector('.kivun-cc-noresults');
+					if (empty) { empty.hidden = shown !== 0; }
+					var wrap = pane.querySelector('.kivun-cc-tablewrap');
+					if (wrap) {
+						// A table in a hidden wrapper has no width, so the
+						// script that measures tables skips it. Search for
+						// something the archive does not have, open the
+						// archive, then clear the search: the wrapper comes
+						// back and nothing has told anyone to measure it,
+						// leaving it unstacked on a phone. Noted here, where
+						// the revealing happens.
+						if (wrap.hidden && shown !== 0) { revealed = true; }
+						wrap.hidden = shown === 0;
+					}
+				});
+
+				// Said once per pass rather than per pane, and only when
+				// something actually came back into view.
+				if (revealed) { document.dispatchEvent(new CustomEvent('kivun:tables-shown')); }
+			};
+
+			if (ccSearch) { ccSearch.addEventListener('input', ccApplyFilter); }
+
+			ccFilterBar.querySelectorAll('.kivun-cc-seg').forEach(function (seg) {
+				seg.addEventListener('click', function () {
+					var wanted = seg.dataset.shows;
+					ccFilterBar.querySelectorAll('.kivun-cc-seg').forEach(function (other) {
+						var on = other === seg;
+						other.classList.toggle('is-active', on);
+						other.setAttribute('aria-selected', on ? 'true' : 'false');
+					});
+					ccPanes.forEach(function (pane) { pane.hidden = pane.dataset.pane !== wanted; });
+					ccApplyFilter();
+				});
+			});
+		});
+
 		var ccConfirm = 'למחוק את כל התוכן המקושר? הפעולה תעביר לפח את דף הנחיתה, הקורס והסדנה.';
 		document.querySelectorAll('.kivun-cc-delete-form').forEach(function (f) {
 			f.addEventListener('submit', function (e) {
