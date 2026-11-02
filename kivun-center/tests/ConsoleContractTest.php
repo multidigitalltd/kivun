@@ -269,6 +269,77 @@ final class ConsoleContractTest extends TestCase {
 	}
 
 	/**
+	 * The actions cell stays a table cell.
+	 *
+	 * `display: flex` on a `<td>` takes it out of table layout, so it stops
+	 * stretching to its row. Measured at 59px in a row whose other cells
+	 * were 64px, which drew its bottom border five pixels above theirs. It
+	 * had been that way for a long time and the zebra striping hid it; with
+	 * the stripes gone the separator carries the structure, and a broken one
+	 * is the first thing you see.
+	 *
+	 * @return void
+	 */
+	public function test_the_actions_cell_stays_a_table_cell(): void {
+		$css = (string) file_get_contents( KIVUN_DIR . 'assets/css/frontend.css' );
+
+		$this->assertStringContainsString(
+			'td.kivun-cc-rowactions { display: table-cell; }',
+			$css,
+			'the actions cell is flexed again, so it no longer stretches to its row and its separator sits high'
+		);
+	}
+
+	/**
+	 * The narrow-screen fallback yields to the labelled one.
+	 *
+	 * Two mobile strategies target the same cells. `admin-crm.js` measures
+	 * each table, copies every column heading onto its cells as `data-label`
+	 * and lays the row out as a card; the no-script fallback just turns
+	 * everything into blocks and drops the header. The fallback's selectors
+	 * carry three elements to the good rule's one, so below 782px it won —
+	 * and the labels the script had just written were rendered inline
+	 * against their values, giving "פניות34" and "תאריך15.9.2025".
+	 *
+	 * @return void
+	 */
+	public function test_the_narrow_fallback_yields_to_the_labelled_one(): void {
+		$css = (string) file_get_contents( KIVUN_DIR . 'assets/css/frontend.css' );
+
+		// Every rule in the file that re-lays-out a console table — whatever
+		// media query it sits in and whatever order the blocks are written
+		// in — has to leave the stacked one alone. Stated over the rules
+		// themselves rather than over a slice of the file, because there is
+		// more than one `@media (max-width: 782px)` and an earlier version
+		// of this test anchored on the wrong one.
+		preg_match_all( '/([^{}]*\.kivun-cc-tablewrap[^{}]*)\{([^{}]*)\}/', $css, $rules, PREG_SET_ORDER );
+		$this->assertNotEmpty( $rules, 'nothing styles the console table wrapper any more' );
+
+		$checked = 0;
+		foreach ( $rules as $rule ) {
+			list( , $selector, $decls ) = $rule;
+
+			// Only the rules that change how the table is laid out. Hiding
+			// the header or a hidden row is right either way.
+			if ( false === strpos( $decls, 'display: block' ) ) {
+				continue;
+			}
+			if ( false === strpos( $selector, '.kivun-cc-table' ) ) {
+				continue;
+			}
+
+			++$checked;
+			$this->assertStringContainsString(
+				':not(.is-stacked)',
+				$selector,
+				'this rule re-lays-out the table without sparing .is-stacked, so the unlabelled blocks beat the labelled cards:' . "\n  " . trim( $selector )
+			);
+		}
+
+		$this->assertGreaterThan( 0, $checked, 'the narrow-screen fallback is gone; this test now checks nothing' );
+	}
+
+	/**
 	 * The step rail stays inside the form.
 	 *
 	 * This one is new, and it is the reason to write it down. The handler
