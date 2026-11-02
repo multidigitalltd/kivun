@@ -376,6 +376,45 @@ final class ConsoleContractTest extends TestCase {
 	}
 
 	/**
+	 * A menu pushed to the edge opens back inward.
+	 *
+	 * The columns menu anchors its inline-start to its button, which is
+	 * right while the button sits at the start of the bar. Moving the
+	 * button to the far end made that anchor point outward: the menu is
+	 * wider than the button, so it hung 98px past the console's left edge
+	 * — and the console clips, so half of it and the reset button were
+	 * simply not there. Measured with the menu open, before and after.
+	 *
+	 * @return void
+	 */
+	public function test_a_menu_pushed_to_the_edge_opens_inward(): void {
+		$css = (string) file_get_contents( KIVUN_DIR . 'assets/css/frontend.css' );
+
+		// The push, and the re-anchoring that has to travel with it.
+		$at = strpos( $css, '.kivun-cc-console .kivun-cc-viewbar > :last-child { margin-inline-start: auto; }' );
+		$this->assertNotFalse( $at, 'nothing pushes the columns button to the end of the bar any more' );
+
+		$after = substr( $css, $at, 900 );
+		$this->assertStringContainsString(
+			'inset-inline-end: 0;',
+			$after,
+			'the columns menu still anchors outward from a button that now sits at the edge, so the console clips it'
+		);
+		$this->assertStringContainsString(
+			'inset-inline-start: auto;',
+			$after,
+			'the old inline-start anchor is still in force, so the menu is pinned both ways'
+		);
+
+		// And the console does clip — which is what makes this matter.
+		$this->assertMatchesRegularExpression(
+			'/\.kivun-cc-console \{[^}]*overflow: hidden/s',
+			$css,
+			'this test assumes the console clips its overflow; if it no longer does, the reasoning needs rechecking'
+		);
+	}
+
+	/**
 	 * A width stops being a width when the bar turns on its side.
 	 *
 	 * The filter bar is a row on a desktop and a column under 782px, and a

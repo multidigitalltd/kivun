@@ -3243,6 +3243,19 @@ body.kivun-ty-open { overflow: hidden; }
    to the far end — it changes what a row shows rather than which rows. */
 .kivun-cc-console .kivun-cc-viewbar { gap: .6rem; margin-bottom: .9rem; }
 .kivun-cc-console .kivun-cc-viewbar > :last-child { margin-inline-start: auto; }
+/*
+ * …and whatever was pushed there has to open back inward. The columns
+ * menu anchors its inline-start to its button, which is right while the
+ * button sits at the start of the bar and wrong once it is at the end:
+ * the menu is wider than the button, so it hung 98px past the console's
+ * left edge — and the console clips, so half of it and the reset button
+ * were simply gone. Measured before the fix, with the menu open.
+ */
+.kivun-cc-console .kivun-cc-viewbar > :last-child .kivun-cc-colpicker__menu,
+.kivun-cc-console .kivun-cc-viewbar > .kivun-cc-colpicker:last-child .kivun-cc-colpicker__menu {
+	inset-inline-start: auto;
+	inset-inline-end: 0;
+}
 .kivun-cc-console .kivun-cc-viewtoggle {
 	padding: .25rem;
 	background: var(--cc-field);
