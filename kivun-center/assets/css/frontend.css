@@ -2520,25 +2520,60 @@ td.kivun-cc-rowactions > form > * {
 .kivun-cc-wizard .kivun-cc-sub .kivun-cc-chip svg { width: 14px; height: 14px; }
 
 /* Fields */
+/*
+ * A pill, not a rounded rectangle.
+ *
+ * These were radius 28 at 15.2px behind a 1px border, against the
+ * handoff's fully round 999 at 18px behind 2px — the same rem scaling
+ * that shrank the rest of the console, and a shape that was simply a
+ * different one.
+ */
 .kivun-cc-wizard .kivun-cc-input {
-	min-height: 52px;
-	padding: .85rem 1.05rem;
-	padding-inline-end: 3.5rem;
+	box-sizing: border-box;
+	min-height: 56px;
+	padding: 0 22px;
+	padding-inline-end: 64px;
 	background: var(--cc-field);
-	border: 1px solid transparent;
-	border-radius: var(--cc-radius-sm);
+	border: 2px solid var(--cc-line);
+	border-radius: 999px;
 	color: var(--cc-field-ink);
-	font-size: .95rem;
+	font-size: 18px;
 }
+/*
+ * A textarea is the one control that is not a pill: it has to hold
+ * several lines, so it takes the card radius and its own padding.
+ */
 .kivun-cc-wizard textarea.kivun-cc-input,
-.kivun-cc-wizard .kivun-cc-textarea { min-height: 96px; line-height: 1.6; }
-.kivun-cc-wizard .kivun-cc-input::placeholder { color: #9b9ba3; }
+.kivun-cc-wizard .kivun-cc-textarea {
+	min-height: 120px;
+	padding: 18px 22px 18px 76px;
+	border-radius: var(--cc-radius-sm);
+	line-height: 1.6;
+	resize: vertical;
+}
+.kivun-cc-wizard .kivun-cc-input::placeholder { color: var(--cc-text-3); }
+/*
+ * Focus moves the border to charcoal and does nothing else. The handoff
+ * is explicit that there is no glow anywhere, and this rule had a 4px
+ * brand halo.
+ */
 .kivun-cc-wizard .kivun-cc-input:focus {
 	background: var(--cc-surface);
-	border-color: var(--cc-brand);
-	box-shadow: 0 0 0 4px color-mix(in srgb, var(--cc-brand) 14%, transparent);
+	border-color: var(--cc-ink);
+	box-shadow: none;
+	outline: none;
 }
-.kivun-cc-wizard select.kivun-cc-input { padding-inline-end: 1.05rem; }
+/* The select carries its own chevron, so it needs room for it and none
+   of the browser's. */
+.kivun-cc-wizard select.kivun-cc-input {
+	appearance: none;
+	-webkit-appearance: none;
+	padding: 0 22px 0 52px;
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232e2e31' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+	background-repeat: no-repeat;
+	background-position: left 22px center;
+	background-size: 18px 18px;
+}
 
 /* The dictation button. voice.js inserts it as the field's next sibling, so
    it cannot be positioned against the field itself — there is no shared
@@ -2551,10 +2586,12 @@ td.kivun-cc-rowactions > form > * {
 	display: grid;
 	place-items: center;
 	float: inline-end;
-	width: 40px;
-	height: 40px;
-	margin-block-start: -46px;
-	margin-inline-end: 6px;
+	/* 44, the handoff's figure for a field mic — 40 is the editor
+	   toolbar's, which is a different control. */
+	width: 44px;
+	height: 44px;
+	margin-block-start: -50px;
+	margin-inline-end: 8px;
 	padding: 0;
 	background: var(--cc-shell);
 	border: 0;
@@ -2628,9 +2665,19 @@ td.kivun-cc-rowactions > form > * {
 	position: relative;
 	display: flex;
 	flex-direction: column;
-	align-items: center;
+	/*
+	 * The tile reads from its inline start, not from its middle: icon
+	 * circle, then label, both against the right edge in RTL. Centring
+	 * them was the whole reason the tile looked unlike the design even
+	 * with every colour and size already right.
+	 *
+	 * Stated, not merely omitted: the base `.kivun-cc-check` centres its
+	 * items, so dropping the override here left the centring in place.
+	 */
+	align-items: normal;
 	justify-content: flex-end;
-	gap: .7rem;
+	text-align: right;
+	gap: 18px;
 	min-height: 118px;
 	margin: 0;
 	/* 22 all round, the handoff's figure — this was a rem-derived 17.6/12.8/16. */
@@ -2657,15 +2704,42 @@ td.kivun-cc-rowactions > form > * {
 	background: var(--cc-surface);
 	border-color: var(--cc-ink);
 }
+/*
+ * The tick is the checkbox itself, restyled — not a span beside a hidden
+ * input. It keeps its name and value, so the save still reads it exactly
+ * as before, and there is no second element to keep in step with it.
+ *
+ * `left: 18px` in the handoff is the inline end here, the page being RTL.
+ */
 .kivun-cc-wizard .kivun-cc-check .kivun-cc-toggle {
 	position: absolute;
-	top: .7rem;
-	inset-inline-end: .7rem;
-	width: 20px;
-	height: 20px;
+	top: 18px;
+	inset-inline-end: 18px;
+	width: 28px;
+	height: 28px;
 	margin: 0;
-	accent-color: var(--cc-brand);
+	appearance: none;
+	-webkit-appearance: none;
+	box-sizing: border-box;
+	border: 2px solid var(--cc-toggle-off);
+	border-radius: 50%;
+	background: #fff;
 	cursor: pointer;
+	transition: background .15s, border-color .15s;
+}
+.kivun-cc-wizard .kivun-cc-check .kivun-cc-toggle:checked {
+	background: var(--cc-brand);
+	border-color: var(--cc-brand);
+	/* A white tick, drawn rather than typed: a glyph would take the page
+	   font with it and change shape from one site to the next. */
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6L9 17l-5-5'/%3E%3C/svg%3E");
+	background-repeat: no-repeat;
+	background-position: center;
+	background-size: 16px 16px;
+}
+.kivun-cc-wizard .kivun-cc-check .kivun-cc-toggle:focus-visible {
+	outline: 2px solid var(--cc-brand);
+	outline-offset: 2px;
 }
 /* The icon disc is 60 on a tile, and it inverts when the tile is chosen:
    a red disc with a white glyph, instead of a tinted one with a red glyph. */
