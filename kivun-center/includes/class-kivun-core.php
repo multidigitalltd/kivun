@@ -461,33 +461,6 @@ class Kivun_Core {
 		wp_enqueue_script( 'kivun-picker' );
 	}
 
-	/**
-	 * The two families the console's design is drawn in.
-	 *
-	 * Rubik carries the headings, titles and figures; Heebo carries the UI
-	 * text. Without them the console falls back to the theme's font, and the
-	 * type — which is most of what a design is — comes out wrong at every
-	 * size and weight.
-	 *
-	 * Loaded only where the console renders rather than beside the rest of
-	 * the front-end bundle, because nothing outside the console is drawn in
-	 * them and no other screen should pay for two font families. Safe to
-	 * call late and more than once, like the bundle above.
-	 *
-	 * The CSS keeps the theme's own font as the fallback after these two, so
-	 * a site that blocks outside requests degrades to its own typography
-	 * rather than to a browser default.
-	 *
-	 * @return void
-	 */
-	public static function enqueue_console_fonts(): void {
-		wp_enqueue_style(
-			'kivun-cc-fonts',
-			'https://fonts.googleapis.com/css2?family=Rubik:wght@500;700;800;900&family=Heebo:wght@400;500;700;800&display=swap',
-			array(),
-			null // phpcs:ignore WordPress.WP.EnqueuedResourceParameters.MissingVersion -- Google serves its own versioned URLs; a query string would only bust their cache.
-		);
-	}
 
 	/**
 	 * Ensure the front-end assets load whenever a Kivun shortcode actually

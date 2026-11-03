@@ -2396,11 +2396,6 @@ class Kivun_Content_Creator {
 				'count' => $stats['jobs'],
 			);
 		}
-		// The console is drawn in Rubik and Heebo. On the front end this runs
-		// while the shortcode renders, which is after wp_head — WordPress
-		// prints a style enqueued this late in the footer, so it still
-		// arrives. The admin path asks for it in enqueue_console_assets().
-		Kivun_Core::enqueue_console_fonts();
 		?>
 		<div class="kivun-cc-console" dir="rtl">
 
@@ -4130,7 +4125,6 @@ class Kivun_Content_Creator {
 	 * @return void
 	 */
 	private static function enqueue_console_assets(): void {
-		Kivun_Core::enqueue_console_fonts();
 		wp_enqueue_style( 'kivun-frontend', KIVUN_URL . 'assets/css/' . Kivun_Core::asset( 'frontend', 'css' ), array(), KIVUN_VERSION );
 		wp_enqueue_script( 'kivun-frontend', KIVUN_URL . 'assets/js/' . Kivun_Core::asset( 'frontend', 'js' ), array(), KIVUN_VERSION, true );
 		wp_localize_script(

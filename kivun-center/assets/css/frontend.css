@@ -1178,13 +1178,20 @@ td.kivun-app-contact a { display: block; }
 	--cc-shadow-pop: 0 18px 40px rgba(17, 17, 20, .16);
 
 	/*
-	 * Rubik for headings, numbers and titles; Heebo for everything else.
-	 * Both are listed ahead of the site's own font rather than instead of it,
-	 * so a console on a site that has neither still falls back to the theme
-	 * rather than to a browser default.
+	 * The site's own font, in both roles.
+	 *
+	 * The handoff draws its headings in Rubik and its UI text in Heebo, and
+	 * this console did load both for a while. It no longer does, by the
+	 * owner's decision: the typography stays as the site has always had it,
+	 * and no outside font request is made from the console.
+	 *
+	 * The two names are kept because everything else about the type is the
+	 * handoff's — the sizes and weights below are its figures to the pixel.
+	 * Only the family is the site's. If the families are ever wanted, this
+	 * is the one place that changes.
 	 */
-	--cc-font-display: Rubik, var(--kivun-font);
-	--cc-font-ui: Heebo, var(--kivun-font);
+	--cc-font-display: var(--kivun-font);
+	--cc-font-ui: var(--kivun-font);
 
 	/*
 	 * The plugin-wide greys, restated for the console subtree in the
@@ -1221,7 +1228,8 @@ td.kivun-app-contact a { display: block; }
 .kivun-cc-console textarea,
 .kivun-cc-console button { font-family: var(--cc-font-ui); }
 
-/* Headings, titles and figures are Rubik; numbers line up in columns. */
+/* Headings, titles and figures take the display face — the site's own font
+   here — and numbers line up in columns. */
 .kivun-cc-console h1,
 .kivun-cc-console h2,
 .kivun-cc-console h3,
@@ -1242,7 +1250,8 @@ td.kivun-app-contact a { display: block; }
 /* Each tab's own heading, in the rail's voice so the list screens and the
    wizard sound like one system. */
 .kivun-cc-console .kivun-cc-head { margin-bottom: 1.1rem; }
-/* Section title: Rubik 32/800. Body and helper text: 16, text-2. */
+/* Section title: 32/800, the handoff's size and weight. Body and helper
+   text: 16, text-2. */
 .kivun-cc-console .kivun-cc-title { font-size: 32px; font-weight: 800; margin: 0 0 .3rem; color: var(--cc-ink); }
 .kivun-cc-console .kivun-cc-lead { font-size: 16px; color: var(--cc-text-2); margin: 0; line-height: 1.65; }
 /* The campaign's tracked numbers, under its links. Set apart by a gap and
