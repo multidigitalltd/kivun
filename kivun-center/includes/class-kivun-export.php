@@ -367,7 +367,16 @@ class Kivun_Export {
 		foreach ( $rows as $r ) {
 			$line = array( $r['id'], $r['post_name'] );
 			if ( $show_source ) {
-				$line[] = $r['source'] ?? '';
+				/*
+				 * The stored source is not just the origin: the capture
+				 * appends "UTM: source / medium / campaign / content" to
+				 * it, so the raw field carries the whole ledger. Writing
+				 * it unredacted handed back, in one cell, exactly what
+				 * the columns below withhold — the restriction would
+				 * have been real on screen and cosmetic in the file.
+				 */
+				$parsed = Kivun_Content_Creator::parse_source( (string) ( $r['source'] ?? '' ) );
+				$line[] = $show_full_source ? ( $r['source'] ?? '' ) : $parsed['origin'];
 				$line[] = $r['utm_source'] ?? '';
 				if ( $show_full_source ) {
 					$line[] = $r['utm_medium'] ?? '';

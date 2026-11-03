@@ -1739,6 +1739,21 @@ final class ConsoleContractTest extends TestCase {
 			$csv,
 			'the CSV export does not apply the full-source rule, so the ledger leaves as a file instead'
 		);
+
+		/*
+		 * And the combined source field is redacted with it.
+		 *
+		 * This one was missed the first time and is the reason the rule
+		 * above was, briefly, decoration. The stored `source` is not just
+		 * the origin: the capture appends "UTM: source / medium /
+		 * campaign / content" to it, so writing it raw handed back in one
+		 * cell exactly what the columns beside it withhold.
+		 */
+		$this->assertStringContainsString(
+			"\$show_full_source ? ( \$r['source'] ?? '' ) : \$parsed['origin']",
+			$csv,
+			'the export writes the raw combined source again, which carries the whole UTM — the campaign and publisher come back through the מקור column'
+		);
 		$this->assertMatchesRegularExpression(
 			'/if \(\s*\$show_full_source\s*\)\s*\{\s*\$headings = array_merge\( \$headings, array\( \x27utm_medium\x27, \x27utm_campaign\x27, \x27utm_content\x27 \) \);/',
 			$csv,
