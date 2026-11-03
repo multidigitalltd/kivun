@@ -46,8 +46,11 @@
 		try { rec.start(); } catch (err) { stop(); }
 	}
 
-	var MIC_SVG = '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">'
-		+ '<path fill="currentColor" d="M12 15a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V22h2v-3.08A7 7 0 0 0 19 12h-2Z"/></svg>';
+	// The design's microphone: a solid capsule and its stand at a lighter
+	// weight, in white on the button's dark disc.
+	var MIC_SVG = '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true" focusable="false">'
+		+ '<path d="M12 2.5a3.5 3.5 0 0 1 3.5 3.5v5.5a3.5 3.5 0 0 1-7 0V6A3.5 3.5 0 0 1 12 2.5z"/>'
+		+ '<path d="M5 10.5h1.8a5.2 5.2 0 0 0 10.4 0H19a7 7 0 0 1-6.1 6.9V20h2.6v1.8h-7V20h2.6v-2.6A7 7 0 0 1 5 10.5z" fill-opacity=".6"/></svg>';
 
 	function micButton(onFinal) {
 		var b = document.createElement('button');
