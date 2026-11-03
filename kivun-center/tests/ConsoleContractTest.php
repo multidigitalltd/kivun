@@ -1647,6 +1647,46 @@ final class ConsoleContractTest extends TestCase {
 	}
 
 	/**
+	 * The form builder's own figures, from the handoff.
+	 *
+	 * Measured against the reference with its builder open: the panel on
+	 * the field grey at 24/20, the open row in the red wash, a question
+	 * card at radius 20, its number a 28 charcoal disc, and "add a
+	 * question" a dashed brand outline 48 tall.
+	 *
+	 * Two of these were not merely off but from another palette: the
+	 * number was indigo on lavender, and the panel was a 4% wash of the
+	 * brand, which put a second pink on screen beside the open row's own.
+	 *
+	 * @return void
+	 */
+	public function test_the_form_builder_keeps_the_handoff_figures(): void {
+		$css = (string) file_get_contents( KIVUN_DIR . 'assets/css/frontend.css' );
+
+		$at = strpos( $css, '.kivun-cf-row {' );
+		$this->assertNotFalse( $at, 'the question card has no rule' );
+		$this->assertStringContainsString( 'border-radius: 20px', substr( $css, $at, 260 ), 'a question card is no longer radius 20' );
+
+		$at = strpos( $css, '.kivun-cf-num {' );
+		$this->assertNotFalse( $at, 'the question number has no rule' );
+		$num = substr( $css, $at, 420 );
+		$this->assertStringContainsString( 'width: 28px', $num, 'the question number is no longer a 28 disc' );
+		$this->assertStringContainsString( 'var(--cc-ink', $num, 'the question number is not charcoal any more' );
+
+		$at = strpos( $css, '.kivun-cc-console .kivun-form-editrow > td {' );
+		$this->assertNotFalse( $at, 'the builder panel has no rule' );
+		$panel = substr( $css, $at, 200 );
+		$this->assertStringContainsString( 'var(--cc-field)', $panel, 'the builder panel is no longer the field grey' );
+		$this->assertStringContainsString( 'padding: 24px 20px', $panel, 'the builder panel lost the handoff padding' );
+
+		$at = strpos( $css, '.kivun-cc-console .kivun-cf-add-btn {' );
+		$this->assertNotFalse( $at, '"add a question" has no rule of its own' );
+		$add = substr( $css, $at, 420 );
+		$this->assertStringContainsString( 'dashed', $add, '"add a question" is no longer a dashed outline' );
+		$this->assertStringContainsString( 'height: 48px', $add, '"add a question" is no longer 48 tall' );
+	}
+
+	/**
 	 * Every console token a rule asks for is a token that exists.
 	 *
 	 * The console's colours, radii and shadows are all custom properties. A
