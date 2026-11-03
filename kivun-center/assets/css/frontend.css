@@ -2615,55 +2615,69 @@ td.kivun-cc-rowactions > form > * {
    button restyled in place. `::file-selector-button` keeps the real input
    doing the work — no label-and-hidden-input swap, which is what usually
    breaks keyboard access and form resets. */
+/*
+ * The upload zone is drawn in sky, not grey: a dashed --sky-border on the
+ * palest wash, which is what marks it as something to drop a file into
+ * rather than another bordered field. Hover moves the dash to full sky.
+ */
 .kivun-cc-wizard input[type="file"] {
 	display: block;
 	width: 100%;
 	box-sizing: border-box;
-	padding: 1.4rem;
-	background: var(--cc-surface);
-	border: 2px dashed var(--cc-line);
+	padding: 22px;
+	background: #fbfdfe;
+	border: 2px dashed var(--cc-sky-line);
 	border-radius: var(--cc-radius-sm);
 	font: inherit;
-	font-size: .88rem;
-	color: var(--kivun-muted);
+	font-size: 17px;
+	color: var(--cc-text-3);
 	cursor: pointer;
 }
-.kivun-cc-wizard input[type="file"]:hover { border-color: color-mix(in srgb, var(--cc-brand) 40%, transparent); }
+.kivun-cc-wizard input[type="file"]:hover { border-color: var(--cc-note-dot); }
+/* "בחירת קובץ": a charcoal pill 48 tall, inside the zone. */
 .kivun-cc-wizard input[type="file"]::file-selector-button {
-	margin-inline-end: .9rem;
-	padding: .6rem 1.1rem;
+	margin-inline-end: 16px;
+	height: 48px;
+	padding: 0 22px;
 	background: var(--cc-shell);
 	border: 0;
 	border-radius: 999px;
 	color: #fff;
 	font: inherit;
 	font-weight: 700;
-	font-size: .86rem;
+	font-size: 17px;
 	cursor: pointer;
 }
 .kivun-cc-wizard input[type="file"]::file-selector-button:hover { background: #000; }
 
-/* Hints: the quiet blue note from the design, and the plain grey line. */
+/*
+ * The info box: the palest of the three skies, radius 20, padding 14/18,
+ * and a sky dot 8 across sitting on the first line of the text.
+ *
+ * It was on --cc-note (#e3f5fd), which is the tint the "in progress"
+ * status pill uses — a shade too strong for a quiet aside, and it made
+ * every hint read as a second kind of badge.
+ */
 .kivun-cc-wizard .kivun-cc-hint,
 .kivun-cc-wizard .kivun-field-hint {
 	display: flex;
 	align-items: flex-start;
-	gap: .5rem;
+	gap: 10px;
 	margin: .9rem 0 0;
-	padding: .75rem .9rem;
-	background: var(--cc-note);
-	border-radius: var(--cc-radius-sm);
-	font-size: .82rem;
+	padding: 14px 18px;
+	background: var(--cc-sky-wash);
+	border-radius: var(--cc-radius-inner);
+	font-size: 15px;
 	line-height: 1.6;
-	color: #44505c;
+	color: #4a4a50;
 }
 .kivun-cc-wizard .kivun-cc-hint::before,
 .kivun-cc-wizard .kivun-field-hint::before {
 	content: "";
-	width: 7px;
-	height: 7px;
+	width: 8px;
+	height: 8px;
 	flex: 0 0 auto;
-	margin-top: .45rem;
+	margin-top: 9px;
 	border-radius: 50%;
 	background: var(--cc-note-dot);
 }
