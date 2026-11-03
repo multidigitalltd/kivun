@@ -491,6 +491,40 @@ final class CustomFormWiringTest extends TestCase {
 	}
 
 	/**
+	 * A landing page made outside the console is adopted into the library.
+	 *
+	 * The old tab listed every landing page; the library lists groups. A page
+	 * from WordPress's own editor has no group, and without this it would
+	 * keep a custom form nobody could reach to change or switch off.
+	 *
+	 * @return void
+	 */
+	public function test_an_ungrouped_landing_page_is_adopted(): void {
+		Kivun_Test_State::$posts[31] = array( 'post_type' => 'kivun_workshop' );
+		Kivun_Test_State::$posts[32] = array( 'post_type' => 'kivun_workshop' );
+		Kivun_Test_State::$posts[33] = array( 'post_type' => 'kivun_course' );
+		update_post_meta( 32, Kivun_Content_Creator::GROUP_META, 'existing-group' );
+
+		$adopt = new ReflectionMethod( Kivun_Content_Creator::class, 'adopt_ungrouped_landings' );
+		$adopt->setAccessible( true );
+		$adopt->invoke( null );
+
+		$given = (string) get_post_meta( 31, Kivun_Content_Creator::GROUP_META, true );
+		$this->assertMatchesRegularExpression( '/^[0-9a-f-]{36}$/', $given, 'the ungrouped landing page was not given a group' );
+		$this->assertSame( 'existing-group', get_post_meta( 32, Kivun_Content_Creator::GROUP_META, true ), 'a page that had a group lost it' );
+		$this->assertSame( '', get_post_meta( 33, Kivun_Content_Creator::GROUP_META, true ), 'something other than a landing page was adopted' );
+
+		// Once: a second pass leaves the group it gave alone.
+		$adopt->invoke( null );
+		$this->assertSame( $given, get_post_meta( 31, Kivun_Content_Creator::GROUP_META, true ) );
+
+		// And the library asks for it before it lists anything.
+		$src = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-content-creator.php' );
+		$at  = (int) strpos( $src, 'private static function front_library(' );
+		$this->assertStringContainsString( 'self::adopt_ungrouped_landings();', substr( $src, $at, 200 ) );
+	}
+
+	/**
 	 * And the built file carries the builder's link to the wizard.
 	 *
 	 * @return void

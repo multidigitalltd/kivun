@@ -3981,6 +3981,53 @@ class Kivun_Content_Creator {
 	}
 
 	/**
+	 * Give a landing page made outside the console a content group of its own.
+	 *
+	 * The library lists content by group, and the wizard opens content by
+	 * group. A landing page created in WordPress's own editor, or through
+	 * the REST API, has none — and the custom-forms tab, which listed every
+	 * landing page whatever its origin, was the one screen that reached it.
+	 * With that tab folded into the library, such a page would have gone on
+	 * asking its custom questions with nowhere left to change or switch them
+	 * off.
+	 *
+	 * So it is adopted: given a group of its own, once, the first time the
+	 * library is drawn after it appeared. From then on it is a library row
+	 * like any other, and opens in the wizard with its form. A page that
+	 * already has a group is never touched, so a group is never split or
+	 * renamed by this.
+	 *
+	 * @return void
+	 */
+	private static function adopt_ungrouped_landings(): void {
+		$ids = get_posts(
+			array(
+				'post_type'              => 'kivun_workshop',
+				'post_status'            => array( 'publish', 'draft', 'pending', 'private', 'future' ),
+				'posts_per_page'         => 200, // phpcs:ignore WordPress.WP.PostsPerPage.posts_per_page_posts_per_page
+				'fields'                 => 'ids',
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'             => array(
+					array(
+						'key'     => self::GROUP_META,
+						'compare' => 'NOT EXISTS',
+					),
+				),
+				'no_found_rows'          => true,
+				'update_post_term_cache' => false,
+			)
+		);
+
+		foreach ( $ids as $id ) {
+			// Asked again per post rather than trusted from the query, so a
+			// page that gained a group in the meantime keeps the one it has.
+			if ( '' === (string) get_post_meta( (int) $id, self::GROUP_META, true ) ) {
+				update_post_meta( (int) $id, self::GROUP_META, wp_generate_uuid4() );
+			}
+		}
+	}
+
+	/**
 	 * The builder for a landing page's form, inside the publishing wizard.
 	 *
 	 * The questions are edited as rows and posted as one definition, rather
@@ -4083,6 +4130,7 @@ class Kivun_Content_Creator {
 	 * @return void
 	 */
 	private static function front_library( string $page_url, bool $can_delete = false ): void {
+		self::adopt_ungrouped_landings();
 		$groups   = self::library_groups( self::library_posts( false ) );
 		$put_away = self::library_groups( self::library_posts( true ) );
 
