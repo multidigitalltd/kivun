@@ -2498,17 +2498,25 @@ td.kivun-cc-rowactions > form > * {
 }
 /* The chip a heading's icon sits in. The icon itself stays optional — a
    heading without one keeps its text flush, rather than leaving a hole. */
+/*
+ * The icon disc comes in three sizes, one per place it appears: 40 beside
+ * a field label, 52 beside a section head, 60 on a type tile and on the
+ * AI head. They were all 34 — one size that matched none of them.
+ */
 .kivun-cc-wizard .kivun-cc-chip {
 	display: grid;
 	place-items: center;
-	width: 34px;
-	height: 34px;
+	width: 40px;
+	height: 40px;
 	flex: 0 0 auto;
 	border-radius: 50%;
 	background: var(--cc-chip);
 	color: var(--cc-chip-ink);
 }
-.kivun-cc-wizard .kivun-cc-chip svg { width: 17px; height: 17px; }
+.kivun-cc-wizard .kivun-cc-chip svg { width: 20px; height: 20px; }
+/* A section head is the larger of the two: 52 with a 26 glyph. */
+.kivun-cc-wizard .kivun-cc-h3 .kivun-cc-chip { width: 52px; height: 52px; }
+.kivun-cc-wizard .kivun-cc-h3 .kivun-cc-chip svg { width: 26px; height: 26px; }
 /* The generator is the one thing on these screens that is not the brand
    doing the work, so the design marks it in the accent blue rather than the
    brand red — the same blue as the "done" steps and the note dots. */
@@ -2773,12 +2781,22 @@ td.kivun-cc-rowactions > form > * {
 	font-size: .95rem;
 	font-weight: 700;
 }
+/* "חזרה" stands beside "המשך" and matches its height: 56, on a 2px
+   border rather than a hairline. */
 .kivun-cc-wizard .kivun-cc-btn--ghost,
 .kivun-cc-wizard .kivun-wiz-prev {
 	background: var(--cc-surface);
-	border: 1px solid var(--cc-line);
+	border: 2px solid var(--cc-line);
 	color: var(--cc-ink);
 }
+.kivun-cc-wizard .kivun-wiz-prev {
+	height: 56px;
+	padding: 0 26px;
+	border-radius: 999px;
+	font-size: 18px;
+	font-weight: 700;
+}
+.kivun-cc-wizard .kivun-wiz-prev:hover { border-color: var(--cc-ink); }
 .kivun-cc-wizard .kivun-cc-btn--ghost:hover,
 .kivun-cc-wizard .kivun-wiz-prev:hover { background: var(--cc-field); color: var(--cc-ink); filter: none; }
 /* The dark secondary actions from the design: generate, pick a file, send. */
