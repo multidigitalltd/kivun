@@ -2356,21 +2356,27 @@ td.kivun-cc-rowactions > form > * {
 .kivun-cc-rail .kivun-wiz-step:not(:last-child)::before {
 	content: "";
 	position: absolute;
-	top: 34px;
+	top: 44px;
 	bottom: 6px;
-	inset-inline-start: 16px;
+	inset-inline-start: 21px;
 	width: 2px;
 	margin-inline-start: -1px;
 	background: var(--cc-line);
 }
 .kivun-cc-rail .kivun-wiz-step.is-done::before { background: var(--cc-note-dot); }
+/*
+ * 44, the handoff's figure — this was 34. Border-box, because the 2px
+ * border is drawn outside the box otherwise and the circle comes out 48:
+ * the right number written down and the wrong one on screen.
+ */
 .kivun-cc-rail .kivun-wiz-step__num {
-	width: 34px;
-	height: 34px;
+	box-sizing: border-box;
+	width: 44px;
+	height: 44px;
 	background: var(--cc-surface);
 	border: 2px solid var(--cc-line);
-	color: var(--kivun-muted);
-	font-size: .9rem;
+	color: var(--cc-text-3);
+	font-size: 16px;
 	z-index: 1;
 }
 .kivun-cc-rail .kivun-wiz-step:hover { color: var(--cc-ink); }
@@ -2381,10 +2387,16 @@ td.kivun-cc-rowactions > form > * {
 	color: #fff;
 }
 .kivun-cc-rail .kivun-wiz-step.is-done { color: var(--cc-ink); }
+/*
+ * A finished step is a sky disc with a charcoal tick, not a white one.
+ * Sky is a shapes-only colour by the client's rule in the handoff, and a
+ * white tick on it is the one place that rule would be broken by accident
+ * — the tick IS the text here. Charcoal also simply reads better on it.
+ */
 .kivun-cc-rail .kivun-wiz-step.is-done .kivun-wiz-step__num {
 	background: var(--cc-note-dot);
 	border-color: var(--cc-note-dot);
-	color: #fff;
+	color: var(--cc-ink);
 }
 
 /* Cards: white, radius 36, padding 32 — flat. */
@@ -2566,18 +2578,29 @@ td.kivun-cc-rowactions > form > * {
 	gap: .7rem;
 	min-height: 118px;
 	margin: 0;
-	padding: 1.1rem .8rem 1rem;
+	/* 22 all round, the handoff's figure — this was a rem-derived 17.6/12.8/16. */
+	padding: 22px;
 	background: var(--cc-field);
-	border: 2px solid transparent;
+	/* The unselected border is the field grey rather than transparent, so the
+	   tile does not change size when it gains a visible one. */
+	border: 2px solid var(--cc-field);
 	border-radius: var(--cc-radius-sm);
 	font-weight: 700;
 	cursor: pointer;
 	transition: border-color .15s, background .15s;
 }
 .kivun-cc-wizard .kivun-cc-check:hover { border-color: color-mix(in srgb, var(--cc-brand) 35%, transparent); }
+/*
+ * Selected: white, with a CHARCOAL border — not the brand red.
+ *
+ * The red is already doing two jobs on a selected tile, in the icon disc
+ * and in the tick, and a third red ring around them made the whole tile
+ * read as one red block. The handoff draws the outline in charcoal so the
+ * two red marks inside it stay the thing you see.
+ */
 .kivun-cc-wizard .kivun-cc-check:has(.kivun-cc-toggle:checked) {
 	background: var(--cc-surface);
-	border-color: var(--cc-brand);
+	border-color: var(--cc-ink);
 }
 .kivun-cc-wizard .kivun-cc-check .kivun-cc-toggle {
 	position: absolute;
@@ -2589,9 +2612,16 @@ td.kivun-cc-rowactions > form > * {
 	accent-color: var(--cc-brand);
 	cursor: pointer;
 }
-.kivun-cc-wizard .kivun-cc-check .kivun-cc-chip { width: 44px; height: 44px; }
-.kivun-cc-wizard .kivun-cc-check .kivun-cc-chip svg { width: 21px; height: 21px; }
-.kivun-cc-wizard .kivun-cc-check > span { font-size: .95rem; }
+/* The icon disc is 60 on a tile, and it inverts when the tile is chosen:
+   a red disc with a white glyph, instead of a tinted one with a red glyph. */
+.kivun-cc-wizard .kivun-cc-check .kivun-cc-chip { width: 60px; height: 60px; }
+.kivun-cc-wizard .kivun-cc-check .kivun-cc-chip svg { width: 26px; height: 26px; }
+.kivun-cc-wizard .kivun-cc-check:has(.kivun-cc-toggle:checked) .kivun-cc-chip {
+	background: var(--cc-brand);
+	color: #fff;
+}
+/* The tile's own label: 24/700, the largest type in the step. */
+.kivun-cc-wizard .kivun-cc-check > span:not(.kivun-cc-chip) { font-size: 24px; font-weight: 700; }
 .kivun-cc-wizard .kivun-cc-view {
 	position: absolute;
 	top: .7rem;
@@ -2602,8 +2632,8 @@ td.kivun-cc-rowactions > form > * {
 /* The checkboxes are a row of cards here rather than a stacked list. */
 .kivun-cc-wizard .kivun-cc-types {
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-	gap: .7rem;
+	grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+	gap: 14px;
 }
 
 /* Buttons */
@@ -2659,7 +2689,8 @@ td.kivun-cc-rowactions > form > * {
 	content: "";
 	width: 190px;
 	max-width: 32vw;
-	height: 6px;
+	/* 8, the handoff's figure. */
+	height: 8px;
 	border-radius: 999px;
 	/* Filled from the inline start — the right, here — so it grows the way
 	   the steps beside it are read. */
@@ -2668,6 +2699,50 @@ td.kivun-cc-rowactions > form > * {
 		right / var(--cc-progress, 25%) 100%,
 		var(--cc-field);
 }
+/*
+ * The wizard's forward button: 56 tall, and carrying a 36 white disc with a
+ * brand chevron in it — the handoff's `padding: 0 30px 0 10px` is what
+ * leaves room for that disc on the inline end.
+ *
+ * The disc is a pseudo-element rather than a span in the markup. Three
+ * buttons would have needed one each, and the script that drives the wizard
+ * reaches for these by class: fewer children is one less thing for it to
+ * walk past.
+ */
+.kivun-cc-wizard .kivun-wiz-next,
+.kivun-cc-wizard .kivun-wiz-submit {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 10px;
+	height: 56px;
+	padding: 0 30px 0 10px;
+	border-radius: 999px;
+	font-size: 17px;
+	font-weight: 700;
+}
+/*
+ * The disc, with the chevron painted on it. The glyph is a data-URI SVG
+ * rather than a mask: a mask would cut the chevron OUT of the white disc,
+ * leaving a hole, where what is wanted is a brand chevron drawn on white.
+ *
+ * It points the way the wizard moves, which in RTL is leftward — the side
+ * the disc sits on.
+ */
+.kivun-cc-wizard .kivun-wiz-next::after,
+.kivun-cc-wizard .kivun-wiz-submit::after {
+	content: "";
+	flex: 0 0 auto;
+	width: 36px;
+	height: 36px;
+	border-radius: 50%;
+	background-color: #fff;
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23df2950' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M15 18l-6-6 6-6'/%3E%3C/svg%3E");
+	background-repeat: no-repeat;
+	background-position: center;
+	background-size: 15px 15px;
+}
+
 .kivun-cc-wizard[data-current="1"] { --cc-progress: 25%; }
 .kivun-cc-wizard[data-current="2"] { --cc-progress: 50%; }
 .kivun-cc-wizard[data-current="3"] { --cc-progress: 75%; }
