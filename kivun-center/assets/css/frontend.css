@@ -1641,8 +1641,23 @@ td.kivun-app-contact a { display: block; }
 	border-bottom: 1px solid var(--cc-divider);
 	vertical-align: middle;
 }
-.kivun-cc-table tbody tr { min-height: 72px; }
-.kivun-cc-table tbody td { height: 72px; }
+/*
+ * 72 only while this is still a table.
+ *
+ * On a real table cell `height` behaves as a minimum — the cell grows for
+ * its content — which is exactly the design's "min-height 72". The moment
+ * `is-stacked` turns each cell into a grid for the phone layout, the same
+ * declaration becomes a hard height that content cannot push past. It was
+ * already cutting into ordinary rows: six of the first ten cells overflowed
+ * by 20–66px at 390px, and an expanded panel or a dragged-taller note
+ * overflowed by 256, spilling into the field below instead of moving it
+ * down.
+ *
+ * The same trap as the narrow-screen fallback further down this file, which
+ * is already scoped this way for the same reason.
+ */
+.kivun-cc-table:not(.is-stacked) tbody tr { min-height: 72px; }
+.kivun-cc-table:not(.is-stacked) tbody td { height: 72px; }
 /* Header row: the field grey, 14/700, secondary — and padding 14/20. */
 .kivun-cc-table thead th {
 	background: var(--cc-field);

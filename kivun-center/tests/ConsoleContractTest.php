@@ -1489,6 +1489,65 @@ final class ConsoleContractTest extends TestCase {
 	}
 
 	/**
+	 * A fixed row height belongs to the table layout only.
+	 *
+	 * The handoff puts body rows at 72 tall. On a real table cell `height`
+	 * behaves as a minimum — the cell grows for its content — so it says
+	 * exactly that. The moment `is-stacked` turns each cell into a grid for
+	 * the phone, the same declaration becomes a hard height that content
+	 * cannot push past.
+	 *
+	 * Not a theoretical edge: with it unscoped, six of the first ten cells
+	 * already overflowed by 20–66px at 390px with ordinary content, and an
+	 * expanded panel or a note dragged taller overflowed by 256, spilling
+	 * over the field beneath it instead of pushing it down.
+	 *
+	 * The narrow-screen fallback in this file is scoped the same way for
+	 * the same reason, which is what makes this worth a standing test
+	 * rather than a comment: the trap is easy to walk into twice.
+	 *
+	 * @return void
+	 */
+	public function test_the_fixed_row_height_does_not_reach_the_stacked_layout(): void {
+		$css = (string) preg_replace( '!/\*.*?\*/!s', '', (string) file_get_contents( KIVUN_DIR . 'assets/css/frontend.css' ) );
+
+		$offenders = array();
+		foreach ( explode( '}', $css ) as $block ) {
+			$at = strpos( $block, '{' );
+			if ( false === $at ) {
+				continue;
+			}
+			$selectors = substr( $block, 0, $at );
+			$body      = substr( $block, $at );
+
+			/*
+			 * Body cells only. The stacked layout hides the header with
+			 * the usual visually-hidden block, which sets `height: 1px`
+			 * on purpose — a first version of this test reported that as
+			 * the bug.
+			 */
+			if ( false === strpos( $selectors, 'kivun-cc-table' ) ) {
+				continue;
+			}
+			if ( false === strpos( $selectors, 'tbody td' ) && false === strpos( $selectors, 'tbody tr' ) ) {
+				continue;
+			}
+			if ( ! preg_match( '/(?<!min-)height:\s*\d/', $body ) ) {
+				continue;
+			}
+			if ( false === strpos( $selectors, ':not(.is-stacked)' ) ) {
+				$offenders[] = trim( preg_replace( '/\s+/', ' ', $selectors ) ?? '' ) . ' →' . trim( preg_replace( '/\s+/', ' ', $body ) ?? '' );
+			}
+		}
+
+		$this->assertSame(
+			array(),
+			$offenders,
+			"a fixed cell height reaches the stacked layout, where it becomes a ceiling instead of a floor and content spills over the field below:\n  " . implode( "\n  ", $offenders )
+		);
+	}
+
+	/**
 	 * Every console token a rule asks for is a token that exists.
 	 *
 	 * The console's colours, radii and shadows are all custom properties. A
