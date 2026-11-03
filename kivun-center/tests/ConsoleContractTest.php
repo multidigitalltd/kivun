@@ -1594,6 +1594,59 @@ final class ConsoleContractTest extends TestCase {
 	}
 
 	/**
+	 * The row's icon actions stay inside their segmented group.
+	 *
+	 * The handoff draws them as one control — a 1.5px ring, fully round,
+	 * 40×38 cells divided by a 1.5px line — rather than four loose
+	 * circles. That needs a wrapper, because inline-block children cannot
+	 * sit flush without one: the whitespace between tags becomes a gap.
+	 *
+	 * Two of the cells are a `<form>`, so the group relies on
+	 * `display: contents` to let their buttons act as cells. Drop that and
+	 * the dividers land on the forms instead of between the buttons, while
+	 * everything still submits — so nothing fails, it just stops looking
+	 * like one control.
+	 *
+	 * @return void
+	 */
+	public function test_the_row_icons_stay_one_segmented_control(): void {
+		$php = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-content-creator.php' );
+		$css = (string) file_get_contents( KIVUN_DIR . 'assets/css/frontend.css' );
+
+		// Both action cells that have icons: the library and the custom pages.
+		$this->assertSame(
+			2,
+			substr_count( $php, 'class="kivun-cc-actgroup"' ),
+			'one of the two row-action groups is gone, so its icons are loose circles again'
+		);
+
+		// Opened and closed the same number of times.
+		$at = strpos( $css, '.kivun-cc-actgroup {' );
+		$this->assertNotFalse( $at, 'the segmented group has no styling' );
+		$group = substr( $css, $at, 400 );
+		$this->assertStringContainsString( 'border-radius: 999px', $group, 'the group is no longer a pill' );
+		$this->assertStringContainsString( 'display: inline-flex', $group, 'the group no longer lays its cells in a row' );
+
+		$this->assertStringContainsString(
+			'.kivun-cc-actgroup form { display: contents; }',
+			$css,
+			'the forms inside the group are laid out again, so the duplicate and delete buttons stop being cells of it'
+		);
+
+		/*
+		 * And the cells state their own colour. One of them is an <a>, and
+		 * the table paints its links brand red — measured, the "view" cell
+		 * came out red beside two grey ones, which reads as a warning on
+		 * the one harmless action in the group.
+		 */
+		$this->assertMatchesRegularExpression(
+			'/\.kivun-cc-actgroup \.kivun-cc-icon-btn \{[^}]*color:\s*var\(--cc-ink\)/s',
+			$css,
+			'the group\'s cells no longer set their own colour, so the one that is a link inherits the table\'s red'
+		);
+	}
+
+	/**
 	 * Every console token a rule asks for is a token that exists.
 	 *
 	 * The console's colours, radii and shadows are all custom properties. A

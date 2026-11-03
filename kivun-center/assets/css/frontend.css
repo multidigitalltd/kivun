@@ -1922,6 +1922,59 @@ td.kivun-app-contact a { display: block; }
 
 .kivun-cc-rowactions { display: flex; flex-wrap: wrap; gap: .35rem; align-items: center; }
 .kivun-cc-rowactions form { display: inline; margin: 0; }
+
+/*
+ * The row's icon actions, as one segmented control rather than four loose
+ * circles: a 1.5px ring, fully round, with 40×38 cells divided by a 1.5px
+ * line — the handoff's figures.
+ *
+ * Two of the four cells are a <form> (duplicate and delete, which post
+ * rather than fetch). `display: contents` drops the form from the layout
+ * so its button becomes a cell of the group like the others, while the
+ * form itself still submits exactly as before. Without it the dividers
+ * would land on the forms instead of between the buttons.
+ */
+.kivun-cc-actgroup {
+	display: inline-flex;
+	align-items: stretch;
+	vertical-align: middle;
+	border: 1.5px solid var(--cc-line);
+	border-radius: 999px;
+	background: var(--cc-surface);
+	overflow: hidden;
+}
+.kivun-cc-actgroup form { display: contents; }
+/*
+ * Charcoal, not the muted grey — and stated here rather than inherited,
+ * because one of these cells is an <a> and the table paints its links
+ * brand red. Measured: the "view" cell came out red while the two beside
+ * it were grey, which read as a warning on the one harmless action in
+ * the group.
+ */
+.kivun-cc-console .kivun-cc-actgroup .kivun-cc-icon-btn {
+	width: 40px;
+	height: 38px;
+	border-radius: 0;
+	background: transparent;
+	color: var(--cc-ink);
+	border-inline-start: 1.5px solid var(--cc-divider);
+}
+/* The first cell in the reading order opens the group, so it has no
+   divider before it. */
+.kivun-cc-console .kivun-cc-actgroup > .kivun-cc-icon-btn:first-child,
+.kivun-cc-console .kivun-cc-actgroup > form:first-child .kivun-cc-icon-btn {
+	border-inline-start: 0;
+}
+/* Charcoal turning red on hover, which is the handoff's rule for every
+   line icon in a table. */
+.kivun-cc-console .kivun-cc-actgroup .kivun-cc-icon-btn:hover {
+	background: var(--cc-field);
+	color: var(--cc-brand);
+}
+/* Delete is red wherever it sits, hover or not. */
+.kivun-cc-console .kivun-cc-actgroup .kivun-cc-icon-btn--danger,
+.kivun-cc-console .kivun-cc-actgroup .kivun-cc-icon-btn--danger:hover { color: var(--cc-brand); }
+.kivun-cc-console .kivun-cc-actgroup .kivun-cc-icon-btn--danger:hover { background: var(--cc-chip); }
 /*
  * …except when the actions ARE the cell, which is every use of this class in
  * the console. `display: flex` on a <td> takes it out of table layout, so it

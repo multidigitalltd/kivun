@@ -3665,8 +3665,10 @@ class Kivun_Content_Creator {
 									// questions is a copy rather than doing it
 									// again by hand.
 									?>
+									<span class="kivun-cc-actgroup">
 									<a class="kivun-cc-icon-btn" href="<?php echo esc_url( (string) get_permalink( $kivun_pid ) ); ?>" target="_blank" rel="noopener noreferrer" aria-label="<?php esc_attr_e( 'תצוגה', 'kivun' ); ?>" title="<?php esc_attr_e( 'תצוגה', 'kivun' ); ?>"><?php echo kivun_icon( 'eye' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?></a>
 									<button type="button" class="kivun-cc-icon-btn kivun-duplicate-form" data-id="<?php echo esc_attr( (string) $kivun_pid ); ?>" aria-label="<?php esc_attr_e( 'שכפול', 'kivun' ); ?>" title="<?php esc_attr_e( 'שכפול', 'kivun' ); ?>"><?php echo kivun_icon( 'copy' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?></button>
+									</span>
 									<span class="kivun-cc-wa-status kivun-form-status" role="status" aria-live="polite"></span>
 								</td>
 							</tr>
@@ -4089,6 +4091,7 @@ class Kivun_Content_Creator {
 							?>
 							<td class="kivun-cc-rowactions">
 								<a class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-act kivun-cc-act--edit" href="<?php echo esc_url( $edit_url ); ?>"><?php echo kivun_icon( 'edit' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?><?php esc_html_e( 'עריכה', 'kivun' ); ?></a>
+								<span class="kivun-cc-actgroup">
 								<?php if ( '' !== $view_url ) : ?>
 									<a class="kivun-cc-icon-btn" href="<?php echo esc_url( $view_url ); ?>" target="_blank" rel="noopener" aria-label="<?php esc_attr_e( 'צפייה', 'kivun' ); ?>" title="<?php esc_attr_e( 'צפייה', 'kivun' ); ?>"><?php echo kivun_icon( 'eye' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?></a>
 								<?php endif; ?>
@@ -4106,6 +4109,7 @@ class Kivun_Content_Creator {
 								<?php if ( $can_delete ) : ?>
 									<?php echo self::delete_form( (string) $gid, $page_url, __( 'מחיקה', 'kivun' ), 'kivun-cc-icon-btn kivun-cc-icon-btn--danger', 'trash' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built from escaped parts in delete_form(). ?>
 								<?php endif; ?>
+								</span>
 							</td>
 						</tr>
 					<?php endforeach; ?>
