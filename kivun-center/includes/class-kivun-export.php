@@ -313,13 +313,23 @@ class Kivun_Export {
 		// spreadsheet either — otherwise the restriction is decoration.
 		$show_source = Kivun_Content_Creator::can_see_lead_source();
 
+		/*
+		 * The same split the leads column makes. A restriction the export
+		 * walks around is not a restriction: the campaign and the
+		 * publisher would simply arrive as a file instead of on screen.
+		 */
+		$show_full_source = Kivun_Content_Creator::can_see_full_lead_source();
+
 		$headings = array( 'ID', 'קורס / סדנה' );
 		if ( $show_source ) {
 			// Each UTM value in a column of its own. They were already stored
 			// that way and only ever left as one line of prose, which is
 			// readable and cannot be summed, sorted or pivoted — the three
 			// things a spreadsheet is opened for.
-			$headings = array_merge( $headings, array( 'מקור', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content' ) );
+			$headings = array_merge( $headings, array( 'מקור', 'utm_source' ) );
+			if ( $show_full_source ) {
+				$headings = array_merge( $headings, array( 'utm_medium', 'utm_campaign', 'utm_content' ) );
+			}
 		}
 		$headings = array_merge( $headings, array( 'שם', 'אימייל', 'טלפון', 'עיר', 'מגדר', 'אישור דיוור', 'אישור פרטיות', 'סוג', 'הערות', 'הערות פנימיות', 'סטטוס', 'תאריך' ) );
 
@@ -357,11 +367,22 @@ class Kivun_Export {
 		foreach ( $rows as $r ) {
 			$line = array( $r['id'], $r['post_name'] );
 			if ( $show_source ) {
-				$line[] = $r['source'] ?? '';
+				/*
+				 * The stored source is not just the origin: the capture
+				 * appends "UTM: source / medium / campaign / content" to
+				 * it, so the raw field carries the whole ledger. Writing
+				 * it unredacted handed back, in one cell, exactly what
+				 * the columns below withhold — the restriction would
+				 * have been real on screen and cosmetic in the file.
+				 */
+				$parsed = Kivun_Content_Creator::parse_source( (string) ( $r['source'] ?? '' ) );
+				$line[] = $show_full_source ? ( $r['source'] ?? '' ) : $parsed['origin'];
 				$line[] = $r['utm_source'] ?? '';
-				$line[] = $r['utm_medium'] ?? '';
-				$line[] = $r['utm_campaign'] ?? '';
-				$line[] = $r['utm_content'] ?? '';
+				if ( $show_full_source ) {
+					$line[] = $r['utm_medium'] ?? '';
+					$line[] = $r['utm_campaign'] ?? '';
+					$line[] = $r['utm_content'] ?? '';
+				}
 			}
 
 			fputcsv(

@@ -2241,6 +2241,30 @@ class Kivun_Content_Creator {
 	}
 
 	/**
+	 * Whether the current user should be shown the whole UTM, rather than
+	 * only the medium a lead arrived through.
+	 *
+	 * Two different questions hide behind one column. "This came from
+	 * WhatsApp" is context for whoever is working the lead. "This came
+	 * from campaign אחזקת-מבנים, publisher ערוץ-הירושלמים" is the
+	 * advertising ledger: which supplier was paid for which placement,
+	 * and what it returned. That belongs to whoever runs the advertising,
+	 * and it is not a coordinator's business.
+	 *
+	 * So the medium stays for everyone who may see the column at all,
+	 * and the campaign and content are kept for the site's managers and
+	 * for the agency, whose own placements they are.
+	 *
+	 * Deliberately a narrower bar than can_see_lead_source(): that one
+	 * admits edit_others_posts, which is most of the content team.
+	 *
+	 * @return bool
+	 */
+	public static function can_see_full_lead_source(): bool {
+		return current_user_can( 'manage_options' ) || self::is_agency();
+	}
+
+	/**
 	 * Whether the current user is an outside agency: the campaign numbers
 	 * and nothing else.
 	 *
@@ -2348,7 +2372,7 @@ class Kivun_Content_Creator {
 		self::remember_console_url( $page_url );
 
 		$can_delete = current_user_can( 'delete_posts' );
-		$stats      = self::console_stats( $show_leads, $show_jobs, ! $leads_only && ! $agency );
+		$stats      = self::console_stats( $show_leads, $show_jobs, ! $leads_only && ! $agency, $show_calls );
 		$user       = wp_get_current_user();
 
 		$console_tabs = ( $leads_only || $agency ) ? array() : array(
@@ -2456,9 +2480,22 @@ class Kivun_Content_Creator {
 						<span class="kivun-cc-stat__num"><?php echo esc_html( number_format_i18n( $stats['published'] ) ); ?></span>
 						<span class="kivun-cc-stat__label"><?php esc_html_e( 'פרסומים', 'kivun' ); ?></span>
 					</div>
+				<?php endif; ?>
+				<?php
+				/*
+				 * Calls, where the switchboard is connected. This card took
+				 * the place of "ממתינים לפרסום", which said almost nothing:
+				 * it is nearly always zero, and the one screen that acts on
+				 * it already lists them.
+				 *
+				 * Only for whoever may open the tracking-numbers screen —
+				 * a figure nobody can click through to is a dead end.
+				 */
+				?>
+				<?php if ( $show_calls ) : ?>
 					<div class="kivun-cc-stat">
-						<span class="kivun-cc-stat__num"><?php echo esc_html( number_format_i18n( $stats['pending'] ) ); ?></span>
-						<span class="kivun-cc-stat__label"><?php esc_html_e( 'ממתינים לפרסום', 'kivun' ); ?></span>
+						<span class="kivun-cc-stat__num"><?php echo esc_html( number_format_i18n( $stats['calls'] ) ); ?></span>
+						<span class="kivun-cc-stat__label"><?php esc_html_e( 'שיחות', 'kivun' ); ?></span>
 					</div>
 				<?php endif; ?>
 				<?php if ( $show_leads ) : ?>
@@ -2626,9 +2663,10 @@ class Kivun_Content_Creator {
 	 * @param bool $with_leads   Whether to count content enquiries.
 	 * @param bool $with_jobs    Whether to count jobs.
 	 * @param bool $with_content Whether to count the content library at all.
+	 * @param bool $with_calls   Whether to count switchboard calls.
 	 * @return array<string,int>
 	 */
-	private static function console_stats( bool $with_leads, bool $with_jobs, bool $with_content = true ): array {
+	private static function console_stats( bool $with_leads, bool $with_jobs, bool $with_content = true, bool $with_calls = false ): array {
 		global $wpdb;
 
 		$stats = array(
@@ -2637,12 +2675,18 @@ class Kivun_Content_Creator {
 			'pending'   => 0,
 			'leads'     => 0,
 			'leads_new' => 0,
+			'calls'     => 0,
 			'jobs'      => 0,
 		);
 
 		// A leads reader is shown no content and counts none: the tally would
 		// tell them how much there is across a site they cannot open, and the
 		// query behind it reads every post to work that out.
+		if ( $with_calls ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$stats['calls'] = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}kivun_calls" );
+		}
+
 		if ( ! $with_content ) {
 			return array_merge( $stats, self::lead_stats( $with_leads, $with_jobs ) );
 		}
@@ -3074,7 +3118,15 @@ class Kivun_Content_Creator {
 		<div class="kivun-cc-front">
 
 			<?php if ( $saved ) : ?>
-				<div class="kivun-cc-note kivun-cc-note--success">
+				<?php
+				/*
+				 * Marked apart from the other two success notices on this
+				 * screen — deleted and duplicated — because only this one
+				 * is the design's charcoal card. They are three different
+				 * events that happen to share a class.
+				 */
+				?>
+				<div class="kivun-cc-note kivun-cc-note--success kivun-cc-published">
 					<span><?php esc_html_e( 'התוכן פורסם בהצלחה.', 'kivun' ); ?></span>
 					<?php if ( $group_posts ) : ?>
 						<span class="kivun-cc-note__actions">
@@ -3159,7 +3211,24 @@ class Kivun_Content_Creator {
 							<input type="text" id="kivun-ccf-title" name="title" class="kivun-cc-input kivun-cc-input--lg" value="<?php echo esc_attr( $v['title'] ); ?>" required>
 
 							<label class="kivun-cc-sub" for="kivun-ccf-slug"><?php esc_html_e( 'כתובת URL (Slug)', 'kivun' ); ?></label>
-							<input type="text" id="kivun-ccf-slug" name="slug" class="kivun-cc-input" dir="ltr" value="<?php echo esc_attr( $v['slug'] ); ?>" placeholder="my-content">
+							<?php
+							/*
+							 * The address is one field with its own prefix shown
+							 * inside it, so what is being typed reads as the tail
+							 * of a real URL rather than a bare word.
+							 *
+							 * The prefix is decoration: it is not an input, carries
+							 * no name, and nothing is submitted for it. The input
+							 * keeps its id, name, value and dir exactly as before,
+							 * and the dictation button still attaches to the field
+							 * and lands inside this wrapper, which is where it
+							 * should sit anyway.
+							 */
+							?>
+							<span class="kivun-cc-slugfield" dir="ltr">
+								<span class="kivun-cc-slugfield__prefix" aria-hidden="true">kivun.org.il/</span>
+								<input type="text" id="kivun-ccf-slug" name="slug" class="kivun-cc-input kivun-cc-slugfield__input" dir="ltr" value="<?php echo esc_attr( $v['slug'] ); ?>" placeholder="my-content">
+							</span>
 							<p class="kivun-cc-hint"><?php esc_html_e( 'ריק = נוצר אוטומטית מהכותרת.', 'kivun' ); ?></p>
 						</div>
 
@@ -6024,7 +6093,8 @@ class Kivun_Content_Creator {
 
 		$can_delete_rows = current_user_can( 'manage_options' );
 		$show_source     = self::can_see_lead_source();
-		$show_source     = self::can_see_lead_source();
+		// Whether the column shows the whole UTM or only the medium.
+		$show_full_source = self::can_see_full_lead_source();
 
 		// Base args preserved across filtering and paging.
 		$base_args = array( 'kivun_tab' => 'leads' );
@@ -6398,14 +6468,25 @@ class Kivun_Content_Creator {
 							<td class="kivun-cc-utm" data-label="<?php esc_attr_e( 'מקור (UTM)', 'kivun' ); ?>" data-col="utm">
 								<?php if ( '' !== $src['source'] ) : ?>
 									<span class="kivun-cc-badge"><?php echo esc_html( $src['source'] ); ?></span>
-									<?php if ( '' !== $src['medium'] ) : ?>
-										<span class="kivun-cc-badge"><?php echo esc_html( $src['medium'] ); ?></span>
-									<?php endif; ?>
-									<?php if ( '' !== $src['campaign'] ) : ?>
-										<span class="kivun-cc-source">
-											<?php echo esc_html( $src['campaign'] ); ?>
-											<?php echo '' !== $src['content'] ? esc_html( ' · ' . $src['content'] ) : ''; ?>
-										</span>
+									<?php
+									/*
+									 * Everything past the medium is the advertising
+									 * ledger — which campaign, which publisher — and
+									 * it is kept for the managers and the agency.
+									 * A coordinator working the lead is shown where
+									 * it came in from and nothing further.
+									 */
+									?>
+									<?php if ( $show_full_source ) : ?>
+										<?php if ( '' !== $src['medium'] ) : ?>
+											<span class="kivun-cc-badge"><?php echo esc_html( $src['medium'] ); ?></span>
+										<?php endif; ?>
+										<?php if ( '' !== $src['campaign'] ) : ?>
+											<span class="kivun-cc-source">
+												<?php echo esc_html( $src['campaign'] ); ?>
+												<?php echo '' !== $src['content'] ? esc_html( ' · ' . $src['content'] ) : ''; ?>
+											</span>
+										<?php endif; ?>
 									<?php endif; ?>
 								<?php else : ?>
 									<span class="kivun-muted" aria-hidden="true">—</span>
