@@ -1057,7 +1057,7 @@ td.kivun-app-contact a { display: block; }
 @media (max-width: 860px) { .kivun-cc-grid { grid-template-columns: 1fr; } .kivun-cc-side { position: static; } }
 
 .kivun-cc-card { background: #fff; border: 1px solid var(--kivun-border); border-radius: 16px; padding: 1.25rem 1.35rem; box-shadow: 0 2px 10px rgba(0,0,0,.05); }
-.kivun-cc-card.kivun-cc-section[data-type="event"] { border: 2px solid var(--kivun-accent); background: #fbf7f8; box-shadow: 0 2px 14px rgba(0,0,0,.10); }
+.kivun-cc-card.kivun-cc-section[data-type="event"] { border: 2px solid var(--kivun-accent); background: var(--cc-surface, #fff); box-shadow: 0 2px 14px rgba(0,0,0,.10); }
 .kivun-cc-card.kivun-cc-section[data-type="event"] .kivun-cc-h3 { color: var(--kivun-accent); display: flex; align-items: center; gap: .4rem; }
 .kivun-cc-h3 { margin: 0 0 .85rem; font-size: 1.05rem; font-weight: 700; color: var(--kivun-accent); }
 .kivun-cc-label { display: block; font-weight: 700; font-size: 1rem; margin-bottom: .5rem; color: var(--kivun-text); }
@@ -1073,7 +1073,7 @@ td.kivun-app-contact a { display: block; }
 @media (max-width: 520px) { .kivun-cc-row { grid-template-columns: 1fr; } }
 
 .kivun-cc-check { display: flex; align-items: center; gap: .55rem; padding: .6rem .7rem; border: 1px solid var(--kivun-border); border-radius: 10px; margin-bottom: .55rem; cursor: pointer; font-weight: 600; transition: border-color .15s, background .15s; }
-.kivun-cc-check:hover { border-color: var(--kivun-accent); background: #fff5f8; }
+.kivun-cc-check:hover { border-color: var(--kivun-accent); background: var(--cc-chip, #fde8ed); }
 .kivun-cc-check input { accent-color: var(--kivun-accent); width: 18px; height: 18px; }
 .kivun-cc-view { margin-inline-start: auto; text-decoration: none; color: var(--kivun-accent); font-weight: 700; }
 
@@ -1196,7 +1196,7 @@ td.kivun-app-contact a { display: block; }
 	/*
 	 * The plugin-wide greys, restated for the console subtree in the
 	 * handoff's own values. They differ from the site's by a hair each —
-	 * #6b7280 against #6b6b72, #e5e7eb against #e4e4e8 — which is too
+	 * var(--cc-text-2, #6b6b72) against #6b6b72, #e5e7eb against #e4e4e8 — which is too
 	 * little to see on its own and plainly visible across a whole screen.
 	 *
 	 * Done by redefining the variables rather than by rewriting the two
@@ -1262,9 +1262,11 @@ td.kivun-app-contact a { display: block; }
 	padding-top: .9rem;
 	border-top: 1px dashed var(--kivun-border);
 }
+/* Ended: a finished campaign, so the handoff's neutral closed-status
+   pair rather than a brown-on-cream from no part of this palette. */
 .kivun-cc-console .kivun-camp-ended {
-	background: #fef3c7;
-	color: #92400e;
+	background: var(--cc-canvas);
+	color: var(--cc-ink);
 }
 
 /* The settlement warning: said plainly, in the colour of a caution rather
@@ -1922,6 +1924,59 @@ td.kivun-app-contact a { display: block; }
 
 .kivun-cc-rowactions { display: flex; flex-wrap: wrap; gap: .35rem; align-items: center; }
 .kivun-cc-rowactions form { display: inline; margin: 0; }
+
+/*
+ * The row's icon actions, as one segmented control rather than four loose
+ * circles: a 1.5px ring, fully round, with 40×38 cells divided by a 1.5px
+ * line — the handoff's figures.
+ *
+ * Two of the four cells are a <form> (duplicate and delete, which post
+ * rather than fetch). `display: contents` drops the form from the layout
+ * so its button becomes a cell of the group like the others, while the
+ * form itself still submits exactly as before. Without it the dividers
+ * would land on the forms instead of between the buttons.
+ */
+.kivun-cc-actgroup {
+	display: inline-flex;
+	align-items: stretch;
+	vertical-align: middle;
+	border: 1.5px solid var(--cc-line);
+	border-radius: 999px;
+	background: var(--cc-surface);
+	overflow: hidden;
+}
+.kivun-cc-actgroup form { display: contents; }
+/*
+ * Charcoal, not the muted grey — and stated here rather than inherited,
+ * because one of these cells is an <a> and the table paints its links
+ * brand red. Measured: the "view" cell came out red while the two beside
+ * it were grey, which read as a warning on the one harmless action in
+ * the group.
+ */
+.kivun-cc-console .kivun-cc-actgroup .kivun-cc-icon-btn {
+	width: 40px;
+	height: 38px;
+	border-radius: 0;
+	background: transparent;
+	color: var(--cc-ink);
+	border-inline-start: 1.5px solid var(--cc-divider);
+}
+/* The first cell in the reading order opens the group, so it has no
+   divider before it. */
+.kivun-cc-console .kivun-cc-actgroup > .kivun-cc-icon-btn:first-child,
+.kivun-cc-console .kivun-cc-actgroup > form:first-child .kivun-cc-icon-btn {
+	border-inline-start: 0;
+}
+/* Charcoal turning red on hover, which is the handoff's rule for every
+   line icon in a table. */
+.kivun-cc-console .kivun-cc-actgroup .kivun-cc-icon-btn:hover {
+	background: var(--cc-field);
+	color: var(--cc-brand);
+}
+/* Delete is red wherever it sits, hover or not. */
+.kivun-cc-console .kivun-cc-actgroup .kivun-cc-icon-btn--danger,
+.kivun-cc-console .kivun-cc-actgroup .kivun-cc-icon-btn--danger:hover { color: var(--cc-brand); }
+.kivun-cc-console .kivun-cc-actgroup .kivun-cc-icon-btn--danger:hover { background: var(--cc-chip); }
 /*
  * …except when the actions ARE the cell, which is every use of this class in
  * the console. `display: flex` on a <td> takes it out of table layout, so it
@@ -1970,7 +2025,7 @@ td.kivun-cc-rowactions > form > * {
 .kivun-cc-leadbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: .6rem; margin-bottom: .9rem; }
 .kivun-cc-leadbar .kivun-stat {
 	padding: .4rem .9rem;
-	background: #f1f5f9;
+	background: var(--cc-field, #f7f7f8);
 	border-radius: 999px;
 	font-size: .85rem;
 }
@@ -2813,7 +2868,7 @@ td.kivun-cc-rowactions > form > * {
 .kivun-camp-out { display: flex; gap: .5rem; align-items: center; }
 .kivun-camp-out .kivun-camp-result {
 	flex: 1 1 auto;
-	background: #f8fafc;
+	background: var(--cc-field, #f7f7f8);
 	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 	font-size: .82rem;
 	direction: ltr;
@@ -2828,7 +2883,7 @@ td.kivun-cc-rowactions > form > * {
 .kivun-camp-short {
 	font-weight: 700;
 	border-color: var(--kivun-accent);
-	background: #fff5f8;
+	background: var(--cc-chip, #fde8ed);
 }
 .kivun-camp-clicks {
 	font-size: .78rem;
@@ -2860,7 +2915,7 @@ td.kivun-cc-rowactions > form > * {
 }
 .kivun-camp-saved {
 	flex: 1 1 auto;
-	background: #f8fafc;
+	background: var(--cc-field, #f7f7f8);
 	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 	font-size: .76rem;
 	padding: .4rem .55rem;
@@ -2902,7 +2957,7 @@ td.kivun-cc-rowactions > form > * {
 }
 .kivun-camp-title { margin: 0 0 .2rem; font-size: 1.05rem; font-weight: 800; color: var(--cc-ink); }
 .kivun-camp-metrics { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; }
-.kivun-camp-total { background: #dcfce7; color: #15803d; }
+.kivun-camp-total { background: var(--cc-chip, #fde8ed); color: var(--cc-brand, #df2950); }
 .kivun-camp-summary {
 	cursor: pointer;
 	font-weight: 700;
@@ -2930,12 +2985,12 @@ td.kivun-cc-rowactions > form > * {
 	margin-bottom: .85rem;
 	padding: .85rem 1rem;
 	border: 1px solid var(--cc-line);
-	border-radius: 12px;
-	background: #f9fafb;
+	border-radius: var(--cc-radius-inner, 20px);
+	background: var(--cc-field, #f7f7f8);
 }
 .kivun-cc-table .kivun-link-editrow > td {
 	padding: .85rem 1rem;
-	background: #f9fafb;
+	background: var(--cc-field, #f7f7f8);
 	border-top: 0;
 }
 .kivun-camp-unmapped { margin: 0 0 .7rem; color: #b45309; }
@@ -3091,7 +3146,7 @@ td.kivun-cc-rowactions > form > * {
 
 /* The badge on a number says what it is carrying now, so it reads as the
    status pills do elsewhere rather than as a louder green. */
-.kivun-cc-console .kivun-cc-calls .kivun-camp-total { background: #dcfce7; color: #14702f; }
+.kivun-cc-console .kivun-cc-calls .kivun-camp-total { background: var(--cc-chip, #fde8ed); color: var(--cc-brand, #df2950); }
 
 /*
  * "+ add" is an action, so it looks like one. Scoped tighter than the rest:
@@ -3495,7 +3550,7 @@ td.kivun-cc-rowactions > form > * {
 	border-radius: 999px;
 	white-space: nowrap;
 }
-.kivun-cc-table .kivun-status--publish { background: #dcfce7; color: #15803d; }
+.kivun-cc-table .kivun-status--publish { background: var(--cc-chip, #fde8ed); color: var(--cc-brand, #df2950); }
 .kivun-cc-table .kivun-status--draft,
 .kivun-cc-table .kivun-status--pending { background: #fef3c7; color: #a16207; }
 /* Scheduled and private are neither live nor unfinished — give them their own
@@ -3688,15 +3743,15 @@ body.kivun-ty-open { overflow: hidden; }
 }
 .kivun-cc-console .kivun-jobs-table thead th,
 .kivun-cc-console .kivun-apps-table thead th {
-	background: #f8fafc;
+	background: var(--cc-field);
 	font-size: .74rem;
 	font-weight: 800;
 	letter-spacing: .02em;
-	color: #64748b;
+	color: var(--cc-text-2);
 	border-bottom: 2px solid var(--cc-line);
 }
 .kivun-cc-console .kivun-jobs-table tbody tr:nth-child(even),
-.kivun-cc-console .kivun-apps-table tbody tr:nth-child(even) { background: #fcfcfd; }
+.kivun-cc-console .kivun-apps-table tbody tr:nth-child(even) { background: var(--cc-field); }
 .kivun-cc-console .kivun-dashboard-header h2 { font-size: 1.3rem; font-weight: 800; color: var(--cc-ink); }
 .kivun-cc-console .kivun-apps-stats { gap: .7rem; }
 .kivun-cc-console .kivun-apps-stats .kivun-stat {
@@ -3709,7 +3764,7 @@ body.kivun-ty-open { overflow: hidden; }
 /* Embedded copy sits inside the console shell already — no second chrome. */
 .kivun-cc-console .kivun-employer-dashboard.is-embedded { margin: 0; padding: 0; background: none; border: none; }
 .kivun-cc-console .kivun-employer-dashboard .kivun-tabs {
-	background: #f8fafc;
+	background: var(--cc-field);
 	border: 1px solid var(--cc-line);
 	border-radius: 12px;
 	padding: .3rem;
@@ -3779,7 +3834,7 @@ body.kivun-ty-open { overflow: hidden; }
 .kivun-cc-viewtoggle {
 	display: inline-flex;
 	padding: 3px;
-	background: #f1f5f9;
+	background: var(--cc-field, #f7f7f8);
 	border: 1px solid var(--kivun-border);
 	border-radius: 999px;
 }
@@ -3910,7 +3965,7 @@ body.kivun-ty-open { overflow: hidden; }
 	align-items: start;
 	padding: .4rem .6rem;
 	border: 0;
-	border-bottom: 1px solid #f1f5f9;
+	border-bottom: 1px solid var(--cc-field, #f7f7f8);
 	text-align: start;
 }
 .kivun-cc-table.is-stacked td:last-child { border-bottom: 0; }
@@ -3980,19 +4035,19 @@ body.kivun-ty-open { overflow: hidden; }
 .kivun-cf-edit { display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
 
 .kivun-cf-card {
-	border: 1px solid var(--cc-line, #e3e5e9);
+	border: 1px solid var(--cc-line, var(--cc-line, #e4e4e8));
 	border-radius: 12px;
 	padding: .9rem 1rem 1rem;
 	background: #fff;
 }
 .kivun-cf-card__title { margin: 0 0 .2rem; font-size: .95rem; font-weight: 600; }
-.kivun-cf-count { color: #6b7280; font-weight: 400; }
+.kivun-cf-count { color: var(--cc-text-2, #6b6b72); font-weight: 400; }
 .kivun-cf-empty {
 	margin: .6rem 0 0;
 	padding: .9rem;
-	border: 1px dashed var(--cc-line, #e3e5e9);
+	border: 1px dashed var(--cc-line, var(--cc-line, #e4e4e8));
 	border-radius: 10px;
-	color: #6b7280;
+	color: var(--cc-text-2, #6b6b72);
 	font-size: .88rem;
 	text-align: center;
 }
@@ -4006,7 +4061,7 @@ body.kivun-ty-open { overflow: hidden; }
 	gap: .4rem;
 	font-size: .88rem;
 	padding: .3rem .6rem;
-	border: 1px solid var(--cc-line, #e3e5e9);
+	border: 1px solid var(--cc-line, var(--cc-line, #e4e4e8));
 	border-radius: 999px;
 	cursor: pointer;
 }
@@ -4053,21 +4108,53 @@ body.kivun-ty-open { overflow: hidden; }
 .kivun-cc-console .kivun-cf-builtin:has(input:checked) input::after { color: #fff; }
 .kivun-cc-console .kivun-cf-builtin input:focus-visible { outline: 2px solid var(--cc-brand); outline-offset: 2px; }
 
-/* The row whose builder is open. */
+/*
+ * The builder panel: the field grey, padding 24/20 — the handoff's
+ * figures. It was a 4% wash of the brand, which put a second pink on
+ * screen beside the open row's own.
+ */
 .kivun-cc-console .kivun-form-editrow > td {
-	background: color-mix(in srgb, var(--cc-brand) 4%, #fff);
-	padding: 1.2rem;
+	background: var(--cc-field);
+	padding: 24px 20px;
 }
+/* And the row it belongs to takes the red wash, the one colour the
+   handoff uses for "this is the open one" everywhere. */
 .kivun-cc-console tr:has(+ .kivun-form-editrow:not([hidden])) > td {
-	background: color-mix(in srgb, var(--cc-brand) 6%, #fff);
+	background: var(--cc-wash);
 }
 
 .kivun-cf-list { display: flex; flex-direction: column; gap: .6rem; margin: .6rem 0 .9rem; }
+/*
+ * "Add a question" is a full-width dashed outline in the brand colour —
+ * the one control in the builder that is an invitation rather than an
+ * action on something already there, and the handoff draws it that way
+ * rather than as another filled pill.
+ */
+.kivun-cc-console .kivun-cf-add-btn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	height: 48px;
+	padding: 0 1rem;
+	background: transparent;
+	border: 2px dashed var(--cc-brand);
+	border-radius: 999px;
+	color: var(--cc-brand);
+	font-weight: 700;
+}
+.kivun-cc-console .kivun-cf-add-btn:hover {
+	background: var(--cc-chip);
+	color: var(--cc-brand);
+	filter: none;
+}
+/* A question is a bordered card at radius 20, on nothing — the panel it
+   sits in is what carries the grey. */
 .kivun-cf-row {
-	border: 1px solid var(--cc-line, #e3e5e9);
-	border-radius: 10px;
-	padding: .7rem .8rem;
-	background: #fcfcfd;
+	border: 1px solid var(--cc-line, var(--cc-line, #e4e4e8));
+	border-radius: 20px;
+	padding: 14px 16px;
+	background: transparent;
 }
 .kivun-cf-row.is-dragging { opacity: .45; border-style: dashed; }
 .kivun-cf-row__bar { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
@@ -4077,13 +4164,15 @@ body.kivun-ty-open { overflow: hidden; }
 	flex: none;
 	display: grid;
 	place-items: center;
-	width: 1.5rem;
-	height: 1.5rem;
+	/* A 28 charcoal disc with white digits. It was indigo on lavender — a
+	   pair of colours from no part of this design. */
+	width: 28px;
+	height: 28px;
 	border-radius: 999px;
-	background: #eef2ff;
-	color: #4338ca;
-	font-size: .78rem;
-	font-weight: 600;
+	background: var(--cc-ink, #2e2e31);
+	color: #fff;
+	font-size: 13px;
+	font-weight: 700;
 }
 /* The question's own words get the room; everything beside it is a control
    of a fixed size, and on a phone they wrap under it rather than squeezing
@@ -4106,17 +4195,17 @@ body.kivun-ty-open { overflow: hidden; }
 .kivun-cf-preview {
 	position: sticky;
 	top: 1rem;
-	border: 1px solid var(--cc-line, #e3e5e9);
+	border: 1px solid var(--cc-line, var(--cc-line, #e4e4e8));
 	border-radius: 12px;
 	padding: .9rem 1rem 1.1rem;
-	background: #f9fafb;
+	background: var(--cc-field, #f7f7f8);
 	min-width: 0;
 }
 .kivun-cf-preview__head { display: flex; flex-wrap: wrap; align-items: baseline; gap: .5rem; margin-bottom: .8rem; }
 .kivun-cf-preview__tag {
 	padding: .18rem .55rem;
 	border-radius: 999px;
-	background: #111827;
+	background: var(--cc-ink, #2e2e31);
 	color: #fff;
 	font-size: .72rem;
 	font-weight: 600;
@@ -4124,7 +4213,7 @@ body.kivun-ty-open { overflow: hidden; }
 .kivun-cf-preview__body { display: flex; flex-direction: column; gap: .7rem; }
 .kivun-cf-pv-field { display: flex; flex-direction: column; gap: .25rem; min-width: 0; }
 .kivun-cf-pv-field.is-blank { opacity: .55; }
-.kivun-cf-pv-label { font-size: .82rem; font-weight: 500; color: #374151; }
+.kivun-cf-pv-label { font-size: .82rem; font-weight: 500; color: var(--cc-text-2, #6b6b72); }
 .kivun-cf-pv-field input, .kivun-cf-pv-field select, .kivun-cf-pv-field textarea {
 	width: 100%;
 	padding: .4rem .55rem;
@@ -4132,17 +4221,17 @@ body.kivun-ty-open { overflow: hidden; }
 	border-radius: 8px;
 	background: #fff;
 	font-size: .85rem;
-	color: #6b7280;
+	color: var(--cc-text-2, #6b6b72);
 }
 .kivun-cf-pv-group { display: flex; flex-wrap: wrap; gap: .3rem .8rem; }
-.kivun-cf-pv-group label, .kivun-cf-pv-consent { display: flex; align-items: center; gap: .35rem; font-size: .82rem; color: #374151; }
+.kivun-cf-pv-group label, .kivun-cf-pv-consent { display: flex; align-items: center; gap: .35rem; font-size: .82rem; color: var(--cc-text-2, #6b6b72); }
 .kivun-cf-pv-group input, .kivun-cf-pv-consent input { flex: none; width: auto; margin: 0; padding: 0; }
 .kivun-cf-pv-send {
 	align-self: flex-start;
 	margin-top: .2rem;
 	padding: .4rem .9rem;
 	border-radius: 8px;
-	background: #111827;
+	background: var(--cc-ink, #2e2e31);
 	color: #fff;
 	font-size: .82rem;
 	font-weight: 600;
