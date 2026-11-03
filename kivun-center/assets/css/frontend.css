@@ -2399,6 +2399,13 @@ td.kivun-cc-rowactions > form > * {
    rule below gives the element. Several of these are flex boxes, and a
    class's display beats the [hidden] attribute's otherwise. */
 .kivun-cc-wizard [hidden] { display: none !important; }
+/* The second line of defence against wpautop(), after the shortcode's own
+   flattening: a break or an empty paragraph another filter slipped in is
+   a box of its own, and in the tile grid each one took a cell. Nothing in
+   the wizard is text that needs a <br> — a textarea's breaks are its
+   content, not elements. */
+.kivun-cc-wizard br,
+.kivun-cc-wizard p:empty { display: none !important; }
 
 /* The form tab sits on the canvas, not on a panel card: the design draws the
    rail and the step's cards straight onto the page, each its own white card.

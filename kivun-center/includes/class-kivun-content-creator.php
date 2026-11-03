@@ -1510,7 +1510,58 @@ class Kivun_Content_Creator {
 
 		ob_start();
 		self::front_console();
-		return (string) ob_get_clean();
+		return self::flatten_output( (string) ob_get_clean() );
+	}
+
+	/**
+	 * The console's markup with no line breaks for a page builder to read.
+	 *
+	 * Elementor's text widget, and some themes, run the shortcode's output
+	 * through wpautop(). That turns every newline between two tags into a
+	 * `<br />` and every blank line into a paragraph — invisible, but each
+	 * one is a box. In the wizard's grids they took cells of their own: the
+	 * four type tiles came out one cell apart, two rows deep, each tile tall
+	 * with its icon floating in the middle. 138 of them on the publish tab.
+	 *
+	 * So the newlines go before wpautop() can see them. Outside a textarea
+	 * a run of whitespace with a newline in it is one space — which is all
+	 * the browser ever rendered it as, so nothing on screen moves. Inside a
+	 * textarea the newlines are the content (a WhatsApp message, a list of
+	 * audiences), so they are kept as `&#10;`, which the browser reads back
+	 * as the same newline and which wpautop() does not recognise.
+	 *
+	 * Script, style and pre blocks are passed through as they are: a newline
+	 * can end a statement in a script, and pre is wpautop()'s own exception.
+	 *
+	 * @param string $html The rendered console.
+	 * @return string The same markup, on one line.
+	 */
+	public static function flatten_output( string $html ): string {
+		$parts = preg_split( '#(<(textarea|script|style|pre)\b[^>]*>.*?</\2\s*>)#is', $html, -1, PREG_SPLIT_DELIM_CAPTURE );
+		if ( ! is_array( $parts ) ) {
+			return $html;
+		}
+
+		$out   = '';
+		$count = count( $parts );
+		for ( $i = 0; $i < $count; $i++ ) {
+			$part = $parts[ $i ];
+			// The capture groups follow each protected block: the block
+			// itself, then the bare tag name, which is skipped.
+			if ( 1 === $i % 3 ) {
+				if ( 0 === stripos( $part, '<textarea' ) ) {
+					$open  = (int) strpos( $part, '>' ) + 1;
+					$close = (int) strripos( $part, '</textarea' );
+					$body  = str_replace( array( "\r\n", "\r", "\n" ), '&#10;', substr( $part, $open, $close - $open ) );
+					$part  = substr( $part, 0, $open ) . $body . substr( $part, $close );
+				}
+				$out .= $part;
+				++$i;
+				continue;
+			}
+			$out .= (string) preg_replace( '/\s*[\r\n]\s*/', ' ', $part );
+		}
+		return $out;
 	}
 
 	/**
