@@ -1630,24 +1630,31 @@ td.kivun-app-contact a { display: block; }
 	border-radius: var(--cc-radius-sm);
 	background: var(--cc-surface);
 }
-.kivun-cc-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: .89rem; }
+/* 15px: the handoff puts tables and filters at 15–17, and the title cell
+   is the 17 (see `td strong` below). */
+.kivun-cc-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 15px; }
+/* Body rows: padding 16/20, a 1px divider line, and 72 tall. */
 .kivun-cc-table th,
 .kivun-cc-table td {
-	padding: .95rem 1.1rem;
+	padding: 16px 20px;
 	text-align: start;
-	border-bottom: 1px solid var(--cc-line, #e5e7eb);
+	border-bottom: 1px solid var(--cc-divider);
 	vertical-align: middle;
 }
+.kivun-cc-table tbody tr { min-height: 72px; }
+.kivun-cc-table tbody td { height: 72px; }
+/* Header row: the field grey, 14/700, secondary — and padding 14/20. */
 .kivun-cc-table thead th {
-	background: transparent;
-	font-size: .78rem;
+	background: var(--cc-field);
+	padding: 14px 20px;
+	font-size: 14px;
 	font-weight: 700;
 	/* No uppercasing. It does nothing to Hebrew, which is most of what these
 	   headers hold, and shouts in the Latin ones that are mixed in with it. */
 	letter-spacing: 0;
-	color: var(--kivun-muted);
+	color: var(--cc-text-2);
 	white-space: nowrap;
-	border-bottom: 1px solid var(--cc-line, #e5e7eb);
+	border-bottom: 1px solid var(--cc-divider);
 }
 .kivun-cc-table tbody tr:last-child td { border-bottom: none; }
 .kivun-cc-table tbody tr { transition: background .12s; }
@@ -1656,7 +1663,8 @@ td.kivun-app-contact a { display: block; }
 .kivun-cc-table tbody tr:hover { background: var(--cc-field, rgba(0,0,0,.03)); }
 .kivun-cc-table a { color: var(--cc-brand, var(--kivun-accent)); text-decoration: none; font-weight: 600; }
 .kivun-cc-table a:hover { text-decoration: underline; }
-.kivun-cc-table td strong { font-weight: 700; color: var(--cc-ink, #0f172a); }
+/* The title cell: 17/700, the one thing in a row read before the rest. */
+.kivun-cc-table td strong { font-size: 17px; font-weight: 700; color: var(--cc-ink); }
 
 .kivun-cc-badge {
 	display: inline-block;
@@ -3547,8 +3555,11 @@ body.kivun-ty-open { overflow: hidden; }
 .kivun-cc-console .kivun-employer-dashboard .kivun-tab { font-size: .87rem; }
 
 @media (max-width: 782px) {
-	.kivun-cc-table { font-size: .82rem; }
-	.kivun-cc-table th, .kivun-cc-table td { padding: .55rem .5rem; }
+	/* A touch smaller on a phone, but still px: a rem here would rescale
+	   against the theme root, which is the whole reason the console read a
+	   size small everywhere. */
+	.kivun-cc-table { font-size: 14px; }
+	.kivun-cc-table th, .kivun-cc-table td { padding: 10px 8px; }
 	.kivun-cc-leadfilters { flex-direction: column; align-items: stretch; }
 	.kivun-cc-leadfilters input[type="search"] { min-width: 0; }
 	/*
