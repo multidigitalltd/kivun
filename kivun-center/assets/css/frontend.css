@@ -1962,26 +1962,90 @@ td.kivun-cc-rowactions > form > * {
 
 /* The filter, as one card: what you are looking at on one side of its last
    row, and how to change it on the other. */
+/* The filter panel: the field grey, radius 28, padding 18, gap 12. */
 .kivun-cc-leadfilters {
 	display: flex;
 	flex-wrap: wrap;
-	gap: .55rem;
+	gap: 12px;
 	align-items: center;
-	padding: 1.1rem 1.2rem;
+	padding: 18px;
 	margin-bottom: 1rem;
-	background: var(--cc-field, #f8fafc);
+	background: var(--cc-field);
 	border: 0;
-	border-radius: var(--cc-radius, 12px);
+	border-radius: var(--cc-radius-sm);
 }
+/* Filter controls are pills, 44–46 tall, on white. */
 .kivun-cc-leadfilters select,
 .kivun-cc-leadfilters input[type="search"],
 .kivun-cc-leadfilters input[type="date"] {
-	padding: .62rem .85rem;
+	min-height: 44px;
+	padding: 0 16px;
 	border: 1px solid transparent;
 	border-radius: 999px;
-	background: var(--cc-surface, #fff);
+	background: var(--cc-surface);
 	font: inherit;
-	font-size: .87rem;
+	font-size: 15px;
+}
+/*
+ * The handoff's "an active filter gets a red tint, a red border and bold
+ * text" is not done here yet, and the first attempt is worth recording
+ * because it was confidently wrong in two ways at once.
+ *
+ * It tried `select:not(:has(option[value=""]:checked))` — the trick the
+ * status pill uses. Measured, every control lit up red while nothing was
+ * filtered at all: exactly backwards. Two reasons, and the second is the
+ * real one.
+ *
+ * The per-page select has no "all" option to begin with, because it is
+ * not a filter — so by that rule it is permanently "active".
+ *
+ * And on the leads screen these are not the visible controls. They are
+ * `<select multiple class="kivun-pick-src">`, hidden sources that the
+ * picker script builds its own UI from, with the "all of them" wording
+ * in `data-pick-all` rather than in an option. There is no option to
+ * match, and styling the source element styles something nobody sees.
+ *
+ * So the active state goes on what the picker renders — and it can still
+ * be read without a script, because the picker keeps the real selection
+ * on the native select it was built from: it toggles `option.selected`
+ * there on every pick and clears them all on "all of them". So "this
+ * filter is narrowing something" is exactly `:has(option:checked)`, which
+ * is live, needs no class for the script to maintain, and is already
+ * right on load when a filtered view arrives from the URL.
+ */
+.kivun-cc-console .kivun-cc-leadfilters .kivun-pick:has(.kivun-pick__native option:checked) .kivun-pick__input {
+	background-color: var(--cc-chip);
+	border-color: var(--cc-brand);
+	color: var(--cc-brand);
+	font-weight: 700;
+}
+/*
+ * The tracking-numbers screen shares this panel but its filters are plain
+ * selects with a real "all" option, so there the test is the other way
+ * round: active unless the all-option is the chosen one.
+ *
+ * The per-page select is excluded by name. It has no "all" option because
+ * it is not a filter — 25 rows is as much a choice as 100 — so without
+ * this it would sit permanently lit.
+ */
+.kivun-cc-console .kivun-cc-calls .kivun-cc-leadfilters select:not([name$="_pp"]):not(:has(option[value=""]:checked)):not(:has(option[value="0"]:checked)) {
+	background-color: var(--cc-chip);
+	border-color: var(--cc-brand);
+	color: var(--cc-brand);
+	font-weight: 700;
+}
+/*
+ * A date or a search term that is actually filtering. Read from the
+ * server-rendered value rather than from the live field: these only
+ * narrow anything once the form is submitted, so the applied filter is
+ * what the panel should be reporting, and it is what the list below is
+ * showing.
+ */
+.kivun-cc-console .kivun-cc-leadfilters input[type="date"]:not([value=""]):not(:placeholder-shown),
+.kivun-cc-console .kivun-cc-leadfilters input[type="search"][value]:not([value=""]) {
+	background-color: var(--cc-chip);
+	border-color: var(--cc-brand);
+	font-weight: 700;
 }
 .kivun-cc-leadfilters input[type="search"] { min-width: 210px; flex: 1 1 210px; }
 .kivun-cc-console .kivun-cc-leadfilters select:focus,

@@ -1423,6 +1423,72 @@ final class ConsoleContractTest extends TestCase {
 	}
 
 	/**
+	 * An active filter is marked from the selection, not from a guess.
+	 *
+	 * The handoff gives an active filter a red tint, a red border and bold
+	 * text. The first attempt styled `select:not(:has(option[value=""]
+	 * :checked))` and lit up every control while nothing was filtered —
+	 * exactly backwards — for two reasons worth keeping out of the code.
+	 *
+	 * On the leads screen those selects are not what anyone sees. They are
+	 * `kivun-pick-src`: hidden sources the picker builds its own control
+	 * from, carrying the "all of them" wording in `data-pick-all` rather
+	 * than in an option, so there is no option to match. The picker does
+	 * keep the real selection on that native select, toggling
+	 * `option.selected`, so the state is readable — from the wrapper.
+	 *
+	 * And the per-page select has no "all" option because it is not a
+	 * filter, so any "active unless all is chosen" rule lights it forever.
+	 *
+	 * @return void
+	 */
+	public function test_an_active_filter_is_marked_from_the_real_selection(): void {
+		$css = (string) file_get_contents( KIVUN_DIR . 'assets/css/frontend.css' );
+
+		// The leads pickers are read through the native select the picker
+		// keeps in step, not through the source element's own styling.
+		$this->assertStringContainsString(
+			'.kivun-pick:has(.kivun-pick__native option:checked) .kivun-pick__input',
+			$css,
+			'the active-filter mark no longer reads the picker\'s own selection, so it marks either nothing or everything'
+		);
+
+		/*
+		 * And the per-page control is excluded wherever the "active unless
+		 * the all-option is chosen" test is used. Without the exclusion it
+		 * is permanently lit, because 25 rows is a choice, not a filter.
+		 *
+		 * Comments are stripped first. Everything before a `{` counts as
+		 * the selector, and the comment above these rules quotes the very
+		 * pattern being searched for — so without this the test reports
+		 * its own explanation as a rule.
+		 */
+		$bare   = (string) preg_replace( '!/\*.*?\*/!s', '', $css );
+		$blocks = explode( '}', $bare );
+		$unguarded = array();
+		foreach ( $blocks as $block ) {
+			$at = strpos( $block, '{' );
+			if ( false === $at ) {
+				continue;
+			}
+			$selectors = substr( $block, 0, $at );
+			if ( false === strpos( $selectors, ':not(:has(option[value="0"]:checked))' )
+				&& false === strpos( $selectors, ':not(:has(option[value=""]:checked))' ) ) {
+				continue;
+			}
+			if ( false === strpos( $selectors, '_pp' ) ) {
+				$unguarded[] = trim( preg_replace( '/\s+/', ' ', $selectors ) ?? '' );
+			}
+		}
+
+		$this->assertSame(
+			array(),
+			$unguarded,
+			"an active-filter rule does not exclude the per-page select, which has no \"all\" option and would sit permanently lit:\n  " . implode( "\n  ", $unguarded )
+		);
+	}
+
+	/**
 	 * Every console token a rule asks for is a token that exists.
 	 *
 	 * The console's colours, radii and shadows are all custom properties. A
