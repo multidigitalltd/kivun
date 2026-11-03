@@ -2241,6 +2241,30 @@ class Kivun_Content_Creator {
 	}
 
 	/**
+	 * Whether the current user should be shown the whole UTM, rather than
+	 * only the medium a lead arrived through.
+	 *
+	 * Two different questions hide behind one column. "This came from
+	 * WhatsApp" is context for whoever is working the lead. "This came
+	 * from campaign אחזקת-מבנים, publisher ערוץ-הירושלמים" is the
+	 * advertising ledger: which supplier was paid for which placement,
+	 * and what it returned. That belongs to whoever runs the advertising,
+	 * and it is not a coordinator's business.
+	 *
+	 * So the medium stays for everyone who may see the column at all,
+	 * and the campaign and content are kept for the site's managers and
+	 * for the agency, whose own placements they are.
+	 *
+	 * Deliberately a narrower bar than can_see_lead_source(): that one
+	 * admits edit_others_posts, which is most of the content team.
+	 *
+	 * @return bool
+	 */
+	public static function can_see_full_lead_source(): bool {
+		return current_user_can( 'manage_options' ) || self::is_agency();
+	}
+
+	/**
 	 * Whether the current user is an outside agency: the campaign numbers
 	 * and nothing else.
 	 *
@@ -6024,7 +6048,8 @@ class Kivun_Content_Creator {
 
 		$can_delete_rows = current_user_can( 'manage_options' );
 		$show_source     = self::can_see_lead_source();
-		$show_source     = self::can_see_lead_source();
+		// Whether the column shows the whole UTM or only the medium.
+		$show_full_source = self::can_see_full_lead_source();
 
 		// Base args preserved across filtering and paging.
 		$base_args = array( 'kivun_tab' => 'leads' );
@@ -6398,14 +6423,25 @@ class Kivun_Content_Creator {
 							<td class="kivun-cc-utm" data-label="<?php esc_attr_e( 'מקור (UTM)', 'kivun' ); ?>" data-col="utm">
 								<?php if ( '' !== $src['source'] ) : ?>
 									<span class="kivun-cc-badge"><?php echo esc_html( $src['source'] ); ?></span>
-									<?php if ( '' !== $src['medium'] ) : ?>
-										<span class="kivun-cc-badge"><?php echo esc_html( $src['medium'] ); ?></span>
-									<?php endif; ?>
-									<?php if ( '' !== $src['campaign'] ) : ?>
-										<span class="kivun-cc-source">
-											<?php echo esc_html( $src['campaign'] ); ?>
-											<?php echo '' !== $src['content'] ? esc_html( ' · ' . $src['content'] ) : ''; ?>
-										</span>
+									<?php
+									/*
+									 * Everything past the medium is the advertising
+									 * ledger — which campaign, which publisher — and
+									 * it is kept for the managers and the agency.
+									 * A coordinator working the lead is shown where
+									 * it came in from and nothing further.
+									 */
+									?>
+									<?php if ( $show_full_source ) : ?>
+										<?php if ( '' !== $src['medium'] ) : ?>
+											<span class="kivun-cc-badge"><?php echo esc_html( $src['medium'] ); ?></span>
+										<?php endif; ?>
+										<?php if ( '' !== $src['campaign'] ) : ?>
+											<span class="kivun-cc-source">
+												<?php echo esc_html( $src['campaign'] ); ?>
+												<?php echo '' !== $src['content'] ? esc_html( ' · ' . $src['content'] ) : ''; ?>
+											</span>
+										<?php endif; ?>
 									<?php endif; ?>
 								<?php else : ?>
 									<span class="kivun-muted" aria-hidden="true">—</span>

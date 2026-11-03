@@ -1687,6 +1687,66 @@ final class ConsoleContractTest extends TestCase {
 	}
 
 	/**
+	 * The advertising ledger is kept behind a narrower bar than the medium.
+	 *
+	 * Two questions share the UTM column. "This came in from WhatsApp" is
+	 * context for whoever works the lead. "This came from campaign X,
+	 * publisher Y" is the advertising ledger — which supplier was paid for
+	 * which placement — and that is the managers' and the agency's.
+	 *
+	 * So the whole UTM sits behind `can_see_full_lead_source()`, which is
+	 * deliberately narrower than `can_see_lead_source()`: the latter
+	 * admits `edit_others_posts`, which is most of the content team.
+	 *
+	 * The export is checked with it, because a restriction the export
+	 * walks around is not a restriction — the campaign and the publisher
+	 * would simply arrive as a file instead of on screen.
+	 *
+	 * @return void
+	 */
+	public function test_the_full_utm_is_narrower_than_the_medium(): void {
+		$php = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-content-creator.php' );
+		$csv = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-export.php' );
+
+		// The narrow rule exists and is what it claims to be.
+		$at = strpos( $php, 'function can_see_full_lead_source' );
+		$this->assertNotFalse( $at, 'the full-source rule is gone' );
+		$body = substr( $php, $at, 220 );
+		$this->assertStringContainsString( "current_user_can( 'manage_options' )", $body, 'the managers lost the full UTM' );
+		$this->assertStringContainsString( 'self::is_agency()', $body, 'the agency lost the full UTM' );
+		$this->assertStringNotContainsString(
+			'edit_others_posts',
+			$body,
+			'the full UTM is open to edit_others_posts again, which is most of the content team — that is the bar it was separated from'
+		);
+
+		/*
+		 * And it actually guards the campaign on screen. The medium is
+		 * not guarded by it: everyone who may see the column sees that.
+		 */
+		$at = strpos( $php, "\$src['campaign']" );
+		$this->assertNotFalse( $at, 'the campaign is no longer rendered' );
+		$before = substr( $php, max( 0, $at - 700 ), 700 );
+		$this->assertStringContainsString(
+			'$show_full_source',
+			$before,
+			'the campaign is rendered without the full-source check, so a coordinator sees the advertising ledger'
+		);
+
+		// The export splits at the same line.
+		$this->assertStringContainsString(
+			'can_see_full_lead_source()',
+			$csv,
+			'the CSV export does not apply the full-source rule, so the ledger leaves as a file instead'
+		);
+		$this->assertMatchesRegularExpression(
+			'/if \(\s*\$show_full_source\s*\)\s*\{\s*\$headings = array_merge\( \$headings, array\( \x27utm_medium\x27, \x27utm_campaign\x27, \x27utm_content\x27 \) \);/',
+			$csv,
+			'the export no longer withholds the campaign columns from everyone else'
+		);
+	}
+
+	/**
 	 * Every console token a rule asks for is a token that exists.
 	 *
 	 * The console's colours, radii and shadows are all custom properties. A

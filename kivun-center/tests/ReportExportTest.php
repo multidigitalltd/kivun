@@ -204,8 +204,28 @@ final class ReportExportTest extends TestCase {
 	public function test_the_utm_values_each_get_a_column(): void {
 		$source = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-export.php' );
 
-		$this->assertStringContainsString( "'utm_source', 'utm_medium', 'utm_campaign', 'utm_content'", $source );
-		$this->assertStringContainsString( "\$line[] = \$r['utm_campaign'] ?? '';", $source );
+		/*
+		 * Named one at a time rather than as one run of four. They are
+		 * emitted in two groups now — the medium for everyone who may see
+		 * the source at all, and the campaign and content only for those
+		 * who may see the whole ledger — so a single string would be
+		 * asserting the grouping rather than the point of this test.
+		 *
+		 * The point is unchanged: each value is its own column, never one
+		 * line of prose that cannot be summed, sorted or pivoted.
+		 */
+		foreach ( array( 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content' ) as $column ) {
+			$this->assertStringContainsString(
+				"'" . $column . "'",
+				$source,
+				$column . ' is no longer a column of its own'
+			);
+			$this->assertStringContainsString(
+				"\$line[] = \$r['" . $column . "'] ?? '';",
+				$source,
+				$column . ' has a heading but nothing writes its cell'
+			);
+		}
 	}
 
 	// ── Reaching the private helpers ──────────────────────────────────────────
