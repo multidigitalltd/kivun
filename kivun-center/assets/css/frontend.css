@@ -1479,6 +1479,9 @@ td.kivun-app-contact a { display: block; }
 .kivun-cc-stat__label {
 	display: flex;
 	align-items: center;
+	/* Wraps, so the badge drops to its own line rather than out of the
+	   card if a card is ever narrower than its label plus the badge. */
+	flex-wrap: wrap;
 	gap: 10px;
 	font-size: 18px;
 	/* 1.5, which is what makes the card 160 tall when the label wraps —
@@ -2591,11 +2594,21 @@ td.kivun-cc-rowactions > form > * {
 	   the only thing that says what a step is, so a bare numbered circle
 	   tells the reader nothing. */
 	.kivun-cc-rail .kivun-wiz-step__label { display: inline; }
-	/* Two across rather than one: five full-width cards is most of a phone
-	   screen before you reach the form. */
-	.kivun-cc-console .kivun-cc-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-	.kivun-cc-console .kivun-cc-stat { min-height: 78px; }
-	.kivun-cc-console .kivun-cc-stat__num { font-size: 1.7rem; }
+	/*
+	 * The stats are left to the design's own grid here.
+	 *
+	 * Two columns were forced across this whole range, written when the
+	 * labels were 13px. At the handoff's 18px it stops working: on a 375px
+	 * phone two columns make each card 124px wide, which leaves 68px of
+	 * content for a dot, a gap, "ממתינות לטיפול" and a 67px badge. The
+	 * badge ended up a full 67px outside its card, clipped away by the
+	 * console's own `overflow: hidden`, and the label overflowed by 95.
+	 *
+	 * `repeat(auto-fit, minmax(200px, 1fr))` already answers this: two
+	 * columns while two fit, one below that. Which is also what the
+	 * handoff specifies, so the override was fighting the design to
+	 * produce a card too narrow to hold it.
+	 */
 }
 
 @media (max-width: 600px) {

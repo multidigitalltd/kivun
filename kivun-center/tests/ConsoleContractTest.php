@@ -1366,6 +1366,63 @@ final class ConsoleContractTest extends TestCase {
 	}
 
 	/**
+	 * The stats are left to the design's grid, and the badge can wrap.
+	 *
+	 * Two columns were forced for everything under 900px, from a time when
+	 * the stat labels were 13px. At the handoff's 18px that card is too
+	 * small to hold its own contents: on a 375px phone each card came out
+	 * 124px wide, and the "requires attention" badge sat a full 67px
+	 * outside it — its whole width — clipped away by the console's
+	 * `overflow: hidden`, with the label overflowing by 95px.
+	 *
+	 * `repeat(auto-fit, minmax(200px, 1fr))` is the handoff's own answer
+	 * and needs no help: two columns while two fit, one below that.
+	 *
+	 * @return void
+	 */
+	public function test_the_stats_grid_is_not_forced_narrower_than_its_contents(): void {
+		$css = (string) file_get_contents( KIVUN_DIR . 'assets/css/frontend.css' );
+
+		$this->assertStringContainsString(
+			'grid-template-columns: repeat(auto-fit, minmax(200px, 1fr))',
+			$css,
+			'the stats no longer use the design\'s own responsive grid'
+		);
+
+		// And nothing pins them to a fixed number of columns again.
+		$blocks = explode( '}', $css );
+		$forced = array();
+		foreach ( $blocks as $block ) {
+			$at = strpos( $block, '{' );
+			if ( false === $at || false === strpos( substr( $block, 0, $at ), 'kivun-cc-stats' ) ) {
+				continue;
+			}
+			if ( preg_match( '/grid-template-columns:\s*repeat\(\s*\d/', substr( $block, $at ) ) ) {
+				$forced[] = trim( preg_replace( '/\s+/', ' ', substr( $block, 0, $at ) ) ?? '' );
+			}
+		}
+		$this->assertSame(
+			array(),
+			$forced,
+			"the stats are pinned to a fixed column count again, which is how a card became too narrow to hold its own badge:\n  " . implode( "\n  ", $forced )
+		);
+
+		/*
+		 * The badge is `flex: 0 0 auto` so it keeps its shape, which means
+		 * the row it sits in has to be able to wrap — otherwise a card
+		 * narrower than label-plus-badge pushes it out of the card rather
+		 * than onto a second line.
+		 */
+		$at = strpos( $css, '.kivun-cc-stat__label {' );
+		$this->assertNotFalse( $at, 'the stat label rule is gone' );
+		$this->assertStringContainsString(
+			'flex-wrap: wrap',
+			substr( $css, $at, 400 ),
+			'the stat label cannot wrap, so a badge that does not shrink is pushed outside the card instead of onto its own line'
+		);
+	}
+
+	/**
 	 * Every console token a rule asks for is a token that exists.
 	 *
 	 * The console's colours, radii and shadows are all custom properties. A
