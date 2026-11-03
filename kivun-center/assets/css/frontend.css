@@ -2356,21 +2356,27 @@ td.kivun-cc-rowactions > form > * {
 .kivun-cc-rail .kivun-wiz-step:not(:last-child)::before {
 	content: "";
 	position: absolute;
-	top: 34px;
+	top: 44px;
 	bottom: 6px;
-	inset-inline-start: 16px;
+	inset-inline-start: 21px;
 	width: 2px;
 	margin-inline-start: -1px;
 	background: var(--cc-line);
 }
 .kivun-cc-rail .kivun-wiz-step.is-done::before { background: var(--cc-note-dot); }
+/*
+ * 44, the handoff's figure — this was 34. Border-box, because the 2px
+ * border is drawn outside the box otherwise and the circle comes out 48:
+ * the right number written down and the wrong one on screen.
+ */
 .kivun-cc-rail .kivun-wiz-step__num {
-	width: 34px;
-	height: 34px;
+	box-sizing: border-box;
+	width: 44px;
+	height: 44px;
 	background: var(--cc-surface);
 	border: 2px solid var(--cc-line);
-	color: var(--kivun-muted);
-	font-size: .9rem;
+	color: var(--cc-text-3);
+	font-size: 16px;
 	z-index: 1;
 }
 .kivun-cc-rail .kivun-wiz-step:hover { color: var(--cc-ink); }
@@ -2381,10 +2387,16 @@ td.kivun-cc-rowactions > form > * {
 	color: #fff;
 }
 .kivun-cc-rail .kivun-wiz-step.is-done { color: var(--cc-ink); }
+/*
+ * A finished step is a sky disc with a charcoal tick, not a white one.
+ * Sky is a shapes-only colour by the client's rule in the handoff, and a
+ * white tick on it is the one place that rule would be broken by accident
+ * — the tick IS the text here. Charcoal also simply reads better on it.
+ */
 .kivun-cc-rail .kivun-wiz-step.is-done .kivun-wiz-step__num {
 	background: var(--cc-note-dot);
 	border-color: var(--cc-note-dot);
-	color: #fff;
+	color: var(--cc-ink);
 }
 
 /* Cards: white, radius 36, padding 32 — flat. */
@@ -2659,7 +2671,8 @@ td.kivun-cc-rowactions > form > * {
 	content: "";
 	width: 190px;
 	max-width: 32vw;
-	height: 6px;
+	/* 8, the handoff's figure. */
+	height: 8px;
 	border-radius: 999px;
 	/* Filled from the inline start — the right, here — so it grows the way
 	   the steps beside it are read. */
@@ -2668,6 +2681,50 @@ td.kivun-cc-rowactions > form > * {
 		right / var(--cc-progress, 25%) 100%,
 		var(--cc-field);
 }
+/*
+ * The wizard's forward button: 56 tall, and carrying a 36 white disc with a
+ * brand chevron in it — the handoff's `padding: 0 30px 0 10px` is what
+ * leaves room for that disc on the inline end.
+ *
+ * The disc is a pseudo-element rather than a span in the markup. Three
+ * buttons would have needed one each, and the script that drives the wizard
+ * reaches for these by class: fewer children is one less thing for it to
+ * walk past.
+ */
+.kivun-cc-wizard .kivun-wiz-next,
+.kivun-cc-wizard .kivun-wiz-submit {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 10px;
+	height: 56px;
+	padding: 0 30px 0 10px;
+	border-radius: 999px;
+	font-size: 17px;
+	font-weight: 700;
+}
+/*
+ * The disc, with the chevron painted on it. The glyph is a data-URI SVG
+ * rather than a mask: a mask would cut the chevron OUT of the white disc,
+ * leaving a hole, where what is wanted is a brand chevron drawn on white.
+ *
+ * It points the way the wizard moves, which in RTL is leftward — the side
+ * the disc sits on.
+ */
+.kivun-cc-wizard .kivun-wiz-next::after,
+.kivun-cc-wizard .kivun-wiz-submit::after {
+	content: "";
+	flex: 0 0 auto;
+	width: 36px;
+	height: 36px;
+	border-radius: 50%;
+	background-color: #fff;
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23df2950' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M15 18l-6-6 6-6'/%3E%3C/svg%3E");
+	background-repeat: no-repeat;
+	background-position: center;
+	background-size: 15px 15px;
+}
+
 .kivun-cc-wizard[data-current="1"] { --cc-progress: 25%; }
 .kivun-cc-wizard[data-current="2"] { --cc-progress: 50%; }
 .kivun-cc-wizard[data-current="3"] { --cc-progress: 75%; }

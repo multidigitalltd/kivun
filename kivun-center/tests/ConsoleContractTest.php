@@ -1548,6 +1548,52 @@ final class ConsoleContractTest extends TestCase {
 	}
 
 	/**
+	 * The wizard's own dimensions, in the handoff's figures.
+	 *
+	 * Three numbers that were each a little short: the step circle at 34
+	 * against 44, the progress track at 6 against 8, and the forward button
+	 * with no height of its own at all, so it came out 46 against 56.
+	 *
+	 * The circle also has to be border-box. With a 2px border outside a
+	 * 44px box it measures 48 — the right number written down and the
+	 * wrong one on screen, which is the hardest kind to notice.
+	 *
+	 * @return void
+	 */
+	public function test_the_wizard_keeps_the_handoff_dimensions(): void {
+		$css = (string) file_get_contents( KIVUN_DIR . 'assets/css/frontend.css' );
+
+		$at = strpos( $css, '.kivun-cc-rail .kivun-wiz-step__num {' );
+		$this->assertNotFalse( $at, 'the wizard step circle has no rule' );
+		$circle = substr( $css, $at, 320 );
+
+		$this->assertStringContainsString( 'width: 44px', $circle, 'the step circle is no longer 44 across' );
+		$this->assertStringContainsString(
+			'box-sizing: border-box',
+			$circle,
+			'the step circle is not border-box, so its 2px border is drawn outside the 44 and it renders 48'
+		);
+
+		$at = strpos( $css, '.kivun-cc-wizard .kivun-wiz-progress::after {' );
+		$this->assertNotFalse( $at, 'the progress track has no rule' );
+		$this->assertStringContainsString(
+			'height: 8px',
+			substr( $css, $at, 300 ),
+			'the progress bar is no longer 8 tall'
+		);
+
+		$at = strpos( $css, '.kivun-cc-wizard .kivun-wiz-next,' );
+		$this->assertNotFalse( $at, 'the wizard forward button has no rule of its own' );
+		$next = substr( $css, $at, 400 );
+		$this->assertStringContainsString( 'height: 56px', $next, 'the forward button is no longer 56 tall' );
+		$this->assertStringContainsString(
+			'padding: 0 30px 0 10px',
+			$next,
+			'the forward button lost the asymmetric padding that leaves room for its chevron disc'
+		);
+	}
+
+	/**
 	 * Every console token a rule asks for is a token that exists.
 	 *
 	 * The console's colours, radii and shadows are all custom properties. A
