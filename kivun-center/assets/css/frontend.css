@@ -1215,7 +1215,9 @@ td.kivun-app-contact a { display: block; }
 	direction: rtl;
 	background: var(--cc-canvas);
 	box-sizing: border-box;
-	max-width: 1320px;
+	/* 1320 of content, the handoff's figure, inside the 32 of padding each
+	   side — this was 1320 overall, which left 1256 for the cards. */
+	max-width: 1384px;
 	overflow: hidden;
 	clear: both;
 }
@@ -1512,6 +1514,15 @@ td.kivun-app-contact a { display: block; }
 .kivun-cc-stat--alert { background: var(--cc-surface); }
 .kivun-cc-stat--alert .kivun-cc-stat__num { color: var(--cc-brand); }
 .kivun-cc-stat--alert .kivun-cc-stat__label::before { background: var(--cc-brand); }
+/*
+ * The words of a flagged label give way before the badge does: they wrap
+ * inside their own share of the row ("ממתינות / לטיפול" over two lines
+ * beside the badge), which is how the handoff draws the card. A zero
+ * basis is what lets them — with the label's full width as its basis the
+ * row would always break before the badge. The row still wraps when even
+ * the longest word and the badge cannot share it.
+ */
+.kivun-cc-stat__text { flex: 1 1 0; min-width: min-content; }
 /* The badge sits at the far end of the label row. */
 .kivun-cc-stat__flag {
 	margin-inline-start: auto;
@@ -1530,7 +1541,7 @@ td.kivun-app-contact a { display: block; }
 	display: flex;
 	flex-wrap: nowrap;
 	gap: 6px;
-	margin-bottom: 1.1rem;
+	margin-bottom: 20px;
 	padding: 8px;
 	background: var(--cc-surface);
 	border: 0;
@@ -1563,7 +1574,7 @@ td.kivun-app-contact a { display: block; }
 	box-shadow: none;
 	transition: background .15s, color .15s;
 }
-.kivun-cc-console .kivun-cc-tabs .kivun-tab:hover { background: var(--cc-tint); color: var(--cc-ink); }
+.kivun-cc-console .kivun-cc-tabs .kivun-tab:hover { opacity: .88; }
 .kivun-cc-console .kivun-cc-tabs .kivun-tab.is-active {
 	background: var(--cc-shell);
 	color: #fff;
@@ -1574,30 +1585,30 @@ td.kivun-app-contact a { display: block; }
 .kivun-cc-console .kivun-cc-tabs .kivun-tabicon {
 	display: grid;
 	place-items: center;
-	width: 30px;
-	height: 30px;
+	width: 34px;
+	height: 34px;
 	flex: 0 0 auto;
 	border-radius: 50%;
 	background: var(--cc-chip);
 	color: var(--cc-chip-ink);
 	font-size: .9rem;
 }
-.kivun-cc-console .kivun-cc-tabs .kivun-tabicon svg { width: 15px; height: 15px; }
+.kivun-cc-console .kivun-cc-tabs .kivun-tabicon svg { width: 19px; height: 19px; }
 .kivun-cc-console .kivun-cc-tabs .kivun-tab.is-active .kivun-tabicon { background: var(--cc-brand); color: #fff; }
 /* Counts on the tabs you are NOT on still have to be readable — they are the
    reason to click through. A tinted chip on the light bar, inverted once the
    tab is active and the bar goes dark. */
 .kivun-cc-console .kivun-cc-tabs .kivun-tab .kivun-tab-badge {
-	padding: .1rem .5rem;
-	background: var(--cc-field);
-	color: var(--kivun-muted);
+	padding: 2px 9px;
+	background: var(--cc-canvas);
+	color: var(--cc-ink);
 	border: 0;
 	border-radius: 999px;
-	font-size: .72rem;
-	font-weight: 700;
+	font-size: 13px;
+	font-weight: 800;
 }
 .kivun-cc-console .kivun-cc-tabs .kivun-tab.is-active .kivun-tab-badge {
-	background: rgba(255,255,255,.16);
+	background: var(--cc-brand);
 	color: #fff;
 }
 .kivun-cc-tabicon { font-size: 1rem; line-height: 1; }
@@ -2367,212 +2378,370 @@ td.kivun-cc-rowactions > form > * {
 }
 .kivun-wiz-error[hidden] { display: none !important; }
 
-/* ── The publish wizard, redesigned ──────────────────────────────────────────
+/* ── The publish wizard, to the publish handoff ──────────────────────────────
+ *
+ * Measured against `Publish Wizard.dc.html`, the handoff for this tab alone.
+ * Every figure below is the reference's own, in px: sizes, radii, gaps and
+ * weights. Where a value is not the reference's, the comment says why.
  *
  * Scoped to the wizard form on purpose. `.kivun-cc-card`, `.kivun-cc-input`
  * and friends are shared with the library, leads, campaigns, numbers and jobs
- * tabs, which have no design of their own yet — restyling them unscoped would
- * have redrawn six screens nobody has looked at. The shell, the stat cards and
- * the tab bar above are deliberately NOT scoped: those are the same furniture
- * on every tab, and they should change together.
+ * tabs, which have their own handoff — restyling them unscoped would redraw
+ * six screens this file does not describe.
+ *
+ * The section replaced the one before it rather than being laid over it.
+ * Two generations of rules for one control is how this console came to look
+ * "close": each was right on its own, and the one that won was whichever
+ * happened to come later.
  * ───────────────────────────────────────────────────────────────────────── */
 
-.kivun-cc-wizard .kivun-cc-grid { grid-template-columns: minmax(0, 1fr) 300px; gap: 1.1rem; }
-.kivun-cc-wizard .kivun-cc-main { gap: 1rem; }
+/* Anything the script or the markup hides stays hidden, whatever display a
+   rule below gives the element. Several of these are flex boxes, and a
+   class's display beats the [hidden] attribute's otherwise. */
+.kivun-cc-wizard [hidden] { display: none !important; }
 
-/* The rail */
-.kivun-cc-rail { position: sticky; top: 16px; padding: 1.5rem 1.4rem; }
-.kivun-cc-rail__title { margin: 0 0 .5rem; font-size: 1.25rem; font-weight: 800; color: var(--cc-ink); letter-spacing: -.01em; }
-.kivun-cc-rail__lead { margin: 0 0 1.5rem; font-size: .84rem; line-height: 1.65; color: var(--kivun-muted); }
+/* The form tab sits on the canvas, not on a panel card: the design draws the
+   rail and the step's cards straight onto the page, each its own white card.
+   Only this tab — the list screens keep their panel. */
+.kivun-cc-console > .kivun-tab-panel[data-panel="form"].is-active {
+	padding: 0;
+	background: transparent;
+	border: 0;
+	border-radius: 0;
+}
+.kivun-cc-console .kivun-cc-wizard { margin-top: 0; }
+
+/* Layout: the rail and the content column, side by side and wrapping.
+   flex 1 1 280 against 999 1 560 is what keeps the rail at its own width
+   while the column takes the rest, and drops the rail above the column
+   when the two no longer fit. */
+.kivun-cc-wizard .kivun-cc-grid {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-start;
+	gap: 20px;
+	grid-template-columns: none;
+}
+/* Written after the cards for a screen reader; drawn first, on the right.
+   336 is the reference's 280 plus its 28 of padding each side: its flex
+   basis is measured on the content box, and these cards are border-box. */
+.kivun-cc-wizard .kivun-cc-side {
+	order: -1;
+	flex: 1 1 336px;
+	max-width: 100%;
+	min-width: 0;
+	position: static;
+}
+.kivun-cc-wizard .kivun-cc-main {
+	display: flex;
+	flex-direction: column;
+	flex: 999 1 560px;
+	min-width: 0;
+	gap: 20px;
+}
+
+/* The rail: radius 36, padding 32/28, its title and lead as one block, then
+   the steps 28 below. */
+.kivun-cc-wizard .kivun-cc-card.kivun-cc-rail {
+	position: static;
+	gap: 28px;
+	padding: 32px 28px;
+}
+.kivun-cc-rail__head { display: flex; flex-direction: column; gap: 10px; }
+.kivun-cc-rail__title {
+	margin: 0;
+	font-family: var(--cc-font-display);
+	font-size: 30px;
+	font-weight: 800;
+	line-height: 1.1;
+	color: var(--cc-ink);
+}
+.kivun-cc-rail__lead {
+	margin: 0;
+	font-size: 17px;
+	line-height: 1.5;
+	color: var(--cc-text-2);
+	text-wrap: pretty;
+}
 
 .kivun-cc-rail .kivun-wiz-steps {
-	display: block;
+	display: flex;
+	flex-direction: column;
+	gap: 0;
 	margin: 0 !important;
 	padding: 0 !important;
 }
+/*
+ * A step is the circle beside its name. Every step but the last is 72 tall:
+ * the 44 circle and the 28 line under it, which is the thread down to the
+ * next circle — so the circles land 72 apart with nothing in between.
+ */
 .kivun-cc-rail .kivun-wiz-step {
 	position: relative;
 	display: flex;
-	align-items: center;
-	gap: .75rem;
+	align-items: flex-start;
+	gap: 16px;
 	flex: none;
-	padding: 0 0 1.5rem;
+	min-height: 72px;
+	margin: 0 !important;
+	padding: 0;
 	background: none;
 	border: 0;
 	border-radius: 0;
 	box-shadow: none;
-	font-size: .92rem;
-	font-weight: 600;
-	color: var(--kivun-muted);
+	font-size: 19px;
+	font-weight: 500;
+	line-height: normal;
+	color: var(--cc-text-3);
+	cursor: pointer;
 }
-.kivun-cc-rail .kivun-wiz-step:last-child { padding-bottom: 0; }
-/* The thread between the circles. Drawn from each step down to the next, so
-   the last one has none and the line never overshoots the list. */
+.kivun-cc-rail .kivun-wiz-step:last-child { min-height: 44px; }
 .kivun-cc-rail .kivun-wiz-step:not(:last-child)::before {
 	content: "";
 	position: absolute;
 	top: 44px;
-	bottom: 6px;
 	inset-inline-start: 21px;
 	width: 2px;
-	margin-inline-start: -1px;
+	height: 28px;
+	margin: 0;
 	background: var(--cc-line);
 }
 .kivun-cc-rail .kivun-wiz-step.is-done::before { background: var(--cc-note-dot); }
+.kivun-cc-rail .kivun-wiz-step__label { display: block; padding-top: 9px; }
 /*
- * 44, the handoff's figure — this was 34. Border-box, because the 2px
- * border is drawn outside the box otherwise and the circle comes out 48:
- * the right number written down and the wrong one on screen.
+ * 44 across, border-box, so the 2px ring is inside the 44 and not around it.
  */
 .kivun-cc-rail .kivun-wiz-step__num {
 	box-sizing: border-box;
 	width: 44px;
 	height: 44px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex: 0 0 auto;
 	background: var(--cc-surface);
 	border: 2px solid var(--cc-line);
+	border-radius: 50%;
 	color: var(--cc-text-3);
-	font-size: 16px;
+	font-family: var(--cc-font-display);
+	font-size: 18px;
+	font-weight: 800;
 	z-index: 1;
 }
-.kivun-cc-rail .kivun-wiz-step:hover { color: var(--cc-ink); }
+.kivun-cc-rail .kivun-wiz-step:hover { color: var(--cc-ink); border: 0; }
 .kivun-cc-rail .kivun-wiz-step.is-current { color: var(--cc-ink); font-weight: 800; }
 .kivun-cc-rail .kivun-wiz-step.is-current .kivun-wiz-step__num {
 	background: var(--cc-brand);
 	border-color: var(--cc-brand);
 	color: #fff;
 }
-.kivun-cc-rail .kivun-wiz-step.is-done { color: var(--cc-ink); }
-/*
- * A finished step is a sky disc with a charcoal tick, not a white one.
- * Sky is a shapes-only colour by the client's rule in the handoff, and a
- * white tick on it is the one place that rule would be broken by accident
- * — the tick IS the text here. Charcoal also simply reads better on it.
- */
+.kivun-cc-rail .kivun-wiz-step.is-done { color: var(--cc-ink); font-weight: 500; }
+/* A finished step is a sky disc with a charcoal tick: sky is a shapes-only
+   colour, so the tick on it is charcoal, never white. */
 .kivun-cc-rail .kivun-wiz-step.is-done .kivun-wiz-step__num {
 	background: var(--cc-note-dot);
 	border-color: var(--cc-note-dot);
 	color: var(--cc-ink);
+	font-size: 0;
 }
+.kivun-cc-rail .kivun-wiz-step.is-done .kivun-wiz-step__num::after { content: "✓"; font-size: 18px; }
 
-/* Cards: white, radius 36, padding 32 — flat. */
+/* Cards: white, radius 36, padding 32, flat, and laid out by their gap — the
+   controls inside carry no margins of their own. */
 .kivun-cc-wizard .kivun-cc-card {
+	display: flex;
+	flex-direction: column;
+	gap: 24px;
+	margin: 0;
+	padding: 32px;
+	background: var(--cc-surface);
 	border: 0;
 	border-radius: var(--cc-radius);
-	padding: 32px 28px;
+	box-shadow: none;
 }
-/*
- * The event section is the one card that has to stand out from its
- * neighbours. It does it with a border rather than a glow: the handoff is
- * explicit that there is no glow anywhere, so a 2px ring reads as the
- * design's own "2px charcoal border" idiom in the brand colour.
- */
-.kivun-cc-wizard .kivun-cc-card.kivun-cc-section[data-type="event"] {
-	border: 2px solid var(--cc-brand);
-	background: var(--cc-surface);
-}
+.kivun-cc-wizard .kivun-cc-card.kivun-cc-typescard,
+.kivun-cc-wizard .kivun-cc-card.kivun-cc-wa { gap: 20px; }
+.kivun-cc-wizard .kivun-cc-card.kivun-cc-editors { gap: 28px; }
+.kivun-cc-wizard .kivun-cc-card:has(.kivun-cc-ctaprev) { gap: 22px; }
+.kivun-cc-wizard .kivun-cc-card:has(> .kivun-cc-status) { gap: 16px; }
+.kivun-cc-wizard .kivun-cc-card.kivun-cc-card--tight { gap: 14px; }
+/* The event section is the one card that has to stand out from its
+   neighbours, and does it with a ring rather than a glow — nothing glows. */
+.kivun-cc-wizard .kivun-cc-card.kivun-cc-section[data-type="event"] { border: 2px solid var(--cc-brand); }
 
-/* Headings and labels */
-.kivun-cc-wizard .kivun-cc-label,
-.kivun-cc-wizard .kivun-cc-h3 {
+/* A card's head: the icon disc, then the title with its helper under it. */
+.kivun-cc-cardhead { display: flex; align-items: flex-start; gap: 16px; }
+.kivun-cc-cardhead__main { display: flex; align-items: flex-start; gap: 16px; min-width: 0; }
+.kivun-cc-cardhead__text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+/* Beside a 52 disc the title drops 4 to sit on its middle. */
+.kivun-cc-chip + .kivun-cc-cardhead__text { padding-top: 4px; }
+.kivun-cc-chip--ai + .kivun-cc-cardhead__text { padding-top: 0; }
+.kivun-cc-typescard .kivun-cc-cardhead__text { gap: 6px; }
+/* The WhatsApp head carries its generate button on the far side. */
+.kivun-cc-cardhead--split { justify-content: space-between; flex-wrap: wrap; }
+
+.kivun-cc-wizard .kivun-cc-cardtitle {
+	display: block;
+	margin: 0;
+	padding: 0;
+	font-family: var(--cc-font-display);
+	font-size: 26px;
+	font-weight: 800;
+	line-height: 1.25;
+	color: var(--cc-ink);
+	letter-spacing: 0;
+}
+/* The helper under a title is plain text, not an info box. */
+.kivun-cc-wizard .kivun-cc-help {
+	margin: 0;
+	font-size: 16px;
+	line-height: 1.5;
+	color: var(--cc-text-2);
+	text-wrap: pretty;
+}
+/* "בחרו לפחות סוג אחד." is also where the type step says it was skipped. */
+.kivun-cc-wizard.kivun-wiz-tried-types .kivun-cc-types-help { color: var(--cc-brand); font-weight: 700; }
+
+/*
+ * The icon disc, in its three sizes: 40 with a 20 glyph beside a field
+ * label, 52 with 26 beside a section title, 60 with 28 on a type tile and
+ * on the AI head. A red glyph on the pale red, inverted when a tile is on.
+ */
+.kivun-cc-wizard .kivun-cc-chip {
 	display: flex;
 	align-items: center;
-	gap: .65rem;
-	flex-direction: row-reverse;
-	justify-content: flex-end;
-	margin: 0 0 1.25rem;
-	font-size: 1.12rem;
-	font-weight: 800;
+	justify-content: center;
+	flex: 0 0 auto;
+	width: 40px;
+	height: 40px;
+	border-radius: 50%;
+	background: var(--cc-chip);
+	color: var(--cc-brand);
+}
+.kivun-cc-wizard .kivun-cc-chip svg { width: 20px; height: 20px; }
+.kivun-cc-wizard .kivun-cc-cardhead .kivun-cc-chip { width: 52px; height: 52px; }
+.kivun-cc-wizard .kivun-cc-cardhead .kivun-cc-chip svg { width: 26px; height: 26px; }
+/* The generator is the one thing on these screens that is not the brand
+   doing the work, so its disc is sky with a charcoal glyph. */
+.kivun-cc-wizard .kivun-cc-cardhead .kivun-cc-chip--ai {
+	width: 60px;
+	height: 60px;
+	background: var(--cc-sky-strong);
 	color: var(--cc-ink);
-	letter-spacing: -.01em;
+}
+.kivun-cc-wizard .kivun-cc-cardhead .kivun-cc-chip--ai svg { width: 28px; height: 28px; }
+
+/* One field: its label, then the control, 10 apart. */
+.kivun-cc-wizard .kivun-cc-fieldset {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	min-width: 0;
+	margin: 0;
 }
 .kivun-cc-wizard .kivun-cc-sub {
 	display: flex;
 	align-items: center;
-	gap: .55rem;
-	flex-direction: row-reverse;
-	justify-content: flex-end;
-	margin: 1.1rem 0 .5rem;
-	font-size: .9rem;
+	flex-direction: row;
+	justify-content: flex-start;
+	flex-wrap: wrap;
+	gap: 12px;
+	margin: 0;
+	font-size: 17px;
 	font-weight: 700;
+	line-height: 1.4;
 	color: var(--cc-ink);
 }
-/* The chip a heading's icon sits in. The icon itself stays optional — a
-   heading without one keeps its text flush, rather than leaving a hole. */
-/*
- * The icon disc comes in three sizes, one per place it appears: 40 beside
- * a field label, 52 beside a section head, 60 on a type tile and on the
- * AI head. They were all 34 — one size that matched none of them.
- */
-.kivun-cc-wizard .kivun-cc-chip {
-	display: grid;
-	place-items: center;
-	width: 40px;
-	height: 40px;
-	flex: 0 0 auto;
-	border-radius: 50%;
-	background: var(--cc-chip);
-	color: var(--cc-chip-ink);
-}
-.kivun-cc-wizard .kivun-cc-chip svg { width: 20px; height: 20px; }
-/* A section head is the larger of the two: 52 with a 26 glyph. */
-.kivun-cc-wizard .kivun-cc-h3 .kivun-cc-chip { width: 52px; height: 52px; }
-.kivun-cc-wizard .kivun-cc-h3 .kivun-cc-chip svg { width: 26px; height: 26px; }
-/* The generator is the one thing on these screens that is not the brand
-   doing the work, so the design marks it in the accent blue rather than the
-   brand red — the same blue as the "done" steps and the note dots. */
-.kivun-cc-wizard .kivun-cc-label--ai .kivun-cc-chip {
-	background: color-mix(in srgb, var(--cc-note-dot) 17%, #fff);
-	color: var(--cc-note-dot);
-}
-.kivun-cc-wizard .kivun-cc-sub .kivun-cc-chip { width: 27px; height: 27px; }
-.kivun-cc-wizard .kivun-cc-sub .kivun-cc-chip svg { width: 14px; height: 14px; }
+/* The star and "(אופציונלי)" stay in the label's line, not a flex cell of
+   their own 12 away from it. */
+.kivun-cc-wizard .kivun-cc-sub .kivun-cc-req,
+.kivun-cc-wizard .kivun-cc-sub .kivun-cc-opt { margin-inline-start: -8px; }
+.kivun-cc-wizard .kivun-cc-req { color: var(--cc-brand); }
+.kivun-cc-wizard .kivun-cc-opt { font-weight: 400; color: var(--cc-text-2); }
 
-/* Fields */
+/* Two fields side by side, and the four details, as the design's grids. */
+.kivun-cc-wizard .kivun-cc-pair {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+	gap: 20px;
+}
+.kivun-cc-wizard .kivun-cc-details {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+	gap: 24px 20px;
+}
+
 /*
- * A pill, not a rounded rectangle.
+ * The controls. A pill, 56 tall (60 for the large ones), a 2px border and
+ * 18px text; the field box beside it is what the dictation button sits in.
  *
- * These were radius 28 at 15.2px behind a 1px border, against the
- * handoff's fully round 999 at 18px behind 2px — the same rem scaling
- * that shrank the rest of the console, and a shape that was simply a
- * different one.
+ * Physical left, not a logical side, for the button and the room kept for
+ * it: the design puts it on the left of every field, the LTR email and
+ * link included, where a logical side would have flipped it.
  */
+.kivun-cc-wizard .kivun-cc-field { position: relative; display: block; min-width: 0; }
 .kivun-cc-wizard .kivun-cc-input {
 	box-sizing: border-box;
-	min-height: 56px;
+	width: 100%;
+	max-width: 100%;
+	height: 56px;
+	min-height: 0;
+	margin: 0;
 	padding: 0 22px;
-	padding-inline-end: 64px;
 	background: var(--cc-field);
 	border: 2px solid var(--cc-line);
 	border-radius: 999px;
+	box-shadow: none;
 	color: var(--cc-field-ink);
+	font-family: inherit;
 	font-size: 18px;
+	font-weight: 400;
+	line-height: normal;
+	outline: none;
 }
-/*
- * A textarea is the one control that is not a pill: it has to hold
- * several lines, so it takes the card radius and its own padding.
- */
-.kivun-cc-wizard textarea.kivun-cc-input,
-.kivun-cc-wizard .kivun-cc-textarea {
-	min-height: 120px;
-	padding: 18px 22px 18px 76px;
-	border-radius: var(--cc-radius-sm);
-	line-height: 1.6;
-	resize: vertical;
-}
-.kivun-cc-wizard .kivun-cc-input::placeholder { color: var(--cc-text-3); }
-/*
- * Focus moves the border to charcoal and does nothing else. The handoff
- * is explicit that there is no glow anywhere, and this rule had a 4px
- * brand halo.
- */
+.kivun-cc-wizard .kivun-cc-input--lg { height: 60px; }
+.kivun-cc-wizard .kivun-cc-field > .kivun-cc-input { padding-left: 64px; }
+/* The title is the one field set larger: 20/500. */
+.kivun-cc-wizard #kivun-ccf-title { font-size: 20px; font-weight: 500; }
+/* An LTR address still reads from the right edge, under its RTL label. */
+.kivun-cc-wizard .kivun-cc-input--ltr { text-align: right; }
+.kivun-cc-wizard .kivun-cc-input--w360 { max-width: 360px; }
+.kivun-cc-wizard .kivun-cc-input--w440 { max-width: 440px; }
+.kivun-cc-wizard .kivun-cc-input::placeholder { color: var(--cc-text-3); opacity: 1; }
+/* Focus moves the border to charcoal and does nothing else. No glow. */
 .kivun-cc-wizard .kivun-cc-input:focus {
-	background: var(--cc-surface);
+	background: var(--cc-field);
 	border-color: var(--cc-ink);
 	box-shadow: none;
 	outline: none;
 }
-/* The select carries its own chevron, so it needs room for it and none
-   of the browser's. */
+
+/* Textareas take the card's radius and their own padding, and keep room on
+   the left for the button. Each kind is the reference's: the topic 28 with
+   76 kept, the details 24 with 64, the WhatsApp message 28 with 64. */
+.kivun-cc-wizard textarea.kivun-cc-input {
+	height: auto;
+	padding: 18px 22px 18px 76px;
+	border-radius: var(--cc-radius-sm);
+	line-height: 1.5;
+	resize: vertical;
+}
+.kivun-cc-wizard .kivun-cc-field--top > textarea.kivun-cc-input {
+	padding: 14px 20px 14px 64px;
+	border-radius: var(--cc-radius-xs);
+}
+.kivun-cc-wizard .kivun-cc-details textarea.kivun-cc-input { min-height: 88px; }
+.kivun-cc-wizard .kivun-cc-ai-prompt,
+.kivun-cc-wizard [name="cta_content"] { font-size: 17px; }
+.kivun-cc-wizard .kivun-cc-field--top > textarea.kivun-wa-text {
+	min-height: 220px;
+	padding: 18px 22px 18px 64px;
+	border-radius: var(--cc-radius-sm);
+	line-height: 1.6;
+}
+
+/* The select draws its own chevron, 22 in from the left, and none of the
+   browser's. */
 .kivun-cc-wizard select.kivun-cc-input {
 	appearance: none;
 	-webkit-appearance: none;
@@ -2581,51 +2750,66 @@ td.kivun-cc-rowactions > form > * {
 	background-repeat: no-repeat;
 	background-position: left 22px center;
 	background-size: 18px 18px;
+	cursor: pointer;
 }
 
 /*
- * After publishing: a charcoal card, not a green notice.
- *
- * It carries a sky disc with a charcoal check — sky being a shapes-only
- * colour, the check is the shape and the charcoal is what reads on it.
+ * The dictation button: a 44 charcoal disc, 8 in from the field's left and
+ * 8 down. voice.js puts it right after the field, so it lands inside the
+ * field's box and is placed against that.
  */
-.kivun-cc-console .kivun-cc-published {
+.kivun-cc-wizard .kivun-cc-field > .kivun-mic {
+	position: absolute;
+	left: 8px;
+	top: 8px;
+	z-index: 1;
 	display: flex;
 	align-items: center;
-	flex-wrap: wrap;
-	gap: 18px;
-	padding: 28px 32px;
+	justify-content: center;
+	width: 44px;
+	height: 44px;
+	margin: 0;
+	padding: 0;
+	float: none;
 	background: var(--cc-shell);
 	border: 0;
-	border-radius: var(--cc-radius);
-	color: #fff;
-	font-size: 17px;
-}
-.kivun-cc-console .kivun-cc-published::before {
-	content: "";
-	flex: 0 0 auto;
-	width: 52px;
-	height: 52px;
 	border-radius: 50%;
-	background-color: var(--cc-note-dot);
-	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232e2e31' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6L9 17l-5-5'/%3E%3C/svg%3E");
-	background-repeat: no-repeat;
-	background-position: center;
-	background-size: 24px 24px;
+	box-shadow: none;
+	color: #fff;
+	cursor: pointer;
 }
-.kivun-cc-console .kivun-cc-published > span:first-of-type {
-	font-family: var(--cc-font-display);
-	font-size: 26px;
-	font-weight: 800;
+.kivun-cc-wizard .kivun-cc-field--top > .kivun-mic { top: 10px; }
+.kivun-cc-wizard .kivun-cc-details .kivun-cc-field--top > .kivun-mic { left: 10px; }
+.kivun-cc-wizard .kivun-cc-field--top > .kivun-wa-text + .kivun-mic { top: 12px; }
+/* The topic's is the large one, at the bottom: 48, 14 in and 16 up. */
+.kivun-cc-wizard .kivun-cc-field--topic > .kivun-mic {
+	top: auto;
+	bottom: 16px;
+	left: 14px;
+	width: 48px;
+	height: 48px;
 }
-/* The links beside it stay legible on charcoal. */
-.kivun-cc-console .kivun-cc-published a { color: #fff; text-decoration: underline; }
-.kivun-cc-console .kivun-cc-published .kivun-cc-note__actions { color: var(--cc-on-dark-2); }
+.kivun-cc-wizard .kivun-cc-field--topic > .kivun-mic svg { width: 22px; height: 22px; }
+.kivun-cc-wizard .kivun-mic svg { width: 20px; height: 20px; }
+.kivun-cc-wizard .kivun-mic:hover { background: var(--cc-ink-hover); color: #fff; }
+.kivun-cc-wizard .kivun-mic.is-rec {
+	background: var(--cc-brand);
+	box-shadow: 0 0 0 6px rgba(223, 41, 80, .2);
+}
+/* "מקליט…" under the topic while it is being dictated into. */
+.kivun-cc-wizard .kivun-cc-recnote {
+	display: none;
+	margin: 0;
+	font-size: 15px;
+	font-weight: 700;
+	color: var(--cc-brand);
+}
+.kivun-cc-wizard .kivun-cc-fieldset:has(.kivun-mic.is-rec) > .kivun-cc-recnote { display: block; }
 
 /*
- * The address field: the wrapper is the pill, and the input inside it is
- * bare. Written this way round so the prefix sits inside the border
- * rather than beside it.
+ * The address field: the wrapper is the pill, the input inside it bare, so
+ * the prefix sits inside the border. The wrapper is dir="ltr", which is why
+ * its mic is on the physical right and the room is kept there.
  */
 .kivun-cc-wizard .kivun-cc-slugfield {
 	position: relative;
@@ -2640,16 +2824,11 @@ td.kivun-cc-rowactions > form > * {
 	border-radius: 999px;
 }
 .kivun-cc-wizard .kivun-cc-slugfield:focus-within { border-color: var(--cc-ink); }
-.kivun-cc-wizard .kivun-cc-slugfield__prefix {
-	flex: 0 0 auto;
-	color: var(--cc-text-3);
-	font-size: 17px;
-}
+.kivun-cc-wizard .kivun-cc-slugfield__prefix { flex: 0 0 auto; color: var(--cc-text-3); font-size: 17px; }
 .kivun-cc-wizard .kivun-cc-input.kivun-cc-slugfield__input {
 	flex: 1 1 auto;
 	min-width: 0;
-	height: auto;
-	min-height: 0;
+	height: 100%;
 	padding: 0;
 	background: transparent;
 	border: 0;
@@ -2657,183 +2836,272 @@ td.kivun-cc-rowactions > form > * {
 	font-size: 17px;
 }
 .kivun-cc-wizard .kivun-cc-input.kivun-cc-slugfield__input:focus { background: transparent; }
-/*
- * The mic lands inside this wrapper, because voice.js puts it after the
- * field it attaches to. Positioned against the wrapper rather than
- * floated, which is what the fields outside need.
- *
- * Scoped through .kivun-cc-console to outrank the floated rule below:
- * at equal specificity that one wins on source order, and it did — the
- * mic measured relative and 38.7 wide inside the flex row.
- */
 .kivun-cc-console .kivun-cc-wizard .kivun-cc-slugfield .kivun-mic {
 	position: absolute;
-	/*
-	 * Physical right, not the logical start. This wrapper is dir="ltr",
-	 * so the inline start is the LEFT — where the prefix begins — and a
-	 * logical property put the mic straight on top of "kivun.org.il/".
-	 * The 64px of padding above is reserved on the right for exactly
-	 * this button.
-	 */
 	right: 8px;
+	left: auto;
 	top: 8px;
 	float: none;
-	flex: 0 0 auto;
 	margin: 0;
 	width: 44px;
 	height: 44px;
-}
-
-/* The dictation button. voice.js inserts it as the field's next sibling, so
-   it cannot be positioned against the field itself — there is no shared
-   container to position inside. Floating it and pulling it back up by the
-   field's own height puts it in the field, and works because the height
-   above is set here rather than left to the browser. */
-.kivun-cc-wizard .kivun-cc-input + .kivun-mic {
-	position: relative;
-	z-index: 1;
-	display: grid;
-	place-items: center;
-	float: inline-end;
-	/* 44, the handoff's figure for a field mic — 40 is the editor
-	   toolbar's, which is a different control. */
-	width: 44px;
-	height: 44px;
-	margin-block-start: -50px;
-	margin-inline-end: 8px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
 	padding: 0;
 	background: var(--cc-shell);
 	border: 0;
 	border-radius: 50%;
 	color: #fff;
-	cursor: pointer;
 }
-.kivun-cc-wizard .kivun-mic:hover { background: #000; color: #fff; }
-.kivun-cc-wizard .kivun-mic.is-rec { background: var(--cc-brand); }
-.kivun-cc-wizard .kivun-mic svg { width: 17px; height: 17px; }
 
-/* File pickers: the dashed drop area from the design, with the browser's own
-   button restyled in place. `::file-selector-button` keeps the real input
-   doing the work — no label-and-hidden-input swap, which is what usually
-   breaks keyboard access and form resets. */
-/*
- * The upload zone is drawn in sky, not grey: a dashed --sky-border on the
- * palest wash, which is what marks it as something to drop a file into
- * rather than another bordered field. Hover moves the dash to full sky.
- */
-.kivun-cc-wizard input[type="file"] {
-	display: block;
-	width: 100%;
-	box-sizing: border-box;
-	padding: 22px;
-	background: #fbfdfe;
-	border: 2px dashed var(--cc-sky-line);
-	border-radius: var(--cc-radius-sm);
-	font: inherit;
-	font-size: 17px;
-	color: var(--cc-text-3);
-	cursor: pointer;
+/* A field the step will not move on without: red border, the line under it
+   says why. The base rule's halo is taken off — nothing glows. */
+.kivun-cc-wizard .kivun-cc-input.kivun-field-invalid {
+	border-color: var(--cc-brand) !important;
+	box-shadow: none !important;
 }
-.kivun-cc-wizard input[type="file"]:hover { border-color: var(--cc-note-dot); }
-/* "בחירת קובץ": a charcoal pill 48 tall, inside the zone. */
-.kivun-cc-wizard input[type="file"]::file-selector-button {
-	margin-inline-end: 16px;
-	height: 48px;
-	padding: 0 22px;
-	background: var(--cc-shell);
-	border: 0;
-	border-radius: 999px;
-	color: #fff;
-	font: inherit;
+.kivun-cc-wizard .kivun-cc-err {
+	display: none;
+	margin: 0;
+	font-size: 15px;
 	font-weight: 700;
-	font-size: 17px;
-	cursor: pointer;
+	color: var(--cc-brand);
 }
-.kivun-cc-wizard input[type="file"]::file-selector-button:hover { background: #000; }
+.kivun-cc-wizard .kivun-cc-fieldset:has(.kivun-field-invalid) > .kivun-cc-err { display: block; }
+/* The email is flagged once it has been typed into and is not an address.
+   It blocks nothing — the browser already refuses it at submit — it only
+   says so where it happened. */
+.kivun-cc-wizard input[type="email"].kivun-cc-input:user-invalid { border-color: var(--cc-brand); }
+.kivun-cc-wizard .kivun-cc-fieldset:has(input[type="email"]:user-invalid) > .kivun-cc-err { display: block; }
+/* The alert above the bar is kept for a screen reader; on screen, the field
+   or the helper that turned red is where the reason is. */
+.kivun-cc-wizard .kivun-wiz-error {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	margin: -1px;
+	padding: 0;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	border: 0;
+	white-space: nowrap;
+}
 
-/*
- * The info box: the palest of the three skies, radius 20, padding 14/18,
- * and a sky dot 8 across sitting on the first line of the text.
- *
- * It was on --cc-note (#e3f5fd), which is the tint the "in progress"
- * status pill uses — a shade too strong for a quiet aside, and it made
- * every hint read as a second kind of badge.
- */
+/* A dot and a line of grey: the note under the address. */
+.kivun-cc-wizard .kivun-cc-dothint {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin: 0;
+	font-size: 15px;
+	line-height: 1.5;
+	color: var(--cc-text-2);
+}
+.kivun-cc-wizard .kivun-cc-dothint::before {
+	content: "";
+	flex: 0 0 auto;
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: var(--cc-note-dot);
+}
+/* The info box: the palest sky, radius 20, padding 14/18, an 8 dot on the
+   first line. */
 .kivun-cc-wizard .kivun-cc-hint,
 .kivun-cc-wizard .kivun-field-hint {
 	display: flex;
 	align-items: flex-start;
 	gap: 10px;
-	margin: .9rem 0 0;
+	margin: 0;
 	padding: 14px 18px;
 	background: var(--cc-sky-wash);
 	border-radius: var(--cc-radius-inner);
 	font-size: 15px;
 	line-height: 1.6;
 	color: #4a4a50;
+	text-wrap: pretty;
 }
 .kivun-cc-wizard .kivun-cc-hint::before,
 .kivun-cc-wizard .kivun-field-hint::before {
 	content: "";
+	flex: 0 0 auto;
 	width: 8px;
 	height: 8px;
-	flex: 0 0 auto;
 	margin-top: 9px;
 	border-radius: 50%;
 	background: var(--cc-note-dot);
 }
+.kivun-cc-wizard .kivun-cc-footnote { margin: 0; font-size: 14px; color: var(--cc-text-2); }
+.kivun-cc-wizard .kivun-cc-ai-warn { margin: 0; }
 
-/* What to publish — the four type cards */
+/*
+ * The file zones. The real input is inside each one, kept focusable and out
+ * of sight; the pill and the name line are what is drawn. A keyboard user
+ * tabs to the input, and the zone shows that it has focus.
+ */
+.kivun-cc-wizard .kivun-cc-drop {
+	position: relative;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 16px;
+	box-sizing: border-box;
+	margin: 0;
+	padding: 22px;
+	background: #fbfdfe;
+	border: 2px dashed var(--cc-sky-line);
+	border-radius: var(--cc-radius-sm);
+	cursor: pointer;
+}
+.kivun-cc-wizard .kivun-cc-drop:hover { border-color: var(--cc-note-dot); }
+.kivun-cc-wizard .kivun-cc-drop:focus-within { border-color: var(--cc-ink); }
+.kivun-cc-wizard .kivun-cc-drop__input {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	margin: 0;
+	padding: 0;
+	opacity: 0;
+	overflow: hidden;
+	pointer-events: none;
+}
+.kivun-cc-wizard .kivun-cc-drop__btn {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	flex: none;
+	height: 48px;
+	padding: 0 22px;
+	background: var(--cc-shell);
+	border-radius: 999px;
+	color: #fff;
+	font-size: 17px;
+	font-weight: 700;
+}
+.kivun-cc-wizard .kivun-cc-drop__icon { width: 18px; height: 18px; }
+.kivun-cc-wizard .kivun-cc-drop__name {
+	min-width: 0;
+	font-size: 17px;
+	color: var(--cc-text-3);
+	overflow-wrap: anywhere;
+}
+.kivun-cc-wizard .kivun-cc-drop.has-file .kivun-cc-drop__name { color: var(--cc-ink); }
+.kivun-cc-wizard .kivun-cc-drop__clear {
+	padding: 0;
+	background: none;
+	border: 0;
+	color: var(--cc-text-2);
+	font: inherit;
+	font-size: 15px;
+	font-weight: 700;
+	text-decoration: underline;
+	cursor: pointer;
+}
+/* The image zone: 280 tall, the pill above the name, both centred. */
+.kivun-cc-wizard .kivun-cc-drop--zone {
+	flex-direction: column;
+	flex-wrap: nowrap;
+	justify-content: center;
+	gap: 12px;
+	min-height: 280px;
+	overflow: hidden;
+}
+.kivun-cc-wizard .kivun-cc-drop--zone .kivun-cc-drop__name { font-size: 16px; text-align: center; }
+/* The picture fills the zone once there is one, and lets the click through
+   to the picker under it. Its own inline display:none still hides it. */
+.kivun-cc-wizard .kivun-cc-drop .kivun-cc-media__preview {
+	position: absolute;
+	inset: 0;
+	display: block;
+	margin: 0;
+	padding: 0;
+	pointer-events: none;
+	background: var(--cc-surface);
+}
+.kivun-cc-wizard .kivun-cc-drop .kivun-cc-media__preview img {
+	display: block;
+	width: 100%;
+	height: 100%;
+	max-width: none;
+	margin: 0;
+	border: 0;
+	border-radius: 0;
+	object-fit: cover;
+	object-position: center;
+}
+.kivun-cc-wizard .kivun-cc-drop:has(.kivun-cc-media__preview:not([style*="none"])) { border-color: var(--cc-note-dot); }
+.kivun-cc-wizard .kivun-cc-evimg img { display: block; max-width: 140px; height: auto; border-radius: 12px; }
+
+/* The image card: the zone on the right, its settings beside it. */
+.kivun-cc-wizard .kivun-cc-media--hero {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+	align-items: stretch;
+	gap: 24px;
+	margin: 0;
+}
+.kivun-cc-wizard .kivun-cc-media__side { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+.kivun-cc-wizard .kivun-cc-media__current { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
+.kivun-cc-wizard .kivun-cc-media__current:not(:has(.kivun-cc-media__remove:not([hidden]))) { display: none; }
+.kivun-cc-wizard .kivun-cc-media__remove {
+	height: 40px;
+	padding: 0 18px;
+	background: var(--cc-surface);
+	border: 2px solid var(--cc-brand);
+	border-radius: 999px;
+	color: var(--cc-brand);
+	font: inherit;
+	font-size: 15px;
+	font-weight: 800;
+	cursor: pointer;
+}
+.kivun-cc-wizard .kivun-cc-ai {
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+	margin: 0;
+	padding: 0;
+	background: none;
+	border: 0;
+}
+
+/* What to publish — the four type tiles */
+.kivun-cc-wizard .kivun-cc-types {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+	gap: 14px;
+}
 .kivun-cc-wizard .kivun-cc-check {
 	position: relative;
 	display: flex;
 	flex-direction: column;
-	/*
-	 * The tile reads from its inline start, not from its middle: icon
-	 * circle, then label, both against the right edge in RTL. Centring
-	 * them was the whole reason the tile looked unlike the design even
-	 * with every colour and size already right.
-	 *
-	 * Stated, not merely omitted: the base `.kivun-cc-check` centres its
-	 * items, so dropping the override here left the centring in place.
-	 */
-	align-items: normal;
-	justify-content: flex-end;
-	text-align: right;
+	/* From the inline start, not the middle: disc, then label, against the
+	   right edge. The base rule centres them, so this has to say it. */
+	align-items: flex-start;
+	justify-content: flex-start;
 	gap: 18px;
-	min-height: 118px;
+	min-height: 0;
+	box-sizing: border-box;
 	margin: 0;
-	/* 22 all round, the handoff's figure — this was a rem-derived 17.6/12.8/16. */
 	padding: 22px;
+	text-align: right;
 	background: var(--cc-field);
-	/* The unselected border is the field grey rather than transparent, so the
-	   tile does not change size when it gains a visible one. */
+	/* The resting border is the field grey, so gaining a visible one does
+	   not change the tile's size. */
 	border: 2px solid var(--cc-field);
 	border-radius: var(--cc-radius-sm);
-	font-weight: 700;
 	cursor: pointer;
-	transition: border-color .15s, background .15s;
 }
-.kivun-cc-wizard .kivun-cc-check:hover { border-color: color-mix(in srgb, var(--cc-brand) 35%, transparent); }
-/*
- * Selected: white, with a CHARCOAL border — not the brand red.
- *
- * The red is already doing two jobs on a selected tile, in the icon disc
- * and in the tick, and a third red ring around them made the whole tile
- * read as one red block. The handoff draws the outline in charcoal so the
- * two red marks inside it stay the thing you see.
- */
+.kivun-cc-wizard .kivun-cc-check:hover { border-color: var(--cc-ink); }
+/* Selected: white with a charcoal ring, the disc and the tick in red. */
 .kivun-cc-wizard .kivun-cc-check:has(.kivun-cc-toggle:checked) {
 	background: var(--cc-surface);
 	border-color: var(--cc-ink);
 }
-/*
- * The tick is the checkbox itself, restyled — not a span beside a hidden
- * input. It keeps its name and value, so the save still reads it exactly
- * as before, and there is no second element to keep in step with it.
- *
- * `left: 18px` in the handoff is the inline end here, the page being RTL.
- */
+/* The tick is the checkbox itself, restyled: it keeps its name and value,
+   so the save reads it exactly as before. `left: 18px` in the design is the
+   inline end here. */
 .kivun-cc-wizard .kivun-cc-check .kivun-cc-toggle {
 	position: absolute;
 	top: 18px;
@@ -2844,139 +3112,203 @@ td.kivun-cc-rowactions > form > * {
 	appearance: none;
 	-webkit-appearance: none;
 	box-sizing: border-box;
+	background: #fff;
 	border: 2px solid var(--cc-toggle-off);
 	border-radius: 50%;
-	background: #fff;
 	cursor: pointer;
-	transition: background .15s, border-color .15s;
 }
 .kivun-cc-wizard .kivun-cc-check .kivun-cc-toggle:checked {
-	background: var(--cc-brand);
+	background-color: var(--cc-brand);
 	border-color: var(--cc-brand);
-	/* A white tick, drawn rather than typed: a glyph would take the page
-	   font with it and change shape from one site to the next. */
-	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6L9 17l-5-5'/%3E%3C/svg%3E");
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E");
 	background-repeat: no-repeat;
 	background-position: center;
 	background-size: 16px 16px;
 }
-.kivun-cc-wizard .kivun-cc-check .kivun-cc-toggle:focus-visible {
-	outline: 2px solid var(--cc-brand);
-	outline-offset: 2px;
-}
-/* The icon disc is 60 on a tile, and it inverts when the tile is chosen:
-   a red disc with a white glyph, instead of a tinted one with a red glyph. */
+.kivun-cc-wizard .kivun-cc-check .kivun-cc-toggle:focus-visible { outline: 2px solid var(--cc-ink); outline-offset: 2px; }
 .kivun-cc-wizard .kivun-cc-check .kivun-cc-chip { width: 60px; height: 60px; }
-.kivun-cc-wizard .kivun-cc-check .kivun-cc-chip svg { width: 26px; height: 26px; }
-.kivun-cc-wizard .kivun-cc-check:has(.kivun-cc-toggle:checked) .kivun-cc-chip {
-	background: var(--cc-brand);
-	color: #fff;
+.kivun-cc-wizard .kivun-cc-check .kivun-cc-chip svg { width: 28px; height: 28px; }
+.kivun-cc-wizard .kivun-cc-check:has(.kivun-cc-toggle:checked) .kivun-cc-chip { background: var(--cc-brand); color: #fff; }
+.kivun-cc-wizard .kivun-cc-check > span:not(.kivun-cc-chip) {
+	font-family: var(--cc-font-display);
+	font-size: 24px;
+	font-weight: 700;
+	line-height: 1.3;
+	color: var(--cc-ink);
 }
-/* The tile's own label: 24/700, the largest type in the step. */
-.kivun-cc-wizard .kivun-cc-check > span:not(.kivun-cc-chip) { font-size: 24px; font-weight: 700; }
+/* An existing item's "view" link, in the tile's free corner. */
 .kivun-cc-wizard .kivun-cc-view {
 	position: absolute;
-	top: .7rem;
-	inset-inline-start: .7rem;
-	color: var(--kivun-muted);
+	bottom: 18px;
+	inset-inline-end: 22px;
+	color: var(--cc-text-2);
+	font-size: 18px;
 	text-decoration: none;
 }
-/* The checkboxes are a row of cards here rather than a stacked list. */
-.kivun-cc-wizard .kivun-cc-types {
-	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-	gap: 14px;
+.kivun-cc-wizard .kivun-cc-optcheck {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	font-size: 17px;
+	font-weight: 500;
+	cursor: pointer;
 }
+.kivun-cc-wizard .kivun-cc-optcheck input { width: 20px; height: 20px; margin: 0; accent-color: var(--cc-brand); }
 
 /* Buttons */
 .kivun-cc-wizard .kivun-cc-btn {
-	gap: .6rem;
-	padding: .85rem 1.5rem;
-	border-radius: 999px;
-	font-size: .95rem;
-	font-weight: 700;
-}
-/* "חזרה" stands beside "המשך" and matches its height: 56, on a 2px
-   border rather than a hairline. */
-.kivun-cc-wizard .kivun-cc-btn--ghost,
-.kivun-cc-wizard .kivun-wiz-prev {
-	background: var(--cc-surface);
-	border: 2px solid var(--cc-line);
-	color: var(--cc-ink);
-}
-.kivun-cc-wizard .kivun-wiz-prev {
-	height: 56px;
-	padding: 0 26px;
-	border-radius: 999px;
-	font-size: 18px;
-	font-weight: 700;
-}
-.kivun-cc-wizard .kivun-wiz-prev:hover { border-color: var(--cc-ink); }
-.kivun-cc-wizard .kivun-cc-btn--ghost:hover,
-.kivun-cc-wizard .kivun-wiz-prev:hover { background: var(--cc-field); color: var(--cc-ink); filter: none; }
-/* The dark secondary actions from the design: generate, pick a file, send. */
-.kivun-cc-wizard .kivun-cc-ai-btn,
-.kivun-cc-wizard .kivun-cc-gen-btn {
-	background: var(--cc-shell);
-	color: #fff;
-}
-.kivun-cc-wizard .kivun-cc-ai-btn:hover,
-.kivun-cc-wizard .kivun-cc-gen-btn:hover { background: #000; color: #fff; filter: none; }
-
-/*
- * The two WhatsApp actions. "Copy" stays an outline pill; "send" is a
- * charcoal pill carrying a green disc — the one place in the whole
- * design that uses WhatsApp's own colour, and only for that disc.
- *
- * The disc is a pseudo-element, so the anchor keeps its href and nothing
- * new has to be kept in step with it. Written after the ghost rule and
- * with the extra class, because the anchor still carries --ghost and
- * would otherwise win on source order.
- */
-.kivun-cc-wizard .kivun-cc-btn.kivun-wa-copy {
-	height: 52px;
-	padding: 0 24px;
-	border-radius: 999px;
-	font-size: 17px;
-}
-.kivun-cc-wizard .kivun-cc-btn.kivun-wa-share {
 	display: inline-flex;
 	align-items: center;
-	gap: 12px;
+	justify-content: center;
+	gap: 10px;
+	box-sizing: border-box;
 	height: 52px;
-	padding: 0 8px 0 22px;
-	background: var(--cc-shell);
+	padding: 0 24px;
 	border: 0;
+	border-radius: 999px;
+	box-shadow: none;
+	font-family: inherit;
+	font-size: 17px;
+	font-weight: 700;
+	line-height: 1;
+	text-decoration: none;
+	white-space: nowrap;
+	cursor: pointer;
+	filter: none;
+	transition: background-color .15s, border-color .15s, color .15s;
+}
+.kivun-cc-wizard .kivun-cc-actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 16px;
+}
+/* The dark AI button: generate content, an image, a message. */
+.kivun-cc-wizard .kivun-cc-btn--ai {
+	flex: none;
+	align-self: flex-start;
+	background: var(--cc-shell);
+	color: #fff;
+	font-weight: 800;
+}
+.kivun-cc-wizard .kivun-cc-btn--ai:hover { background: var(--cc-ink-hover); color: #fff; }
+.kivun-cc-wizard .kivun-cc-btn--ai svg { width: 20px; height: 20px; }
+.kivun-cc-wizard .kivun-cc-btn--ai-lg { height: 56px; padding: 0 28px; font-size: 18px; }
+.kivun-cc-wizard .kivun-cc-btn--ai:disabled { background: var(--cc-line); color: var(--cc-text-3); cursor: default; }
+/* What the generators report: a sky dot and a short line. */
+.kivun-cc-wizard .kivun-cc-gen-status,
+.kivun-cc-wizard .kivun-cc-ai-status,
+.kivun-cc-wizard .kivun-cc-wa-status {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 16px;
+	font-weight: 700;
+	color: var(--cc-ink);
+}
+.kivun-cc-wizard .kivun-cc-wa-status:empty { display: none; }
+.kivun-cc-wizard .kivun-cc-gen-status:not(:empty)::before,
+.kivun-cc-wizard .kivun-cc-ai-status:not(:empty)::before,
+.kivun-cc-wizard .kivun-cc-wa-status:not(:empty)::before {
+	content: "";
+	flex: 0 0 auto;
+	width: 10px;
+	height: 10px;
+	border-radius: 50%;
+	background: var(--cc-note-dot);
+}
+
+/* The CTA banner's preview: a red card with the title, the text and the
+   button as they will read. */
+.kivun-cc-wizard .kivun-cc-ctaprev { display: flex; flex-direction: column; gap: 8px; }
+.kivun-cc-wizard .kivun-cc-ctaprev__label { font-size: 14px; font-weight: 700; color: var(--cc-text-2); }
+.kivun-cc-wizard .kivun-cc-ctaprev__card {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 20px;
+	padding: 24px 28px;
+	background: var(--cc-brand);
+	border-radius: var(--cc-radius-sm);
+}
+.kivun-cc-wizard .kivun-cc-ctaprev__text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.kivun-cc-wizard .kivun-cc-ctaprev__title { font-family: var(--cc-font-display); font-size: 26px; font-weight: 800; color: #fff; }
+.kivun-cc-wizard .kivun-cc-ctaprev__body { font-size: 17px; color: #fff; }
+.kivun-cc-wizard .kivun-cc-ctaprev__title:empty,
+.kivun-cc-wizard .kivun-cc-ctaprev__body:empty { display: none; }
+.kivun-cc-wizard .kivun-cc-ctaprev__btn {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	flex: none;
+	height: 48px;
+	padding: 0 10px 0 24px;
+	background: var(--cc-ink);
 	border-radius: 999px;
 	color: #fff;
 	font-size: 17px;
 	font-weight: 800;
 }
-.kivun-cc-wizard .kivun-cc-btn.kivun-wa-share:hover {
-	background: var(--cc-ink-hover);
-	color: #fff;
-	filter: none;
+.kivun-cc-wizard .kivun-cc-ctaprev__btn::after {
+	content: "";
+	flex: 0 0 auto;
+	width: 32px;
+	height: 32px;
+	border-radius: 50%;
+	background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232e2e31' stroke-width='2.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M15 5l-7 7 7 7'/%3E%3C/svg%3E") center / 16px 16px no-repeat;
 }
-.kivun-cc-wizard .kivun-cc-btn.kivun-wa-share::after {
+
+/*
+ * The two WhatsApp actions. "Copy" is an outline pill with its icon;
+ * "send" a charcoal pill carrying the green disc — the one place the
+ * design uses WhatsApp's own colour, and only for that disc.
+ *
+ * Both icons are pseudo-elements. The copy script swaps the button's text
+ * for "✓ הועתק" and back, which would take an icon in the markup with it.
+ */
+.kivun-cc-wizard .kivun-wa-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 0; }
+.kivun-cc-wizard .kivun-cc-btn.kivun-wa-copy {
+	padding: 0 22px;
+	background: var(--cc-surface);
+	border: 2px solid var(--cc-line);
+	color: var(--cc-ink);
+}
+.kivun-cc-wizard .kivun-cc-btn.kivun-wa-copy:hover { border-color: var(--cc-ink); background: var(--cc-surface); color: var(--cc-ink); }
+.kivun-cc-wizard .kivun-cc-btn.kivun-wa-copy::before {
+	content: "";
+	flex: 0 0 auto;
+	width: 18px;
+	height: 18px;
+	background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%232e2e31'%3E%3Cpath d='M8 8h11a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z' fill-opacity='.35'/%3E%3Cpath d='M5 3h10a1 1 0 0 1 1 1v2H7a1 1 0 0 0-1 1v9H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z'/%3E%3C/svg%3E") center / 18px 18px no-repeat;
+}
+.kivun-cc-wizard .kivun-cc-btn.kivun-wa-share {
+	gap: 12px;
+	padding: 0 8px 0 22px;
+	background: var(--cc-shell);
+	border: 0;
+	color: #fff;
+}
+.kivun-cc-wizard .kivun-cc-btn.kivun-wa-share:hover { background: var(--cc-ink-hover); color: #fff; }
+.kivun-cc-wizard .kivun-cc-btn.kivun-wa-share::before {
 	content: "";
 	flex: 0 0 auto;
 	width: 36px;
 	height: 36px;
 	border-radius: 50%;
-	background-color: var(--cc-whatsapp);
-	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23fff'%3E%3Cpath d='M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.4-.7-1.7-.8s-.4-.1-.5.1-.6.8-.8 1-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.2-.4.6-1.3.1-.2 0-.3 0-.5s-.5-1.3-.7-1.7-.4-.4-.5-.4h-.5a1 1 0 0 0-.7.3A3 3 0 0 0 7 12.3a5.2 5.2 0 0 0 1.1 2.4 11.9 11.9 0 0 0 4.6 4 5.3 5.3 0 0 0 2.4.5 2.7 2.7 0 0 0 1.8-1.3 2.2 2.2 0 0 0 .2-1.3c-.1-.1-.3-.2-.6-.3z'/%3E%3C/svg%3E");
-	background-repeat: no-repeat;
-	background-position: center;
-	background-size: 20px 20px;
+	background: var(--cc-whatsapp) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23fff'%3E%3Cpath d='M12 2.5a9.5 9.5 0 0 0-8.2 14.3L2.5 21.5l4.8-1.3A9.5 9.5 0 1 0 12 2.5z' fill-opacity='.4'/%3E%3Cpath d='M9 7.5c.3 0 .6 0 .8.5l.9 2c.1.3 0 .6-.2.8l-.6.7c.8 1.5 2 2.7 3.5 3.5l.7-.6c.2-.2.5-.3.8-.2l2 .9c.4.2.5.5.5.8 0 1.2-1 2.1-2.3 2.1A8 8 0 0 1 7 9.8C7 8.5 7.9 7.5 9 7.5z'/%3E%3C/svg%3E") center / 20px 20px no-repeat;
 }
 
-/* The bottom bar: how far along, and the way on. */
+/* The bottom bar: a white pill, padding 12 — where you are on the right,
+   the way on to the left. */
 .kivun-cc-wizard .kivun-wiz-nav {
+	order: 99;
 	display: flex;
+	flex-wrap: wrap;
 	align-items: center;
-	gap: .7rem;
-	margin-top: 1.1rem;
-	/* The bottom bar is a white pill, padding 12, flat. */
+	justify-content: space-between;
+	gap: 16px;
+	margin: 0;
 	padding: 12px;
 	background: var(--cc-surface);
 	border: 0;
@@ -2985,59 +3317,64 @@ td.kivun-cc-rowactions > form > * {
 .kivun-cc-wizard .kivun-wiz-progress {
 	display: flex;
 	align-items: center;
-	gap: .9rem;
-	margin-inline-end: auto;
-	font-size: .86rem;
+	gap: 16px;
+	flex: 1 1 220px;
+	margin: 0;
+	padding-right: 16px;
+	font-size: 17px;
 	font-weight: 700;
 	color: var(--cc-ink);
+	white-space: nowrap;
 }
-/* The bar reads the step off the form's own data-current, which the step
-   handler already keeps up to date — so it moves with the wizard without the
-   script having to know the bar exists. */
+/* The bar reads the step off the form's data-current, which the step
+   handler keeps up to date, and fills from the right. */
 .kivun-cc-wizard .kivun-wiz-progress::after {
 	content: "";
-	width: 190px;
-	max-width: 32vw;
-	/* 8, the handoff's figure. */
+	flex: 1;
+	max-width: 240px;
 	height: 8px;
 	border-radius: 999px;
-	/* Filled from the inline start — the right, here — so it grows the way
-	   the steps beside it are read. */
 	background:
 		linear-gradient(var(--cc-brand), var(--cc-brand)) no-repeat
 		right / var(--cc-progress, 25%) 100%,
-		var(--cc-field);
+		var(--cc-canvas);
 }
+.kivun-cc-wizard .kivun-wiz-nav__go { display: flex; gap: 10px; }
+/* "חזרה": 56, a 2px border, the border going charcoal on hover. */
+.kivun-cc-wizard .kivun-cc-btn.kivun-wiz-prev {
+	height: 56px;
+	padding: 0 26px;
+	background: var(--cc-surface);
+	border: 2px solid var(--cc-line);
+	color: var(--cc-ink);
+	font-size: 18px;
+	font-weight: 700;
+}
+.kivun-cc-wizard .kivun-cc-btn.kivun-wiz-prev:hover { background: var(--cc-surface); border-color: var(--cc-ink); color: var(--cc-ink); }
 /*
- * The wizard's forward button: 56 tall, and carrying a 36 white disc with a
- * brand chevron in it — the handoff's `padding: 0 30px 0 10px` is what
- * leaves room for that disc on the inline end.
- *
- * The disc is a pseudo-element rather than a span in the markup. Three
- * buttons would have needed one each, and the script that drives the wizard
- * reaches for these by class: fewer children is one less thing for it to
- * walk past.
+ * The forward button: 56 tall, the label then a 36 white disc with a red
+ * chevron — `0 30px 0 10px` is what leaves the room for the disc on the
+ * left. The disc is a pseudo-element: the script reaches these buttons by
+ * class, and fewer children is one less thing for it to walk past.
  */
 .kivun-cc-wizard .kivun-wiz-next,
 .kivun-cc-wizard .kivun-wiz-submit {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	gap: 10px;
+	gap: 14px;
 	height: 56px;
 	padding: 0 30px 0 10px;
+	background: var(--cc-brand);
+	border: 0;
 	border-radius: 999px;
-	font-size: 17px;
-	font-weight: 700;
+	color: #fff;
+	font-size: 18px;
+	font-weight: 800;
+	line-height: 1;
 }
-/*
- * The disc, with the chevron painted on it. The glyph is a data-URI SVG
- * rather than a mask: a mask would cut the chevron OUT of the white disc,
- * leaving a hole, where what is wanted is a brand chevron drawn on white.
- *
- * It points the way the wizard moves, which in RTL is leftward — the side
- * the disc sits on.
- */
+.kivun-cc-wizard .kivun-cc-btn.kivun-wiz-next:hover,
+.kivun-cc-wizard .kivun-cc-btn.kivun-wiz-submit:hover { background: var(--cc-brand-hover); color: #fff; }
 .kivun-cc-wizard .kivun-wiz-next::after,
 .kivun-cc-wizard .kivun-wiz-submit::after {
 	content: "";
@@ -3045,11 +3382,7 @@ td.kivun-cc-rowactions > form > * {
 	width: 36px;
 	height: 36px;
 	border-radius: 50%;
-	background-color: #fff;
-	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23df2950' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M15 18l-6-6 6-6'/%3E%3C/svg%3E");
-	background-repeat: no-repeat;
-	background-position: center;
-	background-size: 15px 15px;
+	background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23df2950' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M15 5l-7 7 7 7'/%3E%3C/svg%3E") center / 18px 18px no-repeat;
 }
 
 .kivun-cc-wizard[data-current="1"] { --cc-progress: 25%; }
@@ -3057,44 +3390,209 @@ td.kivun-cc-rowactions > form > * {
 .kivun-cc-wizard[data-current="3"] { --cc-progress: 75%; }
 .kivun-cc-wizard[data-current="4"] { --cc-progress: 100%; }
 
-@media (max-width: 900px) {
-	.kivun-cc-wizard .kivun-cc-grid { grid-template-columns: minmax(0, 1fr); }
-	/* Where am I, before what I am filling in — the rail is written after the
-	   cards so that it is the form that reads first to a screen reader and on
-	   a narrow screen it would otherwise land at the very bottom, past
-	   everything it is meant to orient you in. */
-	.kivun-cc-wizard .kivun-cc-side { order: -1; }
-	.kivun-cc-rail { position: static; padding: 1.2rem 1.3rem; }
-	.kivun-cc-rail .kivun-wiz-steps { display: flex; flex-wrap: wrap; gap: .5rem 1.1rem; }
-	.kivun-cc-rail .kivun-wiz-step { padding-bottom: 0; }
-	.kivun-cc-rail .kivun-wiz-step:not(:last-child)::before { content: none; }
-	.kivun-cc-rail__lead { margin-bottom: 1.1rem; }
-	/* The step bar used to hide its labels this narrow, when it was a row of
-	   four boxes across the top and there was no room. In the rail they are
-	   the only thing that says what a step is, so a bare numbered circle
-	   tells the reader nothing. */
-	.kivun-cc-rail .kivun-wiz-step__label { display: inline; }
-	/*
-	 * The stats are left to the design's own grid here.
-	 *
-	 * Two columns were forced across this whole range, written when the
-	 * labels were 13px. At the handoff's 18px it stops working: on a 375px
-	 * phone two columns make each card 124px wide, which leaves 68px of
-	 * content for a dot, a gap, "ממתינות לטיפול" and a 67px badge. The
-	 * badge ended up a full 67px outside its card, clipped away by the
-	 * console's own `overflow: hidden`, and the label overflowed by 95.
-	 *
-	 * `repeat(auto-fit, minmax(200px, 1fr))` already answers this: two
-	 * columns while two fit, one below that. Which is also what the
-	 * handoff specifies, so the override was fighting the design to
-	 * produce a card too narrow to hold it.
-	 */
+/*
+ * The two editors. The engine is WordPress's own TinyMCE, untouched; what
+ * is restyled is its frame and toolbar. The container is one 2px rounded
+ * box, the toolbar a grey band across its top with a 2px rule under it, the
+ * buttons 38 squares at radius 12, the groups split by a short 2px line.
+ *
+ * TinyMCE draws its glyphs from the dashicons font. They are swapped for
+ * the design's: letters for the four type buttons, line icons for the rest.
+ * The buttons themselves are untouched, so every command is the one it was.
+ */
+.kivun-cc-wizard .wp-editor-wrap {
+	position: relative;
+	margin: 0;
+	overflow: hidden;
+	background: var(--cc-surface);
+	border: 2px solid var(--cc-line);
+	border-radius: var(--cc-radius-sm);
 }
+.kivun-cc-wizard .wp-editor-wrap:focus-within,
+.kivun-cc-wizard .wp-editor-wrap:has(.mce-edit-focus) { border-color: var(--cc-ink); }
+.kivun-cc-wizard .wp-editor-container,
+.kivun-cc-wizard .wp-editor-wrap .mce-panel,
+.kivun-cc-wizard .wp-editor-wrap .mce-tinymce {
+	border: 0 !important;
+	background: transparent !important;
+	box-shadow: none !important;
+}
+.kivun-cc-wizard .wp-editor-wrap .mce-top-part::before { box-shadow: none !important; }
+.kivun-cc-wizard .wp-editor-wrap .mce-toolbar-grp {
+	padding: 8px 10px !important;
+	/* Room on the left for the dictation disc, which is laid over the band. */
+	padding-left: 60px !important;
+	background: var(--cc-field) !important;
+	border: 0 !important;
+	border-bottom: 2px solid var(--cc-divider) !important;
+}
+.kivun-cc-wizard .wp-editor-wrap .mce-toolbar .mce-container-body,
+.kivun-cc-wizard .wp-editor-wrap .mce-toolbar-grp .mce-container-body {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 4px;
+	/* TinyMCE's skin sets every container LTR, and only an RTL locale
+	   turns its UI round; the design reads the bar from the right
+	   whatever language the site's admin happens to be in. */
+	direction: rtl;
+	background: transparent !important;
+}
+.kivun-cc-wizard .wp-editor-wrap .mce-toolbar { padding: 0 !important; }
+.kivun-cc-wizard .wp-editor-wrap .mce-btn-group {
+	display: flex !important;
+	align-items: center;
+	margin: 0 !important;
+	padding: 0 !important;
+	border: 0 !important;
+}
+.kivun-cc-wizard .wp-editor-wrap .mce-btn-group > div { display: flex; align-items: center; gap: 4px; direction: rtl; }
+.kivun-cc-wizard .wp-editor-wrap .mce-btn-group:not(:first-child)::before {
+	content: "";
+	flex: 0 0 auto;
+	width: 2px;
+	height: 22px;
+	margin: 0 4px;
+	background: var(--cc-line);
+}
+.kivun-cc-wizard .wp-editor-wrap .mce-btn {
+	width: 38px;
+	height: 38px;
+	margin: 0 !important;
+	background: transparent !important;
+	border: 0 !important;
+	border-radius: var(--cc-radius-tool) !important;
+	box-shadow: none !important;
+}
+.kivun-cc-wizard .wp-editor-wrap .mce-btn button {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 38px;
+	height: 38px;
+	padding: 0 !important;
+	background: transparent !important;
+	border: 0 !important;
+	border-radius: var(--cc-radius-tool) !important;
+	box-shadow: none !important;
+	color: var(--cc-ink) !important;
+}
+.kivun-cc-wizard .wp-editor-wrap .mce-btn:hover,
+.kivun-cc-wizard .wp-editor-wrap .mce-btn:focus-within { background: #e9e9ec !important; }
+/* A toggle that is on — left-to-right, full screen, or the style the caret
+   is in — sits on the sky tint. */
+.kivun-cc-wizard .wp-editor-wrap .mce-btn.mce-active,
+.kivun-cc-wizard .wp-editor-wrap .mce-btn.mce-active:hover { background: var(--cc-sky-strong) !important; }
+.kivun-cc-wizard .wp-editor-wrap .mce-btn .mce-ico {
+	display: block;
+	width: 19px;
+	height: 19px;
+	margin: 0;
+	padding: 0;
+	font-size: 0 !important;
+	line-height: 1;
+	color: var(--cc-ink) !important;
+	/* Longhands: a shorthand here would reset the image each icon sets. */
+	background-position: center;
+	background-size: 19px 19px;
+	background-repeat: no-repeat;
+}
+.kivun-cc-wizard .wp-editor-wrap .mce-btn .mce-ico::before { content: none !important; }
+.kivun-cc-wizard .wp-editor-wrap .mce-btn .mce-i-bold::before,
+.kivun-cc-wizard .wp-editor-wrap .mce-btn .mce-i-italic::before,
+.kivun-cc-wizard .wp-editor-wrap .mce-btn .mce-i-underline::before,
+.kivun-cc-wizard .wp-editor-wrap .mce-btn .mce-i-strikethrough::before {
+	display: block;
+	width: 19px;
+	text-align: center;
+	font-family: var(--cc-font-display) !important;
+	font-size: 18px;
+	font-weight: 700;
+	line-height: 19px;
+	color: var(--cc-ink);
+}
+.kivun-cc-wizard .wp-editor-wrap .mce-btn .mce-i-bold::before { content: "B" !important; font-weight: 800; }
+.kivun-cc-wizard .wp-editor-wrap .mce-btn .mce-i-italic::before { content: "I" !important; font-family: Georgia, serif !important; font-style: italic; }
+.kivun-cc-wizard .wp-editor-wrap .mce-btn .mce-i-underline::before { content: "U" !important; text-decoration: underline; }
+.kivun-cc-wizard .wp-editor-wrap .mce-btn .mce-i-strikethrough::before { content: "S" !important; text-decoration: line-through; }
+.kivun-cc-wizard .wp-editor-wrap .mce-i-blockquote { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232e2e31' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 17c-1.5 0-2.5-1.2-2.5-3 0-3 2-6 5-7.5 M15 17c-1.5 0-2.5-1.2-2.5-3 0-3 2-6 5-7.5 M3.5 14h4v3h-4z M12.5 14h4v3h-4z'/%3E%3C/svg%3E"); }
+.kivun-cc-wizard .wp-editor-wrap .mce-i-bullist { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232e2e31' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10 6h10 M10 12h10 M10 18h10 M5 6h.01 M5 12h.01 M5 18h.01'/%3E%3C/svg%3E"); }
+.kivun-cc-wizard .wp-editor-wrap .mce-i-numlist { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232e2e31' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M11 6h9 M11 12h9 M11 18h9 M4 4.5h1.5V9 M4 14h3l-3 4h3'/%3E%3C/svg%3E"); }
+.kivun-cc-wizard .wp-editor-wrap .mce-i-alignright { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232e2e31' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6h16 M10 10h10 M4 14h16 M10 18h10'/%3E%3C/svg%3E"); }
+.kivun-cc-wizard .wp-editor-wrap .mce-i-aligncenter { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232e2e31' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6h16 M7 10h10 M4 14h16 M7 18h10'/%3E%3C/svg%3E"); }
+.kivun-cc-wizard .wp-editor-wrap .mce-i-alignleft { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232e2e31' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6h16 M4 10h10 M4 14h16 M4 18h10'/%3E%3C/svg%3E"); }
+.kivun-cc-wizard .wp-editor-wrap .mce-i-ltr { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232e2e31' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 4v12 M16 4v12 M18 4h-8a3.5 3.5 0 0 0 0 7h2 M4 20h16 M7 17l-3 3 3 3'/%3E%3C/svg%3E"); }
+.kivun-cc-wizard .wp-editor-wrap .mce-i-link { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232e2e31' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1 M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1'/%3E%3C/svg%3E"); }
+.kivun-cc-wizard .wp-editor-wrap .mce-i-undo { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232e2e31' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 14L4 9l5-5 M4 9h10a6 6 0 0 1 0 12h-3'/%3E%3C/svg%3E"); }
+.kivun-cc-wizard .wp-editor-wrap .mce-i-redo { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232e2e31' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M15 14l5-5-5-5 M20 9H10a6 6 0 0 0 0 12h3'/%3E%3C/svg%3E"); }
+.kivun-cc-wizard .wp-editor-wrap .mce-i-fullscreen,
+.kivun-cc-wizard .wp-editor-wrap .mce-i-dfw { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232e2e31' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 9V4h5 M20 9V4h-5 M4 15v5h5 M20 15v5h-5'/%3E%3C/svg%3E"); }
+.kivun-cc-wizard .wp-editor-wrap .mce-edit-area { border: 0 !important; }
+.kivun-cc-wizard .wp-editor-wrap .mce-statusbar {
+	background: var(--cc-surface) !important;
+	border: 0 !important;
+}
+/* The editor's own dictation disc: 40, laid over the left end of the band.
+   voice.js puts it first in the wrapper, before the editor itself. */
+.kivun-cc-wizard .wp-editor-wrap > .kivun-mic--editor {
+	position: absolute;
+	top: 7px;
+	left: 10px;
+	z-index: 2;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 40px;
+	height: 40px;
+	margin: 0;
+	padding: 0;
+	float: none;
+	background: var(--cc-shell);
+	border: 0;
+	border-radius: 50%;
+	color: #fff;
+	cursor: pointer;
+}
+.kivun-cc-wizard .wp-editor-wrap > .kivun-mic--editor svg { width: 18px; height: 18px; }
+
+/*
+ * After publishing: a charcoal card, not a green notice — a sky disc with a
+ * charcoal check, the title at 26/800 beside it.
+ */
+.kivun-cc-console .kivun-cc-published {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 18px;
+	margin: 0 0 20px;
+	padding: 28px 32px;
+	background: var(--cc-shell);
+	border: 0;
+	border-radius: var(--cc-radius);
+	color: #fff;
+	font-size: 17px;
+}
+.kivun-cc-console .kivun-cc-published::before {
+	content: "";
+	flex: 0 0 auto;
+	width: 52px;
+	height: 52px;
+	border-radius: 50%;
+	background: var(--cc-note-dot) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232e2e31' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center / 26px 26px no-repeat;
+}
+.kivun-cc-console .kivun-cc-published > span:first-of-type {
+	font-family: var(--cc-font-display);
+	font-size: 26px;
+	font-weight: 800;
+}
+.kivun-cc-console .kivun-cc-published a { color: #fff; text-decoration: underline; }
+.kivun-cc-console .kivun-cc-published .kivun-cc-note__actions { color: var(--cc-on-dark-2); }
 
 @media (max-width: 600px) {
-	.kivun-wiz-step__label { display: none; }
-	.kivun-wiz-step { flex: 0 0 auto; justify-content: center; }
-	.kivun-wiz-nav { flex-wrap: wrap; }
+	/* The pill bar wraps to two rows on a phone; at radius 999 a two-row
+	   box turns into a lozenge, so it steps down to the card radius. */
+	.kivun-cc-wizard .kivun-wiz-nav { border-radius: var(--cc-radius-sm); }
+	.kivun-cc-wizard .kivun-cc-card { padding: 24px 20px; }
 }
 
 /* Icons — stroke SVGs that inherit the surrounding colour. */

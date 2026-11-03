@@ -2035,6 +2035,9 @@
 		// to publish, and the later steps would ask about nothing.
 		if (step === 1) {
 			var chosen = form.querySelectorAll('.kivun-cc-toggle:checked').length;
+			// The design says it on the helper under the title, which turns
+			// red; the alert below still carries it for a screen reader.
+			form.classList.toggle('kivun-wiz-tried-types', !chosen);
 			if (!chosen) {
 				kivunWizError(form, 'יש לבחור לפחות סוג תוכן אחד לפרסום.');
 				var firstToggle = form.querySelector('.kivun-cc-toggle');
@@ -2100,12 +2103,104 @@
 		var form = toggle.closest('.kivun-cc-wizard');
 		if (form && form.querySelectorAll('.kivun-cc-toggle:checked').length) {
 			kivunWizError(form, '');
+			form.classList.remove('kivun-wiz-tried-types');
 		}
+	});
+
+	// ── The wizard's file zones ─────────────────────────────────────────────────
+	// The real file input sits inside each zone and does the work; what shows is
+	// the design's pill and a line for the file's name. That line is the one
+	// thing the browser no longer draws for us, so it is kept in step here.
+	function kivunDropName(zone) {
+		var input = zone.querySelector('.kivun-cc-drop__input');
+		var name = zone.querySelector('.kivun-cc-drop__name');
+		var clear = zone.querySelector('.kivun-cc-drop__clear');
+		var file = input && input.files && input.files[0];
+		if (name) { name.textContent = file ? file.name : (name.dataset.empty || ''); }
+		if (clear) { clear.hidden = !file; }
+		zone.classList.toggle('has-file', !!file);
+	}
+
+	document.addEventListener('change', function (e) {
+		var input = e.target.closest('.kivun-cc-drop__input');
+		var zone = input && input.closest('.kivun-cc-drop');
+		if (zone) { kivunDropName(zone); }
+	});
+
+	// "הסרה" empties the picker and nothing else. It is a button inside the
+	// zone's label, so the click does not reopen the picker, and no change
+	// event is sent: the media boxes read one as "a new image was chosen".
+	document.addEventListener('click', function (e) {
+		var clear = e.target.closest('.kivun-cc-drop__clear');
+		if (clear) {
+			e.preventDefault();
+			var zone = clear.closest('.kivun-cc-drop');
+			var input = zone && zone.querySelector('.kivun-cc-drop__input');
+			if (input) { input.value = ''; }
+			if (zone) { kivunDropName(zone); }
+			return;
+		}
+		// The media box's own remove button empties its picker; the name
+		// line follows it.
+		var remove = e.target.closest('.kivun-cc-media__remove');
+		var box = remove && remove.closest('.kivun-cc-media');
+		if (box) {
+			box.querySelectorAll('.kivun-cc-drop').forEach(function (zone) {
+				// After the media handler has emptied the input.
+				setTimeout(function () { kivunDropName(zone); }, 0);
+			});
+		}
+	});
+
+	// "צור תוכן" waits for something to work from: a topic, or an ad to read.
+	// Until then it is drawn as unavailable rather than pressed and refused.
+	function kivunGenReady() {
+		var btn = document.querySelector('.kivun-cc-gen-btn');
+		if (!btn || btn.dataset.busy === '1') { return; }
+		var topic = document.querySelector('.kivun-cc-gen-topic');
+		var img = document.querySelector('.kivun-cc-gen-image');
+		var ready = (topic && topic.value.trim()) || (img && img.files && img.files.length);
+		btn.disabled = !ready;
+	}
+	document.addEventListener('input', function (e) {
+		if (e.target.closest && e.target.closest('.kivun-cc-gen-topic')) { kivunGenReady(); }
+	});
+	document.addEventListener('change', function (e) {
+		if (e.target.closest && e.target.closest('.kivun-cc-gen-image, .kivun-cc-gen-topic')) { kivunGenReady(); }
+	});
+	document.addEventListener('click', function (e) {
+		if (e.target.closest && e.target.closest('.kivun-cc-drop__clear')) { setTimeout(kivunGenReady, 0); }
+	});
+
+	// ── The CTA banner's preview ────────────────────────────────────────────────
+	// Drawn from the three fields as they are typed, and shown once any of them
+	// has something in it. It holds no inputs, so it cannot change what is saved.
+	function kivunCtaPreview(form) {
+		var box = form.querySelector('.kivun-cc-ctaprev');
+		if (!box) { return; }
+		var val = function (name) {
+			var el = form.querySelector('[name="' + name + '"]');
+			return el ? el.value.trim() : '';
+		};
+		var title = val('cta_title'), body = val('cta_content'), btn = val('cta_button');
+		box.querySelector('.kivun-cc-ctaprev__title').textContent = title;
+		box.querySelector('.kivun-cc-ctaprev__body').textContent = body;
+		box.querySelector('.kivun-cc-ctaprev__btntext').textContent = btn;
+		box.querySelector('.kivun-cc-ctaprev__btn').hidden = !btn;
+		box.hidden = !(title || body || btn);
+	}
+
+	document.addEventListener('input', function (e) {
+		if (!e.target.matches || !e.target.matches('[name="cta_title"], [name="cta_content"], [name="cta_button"]')) { return; }
+		var form = e.target.closest('.kivun-cc-wizard');
+		if (form) { kivunCtaPreview(form); }
 	});
 
 	document.querySelectorAll('.kivun-cc-wizard').forEach(function (form) {
 		kivunWizShow(form, 1);
+		kivunCtaPreview(form);
 	});
+	kivunGenReady();
 
 	// ── Tabs (WAI-ARIA tab pattern) — employer dashboard + content console ───────
 	function getTabs(tab) {
@@ -2658,6 +2753,7 @@
 				fd.append('tone', toneEl ? toneEl.value : 'marketing');
 				fd.append('type', typeEl ? typeEl.dataset.type : '');
 				ccGen.disabled = true;
+				ccGen.dataset.busy = '1';
 				if (gStat) { gStat.textContent = 'יוצר תוכן… זה עשוי לקחת מספר שניות'; }
 				function setByName(name, val) {
 					var el = document.querySelector('.kivun-cc-front [name="' + name + '"]');
@@ -2667,6 +2763,7 @@
 					.then(function (r) { return r.json(); })
 					.then(function (res) {
 						ccGen.disabled = false;
+						delete ccGen.dataset.busy;
 						if (res && res.success && res.data) {
 							var d = res.data, t = document.getElementById('kivun-ccf-title');
 							if (t && d.title) { t.value = d.title; }
@@ -2683,6 +2780,7 @@
 					})
 					.catch(function () {
 						ccGen.disabled = false;
+						delete ccGen.dataset.busy;
 						if (gStat) { gStat.textContent = 'שגיאת רשת'; }
 					});
 			});

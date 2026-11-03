@@ -64,6 +64,87 @@ class Kivun_Content_Creator {
 		add_action( 'wp_ajax_kivun_duplicate_landing', array( __CLASS__, 'ajax_duplicate_landing' ) );
 		add_action( 'wp_ajax_kivun_add_leads_viewer', array( __CLASS__, 'ajax_add_leads_viewer' ) );
 		add_action( 'wp_ajax_kivun_remove_leads_viewer', array( __CLASS__, 'ajax_remove_leads_viewer' ) );
+
+		add_filter( 'teeny_mce_before_init', array( __CLASS__, 'wizard_editor_init' ), 10, 2 );
+	}
+
+	/**
+	 * The wizard's two editors, set up the way the publish handoff draws them.
+	 *
+	 * Only the order of the toolbar changes, plus one button: the design
+	 * groups it as type (B I U S), blocks (quote, lists), alignment and
+	 * direction, then links and history, and adds a left-to-right toggle for
+	 * a paragraph in English. That toggle is TinyMCE's own `ltr` button from
+	 * the `directionality` plugin WordPress ships — set once, it marks the
+	 * paragraph `dir="ltr"`; pressed again, it takes the mark off.
+	 *
+	 * Everything already on the toolbar stays on it. The buttons the design
+	 * names are put in its order, and anything else — something another
+	 * plugin added through `teeny_mce_buttons` — keeps its place at the end
+	 * rather than disappearing because this list did not know its name.
+	 *
+	 * Scoped to these two editor ids. Every other editor on the site, the
+	 * jobs board's included, is handed back exactly as it came.
+	 *
+	 * @param array<string,mixed> $init      The teenyMCE settings.
+	 * @param string              $editor_id Which editor they are for.
+	 * @return array<string,mixed>
+	 */
+	public static function wizard_editor_init( $init, $editor_id ) {
+		if ( ! is_array( $init ) || ! in_array( $editor_id, array( 'kivun_ccf_short', 'kivun_ccf_long' ), true ) ) {
+			return $init;
+		}
+
+		$groups = array(
+			array( 'bold', 'italic', 'underline', 'strikethrough' ),
+			array( 'blockquote', 'bullist', 'numlist' ),
+			array( 'alignright', 'aligncenter', 'alignleft', 'ltr' ),
+			array( 'link', 'undo', 'redo', 'fullscreen' ),
+		);
+
+		$current = array_values( array_filter( array_map( 'trim', explode( ',', (string) ( $init['toolbar1'] ?? '' ) ) ), 'strlen' ) );
+		$current = array_values( array_diff( $current, array( '|' ) ) );
+		$known   = array_merge( ...$groups );
+
+		$toolbar = array();
+		foreach ( $groups as $group ) {
+			// The direction toggle is the one button this adds; the rest are
+			// only placed if they were there to begin with.
+			$present = array_values(
+				array_filter(
+					$group,
+					static function ( $button ) use ( $current ) {
+						return 'ltr' === $button || in_array( $button, $current, true );
+					}
+				)
+			);
+			if ( $present ) {
+				if ( $toolbar ) {
+					$toolbar[] = '|';
+				}
+				$toolbar = array_merge( $toolbar, $present );
+			}
+		}
+		$rest = array_values( array_diff( $current, $known ) );
+		if ( $rest ) {
+			$toolbar[] = '|';
+			$toolbar   = array_merge( $toolbar, $rest );
+		}
+		$init['toolbar1'] = implode( ',', $toolbar );
+
+		$plugins = array_filter( array_map( 'trim', explode( ',', (string) ( $init['plugins'] ?? '' ) ) ), 'strlen' );
+		if ( ! in_array( 'directionality', $plugins, true ) ) {
+			$plugins[] = 'directionality';
+		}
+		$init['plugins'] = implode( ',', $plugins );
+
+		// The editable area's own padding and type: 18px at 1.6, 18/22 in
+		// from the edges. It lives in an iframe, so the page's stylesheet
+		// cannot reach it — this is the only place it can be said.
+		$style                 = 'body.mce-content-body{margin:0;padding:18px 22px;font-size:18px;line-height:1.6;color:#2e2e31}';
+		$init['content_style'] = trim( ( isset( $init['content_style'] ) ? (string) $init['content_style'] . ' ' : '' ) . $style );
+
+		return $init;
 	}
 
 	/**
@@ -2378,31 +2459,31 @@ class Kivun_Content_Creator {
 		$console_tabs = ( $leads_only || $agency ) ? array() : array(
 			'form'    => array(
 				'label' => __( 'פרסום תוכן', 'kivun' ),
-				'icon'  => 'publish',
+				'icon'  => 'pen',
 				'count' => null,
 			),
 			'library' => array(
 				'label' => __( 'התכנים שלי', 'kivun' ),
-				'icon'  => 'library',
+				'icon'  => 'grid',
 				'count' => $stats['content'],
 			),
 			'forms'   => array(
 				'label' => __( 'דפי נחיתה בהתאמה אישית', 'kivun' ),
-				'icon'  => 'publish',
+				'icon'  => 'page',
 				'count' => null,
 			),
 		);
 		if ( $show_leads ) {
 			$console_tabs['leads'] = array(
 				'label' => __( 'לידים והרשמות', 'kivun' ),
-				'icon'  => 'leads',
+				'icon'  => 'people',
 				'count' => $stats['leads'],
 			);
 		}
 		if ( $show_camp ) {
 			$console_tabs['campaigns'] = array(
 				'label' => __( 'קמפיינים', 'kivun' ),
-				'icon'  => 'filter',
+				'icon'  => 'mega',
 				'count' => null,
 			);
 		}
@@ -2416,7 +2497,7 @@ class Kivun_Content_Creator {
 		if ( $show_jobs ) {
 			$console_tabs['jobs'] = array(
 				'label' => __( 'לוח משרות', 'kivun' ),
-				'icon'  => 'jobs',
+				'icon'  => 'case',
 				'count' => $stats['jobs'],
 			);
 		}
@@ -2520,7 +2601,7 @@ class Kivun_Content_Creator {
 					<div class="kivun-cc-stat <?php echo $kivun_leads_waiting ? 'kivun-cc-stat--alert' : ''; ?>">
 						<span class="kivun-cc-stat__num"><?php echo esc_html( number_format_i18n( $stats['leads_new'] ) ); ?></span>
 						<span class="kivun-cc-stat__label">
-							<?php esc_html_e( 'ממתינות לטיפול', 'kivun' ); ?>
+							<span class="kivun-cc-stat__text"><?php esc_html_e( 'ממתינות לטיפול', 'kivun' ); ?></span>
 							<?php if ( $kivun_leads_waiting ) : ?>
 								<span class="kivun-cc-stat__flag"><?php esc_html_e( 'לטיפול', 'kivun' ); ?></span>
 							<?php endif; ?>
@@ -2552,7 +2633,7 @@ class Kivun_Content_Creator {
 						aria-selected="<?php echo $is_active ? 'true' : 'false'; ?>"
 						<?php echo $is_active ? '' : 'tabindex="-1"'; ?>
 					>
-						<?php echo kivun_icon( $tab_meta['icon'], 'kivun-cc-tabicon' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?>
+						<span class="kivun-tabicon" aria-hidden="true"><?php echo kivun_duo_icon( $tab_meta['icon'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?></span>
 						<?php echo esc_html( $tab_meta['label'] ); ?>
 						<?php if ( $tab_meta['count'] ) : ?>
 							<span class="kivun-tab-badge kivun-tab-badge--soft"><?php echo esc_html( number_format_i18n( $tab_meta['count'] ) ); ?></span>
@@ -3179,201 +3260,369 @@ class Kivun_Content_Creator {
 				);
 				?>
 
+				<?php
+				/*
+				 * The wizard's body, laid out as the publish handoff draws it.
+				 *
+				 * Everything the save reads and everything the script binds
+				 * to is unchanged: the same names, ids and classes on the same
+				 * controls. What changed is what wraps them. Three wrappers
+				 * recur and are worth naming once:
+				 *
+				 * - `kivun-cc-cardhead` — a card's icon disc, title and helper,
+				 *   as one row. The helper under a title is plain text in the
+				 *   design, not the info box a hint is elsewhere.
+				 * - `kivun-cc-field` — the box a field and its dictation button
+				 *   share. voice.js puts the button right after the field, so
+				 *   it lands inside this box and can be placed against it,
+				 *   where before it had to be floated back up by the field's
+				 *   own height.
+				 * - `kivun-cc-drop` — a file picker drawn as the design's
+				 *   dashed zone. The real input is inside it and still does
+				 *   the work; the pill and the file name beside it are what
+				 *   it looks like.
+				 */
+				$kivun_upload_svg = '<svg class="kivun-cc-drop__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 16V4 M7 9l5-5 5 5 M4 20h16"/></svg>';
+				?>
+
 				<div class="kivun-cc-grid">
 					<div class="kivun-cc-main">
 
 						<div class="kivun-cc-card kivun-cc-genai" data-step="1" style="order:2">
-							<label class="kivun-cc-label kivun-cc-label--ai"><span class="kivun-cc-chip" aria-hidden="true"><?php echo kivun_icon( 'sparkle' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?></span><?php esc_html_e( 'יצירת תוכן אוטומטית (AI)', 'kivun' ); ?></label>
+							<div class="kivun-cc-cardhead">
+								<span class="kivun-cc-chip kivun-cc-chip--ai" aria-hidden="true"><?php echo kivun_duo_icon( 'spark' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?></span>
+								<div class="kivun-cc-cardhead__text">
+									<h3 class="kivun-cc-cardtitle"><?php esc_html_e( 'יצירת תוכן אוטומטית (AI)', 'kivun' ); ?></h3>
+									<p class="kivun-cc-help"><?php esc_html_e( 'תארו את הנושא וה-AI ימלא כותרת, תיאורים ופרטים — תוכלו לערוך אחר כך.', 'kivun' ); ?></p>
+								</div>
+							</div>
 							<?php if ( ! $ai_configured ) : ?>
 								<p class="kivun-cc-ai-warn"><?php esc_html_e( '⚠️ היצירה האוטומטית אינה פעילה כרגע (לא הוגדר מפתח API / נגמרו הקרדיטים). פנו למנהל האתר.', 'kivun' ); ?></p>
 							<?php endif; ?>
-							<p class="kivun-cc-hint"><?php esc_html_e( 'תארו את הנושא וה-AI ימלא כותרת, תיאורים ופרטים — תוכלו לערוך אחר כך.', 'kivun' ); ?></p>
-							<label class="kivun-cc-sub"><?php esc_html_e( 'סגנון כתיבה', 'kivun' ); ?></label>
-							<select class="kivun-cc-input kivun-cc-gen-tone">
-								<?php foreach ( Kivun_AI_Content::tones() as $tkey => $tlabel ) : ?>
-									<option value="<?php echo esc_attr( $tkey ); ?>"><?php echo esc_html( $tlabel ); ?></option>
-								<?php endforeach; ?>
-							</select>
-							<label class="kivun-cc-sub"><?php esc_html_e( 'נושא התוכן', 'kivun' ); ?></label>
-							<textarea class="kivun-cc-input kivun-cc-textarea kivun-cc-gen-topic" rows="2" placeholder="<?php esc_attr_e( 'למשל: סדנת הורים-מתבגרים בת 4 מפגשים בערבים', 'kivun' ); ?>"></textarea>
+							<div class="kivun-cc-fieldset">
+								<label class="kivun-cc-sub" for="kivun-ccf-gen-tone"><?php esc_html_e( 'סגנון כתיבה', 'kivun' ); ?></label>
+								<select id="kivun-ccf-gen-tone" class="kivun-cc-input kivun-cc-gen-tone kivun-cc-input--w360">
+									<?php foreach ( Kivun_AI_Content::tones() as $tkey => $tlabel ) : ?>
+										<option value="<?php echo esc_attr( $tkey ); ?>"><?php echo esc_html( $tlabel ); ?></option>
+									<?php endforeach; ?>
+								</select>
+							</div>
+							<div class="kivun-cc-fieldset">
+								<label class="kivun-cc-sub" for="kivun-ccf-gen-topic"><?php esc_html_e( 'נושא התוכן', 'kivun' ); ?></label>
+								<span class="kivun-cc-field kivun-cc-field--topic">
+									<textarea id="kivun-ccf-gen-topic" class="kivun-cc-input kivun-cc-textarea kivun-cc-gen-topic" rows="4" placeholder="<?php esc_attr_e( 'למשל: סדנת הורים-מתבגרים בת 4 מפגשים בערבים', 'kivun' ); ?>"></textarea>
+								</span>
+								<p class="kivun-cc-recnote" aria-hidden="true"><?php esc_html_e( 'מקליט… לחצו שוב לעצירה', 'kivun' ); ?></p>
+							</div>
 							<?php if ( $can_upload ) : ?>
-								<label class="kivun-cc-sub" style="margin-top:.6rem"><?php esc_html_e( 'או העלו מודעה מעוצבת — וה-AI יחלץ ממנה את הפרטים (אופציונלי)', 'kivun' ); ?></label>
-								<input type="file" class="kivun-cc-input kivun-cc-gen-image" accept="image/*">
+								<div class="kivun-cc-fieldset">
+									<span class="kivun-cc-sub" id="kivun-ccf-gen-image-label"><?php esc_html_e( 'או העלו מודעה מעוצבת — וה-AI יחלץ ממנה את הפרטים', 'kivun' ); ?> <span class="kivun-cc-opt"><?php esc_html_e( '(אופציונלי)', 'kivun' ); ?></span></span>
+									<label class="kivun-cc-drop kivun-cc-drop--row">
+										<input type="file" class="kivun-cc-gen-image kivun-cc-drop__input" accept="image/*" aria-labelledby="kivun-ccf-gen-image-label">
+										<span class="kivun-cc-drop__btn" aria-hidden="true"><?php echo $kivun_upload_svg; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static SVG. ?><?php esc_html_e( 'בחירת קובץ', 'kivun' ); ?></span>
+										<span class="kivun-cc-drop__name" data-empty="<?php esc_attr_e( 'לא נבחר קובץ', 'kivun' ); ?>"><?php esc_html_e( 'לא נבחר קובץ', 'kivun' ); ?></span>
+										<button type="button" class="kivun-cc-drop__clear" hidden><?php esc_html_e( 'הסרה', 'kivun' ); ?></button>
+									</label>
+								</div>
 							<?php endif; ?>
-							<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost kivun-cc-gen-btn" data-ajax="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>" data-nonce="<?php echo esc_attr( wp_create_nonce( 'kivun_ai_content' ) ); ?>">
-								<?php echo kivun_icon( 'sparkle' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?><?php esc_html_e( 'צור תוכן', 'kivun' ); ?>
-							</button>
-							<span class="kivun-cc-gen-status" role="status" aria-live="polite"></span>
+							<div class="kivun-cc-actions">
+								<button type="button" class="kivun-cc-btn kivun-cc-btn--ai kivun-cc-btn--ai-lg kivun-cc-gen-btn" data-ajax="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>" data-nonce="<?php echo esc_attr( wp_create_nonce( 'kivun_ai_content' ) ); ?>">
+									<?php echo kivun_duo_icon( 'sparkle' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?><?php esc_html_e( 'צור תוכן', 'kivun' ); ?>
+								</button>
+								<span class="kivun-cc-gen-status" role="status" aria-live="polite"></span>
+							</div>
 						</div>
 
 						<div class="kivun-cc-card" data-step="2" style="order:1">
-							<label class="kivun-cc-label" for="kivun-ccf-title"><?php esc_html_e( 'כותרת', 'kivun' ); ?> <span class="kivun-cc-req">*</span></label>
-							<input type="text" id="kivun-ccf-title" name="title" class="kivun-cc-input kivun-cc-input--lg" value="<?php echo esc_attr( $v['title'] ); ?>" required>
+							<div class="kivun-cc-fieldset">
+								<label class="kivun-cc-sub" for="kivun-ccf-title"><?php esc_html_e( 'כותרת', 'kivun' ); ?> <span class="kivun-cc-req">*</span></label>
+								<span class="kivun-cc-field">
+									<input type="text" id="kivun-ccf-title" name="title" class="kivun-cc-input kivun-cc-input--lg" value="<?php echo esc_attr( $v['title'] ); ?>" placeholder="<?php esc_attr_e( 'שם הקורס, הסדנה או האירוע', 'kivun' ); ?>" required>
+								</span>
+								<p class="kivun-cc-err"><?php esc_html_e( 'יש למלא כותרת כדי להמשיך.', 'kivun' ); ?></p>
+							</div>
 
-							<label class="kivun-cc-sub" for="kivun-ccf-slug"><?php esc_html_e( 'כתובת URL (Slug)', 'kivun' ); ?></label>
-							<?php
-							/*
-							 * The address is one field with its own prefix shown
-							 * inside it, so what is being typed reads as the tail
-							 * of a real URL rather than a bare word.
-							 *
-							 * The prefix is decoration: it is not an input, carries
-							 * no name, and nothing is submitted for it. The input
-							 * keeps its id, name, value and dir exactly as before,
-							 * and the dictation button still attaches to the field
-							 * and lands inside this wrapper, which is where it
-							 * should sit anyway.
-							 */
-							?>
-							<span class="kivun-cc-slugfield" dir="ltr">
-								<span class="kivun-cc-slugfield__prefix" aria-hidden="true">kivun.org.il/</span>
-								<input type="text" id="kivun-ccf-slug" name="slug" class="kivun-cc-input kivun-cc-slugfield__input" dir="ltr" value="<?php echo esc_attr( $v['slug'] ); ?>" placeholder="my-content">
-							</span>
-							<p class="kivun-cc-hint"><?php esc_html_e( 'ריק = נוצר אוטומטית מהכותרת.', 'kivun' ); ?></p>
+							<div class="kivun-cc-fieldset">
+								<label class="kivun-cc-sub" for="kivun-ccf-slug"><?php esc_html_e( 'כתובת URL (Slug)', 'kivun' ); ?></label>
+								<?php
+								/*
+								 * The address is one field with its own prefix shown
+								 * inside it, so what is being typed reads as the tail
+								 * of a real URL rather than a bare word.
+								 *
+								 * The prefix is decoration: it is not an input, carries
+								 * no name, and nothing is submitted for it. The input
+								 * keeps its id, name, value and dir exactly as before,
+								 * and the dictation button still attaches to the field
+								 * and lands inside this wrapper, which is where it
+								 * should sit anyway.
+								 */
+								?>
+								<span class="kivun-cc-slugfield" dir="ltr">
+									<span class="kivun-cc-slugfield__prefix" aria-hidden="true">kivun.org.il/</span>
+									<input type="text" id="kivun-ccf-slug" name="slug" class="kivun-cc-input kivun-cc-slugfield__input" dir="ltr" value="<?php echo esc_attr( $v['slug'] ); ?>" placeholder="my-content">
+								</span>
+								<p class="kivun-cc-dothint"><?php esc_html_e( 'ריק = נוצר אוטומטית מהכותרת.', 'kivun' ); ?></p>
+							</div>
 						</div>
 
-						<div class="kivun-cc-card" data-step="2" style="order:2">
-							<label class="kivun-cc-label"><?php esc_html_e( 'תיאור קצר', 'kivun' ); ?></label>
-							<?php
-							wp_editor(
-								(string) $v['short'],
-								'kivun_ccf_short',
-								array(
-									'textarea_name' => 'short',
-									'media_buttons' => false,
-									'teeny'         => true,
-									'quicktags'     => false,
-									'textarea_rows' => 4,
-								)
-							);
-							?>
+						<div class="kivun-cc-card kivun-cc-editors" data-step="2" style="order:2">
+							<div class="kivun-cc-fieldset">
+								<span class="kivun-cc-sub"><?php esc_html_e( 'תיאור קצר', 'kivun' ); ?></span>
+								<?php
+								wp_editor(
+									(string) $v['short'],
+									'kivun_ccf_short',
+									array(
+										'textarea_name' => 'short',
+										'media_buttons' => false,
+										'teeny'         => true,
+										'quicktags'     => false,
+										'textarea_rows' => 4,
+										'editor_height' => 120,
+									)
+								);
+								?>
+							</div>
 
-							<label class="kivun-cc-label" style="margin-top:1rem"><?php esc_html_e( 'תיאור מלא', 'kivun' ); ?></label>
-							<?php
-							wp_editor(
-								(string) $v['long'],
-								'kivun_ccf_long',
-								array(
-									'textarea_name' => 'long',
-									'media_buttons' => false,
-									'teeny'         => true,
-									'quicktags'     => false,
-									'textarea_rows' => 10,
-								)
-							);
-							?>
+							<div class="kivun-cc-fieldset">
+								<span class="kivun-cc-sub"><?php esc_html_e( 'תיאור מלא', 'kivun' ); ?></span>
+								<?php
+								wp_editor(
+									(string) $v['long'],
+									'kivun_ccf_long',
+									array(
+										'textarea_name' => 'long',
+										'media_buttons' => false,
+										'teeny'         => true,
+										'quicktags'     => false,
+										'textarea_rows' => 10,
+										'editor_height' => 200,
+									)
+								);
+								?>
+							</div>
 						</div>
 
 						<div class="kivun-cc-card" data-step="3" style="order:1">
-							<label class="kivun-cc-label"><?php esc_html_e( 'פרטים', 'kivun' ); ?></label>
-							<div class="kivun-cc-row">
-								<div>
-									<label class="kivun-cc-sub"><span class="kivun-cc-chip" aria-hidden="true"><?php echo kivun_icon( 'users' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?></span><?php esc_html_e( 'קהל יעד', 'kivun' ); ?></label>
-									<textarea name="audience" class="kivun-cc-input kivun-cc-textarea" rows="2"><?php echo esc_textarea( $v['audience'] ); ?></textarea>
+							<h3 class="kivun-cc-cardtitle"><?php esc_html_e( 'פרטים', 'kivun' ); ?></h3>
+							<div class="kivun-cc-details">
+								<div class="kivun-cc-fieldset">
+									<label class="kivun-cc-sub" for="kivun-ccf-audience"><span class="kivun-cc-chip" aria-hidden="true"><?php echo kivun_duo_icon( 'people' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?></span><?php esc_html_e( 'קהל יעד', 'kivun' ); ?></label>
+									<span class="kivun-cc-field kivun-cc-field--top">
+										<textarea id="kivun-ccf-audience" name="audience" class="kivun-cc-input kivun-cc-textarea" rows="2"><?php echo esc_textarea( $v['audience'] ); ?></textarea>
+									</span>
 								</div>
-								<div class="kivun-cc-nonevent">
-									<label class="kivun-cc-sub"><span class="kivun-cc-chip" aria-hidden="true"><?php echo kivun_icon( 'clock' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?></span><?php esc_html_e( 'משך', 'kivun' ); ?></label>
-									<textarea name="duration" class="kivun-cc-input kivun-cc-textarea" rows="2"><?php echo esc_textarea( $v['duration'] ); ?></textarea>
+								<div class="kivun-cc-fieldset kivun-cc-nonevent">
+									<label class="kivun-cc-sub" for="kivun-ccf-duration"><span class="kivun-cc-chip" aria-hidden="true"><?php echo kivun_duo_icon( 'clock' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?></span><?php esc_html_e( 'משך', 'kivun' ); ?></label>
+									<span class="kivun-cc-field kivun-cc-field--top">
+										<textarea id="kivun-ccf-duration" name="duration" class="kivun-cc-input kivun-cc-textarea" rows="2"><?php echo esc_textarea( $v['duration'] ); ?></textarea>
+									</span>
+								</div>
+								<div class="kivun-cc-fieldset">
+									<label class="kivun-cc-sub" for="kivun-ccf-cost"><span class="kivun-cc-chip" aria-hidden="true"><?php echo kivun_duo_icon( 'tag' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?></span><?php esc_html_e( 'עלות', 'kivun' ); ?></label>
+									<span class="kivun-cc-field kivun-cc-field--top">
+										<textarea id="kivun-ccf-cost" name="cost" class="kivun-cc-input kivun-cc-textarea" rows="2" placeholder="<?php esc_attr_e( 'חינם / 120 ₪', 'kivun' ); ?>"><?php echo esc_textarea( $v['cost'] ); ?></textarea>
+									</span>
+								</div>
+								<div class="kivun-cc-fieldset kivun-cc-nonevent">
+									<label class="kivun-cc-sub" for="kivun-ccf-date"><span class="kivun-cc-chip" aria-hidden="true"><?php echo kivun_duo_icon( 'cal' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?></span><?php esc_html_e( 'תאריך / מועד', 'kivun' ); ?></label>
+									<span class="kivun-cc-field kivun-cc-field--top">
+										<textarea id="kivun-ccf-date" name="date" class="kivun-cc-input kivun-cc-textarea" rows="2" placeholder="<?php esc_attr_e( '15.9.2025 בשעה 18:00', 'kivun' ); ?>"><?php echo esc_textarea( $v['date'] ); ?></textarea>
+									</span>
 								</div>
 							</div>
-							<div class="kivun-cc-row">
-								<div>
-									<label class="kivun-cc-sub"><span class="kivun-cc-chip" aria-hidden="true"><?php echo kivun_icon( 'tag' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?></span><?php esc_html_e( 'עלות', 'kivun' ); ?></label>
-									<textarea name="cost" class="kivun-cc-input kivun-cc-textarea" rows="2" placeholder="<?php esc_attr_e( 'חינם / 120 ₪', 'kivun' ); ?>"><?php echo esc_textarea( $v['cost'] ); ?></textarea>
-								</div>
-								<div class="kivun-cc-nonevent">
-									<label class="kivun-cc-sub"><span class="kivun-cc-chip" aria-hidden="true"><?php echo kivun_icon( 'calendar' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?></span><?php esc_html_e( 'תאריך / מועד', 'kivun' ); ?></label>
-									<textarea name="date" class="kivun-cc-input kivun-cc-textarea" rows="2" placeholder="<?php esc_attr_e( '15.9.2025 בשעה 18:00', 'kivun' ); ?>"><?php echo esc_textarea( $v['date'] ); ?></textarea>
-								</div>
+							<div class="kivun-cc-fieldset">
+								<label class="kivun-cc-sub" for="kivun-ccf-email"><span class="kivun-cc-chip" aria-hidden="true"><?php echo kivun_duo_icon( 'mail' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?></span><?php esc_html_e( 'אימייל לקבלת לידים/הרשמות', 'kivun' ); ?></label>
+								<span class="kivun-cc-field">
+									<input type="email" id="kivun-ccf-email" name="email" class="kivun-cc-input kivun-cc-input--lg kivun-cc-input--ltr" dir="ltr" value="<?php echo esc_attr( $v['email'] ); ?>" placeholder="name@kivun.org.il">
+								</span>
+								<p class="kivun-cc-err"><?php esc_html_e( 'כתובת האימייל לא תקינה.', 'kivun' ); ?></p>
 							</div>
-							<label class="kivun-cc-sub"><span class="kivun-cc-chip" aria-hidden="true"><?php echo kivun_icon( 'mail' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?></span><?php esc_html_e( 'אימייל לקבלת לידים/הרשמות', 'kivun' ); ?></label>
-							<input type="email" name="email" class="kivun-cc-input" dir="ltr" value="<?php echo esc_attr( $v['email'] ); ?>">
 						</div>
 
 						<div class="kivun-cc-card" data-step="4" style="order:2">
-							<label class="kivun-cc-label"><span class="kivun-cc-chip" aria-hidden="true"><?php echo kivun_icon( 'megaphone' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?></span><?php esc_html_e( 'באנר הנעה לפעולה (CTA)', 'kivun' ); ?></label>
-							<label class="kivun-cc-sub"><?php esc_html_e( 'כותרת', 'kivun' ); ?></label>
-							<input type="text" name="cta_title" class="kivun-cc-input" value="<?php echo esc_attr( $v['cta_title'] ); ?>">
-							<label class="kivun-cc-sub"><?php esc_html_e( 'תוכן', 'kivun' ); ?></label>
-							<textarea name="cta_content" class="kivun-cc-input kivun-cc-textarea" rows="2"><?php echo esc_textarea( $v['cta_content'] ); ?></textarea>
-							<label class="kivun-cc-sub"><?php esc_html_e( 'טקסט כפתור', 'kivun' ); ?></label>
-							<input type="text" name="cta_button" class="kivun-cc-input" value="<?php echo esc_attr( $v['cta_button'] ); ?>">
+							<div class="kivun-cc-cardhead">
+								<span class="kivun-cc-chip" aria-hidden="true"><?php echo kivun_duo_icon( 'cta' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?></span>
+								<div class="kivun-cc-cardhead__text">
+									<h3 class="kivun-cc-cardtitle"><?php esc_html_e( 'באנר הנעה לפעולה (CTA)', 'kivun' ); ?></h3>
+								</div>
+							</div>
+							<div class="kivun-cc-pair">
+								<div class="kivun-cc-fieldset">
+									<label class="kivun-cc-sub" for="kivun-ccf-cta-title"><?php esc_html_e( 'כותרת', 'kivun' ); ?></label>
+									<span class="kivun-cc-field">
+										<input type="text" id="kivun-ccf-cta-title" name="cta_title" class="kivun-cc-input kivun-cc-input--lg" value="<?php echo esc_attr( $v['cta_title'] ); ?>">
+									</span>
+								</div>
+								<div class="kivun-cc-fieldset">
+									<label class="kivun-cc-sub" for="kivun-ccf-cta-button"><?php esc_html_e( 'טקסט כפתור', 'kivun' ); ?></label>
+									<span class="kivun-cc-field">
+										<input type="text" id="kivun-ccf-cta-button" name="cta_button" class="kivun-cc-input kivun-cc-input--lg" value="<?php echo esc_attr( $v['cta_button'] ); ?>">
+									</span>
+								</div>
+							</div>
+							<div class="kivun-cc-fieldset">
+								<label class="kivun-cc-sub" for="kivun-ccf-cta-content"><?php esc_html_e( 'תוכן', 'kivun' ); ?></label>
+								<span class="kivun-cc-field kivun-cc-field--top">
+									<textarea id="kivun-ccf-cta-content" name="cta_content" class="kivun-cc-input kivun-cc-textarea" rows="3"><?php echo esc_textarea( $v['cta_content'] ); ?></textarea>
+								</span>
+							</div>
+							<?php
+							/*
+							 * A picture of the banner, drawn from the three fields
+							 * above as they are typed. Nothing in it is submitted —
+							 * it has no inputs — so it cannot disagree with what
+							 * gets saved; it can only be a moment behind it.
+							 */
+							?>
+							<div class="kivun-cc-ctaprev" hidden>
+								<span class="kivun-cc-ctaprev__label"><?php esc_html_e( 'תצוגה מקדימה', 'kivun' ); ?></span>
+								<div class="kivun-cc-ctaprev__card">
+									<div class="kivun-cc-ctaprev__text">
+										<div class="kivun-cc-ctaprev__title"></div>
+										<div class="kivun-cc-ctaprev__body"></div>
+									</div>
+									<span class="kivun-cc-ctaprev__btn" hidden><span class="kivun-cc-ctaprev__btntext"></span></span>
+								</div>
+							</div>
 						</div>
 
 						<div class="kivun-cc-card kivun-cc-section" data-step="3" style="order:2" data-type="course" <?php echo isset( $group_posts['course'] ) ? '' : 'hidden'; ?>>
-							<h3 class="kivun-cc-h3"><?php esc_html_e( 'קורס — פרטים נוספים', 'kivun' ); ?></h3>
-							<label class="kivun-cc-sub"><?php esc_html_e( 'מקסימום משתתפים', 'kivun' ); ?></label>
-							<input type="number" name="course_capacity" class="kivun-cc-input" min="0" value="<?php echo esc_attr( $v['course_capacity'] ); ?>">
-							<label class="kivun-cc-sub"><?php esc_html_e( 'מזהה מוצר WooCommerce (אופציונלי)', 'kivun' ); ?></label>
-							<input type="number" name="course_wc" class="kivun-cc-input" min="0" value="<?php echo esc_attr( $v['course_wc'] ); ?>">
+							<h3 class="kivun-cc-h3 kivun-cc-cardtitle"><?php esc_html_e( 'קורס — פרטים נוספים', 'kivun' ); ?></h3>
+							<div class="kivun-cc-pair">
+								<div class="kivun-cc-fieldset">
+									<label class="kivun-cc-sub" for="kivun-ccf-course-capacity"><?php esc_html_e( 'מקסימום משתתפים', 'kivun' ); ?></label>
+									<input type="number" id="kivun-ccf-course-capacity" name="course_capacity" class="kivun-cc-input kivun-cc-input--lg" min="0" value="<?php echo esc_attr( $v['course_capacity'] ); ?>">
+								</div>
+								<div class="kivun-cc-fieldset">
+									<label class="kivun-cc-sub" for="kivun-ccf-course-wc"><?php esc_html_e( 'מזהה מוצר WooCommerce (אופציונלי)', 'kivun' ); ?></label>
+									<input type="number" id="kivun-ccf-course-wc" name="course_wc" class="kivun-cc-input kivun-cc-input--lg" min="0" value="<?php echo esc_attr( $v['course_wc'] ); ?>">
+								</div>
+							</div>
 							<p class="kivun-cc-hint"><?php esc_html_e( 'לקורס בתשלום: מזהה מוצר WooCommerce. ריק = חינם / לפי שדה העלות.', 'kivun' ); ?></p>
 						</div>
 
 						<div class="kivun-cc-card kivun-cc-section" data-step="3" style="order:3" data-type="session" <?php echo isset( $group_posts['session'] ) ? '' : 'hidden'; ?>>
-							<h3 class="kivun-cc-h3"><?php esc_html_e( 'סדנה — פרטים נוספים', 'kivun' ); ?></h3>
-							<label class="kivun-cc-sub"><?php esc_html_e( 'מיקום', 'kivun' ); ?></label>
-							<input type="text" name="session_location" class="kivun-cc-input" value="<?php echo esc_attr( $v['session_location'] ); ?>">
-							<label class="kivun-cc-sub"><?php esc_html_e( 'מקסימום משתתפים', 'kivun' ); ?></label>
-							<input type="number" name="session_capacity" class="kivun-cc-input" min="0" value="<?php echo esc_attr( $v['session_capacity'] ); ?>">
-							<label class="kivun-cc-sub"><?php esc_html_e( 'תוקף ההרשמה (עד תאריך)', 'kivun' ); ?></label>
-							<input type="date" name="session_valid_until" class="kivun-cc-input" dir="ltr" value="<?php echo esc_attr( $v['session_valid'] ); ?>">
+							<h3 class="kivun-cc-h3 kivun-cc-cardtitle"><?php esc_html_e( 'סדנה — פרטים נוספים', 'kivun' ); ?></h3>
+							<div class="kivun-cc-fieldset">
+								<label class="kivun-cc-sub" for="kivun-ccf-session-location"><?php esc_html_e( 'מיקום', 'kivun' ); ?></label>
+								<span class="kivun-cc-field">
+									<input type="text" id="kivun-ccf-session-location" name="session_location" class="kivun-cc-input kivun-cc-input--lg" value="<?php echo esc_attr( $v['session_location'] ); ?>">
+								</span>
+							</div>
+							<div class="kivun-cc-pair">
+								<div class="kivun-cc-fieldset">
+									<label class="kivun-cc-sub" for="kivun-ccf-session-capacity"><?php esc_html_e( 'מקסימום משתתפים', 'kivun' ); ?></label>
+									<input type="number" id="kivun-ccf-session-capacity" name="session_capacity" class="kivun-cc-input kivun-cc-input--lg" min="0" value="<?php echo esc_attr( $v['session_capacity'] ); ?>">
+								</div>
+								<div class="kivun-cc-fieldset">
+									<label class="kivun-cc-sub" for="kivun-ccf-session-valid"><?php esc_html_e( 'תוקף ההרשמה (עד תאריך)', 'kivun' ); ?></label>
+									<input type="date" id="kivun-ccf-session-valid" name="session_valid_until" class="kivun-cc-input kivun-cc-input--lg" dir="ltr" value="<?php echo esc_attr( $v['session_valid'] ); ?>">
+								</div>
+							</div>
 							<p class="kivun-cc-hint"><?php esc_html_e( 'אחרי תאריך זה המחזור הנוכחי נסגר; ההרשמה נשמרת למחזור הבא. עדכון תאריך פותח מחזור חדש.', 'kivun' ); ?></p>
 						</div>
 
 						<div class="kivun-cc-card kivun-cc-section" data-step="3" style="order:4" data-type="event" <?php echo isset( $group_posts['event'] ) ? '' : 'hidden'; ?>>
-							<h3 class="kivun-cc-h3"><?php echo kivun_icon( 'calendar' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?><?php esc_html_e( 'אירוע — פרטים נוספים', 'kivun' ); ?></h3>
-							<p class="kivun-cc-hint"><?php esc_html_e( 'לאירוע יש שדות ייחודיים משלו כאן. המועד ותאריך האירוע נלקחים מהשדות שבבלוק זה — לא מהשדות "משך" / "תאריך" הכלליים שמעלה.', 'kivun' ); ?></p>
-							<label class="kivun-cc-sub"><?php esc_html_e( 'תאריך האירוע (סוגר את ההרשמה)', 'kivun' ); ?></label>
-							<input type="date" name="event_date" class="kivun-cc-input" dir="ltr" value="<?php echo esc_attr( $v['event_date'] ); ?>">
-							<p class="kivun-cc-hint"><?php esc_html_e( 'לאחר תאריך זה ההרשמה נסגרת לצמיתות. ריק = תמיד פתוח.', 'kivun' ); ?></p>
-							<label class="kivun-cc-sub"><?php esc_html_e( 'מועד מלא (שעה / משך — לתצוגה)', 'kivun' ); ?></label>
-							<input type="text" name="event_time" class="kivun-cc-input" value="<?php echo esc_attr( $v['event_time'] ); ?>" placeholder="<?php esc_attr_e( 'יום ג׳, 15.9.2025, 18:00–20:00', 'kivun' ); ?>">
-							<label class="kivun-cc-sub"><?php esc_html_e( 'מיקום', 'kivun' ); ?></label>
-							<input type="text" name="event_location" class="kivun-cc-input" value="<?php echo esc_attr( $v['event_location'] ); ?>">
-							<label class="kivun-cc-sub"><?php esc_html_e( 'מקסימום משתתפים', 'kivun' ); ?></label>
-							<input type="number" name="event_capacity" class="kivun-cc-input" min="0" value="<?php echo esc_attr( $v['event_capacity'] ); ?>">
-							<label class="kivun-cc-sub"><?php esc_html_e( 'אופן ההרשמה', 'kivun' ); ?></label>
-							<select name="event_mode" class="kivun-cc-input">
-								<option value="form" <?php selected( $v['event_mode'], 'form' ); ?>><?php esc_html_e( 'טופס באתר (נשמר בטבלת הלידים)', 'kivun' ); ?></option>
-								<option value="external" <?php selected( $v['event_mode'], 'external' ); ?>><?php esc_html_e( 'כפתור לקישור חיצוני', 'kivun' ); ?></option>
-							</select>
-							<label class="kivun-cc-sub"><?php esc_html_e( 'קישור הרשמה חיצוני', 'kivun' ); ?></label>
-							<input type="url" name="event_url" class="kivun-cc-input" dir="ltr" value="<?php echo esc_attr( $v['event_url'] ); ?>" placeholder="https://...">
-							<label class="kivun-cc-sub"><?php esc_html_e( 'טקסט כפתור ההרשמה', 'kivun' ); ?></label>
-							<input type="text" name="event_button" class="kivun-cc-input" value="<?php echo esc_attr( $v['event_button'] ); ?>" placeholder="<?php esc_attr_e( 'להרשמה לאירוע', 'kivun' ); ?>">
+							<div class="kivun-cc-cardhead">
+								<span class="kivun-cc-chip" aria-hidden="true"><?php echo kivun_duo_icon( 'cal' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?></span>
+								<div class="kivun-cc-cardhead__text">
+									<h3 class="kivun-cc-h3 kivun-cc-cardtitle"><?php esc_html_e( 'אירוע — פרטים נוספים', 'kivun' ); ?></h3>
+									<p class="kivun-cc-help"><?php esc_html_e( 'לאירוע יש שדות ייחודיים משלו כאן. המועד ותאריך האירוע נלקחים מהשדות שבבלוק זה — לא מהשדות "משך" / "תאריך" הכלליים שמעלה.', 'kivun' ); ?></p>
+								</div>
+							</div>
+							<div class="kivun-cc-pair">
+								<div class="kivun-cc-fieldset">
+									<label class="kivun-cc-sub" for="kivun-ccf-event-date"><?php esc_html_e( 'תאריך האירוע (סוגר את ההרשמה)', 'kivun' ); ?></label>
+									<input type="date" id="kivun-ccf-event-date" name="event_date" class="kivun-cc-input kivun-cc-input--lg" dir="ltr" value="<?php echo esc_attr( $v['event_date'] ); ?>">
+									<p class="kivun-cc-dothint"><?php esc_html_e( 'לאחר תאריך זה ההרשמה נסגרת לצמיתות. ריק = תמיד פתוח.', 'kivun' ); ?></p>
+								</div>
+								<div class="kivun-cc-fieldset">
+									<label class="kivun-cc-sub" for="kivun-ccf-event-time"><?php esc_html_e( 'מועד מלא (שעה / משך — לתצוגה)', 'kivun' ); ?></label>
+									<span class="kivun-cc-field">
+										<input type="text" id="kivun-ccf-event-time" name="event_time" class="kivun-cc-input kivun-cc-input--lg" value="<?php echo esc_attr( $v['event_time'] ); ?>" placeholder="<?php esc_attr_e( 'יום ג׳, 15.9.2025, 18:00–20:00', 'kivun' ); ?>">
+									</span>
+								</div>
+							</div>
+							<div class="kivun-cc-pair">
+								<div class="kivun-cc-fieldset">
+									<label class="kivun-cc-sub" for="kivun-ccf-event-location"><?php esc_html_e( 'מיקום', 'kivun' ); ?></label>
+									<span class="kivun-cc-field">
+										<input type="text" id="kivun-ccf-event-location" name="event_location" class="kivun-cc-input kivun-cc-input--lg" value="<?php echo esc_attr( $v['event_location'] ); ?>">
+									</span>
+								</div>
+								<div class="kivun-cc-fieldset">
+									<label class="kivun-cc-sub" for="kivun-ccf-event-capacity"><?php esc_html_e( 'מקסימום משתתפים', 'kivun' ); ?></label>
+									<input type="number" id="kivun-ccf-event-capacity" name="event_capacity" class="kivun-cc-input kivun-cc-input--lg" min="0" value="<?php echo esc_attr( $v['event_capacity'] ); ?>">
+								</div>
+							</div>
+							<div class="kivun-cc-fieldset">
+								<label class="kivun-cc-sub" for="kivun-ccf-event-mode"><?php esc_html_e( 'אופן ההרשמה', 'kivun' ); ?></label>
+								<select id="kivun-ccf-event-mode" name="event_mode" class="kivun-cc-input kivun-cc-input--w440">
+									<option value="form" <?php selected( $v['event_mode'], 'form' ); ?>><?php esc_html_e( 'טופס באתר (נשמר בטבלת הלידים)', 'kivun' ); ?></option>
+									<option value="external" <?php selected( $v['event_mode'], 'external' ); ?>><?php esc_html_e( 'כפתור לקישור חיצוני', 'kivun' ); ?></option>
+								</select>
+							</div>
+							<div class="kivun-cc-pair">
+								<div class="kivun-cc-fieldset">
+									<label class="kivun-cc-sub" for="kivun-ccf-event-url"><?php esc_html_e( 'קישור הרשמה חיצוני', 'kivun' ); ?></label>
+									<span class="kivun-cc-field">
+										<input type="url" id="kivun-ccf-event-url" name="event_url" class="kivun-cc-input kivun-cc-input--lg kivun-cc-input--ltr" dir="ltr" value="<?php echo esc_attr( $v['event_url'] ); ?>" placeholder="https://...">
+									</span>
+								</div>
+								<div class="kivun-cc-fieldset">
+									<label class="kivun-cc-sub" for="kivun-ccf-event-button"><?php esc_html_e( 'טקסט כפתור ההרשמה', 'kivun' ); ?></label>
+									<span class="kivun-cc-field">
+										<input type="text" id="kivun-ccf-event-button" name="event_button" class="kivun-cc-input kivun-cc-input--lg" value="<?php echo esc_attr( $v['event_button'] ); ?>" placeholder="<?php esc_attr_e( 'להרשמה לאירוע', 'kivun' ); ?>">
+									</span>
+								</div>
+							</div>
 
-							<label class="kivun-cc-sub" style="margin-top:.9rem"><?php esc_html_e( 'תמונת האירוע (מלבנית צרה/גבוהה — לפופאפ)', 'kivun' ); ?></label>
-							<?php if ( (int) $v['event_image_id'] && $ev_img_url ) : ?>
-								<div class="kivun-cc-media__preview" style="margin-bottom:.5rem"><img src="<?php echo esc_url( $ev_img_url ); ?>" alt="" style="max-width:140px;height:auto"></div>
-							<?php endif; ?>
-							<input type="hidden" name="event_image_id" value="<?php echo esc_attr( $v['event_image_id'] ); ?>">
-							<?php if ( $can_upload ) : ?>
-								<input type="file" name="event_image_file" accept="image/*" class="kivun-cc-input">
-							<?php else : ?>
-								<p class="kivun-cc-hint"><?php esc_html_e( 'אין לך הרשאה להעלות קבצים — התמונה תיקבע ע"י מנהל.', 'kivun' ); ?></p>
-							<?php endif; ?>
+							<div class="kivun-cc-fieldset">
+								<span class="kivun-cc-sub"><?php esc_html_e( 'תמונת האירוע (מלבנית צרה/גבוהה — לפופאפ)', 'kivun' ); ?></span>
+								<?php if ( (int) $v['event_image_id'] && $ev_img_url ) : ?>
+									<div class="kivun-cc-media__preview kivun-cc-evimg"><img src="<?php echo esc_url( $ev_img_url ); ?>" alt=""></div>
+								<?php endif; ?>
+								<input type="hidden" name="event_image_id" value="<?php echo esc_attr( $v['event_image_id'] ); ?>">
+								<?php if ( $can_upload ) : ?>
+									<label class="kivun-cc-drop kivun-cc-drop--row">
+										<input type="file" name="event_image_file" accept="image/*" class="kivun-cc-drop__input">
+										<span class="kivun-cc-drop__btn" aria-hidden="true"><?php echo $kivun_upload_svg; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static SVG. ?><?php esc_html_e( 'בחירת קובץ', 'kivun' ); ?></span>
+										<span class="kivun-cc-drop__name" data-empty="<?php esc_attr_e( 'לא נבחר קובץ', 'kivun' ); ?>"><?php esc_html_e( 'לא נבחר קובץ', 'kivun' ); ?></span>
+										<button type="button" class="kivun-cc-drop__clear" hidden><?php esc_html_e( 'הסרה', 'kivun' ); ?></button>
+									</label>
+								<?php else : ?>
+									<p class="kivun-cc-hint"><?php esc_html_e( 'אין לך הרשאה להעלות קבצים — התמונה תיקבע ע"י מנהל.', 'kivun' ); ?></p>
+								<?php endif; ?>
+							</div>
 
-							<label class="kivun-cc-check" style="margin-top:.9rem">
+							<label class="kivun-cc-optcheck">
 								<input type="checkbox" name="event_popup" value="1" <?php checked( '1', $v['event_popup'] ); ?>>
 								<span><?php esc_html_e( 'הצגת פופאפ באתר עד מועד האירוע', 'kivun' ); ?></span>
 							</label>
 						</div>
 
-						<div class="kivun-cc-card" data-step="1" style="order:1">
-							<label class="kivun-cc-label"><?php esc_html_e( 'מה לפרסם?', 'kivun' ); ?></label>
+						<div class="kivun-cc-card kivun-cc-typescard" data-step="1" style="order:1">
+							<div class="kivun-cc-cardhead">
+								<div class="kivun-cc-cardhead__text">
+									<h3 class="kivun-cc-cardtitle"><?php esc_html_e( 'מה לפרסם?', 'kivun' ); ?></h3>
+									<p class="kivun-cc-help kivun-cc-types-help"><?php esc_html_e( 'בחרו לפחות סוג אחד.', 'kivun' ); ?></p>
+								</div>
+							</div>
 							<?php
 							$kivun_type_icons = array(
-								'landing' => 'landing',
-								'course'  => 'course',
-								'session' => 'users',
-								'event'   => 'calendar',
+								'landing' => 'page',
+								'course'  => 'cap',
+								'session' => 'people',
+								'event'   => 'cal',
 							);
 							?>
 							<div class="kivun-cc-types">
 								<?php foreach ( $sections as $key => $label ) : ?>
 									<label class="kivun-cc-check">
 										<input type="checkbox" name="publish[]" value="<?php echo esc_attr( $key ); ?>" class="kivun-cc-toggle" data-type="<?php echo esc_attr( $key ); ?>" <?php checked( isset( $group_posts[ $key ] ) ); ?>>
-										<span class="kivun-cc-chip" aria-hidden="true"><?php echo kivun_icon( isset( $kivun_type_icons[ $key ] ) ? $kivun_type_icons[ $key ] : 'library' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?></span>
+										<span class="kivun-cc-chip" aria-hidden="true"><?php echo kivun_duo_icon( isset( $kivun_type_icons[ $key ] ) ? $kivun_type_icons[ $key ] : 'page' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?></span>
 										<span><?php echo esc_html( $label ); ?></span>
 										<?php if ( isset( $group_posts[ $key ] ) ) : ?>
 											<a class="kivun-cc-view" href="<?php echo esc_url( (string) get_permalink( $group_posts[ $key ] ) ); ?>" target="_blank" rel="noopener">↗</a>
@@ -3381,133 +3630,187 @@ class Kivun_Content_Creator {
 									</label>
 								<?php endforeach; ?>
 							</div>
-							<p class="kivun-cc-hint"><?php esc_html_e( 'בחרו לפחות סוג אחד.', 'kivun' ); ?></p>
 							<?php if ( $editing ) : ?>
 								<a class="kivun-cc-link" href="<?php echo esc_url( remove_query_arg( array( 'kivun_group', 'kivun_saved', 'kivun_cc_error' ), $page_url ) ); ?>"><?php esc_html_e( 'תוכן חדש', 'kivun' ); ?></a>
 							<?php endif; ?>
 						</div>
 
 						<div class="kivun-cc-card" data-step="4" style="order:1">
-							<label class="kivun-cc-label"><span class="kivun-cc-chip" aria-hidden="true"><?php echo kivun_icon( 'image' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?></span><?php esc_html_e( 'תמונה ראשית', 'kivun' ); ?></label>
-							<div class="kivun-cc-media">
-								<div class="kivun-cc-media__preview" <?php echo $thumb_url ? '' : 'style="display:none"'; ?>><img src="<?php echo esc_url( $thumb_url ); ?>" alt=""></div>
+							<div class="kivun-cc-cardhead">
+								<span class="kivun-cc-chip" aria-hidden="true"><?php echo kivun_duo_icon( 'img' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?></span>
+								<div class="kivun-cc-cardhead__text">
+									<h3 class="kivun-cc-cardtitle"><?php esc_html_e( 'תמונה ראשית', 'kivun' ); ?></h3>
+								</div>
+							</div>
+							<div class="kivun-cc-media kivun-cc-media--hero">
 								<input type="hidden" class="kivun-cc-media__id" name="thumbnail_id" value="<?php echo esc_attr( $v['thumb_id'] ); ?>">
 								<input type="hidden" name="remove_thumbnail" value="0" class="kivun-cc-remove-flag">
 								<?php if ( $can_upload ) : ?>
-									<input type="file" name="thumbnail_file" accept="image/*" class="kivun-cc-file">
-									<button type="button" class="kivun-cc-media__remove"<?php echo $thumb_url ? '' : ' hidden'; ?>><?php esc_html_e( 'הסרת התמונה', 'kivun' ); ?></button>
-								<?php else : ?>
-									<p class="kivun-cc-hint"><?php esc_html_e( 'אין לך הרשאה להעלות קבצים — התמונה תיקבע ע"י מנהל.', 'kivun' ); ?></p>
-								<?php endif; ?>
-								<?php if ( $can_upload ) : ?>
-									<div class="kivun-cc-ai">
-										<?php if ( ! $ai_configured ) : ?>
-											<p class="kivun-cc-ai-warn"><?php esc_html_e( '⚠️ היצירה האוטומטית אינה פעילה כרגע (לא הוגדר מפתח API / נגמרו הקרדיטים). פנו למנהל האתר.', 'kivun' ); ?></p>
-										<?php endif; ?>
-										<label class="kivun-cc-sub"><?php esc_html_e( 'סגנון התמונה', 'kivun' ); ?></label>
-										<select class="kivun-cc-input kivun-cc-ai-style">
-											<?php foreach ( Kivun_AI_Image::styles() as $skey => $slabel ) : ?>
-												<option value="<?php echo esc_attr( $skey ); ?>"><?php echo esc_html( $slabel ); ?></option>
-											<?php endforeach; ?>
-										</select>
-										<label class="kivun-cc-sub"><?php esc_html_e( 'תיאור חופשי לתמונה (אופציונלי)', 'kivun' ); ?></label>
-										<textarea class="kivun-cc-input kivun-cc-textarea kivun-cc-ai-prompt" rows="2" placeholder="<?php esc_attr_e( 'אם ריק — התמונה תיווצר מהכותרת והתיאור הקצר של העמוד', 'kivun' ); ?>"></textarea>
-										<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost kivun-cc-ai-btn" data-ajax="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>" data-nonce="<?php echo esc_attr( wp_create_nonce( 'kivun_ai_image' ) ); ?>">
-											<?php echo kivun_icon( 'sparkle' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?><?php esc_html_e( 'צור תמונה עם AI', 'kivun' ); ?>
-										</button>
-										<span class="kivun-cc-ai-status" role="status" aria-live="polite"></span>
+									<?php
+									/*
+									 * The zone is the picker. The preview is laid over
+									 * it once there is an image, and lets clicks through,
+									 * so clicking the picture still opens the picker to
+									 * replace it — the way the design's zone behaves.
+									 */
+									?>
+									<label class="kivun-cc-drop kivun-cc-drop--zone">
+										<input type="file" name="thumbnail_file" accept="image/*" class="kivun-cc-file kivun-cc-drop__input">
+										<span class="kivun-cc-drop__btn" aria-hidden="true"><?php echo $kivun_upload_svg; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static SVG. ?><?php esc_html_e( 'בחירת קובץ', 'kivun' ); ?></span>
+										<span class="kivun-cc-drop__name" data-empty="<?php esc_attr_e( 'לא נבחר קובץ', 'kivun' ); ?>"><?php esc_html_e( 'לא נבחר קובץ', 'kivun' ); ?></span>
+										<span class="kivun-cc-media__preview" <?php echo $thumb_url ? '' : 'style="display:none"'; ?>><img src="<?php echo esc_url( $thumb_url ); ?>" alt=""></span>
+									</label>
+									<div class="kivun-cc-media__side">
+										<div class="kivun-cc-media__current">
+											<button type="button" class="kivun-cc-media__remove"<?php echo $thumb_url ? '' : ' hidden'; ?>><?php esc_html_e( 'הסרת התמונה', 'kivun' ); ?></button>
+										</div>
+										<div class="kivun-cc-ai">
+											<?php if ( ! $ai_configured ) : ?>
+												<p class="kivun-cc-ai-warn"><?php esc_html_e( '⚠️ היצירה האוטומטית אינה פעילה כרגע (לא הוגדר מפתח API / נגמרו הקרדיטים). פנו למנהל האתר.', 'kivun' ); ?></p>
+											<?php endif; ?>
+											<div class="kivun-cc-fieldset">
+												<label class="kivun-cc-sub" for="kivun-ccf-ai-style"><?php esc_html_e( 'סגנון התמונה', 'kivun' ); ?></label>
+												<select id="kivun-ccf-ai-style" class="kivun-cc-input kivun-cc-ai-style kivun-cc-input--w440">
+													<?php foreach ( Kivun_AI_Image::styles() as $skey => $slabel ) : ?>
+														<option value="<?php echo esc_attr( $skey ); ?>"><?php echo esc_html( $slabel ); ?></option>
+													<?php endforeach; ?>
+												</select>
+											</div>
+											<div class="kivun-cc-fieldset">
+												<label class="kivun-cc-sub" for="kivun-ccf-ai-prompt"><?php esc_html_e( 'תיאור חופשי לתמונה', 'kivun' ); ?> <span class="kivun-cc-opt"><?php esc_html_e( '(אופציונלי)', 'kivun' ); ?></span></label>
+												<span class="kivun-cc-field kivun-cc-field--top">
+													<textarea id="kivun-ccf-ai-prompt" class="kivun-cc-input kivun-cc-textarea kivun-cc-ai-prompt" rows="3" placeholder="<?php esc_attr_e( 'אם ריק — התמונה תיווצר מהכותרת והתיאור הקצר של העמוד', 'kivun' ); ?>"></textarea>
+												</span>
+											</div>
+											<div class="kivun-cc-actions">
+												<button type="button" class="kivun-cc-btn kivun-cc-btn--ai kivun-cc-ai-btn" data-ajax="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>" data-nonce="<?php echo esc_attr( wp_create_nonce( 'kivun_ai_image' ) ); ?>">
+													<?php echo kivun_duo_icon( 'sparkle' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?><?php esc_html_e( 'צור תמונה עם AI', 'kivun' ); ?>
+												</button>
+												<span class="kivun-cc-ai-status" role="status" aria-live="polite"></span>
+											</div>
+										</div>
 									</div>
+								<?php else : ?>
+									<div class="kivun-cc-media__preview" <?php echo $thumb_url ? '' : 'style="display:none"'; ?>><img src="<?php echo esc_url( $thumb_url ); ?>" alt=""></div>
+									<p class="kivun-cc-hint"><?php esc_html_e( 'אין לך הרשאה להעלות קבצים — התמונה תיקבע ע"י מנהל.', 'kivun' ); ?></p>
 								<?php endif; ?>
 							</div>
 						</div>
 
 						<div class="kivun-cc-card" data-step="4" style="order:1">
-							<label class="kivun-cc-label"><span class="kivun-cc-chip" aria-hidden="true"><?php echo kivun_icon( 'image' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?></span><?php esc_html_e( 'תמונה לשיתוף קישור', 'kivun' ); ?></label>
-							<div class="kivun-cc-media">
-								<p class="kivun-cc-hint">
-									<?php esc_html_e( 'לא מוצגת בעמוד. היא מה שרואים כששולחים את הקישור בוואטסאפ או מפרסמים אותו ברשתות. מומלץ 1200×630.', 'kivun' ); ?>
-								</p>
-								<div class="kivun-cc-media__preview" <?php echo $share_url ? '' : 'style="display:none"'; ?>><img src="<?php echo esc_url( $share_url ); ?>" alt=""></div>
+							<div class="kivun-cc-cardhead">
+								<span class="kivun-cc-chip" aria-hidden="true"><?php echo kivun_duo_icon( 'img' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?></span>
+								<div class="kivun-cc-cardhead__text">
+									<h3 class="kivun-cc-cardtitle"><?php esc_html_e( 'תמונה לשיתוף קישור', 'kivun' ); ?></h3>
+									<p class="kivun-cc-help"><?php esc_html_e( 'לא מוצגת בעמוד. היא מה שרואים כששולחים את הקישור בוואטסאפ או מפרסמים אותו ברשתות. מומלץ 1200×630.', 'kivun' ); ?></p>
+								</div>
+							</div>
+							<div class="kivun-cc-media kivun-cc-media--hero">
 								<input type="hidden" class="kivun-cc-media__id" name="share_image_id" value="<?php echo esc_attr( $v['share_id'] ); ?>">
 								<input type="hidden" name="remove_share_image" value="0" class="kivun-cc-remove-flag">
 								<?php if ( $can_upload ) : ?>
-									<input type="file" name="share_image_file" accept="image/*" class="kivun-cc-file">
-									<button type="button" class="kivun-cc-media__remove"<?php echo $share_url ? '' : ' hidden'; ?>><?php esc_html_e( 'הסרת התמונה', 'kivun' ); ?></button>
+									<label class="kivun-cc-drop kivun-cc-drop--zone">
+										<input type="file" name="share_image_file" accept="image/*" class="kivun-cc-file kivun-cc-drop__input">
+										<span class="kivun-cc-drop__btn" aria-hidden="true"><?php echo $kivun_upload_svg; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static SVG. ?><?php esc_html_e( 'בחירת קובץ', 'kivun' ); ?></span>
+										<span class="kivun-cc-drop__name" data-empty="<?php esc_attr_e( 'לא נבחר קובץ', 'kivun' ); ?>"><?php esc_html_e( 'לא נבחר קובץ', 'kivun' ); ?></span>
+										<span class="kivun-cc-media__preview" <?php echo $share_url ? '' : 'style="display:none"'; ?>><img src="<?php echo esc_url( $share_url ); ?>" alt=""></span>
+									</label>
+									<div class="kivun-cc-media__side">
+										<div class="kivun-cc-media__current">
+											<button type="button" class="kivun-cc-media__remove"<?php echo $share_url ? '' : ' hidden'; ?>><?php esc_html_e( 'הסרת התמונה', 'kivun' ); ?></button>
+										</div>
+										<p class="kivun-cc-hint"><?php esc_html_e( 'אם לא נבחרה — תוצג התמונה הראשית.', 'kivun' ); ?></p>
+									</div>
+								<?php else : ?>
+									<div class="kivun-cc-media__preview" <?php echo $share_url ? '' : 'style="display:none"'; ?>><img src="<?php echo esc_url( $share_url ); ?>" alt=""></div>
+									<p class="kivun-cc-hint"><?php esc_html_e( 'אם לא נבחרה — תוצג התמונה הראשית.', 'kivun' ); ?></p>
 								<?php endif; ?>
-								<p class="kivun-cc-hint">
-									<?php esc_html_e( 'אם לא נבחרה — תוצג התמונה הראשית.', 'kivun' ); ?>
-								</p>
 							</div>
 						</div>
 
-						<div class="kivun-cc-card" data-step="3" style="order:5">
-							<label class="kivun-cc-label" for="kivun-ccf-city"><span class="kivun-cc-chip" aria-hidden="true"><?php echo kivun_icon( 'pin' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?></span><?php esc_html_e( 'יישוב', 'kivun' ); ?></label>
-							<input
-								type="text"
-								id="kivun-ccf-city"
-								name="city"
-								class="kivun-cc-input"
-								list="kivun-city-list"
-								autocomplete="off"
-								value="<?php echo esc_attr( $v['city'] ); ?>"
-								placeholder="<?php esc_attr_e( 'למשל: ירושלים', 'kivun' ); ?>"
-							>
+						<div class="kivun-cc-card kivun-cc-card--tight" data-step="3" style="order:5">
+							<label class="kivun-cc-sub" for="kivun-ccf-city"><span class="kivun-cc-chip" aria-hidden="true"><?php echo kivun_duo_icon( 'pin' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?></span><?php esc_html_e( 'יישוב', 'kivun' ); ?></label>
+							<span class="kivun-cc-field">
+								<input
+									type="text"
+									id="kivun-ccf-city"
+									name="city"
+									class="kivun-cc-input kivun-cc-input--lg"
+									list="kivun-city-list"
+									autocomplete="off"
+									value="<?php echo esc_attr( $v['city'] ); ?>"
+									placeholder="<?php esc_attr_e( 'למשל: ירושלים', 'kivun' ); ?>"
+								>
+							</span>
 							<datalist id="kivun-city-list"></datalist>
 							<p class="kivun-field-hint"><?php esc_html_e( 'היישוב שבו מתקיים התוכן. נשלח למרכז כיוון — תוכן ללא יישוב לא מופיע שם בחיפוש לפי מרחק.', 'kivun' ); ?></p>
 						</div>
 
 						<div class="kivun-cc-card kivun-cc-wa" data-step="4" style="order:4">
-							<label class="kivun-cc-label" for="kivun-ccf-whatsapp"><span class="kivun-cc-chip" aria-hidden="true"><?php echo kivun_icon( 'phone' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?></span><?php esc_html_e( 'הודעה להפצה בוואטסאפ', 'kivun' ); ?></label>
-							<p class="kivun-cc-hint"><?php esc_html_e( 'תמצית שיווקית של התוכן, בפורמט שמתאים לשליחה בקבוצות. אפשר לערוך אחרי היצירה — מה שיישמר כאן הוא מה שיישמר עם התוכן.', 'kivun' ); ?></p>
-
-							<button
-								type="button"
-								class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost kivun-wa-btn"
-								data-ajax="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>"
-								data-nonce="<?php echo esc_attr( wp_create_nonce( 'kivun_ai_content' ) ); ?>"
-								data-url="<?php echo esc_url( $group_view_url ); ?>"
-							>
-								<?php echo kivun_icon( 'sparkle' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?><?php esc_html_e( 'צור הודעה לוואטסאפ', 'kivun' ); ?>
-							</button>
+							<div class="kivun-cc-cardhead kivun-cc-cardhead--split">
+								<div class="kivun-cc-cardhead__main">
+									<span class="kivun-cc-chip" aria-hidden="true"><?php echo kivun_duo_icon( 'wa' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?></span>
+									<div class="kivun-cc-cardhead__text">
+										<label class="kivun-cc-cardtitle" for="kivun-ccf-whatsapp"><?php esc_html_e( 'הודעה להפצה בוואטסאפ', 'kivun' ); ?></label>
+										<p class="kivun-cc-help"><?php esc_html_e( 'תמצית שיווקית של התוכן, בפורמט שמתאים לשליחה בקבוצות. אפשר לערוך אחרי היצירה — מה שיישמר כאן הוא מה שיישמר עם התוכן.', 'kivun' ); ?></p>
+									</div>
+								</div>
+								<button
+									type="button"
+									class="kivun-cc-btn kivun-cc-btn--ai kivun-wa-btn"
+									data-ajax="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>"
+									data-nonce="<?php echo esc_attr( wp_create_nonce( 'kivun_ai_content' ) ); ?>"
+									data-url="<?php echo esc_url( $group_view_url ); ?>"
+								>
+									<?php echo kivun_duo_icon( 'sparkle' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?><?php esc_html_e( 'צור הודעה לוואטסאפ', 'kivun' ); ?>
+								</button>
+							</div>
 							<span class="kivun-cc-wa-status" role="status" aria-live="polite"></span>
 
-							<textarea
-								id="kivun-ccf-whatsapp"
-								name="whatsapp"
-								class="kivun-cc-input kivun-cc-textarea kivun-wa-text"
-								rows="12"
-								dir="rtl"
-								placeholder="<?php esc_attr_e( 'לחצו על "צור הודעה לוואטסאפ" — או כתבו כאן בעצמכם.', 'kivun' ); ?>"
-							><?php echo esc_textarea( Kivun_Campaigns::clean_promo( (string) $v['whatsapp'] ) ); ?></textarea>
+							<span class="kivun-cc-field kivun-cc-field--top">
+								<textarea
+									id="kivun-ccf-whatsapp"
+									name="whatsapp"
+									class="kivun-cc-input kivun-cc-textarea kivun-wa-text"
+									rows="8"
+									dir="rtl"
+									placeholder="<?php esc_attr_e( 'לחצו על "צור הודעה לוואטסאפ" — או כתבו כאן בעצמכם.', 'kivun' ); ?>"
+								><?php echo esc_textarea( Kivun_Campaigns::clean_promo( (string) $v['whatsapp'] ) ); ?></textarea>
+							</span>
 
 							<div class="kivun-wa-actions">
-								<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost kivun-wa-copy"><?php esc_html_e( 'העתקת ההודעה', 'kivun' ); ?></button>
-								<a class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost kivun-wa-share" href="https://wa.me/" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'שליחה בוואטסאפ', 'kivun' ); ?></a>
+								<button type="button" class="kivun-cc-btn kivun-cc-btn--ghost kivun-wa-copy"><?php esc_html_e( 'העתקת ההודעה', 'kivun' ); ?></button>
+								<a class="kivun-cc-btn kivun-cc-btn--ghost kivun-wa-share" href="https://wa.me/" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'שליחה בוואטסאפ', 'kivun' ); ?></a>
 							</div>
 							<?php if ( '' === $group_view_url ) : ?>
-								<p class="kivun-field-hint"><?php esc_html_e( 'הקישור להרשמה יתווסף אחרי הפרסום — צרו את ההודעה שוב אז, או הדביקו את הכתובת ידנית.', 'kivun' ); ?></p>
+								<p class="kivun-cc-footnote"><?php esc_html_e( 'הקישור להרשמה יתווסף אחרי הפרסום — צרו את ההודעה שוב אז, או הדביקו את הכתובת ידנית.', 'kivun' ); ?></p>
 							<?php endif; ?>
 						</div>
 
 						<div class="kivun-cc-card" data-step="4" style="order:3">
-							<label class="kivun-cc-label" for="kivun-ccf-status"><span class="kivun-cc-chip" aria-hidden="true"><?php echo kivun_icon( 'eye' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?></span><?php esc_html_e( 'סטטוס פרסום', 'kivun' ); ?></label>
-							<select id="kivun-ccf-status" name="status" class="kivun-cc-input kivun-cc-status">
+							<div class="kivun-cc-cardhead">
+								<span class="kivun-cc-chip" aria-hidden="true"><?php echo kivun_duo_icon( 'eye' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?></span>
+								<div class="kivun-cc-cardhead__text">
+									<label class="kivun-cc-cardtitle" for="kivun-ccf-status"><?php esc_html_e( 'סטטוס פרסום', 'kivun' ); ?></label>
+								</div>
+							</div>
+							<select id="kivun-ccf-status" name="status" class="kivun-cc-input kivun-cc-status kivun-cc-input--w440">
 								<option value="publish" <?php selected( $v['status'], 'publish' ); ?>><?php esc_html_e( 'פרסום מיידי — גלוי לכולם', 'kivun' ); ?></option>
 								<option value="draft" <?php selected( $v['status'], 'draft' ); ?>><?php esc_html_e( 'טיוטה — לא מפורסם, נשמר לעריכה', 'kivun' ); ?></option>
 								<option value="private" <?php selected( $v['status'], 'private' ); ?>><?php esc_html_e( 'פרטי — גלוי רק לבעלי הרשאה', 'kivun' ); ?></option>
 								<option value="future" <?php selected( $v['status'], 'future' ); ?>><?php esc_html_e( 'מתוזמן — יפורסם אוטומטית בתאריך', 'kivun' ); ?></option>
 							</select>
 
-							<div class="kivun-cc-schedule" <?php echo 'future' === $v['status'] ? '' : 'hidden'; ?>>
+							<div class="kivun-cc-schedule kivun-cc-fieldset" <?php echo 'future' === $v['status'] ? '' : 'hidden'; ?>>
 								<label class="kivun-cc-sub" for="kivun-ccf-schedule"><?php esc_html_e( 'תאריך ושעת הפרסום', 'kivun' ); ?></label>
 								<input
 									type="datetime-local"
 									id="kivun-ccf-schedule"
 									name="schedule"
-									class="kivun-cc-input"
+									class="kivun-cc-input kivun-cc-input--w440"
 									value="<?php echo esc_attr( $v['schedule'] ); ?>"
 								>
-								<p class="kivun-field-hint">
+								<p class="kivun-cc-dothint">
 									<?php
 									printf(
 										/* translators: %s: the site's current local time. */
@@ -3522,6 +3825,35 @@ class Kivun_Content_Creator {
 								<?php esc_html_e( 'הסטטוס חל על כל הפריטים שנוצרים יחד — דף הנחיתה, הקורס והסדנה.', 'kivun' ); ?>
 							</p>
 						</div>
+
+						<?php
+						/*
+						 * The bottom bar sits in the content column, under the
+						 * step's cards, the way the design draws it — not across
+						 * the whole width under the rail as well. It carries no
+						 * data-step, so it is on every step; the script reaches
+						 * its buttons by class from the form, wherever they sit.
+						 *
+						 * The order inside it is the reading order: where you are
+						 * first, then back, then on.
+						 */
+						?>
+						<p class="kivun-wiz-error" role="alert" hidden></p>
+
+						<div class="kivun-wiz-nav">
+							<span class="kivun-wiz-progress" role="status" aria-live="polite"></span>
+							<span class="kivun-wiz-nav__go">
+								<button type="button" class="kivun-cc-btn kivun-cc-btn--ghost kivun-wiz-prev" hidden>
+									<?php esc_html_e( 'חזרה', 'kivun' ); ?>
+								</button>
+								<button type="button" class="kivun-cc-btn kivun-wiz-next">
+									<?php esc_html_e( 'המשך', 'kivun' ); ?>
+								</button>
+								<button type="submit" class="kivun-cc-btn kivun-wiz-submit" hidden>
+									<?php echo $editing ? esc_html__( 'שמירת שינויים', 'kivun' ) : esc_html__( 'פרסום התוכן', 'kivun' ); ?>
+								</button>
+							</span>
+						</div>
 					</div>
 
 					<?php
@@ -3535,12 +3867,17 @@ class Kivun_Content_Creator {
 					 * walks up from a click with `closest('.kivun-cc-wizard')`.
 					 * Moved out of the form, the steps would still be drawn
 					 * and would no longer navigate.
+					 *
+					 * Written after the cards so the form is what a screen
+					 * reader meets first; the stylesheet puts it on the right.
 					 */
 					?>
 					<aside class="kivun-cc-side">
 						<div class="kivun-cc-card kivun-cc-rail">
-							<h2 class="kivun-cc-rail__title"><?php echo $editing ? esc_html__( 'עריכת תוכן', 'kivun' ) : esc_html__( 'פרסום תוכן חדש', 'kivun' ); ?></h2>
-							<p class="kivun-cc-rail__lead"><?php esc_html_e( 'מלאו את התוכן פעם אחת, סמנו מה לפרסם — דף נחיתה, קורס וסדנה נוצרים ומתעדכנים יחד.', 'kivun' ); ?></p>
+							<div class="kivun-cc-rail__head">
+								<h2 class="kivun-cc-rail__title"><?php echo $editing ? esc_html__( 'עריכת תוכן', 'kivun' ) : esc_html__( 'פרסום תוכן חדש', 'kivun' ); ?></h2>
+								<p class="kivun-cc-rail__lead"><?php esc_html_e( 'מלאו את התוכן פעם אחת, סמנו מה לפרסם — דף נחיתה, קורס וסדנה נוצרים ומתעדכנים יחד.', 'kivun' ); ?></p>
+							</div>
 
 							<ol class="kivun-wiz-steps" aria-label="<?php esc_attr_e( 'שלבי פרסום', 'kivun' ); ?>">
 								<?php foreach ( $kivun_steps as $kivun_n => $kivun_label ) : ?>
@@ -3552,21 +3889,6 @@ class Kivun_Content_Creator {
 							</ol>
 						</div>
 					</aside>
-				</div>
-
-				<p class="kivun-wiz-error" role="alert" hidden></p>
-
-				<div class="kivun-wiz-nav">
-					<button type="button" class="kivun-cc-btn kivun-cc-btn--ghost kivun-wiz-prev" hidden>
-						<?php esc_html_e( 'חזרה', 'kivun' ); ?>
-					</button>
-					<span class="kivun-wiz-progress" role="status" aria-live="polite"></span>
-					<button type="button" class="kivun-cc-btn kivun-wiz-next">
-						<?php esc_html_e( 'המשך', 'kivun' ); ?>
-					</button>
-					<button type="submit" class="kivun-cc-btn kivun-wiz-submit" hidden>
-						<?php echo $editing ? esc_html__( 'שמירת שינויים', 'kivun' ) : esc_html__( 'פרסום התוכן', 'kivun' ); ?>
-					</button>
 				</div>
 			</form>
 

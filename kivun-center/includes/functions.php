@@ -255,6 +255,64 @@ function kivun_icon( string $name, string $classes = '' ): string {
 }
 
 /**
+ * The handoff's filled, two-tone icon set.
+ *
+ * Every icon is a back shape at a fraction of the colour and a front shape
+ * in full, both in currentColor, so one glyph sits on a tinted disc in red
+ * and on a red disc in white without a second drawing. The path data is
+ * the reference file's own (its `IC` object), copied as it stands: these
+ * are what the tabs, the type tiles, the field labels and the section heads
+ * are drawn with, and a redrawn approximation is how a console ends up
+ * looking almost like its design.
+ *
+ * Separate from kivun_icon() on purpose. That set is stroke icons used all
+ * over the plugin; changing a name there would redraw screens this design
+ * does not cover.
+ *
+ * @param string $name    Icon name.
+ * @param string $classes Optional extra CSS classes.
+ * @return string Inline SVG markup, or '' for an unknown name.
+ */
+function kivun_duo_icon( string $name, string $classes = '' ): string {
+	// [ back, front, back opacity ].
+	$paths = array(
+		'page'    => array( 'M3 7a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3z', 'M6 4h12a3 3 0 0 1 3 3v2H3V7a3 3 0 0 1 3-3z M7 12h8v2H7z M7 15.5h5v2H7z' ),
+		'cap'     => array( 'M6 12.2v4c0 1.7 2.7 3.3 6 3.3s6-1.6 6-3.3v-4l-6 3z', 'M12 3.8l10 5-10 5-10-5z M19.8 10h1.7v5.5h-1.7z' ),
+		'people'  => array( 'M16.8 11a2.8 2.8 0 1 0 0-5.6 2.8 2.8 0 0 0 0 5.6z M15.4 13.2c.5-.1.9-.2 1.4-.2 2.9 0 5.2 1.9 5.2 4.4V19h-4.6v-.6c0-2-.8-3.8-2-5.2z', 'M9 11.6a3.6 3.6 0 1 0 0-7.2 3.6 3.6 0 0 0 0 7.2z M2 19.2C2 15.9 5.1 13.6 9 13.6s7 2.3 7 5.6v.8H2z' ),
+		'cal'     => array( 'M3 9.5h18V18a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3z', 'M6 4.5h12a3 3 0 0 1 3 3v2.5H3V7.5a3 3 0 0 1 3-3z M7 2.5h2V7H7z M15 2.5h2V7h-2z M7 13h3.2v3.2H7z' ),
+		'pen'     => array( 'M4 20l1-4.2L15.3 5.5l3.2 3.2L8.2 19z', 'M15.3 5.5l1.7-1.7a1.6 1.6 0 0 1 2.2 0l1 1a1.6 1.6 0 0 1 0 2.2l-1.7 1.7z M4 20l1-4.2 3.2 3.2z' ),
+		'grid'    => array( 'M13 4h5a2 2 0 0 1 2 2v5h-7z M4 13h7v7H6a2 2 0 0 1-2-2z', 'M6 4h5v7H4V6a2 2 0 0 1 2-2z M13 13h7v5a2 2 0 0 1-2 2h-5z' ),
+		'mega'    => array( 'M7.5 15.5h3.2l1.2 4.8H8.6z M4 9.5a3 3 0 0 1 3-3h6v9H7a3 3 0 0 1-3-3z', 'M13 6.5l7-3.5v18l-7-3.5z' ),
+		'phone'   => array( 'M14.5 3.2a6.3 6.3 0 0 1 6.3 6.3H19a4.5 4.5 0 0 0-4.5-4.5z', 'M6.6 3h3l1.6 4.5-2.3 1.6a11 11 0 0 0 6 6l1.6-2.3 4.5 1.6v3a2.6 2.6 0 0 1-2.8 2.6A17 17 0 0 1 4 5.8 2.6 2.6 0 0 1 6.6 3z' ),
+		'clock'   => array( 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z', 'M11 7h2v5.2l3.2 2-1 1.6L11 13.3z' ),
+		'tag'     => array( 'M3 12.2V5a2 2 0 0 1 2-2h7.2l8.3 8.3a2 2 0 0 1 0 2.8l-6.6 6.6a2 2 0 0 1-2.8 0z', 'M8 5.8a2.2 2.2 0 1 1 0 4.4 2.2 2.2 0 0 1 0-4.4z' ),
+		'mail'    => array( 'M3 6.5A2.5 2.5 0 0 1 5.5 4h13A2.5 2.5 0 0 1 21 6.5v11a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z', 'M3.5 6.2l8.5 6 8.5-6v2.4l-8.5 6-8.5-6z' ),
+		'pin'     => array( 'M12 2.5a7.5 7.5 0 0 1 7.5 7.5c0 5.2-7.5 11.5-7.5 11.5S4.5 15.2 4.5 10A7.5 7.5 0 0 1 12 2.5z', 'M12 7a3 3 0 1 1 0 6 3 3 0 0 1 0-6z' ),
+		'img'     => array( 'M3 6a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3z', 'M8.5 6.5a2 2 0 1 1 0 4 2 2 0 0 1 0-4z M3 17l5-5 4 4 3-3 6 6v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z' ),
+		'cta'     => array( 'M3 8a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v6a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3z', 'M13 11l8 3-3.3 1.2L21 18.5 19.5 20l-3.3-3.3L15 20z M6 9h7v1.8H6z' ),
+		'eye'     => array( 'M12 5c5 0 9 4.5 10 7-1 2.5-5 7-10 7S3 14.5 2 12c1-2.5 5-7 10-7z', 'M12 8.5a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7z' ),
+		'wa'      => array( 'M12 2.5a9.5 9.5 0 0 0-8.2 14.3L2.5 21.5l4.8-1.3A9.5 9.5 0 1 0 12 2.5z', 'M9 7.5c.3 0 .6 0 .8.5l.9 2c.1.3 0 .6-.2.8l-.6.7c.8 1.5 2 2.7 3.5 3.5l.7-.6c.2-.2.5-.3.8-.2l2 .9c.4.2.5.5.5.8 0 1.2-1 2.1-2.3 2.1A8 8 0 0 1 7 9.8C7 8.5 7.9 7.5 9 7.5z' ),
+		'case'    => array( 'M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z', 'M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7h-1.8V5.8h-2.4V7z M3 11.5h18v2H3z' ),
+		'copy'    => array( 'M8 8h11a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z', 'M5 3h10a1 1 0 0 1 1 1v2H7a1 1 0 0 0-1 1v9H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z' ),
+		// The AI head carries both small stars; the buttons carry one.
+		'spark'   => array( 'M18.5 14l1 2.5 2.5 1-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1z M5.5 2.5l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z', 'M11 4.5l1.9 5.1 5.1 1.9-5.1 1.9L11 18.5l-1.9-5.1L4 11.5l5.1-1.9z', '.45' ),
+		'sparkle' => array( 'M18.5 14l1 2.5 2.5 1-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1z', 'M11 4.5l1.9 5.1 5.1 1.9-5.1 1.9L11 18.5l-1.9-5.1L4 11.5l5.1-1.9z', '.5' ),
+	);
+
+	if ( ! isset( $paths[ $name ] ) ) {
+		return '';
+	}
+
+	return sprintf(
+		'<svg class="kivun-duo %s" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="%s" fill-opacity="%s"/><path d="%s"/></svg>',
+		esc_attr( $classes ),
+		esc_attr( $paths[ $name ][0] ),
+		esc_attr( $paths[ $name ][2] ?? '.35' ),
+		esc_attr( $paths[ $name ][1] )
+	);
+}
+
+/**
  * Show a date or time this site stored, in this site's own clock.
  *
  * Every datetime the plugin writes is local wall-clock — `current_time()` and
