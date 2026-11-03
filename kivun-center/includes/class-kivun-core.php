@@ -461,6 +461,7 @@ class Kivun_Core {
 		wp_enqueue_script( 'kivun-picker' );
 	}
 
+
 	/**
 	 * Ensure the front-end assets load whenever a Kivun shortcode actually
 	 * renders — including inside Elementor's Shortcode widget, page-builder

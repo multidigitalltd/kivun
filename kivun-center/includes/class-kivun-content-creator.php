@@ -2466,9 +2466,28 @@ class Kivun_Content_Creator {
 						<span class="kivun-cc-stat__num"><?php echo esc_html( number_format_i18n( $stats['leads'] ) ); ?></span>
 						<span class="kivun-cc-stat__label"><?php esc_html_e( 'פניות', 'kivun' ); ?></span>
 					</div>
-					<div class="kivun-cc-stat">
+					<?php
+					/*
+					 * The one card that asks for something to be done. The
+					 * design gives it a red dot, a red figure and a badge —
+					 * and the style for the first two has been in the
+					 * stylesheet all along under `kivun-cc-stat--alert`,
+					 * which nothing ever emitted. So the card has been
+					 * rendering as an ordinary one.
+					 *
+					 * Only when there is something waiting: a badge reading
+					 * "לטיפול" over a zero is an alarm about nothing.
+					 */
+					$kivun_leads_waiting = (int) $stats['leads_new'] > 0;
+					?>
+					<div class="kivun-cc-stat <?php echo $kivun_leads_waiting ? 'kivun-cc-stat--alert' : ''; ?>">
 						<span class="kivun-cc-stat__num"><?php echo esc_html( number_format_i18n( $stats['leads_new'] ) ); ?></span>
-						<span class="kivun-cc-stat__label"><?php esc_html_e( 'ממתינות לטיפול', 'kivun' ); ?></span>
+						<span class="kivun-cc-stat__label">
+							<?php esc_html_e( 'ממתינות לטיפול', 'kivun' ); ?>
+							<?php if ( $kivun_leads_waiting ) : ?>
+								<span class="kivun-cc-stat__flag"><?php esc_html_e( 'לטיפול', 'kivun' ); ?></span>
+							<?php endif; ?>
+						</span>
 					</div>
 				<?php endif; ?>
 				<?php if ( $show_jobs ) : ?>
@@ -4241,7 +4260,21 @@ class Kivun_Content_Creator {
 		$top_media    = $report['media'][0] ?? null;
 		$top_campaign = $report['campaigns'][0] ?? null;
 		?>
-		<div class="kivun-cc-front">
+		<?php
+		/*
+		 * The screen gets a scope of its own, the way the wizard has
+		 * `kivun-cc-wizard`, and for a sharper reason than tidiness: this
+		 * screen's blocks are drawn with `kivun-cc-card` and
+		 * `kivun-camp-summary`, and the jobs board template uses both of
+		 * those too — inside this very console. A rule written for the
+		 * numbers without a scope would redraw the jobs board as well,
+		 * half-restyling a screen nobody has designed yet.
+		 *
+		 * Added alongside `kivun-cc-front` rather than replacing it: the
+		 * filter script walks up with `closest('.kivun-cc-front')`.
+		 */
+		?>
+		<div class="kivun-cc-front kivun-cc-calls">
 			<div class="kivun-cc-head">
 				<h2 class="kivun-cc-title"><?php esc_html_e( 'מספרי מעקב', 'kivun' ); ?></h2>
 				<p class="kivun-cc-lead">
