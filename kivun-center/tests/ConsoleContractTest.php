@@ -93,6 +93,13 @@ final class ConsoleContractTest extends TestCase {
 		'share_image_id',
 		'share_image_file',
 		'remove_share_image',
+
+		// The landing page's own form. "present" says the builder was on
+		// the page at all — without it a save from elsewhere would read as
+		// "switched off" — and "on" is the switch itself. The questions and
+		// the built-in fields come from the builder, checked on their own.
+		'custom_form_present',
+		'custom_form_on',
 	);
 
 	/**
@@ -1613,11 +1620,12 @@ final class ConsoleContractTest extends TestCase {
 		$php = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-content-creator.php' );
 		$css = (string) file_get_contents( KIVUN_DIR . 'assets/css/frontend.css' );
 
-		// Both action cells that have icons: the library and the custom pages.
+		// The library's action cell. The custom pages had one too, until
+		// their tab folded into the wizard and the library.
 		$this->assertSame(
-			2,
+			1,
 			substr_count( $php, 'class="kivun-cc-actgroup"' ),
-			'one of the two row-action groups is gone, so its icons are loose circles again'
+			'the library\'s row-action group is gone, so its icons are loose circles again'
 		);
 
 		// Opened and closed the same number of times.

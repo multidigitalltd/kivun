@@ -582,6 +582,19 @@ function update_post_meta( int $post_id, string $key, $value ): bool {
 }
 
 /**
+ * Remove post meta.
+ *
+ * @param int    $post_id The post.
+ * @param string $key     The meta key.
+ * @return bool Whether there was anything to remove, as WordPress reports.
+ */
+function delete_post_meta( int $post_id, string $key ): bool {
+	$had = isset( Kivun_Test_State::$meta[ $post_id ][ $key ] );
+	unset( Kivun_Test_State::$meta[ $post_id ][ $key ] );
+	return $had;
+}
+
+/**
  * Terms attached to a post in one taxonomy.
  *
  * Objects with a name, which is all the code under test reads: the two

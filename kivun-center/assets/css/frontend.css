@@ -3162,6 +3162,13 @@ td.kivun-cc-rowactions > form > * {
 }
 .kivun-cc-wizard .kivun-cc-optcheck input { width: 20px; height: 20px; margin: 0; accent-color: var(--cc-brand); }
 
+/* The landing page's form: the builder shows once the page is given a form
+   of its own, and the fixed form needs nothing built. */
+.kivun-cc-wizard .kivun-cc-formcard:not(:has(.kivun-cf-switch:checked)) .kivun-cf-wrap { display: none; }
+/* The preview's caption is a caption, not an aside in a box. */
+.kivun-cc-wizard .kivun-cf-preview__head .kivun-field-hint { padding: 0; background: none; font-size: 14px; color: var(--cc-text-2); }
+.kivun-cc-wizard .kivun-cf-preview__head .kivun-field-hint::before { content: none; }
+
 /* Buttons */
 .kivun-cc-wizard .kivun-cc-btn {
 	display: inline-flex;
