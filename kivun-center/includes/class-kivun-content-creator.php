@@ -2372,7 +2372,7 @@ class Kivun_Content_Creator {
 		self::remember_console_url( $page_url );
 
 		$can_delete = current_user_can( 'delete_posts' );
-		$stats      = self::console_stats( $show_leads, $show_jobs, ! $leads_only && ! $agency );
+		$stats      = self::console_stats( $show_leads, $show_jobs, ! $leads_only && ! $agency, $show_calls );
 		$user       = wp_get_current_user();
 
 		$console_tabs = ( $leads_only || $agency ) ? array() : array(
@@ -2480,9 +2480,22 @@ class Kivun_Content_Creator {
 						<span class="kivun-cc-stat__num"><?php echo esc_html( number_format_i18n( $stats['published'] ) ); ?></span>
 						<span class="kivun-cc-stat__label"><?php esc_html_e( 'פרסומים', 'kivun' ); ?></span>
 					</div>
+				<?php endif; ?>
+				<?php
+				/*
+				 * Calls, where the switchboard is connected. This card took
+				 * the place of "ממתינים לפרסום", which said almost nothing:
+				 * it is nearly always zero, and the one screen that acts on
+				 * it already lists them.
+				 *
+				 * Only for whoever may open the tracking-numbers screen —
+				 * a figure nobody can click through to is a dead end.
+				 */
+				?>
+				<?php if ( $show_calls ) : ?>
 					<div class="kivun-cc-stat">
-						<span class="kivun-cc-stat__num"><?php echo esc_html( number_format_i18n( $stats['pending'] ) ); ?></span>
-						<span class="kivun-cc-stat__label"><?php esc_html_e( 'ממתינים לפרסום', 'kivun' ); ?></span>
+						<span class="kivun-cc-stat__num"><?php echo esc_html( number_format_i18n( $stats['calls'] ) ); ?></span>
+						<span class="kivun-cc-stat__label"><?php esc_html_e( 'שיחות', 'kivun' ); ?></span>
 					</div>
 				<?php endif; ?>
 				<?php if ( $show_leads ) : ?>
@@ -2650,9 +2663,10 @@ class Kivun_Content_Creator {
 	 * @param bool $with_leads   Whether to count content enquiries.
 	 * @param bool $with_jobs    Whether to count jobs.
 	 * @param bool $with_content Whether to count the content library at all.
+	 * @param bool $with_calls   Whether to count switchboard calls.
 	 * @return array<string,int>
 	 */
-	private static function console_stats( bool $with_leads, bool $with_jobs, bool $with_content = true ): array {
+	private static function console_stats( bool $with_leads, bool $with_jobs, bool $with_content = true, bool $with_calls = false ): array {
 		global $wpdb;
 
 		$stats = array(
@@ -2661,12 +2675,18 @@ class Kivun_Content_Creator {
 			'pending'   => 0,
 			'leads'     => 0,
 			'leads_new' => 0,
+			'calls'     => 0,
 			'jobs'      => 0,
 		);
 
 		// A leads reader is shown no content and counts none: the tally would
 		// tell them how much there is across a site they cannot open, and the
 		// query behind it reads every post to work that out.
+		if ( $with_calls ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$stats['calls'] = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}kivun_calls" );
+		}
+
 		if ( ! $with_content ) {
 			return array_merge( $stats, self::lead_stats( $with_leads, $with_jobs ) );
 		}
@@ -3098,7 +3118,15 @@ class Kivun_Content_Creator {
 		<div class="kivun-cc-front">
 
 			<?php if ( $saved ) : ?>
-				<div class="kivun-cc-note kivun-cc-note--success">
+				<?php
+				/*
+				 * Marked apart from the other two success notices on this
+				 * screen — deleted and duplicated — because only this one
+				 * is the design's charcoal card. They are three different
+				 * events that happen to share a class.
+				 */
+				?>
+				<div class="kivun-cc-note kivun-cc-note--success kivun-cc-published">
 					<span><?php esc_html_e( 'התוכן פורסם בהצלחה.', 'kivun' ); ?></span>
 					<?php if ( $group_posts ) : ?>
 						<span class="kivun-cc-note__actions">

@@ -2584,6 +2584,45 @@ td.kivun-cc-rowactions > form > * {
 }
 
 /*
+ * After publishing: a charcoal card, not a green notice.
+ *
+ * It carries a sky disc with a charcoal check — sky being a shapes-only
+ * colour, the check is the shape and the charcoal is what reads on it.
+ */
+.kivun-cc-console .kivun-cc-published {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 18px;
+	padding: 28px 32px;
+	background: var(--cc-shell);
+	border: 0;
+	border-radius: var(--cc-radius);
+	color: #fff;
+	font-size: 17px;
+}
+.kivun-cc-console .kivun-cc-published::before {
+	content: "";
+	flex: 0 0 auto;
+	width: 52px;
+	height: 52px;
+	border-radius: 50%;
+	background-color: var(--cc-note-dot);
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232e2e31' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6L9 17l-5-5'/%3E%3C/svg%3E");
+	background-repeat: no-repeat;
+	background-position: center;
+	background-size: 24px 24px;
+}
+.kivun-cc-console .kivun-cc-published > span:first-of-type {
+	font-family: var(--cc-font-display);
+	font-size: 26px;
+	font-weight: 800;
+}
+/* The links beside it stay legible on charcoal. */
+.kivun-cc-console .kivun-cc-published a { color: #fff; text-decoration: underline; }
+.kivun-cc-console .kivun-cc-published .kivun-cc-note__actions { color: var(--cc-on-dark-2); }
+
+/*
  * The address field: the wrapper is the pill, and the input inside it is
  * bare. Written this way round so the prefix sits inside the border
  * rather than beside it.
