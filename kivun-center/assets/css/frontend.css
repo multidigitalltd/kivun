@@ -4356,24 +4356,61 @@ body.kivun-ty-open { overflow: hidden; }
 }
 .kivun-cc-console .kivun-status-select:focus-visible { outline: 2px solid var(--cc-brand); outline-offset: 2px; }
 
-.kivun-cc-console .kivun-status-select:has(option[value="closed"]:checked),
-.kivun-cc-console .kivun-status-select:has(option[value="enrolled"]:checked),
-.kivun-cc-console .kivun-status-select:has(option[value="hired"]:checked) { background-color: #dcfce7; color: #14702f; }
+/*
+ * The five pill colours, from the design handoff.
+ *
+ * The handoff names five statuses — חדש / בטיפול / נוצר קשר / נרשם /
+ * לא רלוונטי — and says in its own words that the list is a placeholder.
+ * The system has ten. They were already grouped into five families here
+ * for the old colours, and those families map onto the design's five one
+ * for one, so the mapping is the grouping that already existed:
+ *
+ *   waiting on somebody   new · new_lead · no_answer · pending   → חדש
+ *   in progress           next_cycle                             → בטיפול
+ *   someone has it        contacted · viewed · interview ·
+ *                         interested                             → נוצר קשר
+ *   finished well         enrolled · closed · hired              → נרשם
+ *   closed, went nowhere  not_relevant · rejected                → לא רלוונטי
+ *
+ * Both the editable select and the read-only badge are restyled, together
+ * and console-scoped. Together, because they sit in the same table and a
+ * row you can change must not say the same thing in a different colour
+ * from a row you cannot. Console-scoped, because the same badge is drawn
+ * on the WP-admin leads screen and on the jobs board, neither of which the
+ * handoff covers.
+ */
+.kivun-cc-console .kivun-status-select:has(option[value="new"]:checked),
+.kivun-cc-console .kivun-status-select:has(option[value="new_lead"]:checked),
+.kivun-cc-console .kivun-status-select:has(option[value="no_answer"]:checked),
+.kivun-cc-console .kivun-status-select:has(option[value="pending"]:checked),
+.kivun-cc-console .kivun-status-badge[data-status="new"],
+.kivun-cc-console .kivun-status-badge[data-status="new_lead"],
+.kivun-cc-console .kivun-status-badge[data-status="no_answer"],
+.kivun-cc-console .kivun-status-badge[data-status="pending"] { background-color: var(--cc-chip); color: var(--cc-brand); }
 
-.kivun-cc-console .kivun-status-select:has(option[value="not_relevant"]:checked),
-.kivun-cc-console .kivun-status-select:has(option[value="rejected"]:checked) { background-color: #f1f2f4; color: #52525b; }
+.kivun-cc-console .kivun-status-select:has(option[value="next_cycle"]:checked),
+.kivun-cc-console .kivun-status-badge[data-status="next_cycle"] { background-color: var(--cc-note); color: var(--cc-ink); }
 
 .kivun-cc-console .kivun-status-select:has(option[value="contacted"]:checked),
 .kivun-cc-console .kivun-status-select:has(option[value="viewed"]:checked),
 .kivun-cc-console .kivun-status-select:has(option[value="interview"]:checked),
-.kivun-cc-console .kivun-status-select:has(option[value="interested"]:checked) { background-color: #dbeafe; color: #1d4ed8; }
+.kivun-cc-console .kivun-status-select:has(option[value="interested"]:checked),
+.kivun-cc-console .kivun-status-badge[data-status="contacted"],
+.kivun-cc-console .kivun-status-badge[data-status="viewed"],
+.kivun-cc-console .kivun-status-badge[data-status="interview"],
+.kivun-cc-console .kivun-status-badge[data-status="interested"] { background-color: var(--cc-canvas); color: var(--cc-ink); }
 
-.kivun-cc-console .kivun-status-select:has(option[value="new"]:checked),
-.kivun-cc-console .kivun-status-select:has(option[value="new_lead"]:checked),
-.kivun-cc-console .kivun-status-select:has(option[value="no_answer"]:checked),
-.kivun-cc-console .kivun-status-select:has(option[value="pending"]:checked) { background-color: #fff5f8; color: #b81843; }
+.kivun-cc-console .kivun-status-select:has(option[value="closed"]:checked),
+.kivun-cc-console .kivun-status-select:has(option[value="enrolled"]:checked),
+.kivun-cc-console .kivun-status-select:has(option[value="hired"]:checked),
+.kivun-cc-console .kivun-status-badge[data-status="closed"],
+.kivun-cc-console .kivun-status-badge[data-status="enrolled"],
+.kivun-cc-console .kivun-status-badge[data-status="hired"] { background-color: var(--cc-ink); color: #fff; }
 
-.kivun-cc-console .kivun-status-select:has(option[value="next_cycle"]:checked) { background-color: #fef3c7; color: #92400e; }
+.kivun-cc-console .kivun-status-select:has(option[value="not_relevant"]:checked),
+.kivun-cc-console .kivun-status-select:has(option[value="rejected"]:checked),
+.kivun-cc-console .kivun-status-badge[data-status="not_relevant"],
+.kivun-cc-console .kivun-status-badge[data-status="rejected"] { background-color: var(--cc-field); color: var(--cc-text-3); }
 
 /* The coordinator picker and the note sit beside it, so they read as one
    row of controls rather than three different kinds of field. */

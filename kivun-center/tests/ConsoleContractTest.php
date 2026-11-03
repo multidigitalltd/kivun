@@ -508,6 +508,36 @@ final class ConsoleContractTest extends TestCase {
 			$css,
 			'the status pill is unscoped, so it redraws the WP-admin leads screen too'
 		);
+
+		/*
+		 * And the console's pills are drawn from the design's tokens, not
+		 * from hexes of their own. The colours before the handoff arrived
+		 * were a green, a blue and an amber written straight into these
+		 * rules — a palette the design does not contain. Tokens here mean
+		 * the pills move with the design when it moves.
+		 */
+		$blocks = explode( '}', $css );
+		$raw    = array();
+		foreach ( $blocks as $block ) {
+			$at = strpos( $block, '{' );
+			if ( false === $at ) {
+				continue;
+			}
+			$selectors = substr( $block, 0, $at );
+			if ( false === strpos( $selectors, '.kivun-cc-console .kivun-status-' ) ) {
+				continue;
+			}
+			// A hex anywhere in the declarations, other than plain white.
+			if ( preg_match_all( '/#(?!fff\b)(?!ffffff\b)[0-9a-f]{3,8}\b/i', substr( $block, $at ), $hits ) ) {
+				$raw[] = trim( preg_replace( '/\s+/', ' ', $selectors ) ?? '' ) . ' → ' . implode( ', ', $hits[0] );
+			}
+		}
+
+		$this->assertSame(
+			array(),
+			$raw,
+			"the console's status colours are written as hexes instead of design tokens, so they no longer follow the palette:\n  " . implode( "\n  ", $raw )
+		);
 	}
 
 	/**
