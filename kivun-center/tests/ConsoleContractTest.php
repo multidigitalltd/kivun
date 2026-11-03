@@ -906,4 +906,504 @@ final class ConsoleContractTest extends TestCase {
 			'there is more than one step rail; both would be driven, and the reader would be told two different things'
 		);
 	}
+
+	// ── 3. The tracking-numbers screen, locked before it is restyled ─────────
+
+	/**
+	 * Every filter the tracking-numbers screen offers still has a field.
+	 *
+	 * The same contract as the leads screen, and it breaks the same way:
+	 * these travel in the URL, so a bookmarked "calls from the newspaper
+	 * in March" rebuilds the screen from them. A field dropped in a
+	 * redesign does not error — the filter stops narrowing, and a log that
+	 * should show eleven calls shows every call ever logged.
+	 *
+	 * Paging is in here for a reason of its own: `kivun_call_paged` and
+	 * `kivun_call_pp` are what keep page two of a filtered view filtered.
+	 *
+	 * @return void
+	 */
+	public function test_every_call_filter_still_has_a_field(): void {
+		$src = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-content-creator.php' );
+
+		$filters = array(
+			'kivun_call_campaign' => 'which campaign the call came from',
+			'kivun_call_media'    => 'which medium it was published in',
+			'kivun_call_number'   => 'which tracking number was dialled',
+			'kivun_call_from'     => 'the start of the date range',
+			'kivun_call_to'       => 'the end of the date range',
+			'kivun_call_s'        => 'the free-text search',
+			'kivun_call_pp'       => 'how many rows per page',
+		);
+
+		foreach ( $filters as $name => $what ) {
+			$this->assertStringContainsString(
+				'name="' . $name . '"',
+				$src,
+				'nothing on the tracking-numbers screen submits ' . $name . ' (' . $what . '), so that filter silently stops narrowing'
+			);
+		}
+
+		/*
+		 * And the screen has to say which tab it is, or submitting the
+		 * filters lands the reader back on the first tab with their filters
+		 * applied to a screen that does not use them.
+		 */
+		$this->assertStringContainsString(
+			'<input type="hidden" name="kivun_tab" value="calls">',
+			$src,
+			'the filter form no longer says it belongs to the calls tab, so filtering navigates away from the screen being filtered'
+		);
+	}
+
+	/**
+	 * And every control the tracking-numbers scripts reach for is still
+	 * emitted.
+	 *
+	 * All of these are bound by name from `frontend.js`. The failure is the
+	 * one this file was written for: the control stays on the screen,
+	 * looking live, wired to nothing.
+	 *
+	 * @return void
+	 */
+	public function test_every_calls_control_the_scripts_bind_is_still_emitted(): void {
+		$php = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-content-creator.php' );
+
+		$bound = array(
+			// The numbers and their periods.
+			'kivun-delete-phone'        => 'removing a tracking number',
+			'kivun-edit-assignment'     => 'opening a period for editing',
+			'kivun-delete-assignment'   => 'deleting a period',
+			'kivun-assignment-form'     => 'saving a period',
+
+			// The period's own fields. Dropping one does not empty it —
+			// the save reads it as blank and writes that over the dates.
+			'kivun-as-media'            => 'the medium of a period',
+			'kivun-as-campaign'         => 'the campaign of a period',
+			'kivun-as-label'            => 'what the advert was',
+			'kivun-as-start'            => 'the date a period starts',
+			'kivun-as-end'              => 'the date a period ends',
+
+			// A campaign created without leaving the screen.
+			'kivun-newcamp'             => 'the inline new-campaign panel',
+			'kivun-newcamp-name'        => 'the new campaign name',
+			'kivun-newcamp-btn'         => 'creating the campaign',
+
+			// Adding numbers, by hand and by file.
+			'kivun-phone-form'          => 'adding a number',
+			'kivun-phone-number'        => 'the number being added',
+			'kivun-phone-label'         => 'its nickname',
+			'kivun-phone-file'          => 'the CSV being imported',
+			'kivun-phone-import-btn'    => 'starting the import',
+			'kivun-phone-import-status' => 'what the import reports back',
+
+			// The switchboard setup, which is read-only and copied out.
+			'kivun-camp-saved'          => 'the webhook address to copy',
+			'kivun-camp-copy'           => 'copying it',
+		);
+
+		foreach ( $bound as $class => $what ) {
+			$this->assertMatchesRegularExpression(
+				'/(?<![a-z0-9_-])' . preg_quote( $class, '/' ) . '(?![a-z0-9_-])/',
+				$php,
+				$class . ' is gone, so ' . $what . ' is wired to nothing'
+			);
+		}
+	}
+
+	/**
+	 * A period's editor follows the period it belongs to.
+	 *
+	 * The editor is a second row, hidden under the one it edits, and the
+	 * two find each other by id alone: the edit button looks up
+	 * `[data-assignment-edit="<id>"]`, and deleting a period removes both
+	 * rows by the same pair of attributes. Rebuild the table and keep only
+	 * the visible row, and the editor is orphaned — deleting a period
+	 * leaves a form on screen that still submits for a period that no
+	 * longer exists.
+	 *
+	 * The same shape as the forms builder row, and it already went wrong
+	 * once there.
+	 *
+	 * @return void
+	 */
+	public function test_an_assignment_editor_follows_its_own_period(): void {
+		$src = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-content-creator.php' );
+
+		$this->assertStringContainsString(
+			'data-assignment-row=',
+			$src,
+			'the period rows are no longer identified, so deleting one cannot find it'
+		);
+		$this->assertStringContainsString(
+			'data-assignment-edit=',
+			$src,
+			'the period editor is no longer identified, so the edit button opens nothing'
+		);
+
+		// One editor per row, or a delete takes away the wrong pair.
+		$this->assertSame(
+			substr_count( $src, 'data-assignment-row="' ),
+			substr_count( $src, 'data-assignment-edit="' ),
+			'the period rows and their editors no longer come in pairs'
+		);
+
+		/*
+		 * And the field the editor focuses on opening has to be inside it.
+		 * `.kivun-as-start` is looked up within the panel, so a design that
+		 * lifts the dates out of the editor leaves it opening onto nothing
+		 * — which reads as the editor being broken rather than moved.
+		 */
+		$at = strpos( $src, 'data-assignment-edit="' );
+		$this->assertNotFalse( $at, 'the period editor is gone' );
+		$editor = substr( $src, $at, 2600 );
+		$this->assertStringContainsString(
+			'kivun-as-start',
+			$editor,
+			'the date the editor focuses on opening is no longer inside the editor'
+		);
+	}
+
+	/**
+	 * The period editor spans every column of its table.
+	 *
+	 * It sits in a single cell that has to reach across the whole table,
+	 * and the column count is not fixed: the "answered" column only
+	 * appears where the switchboard reports talk time. So the span is a
+	 * number that has to track a conditional — exactly the kind that goes
+	 * stale when a column is added for design reasons.
+	 *
+	 * Too small and the editor is squeezed into part of the row with blank
+	 * cells beside it, which is what the forms builder row did: 84px of a
+	 * 244px card. Nothing errors either way.
+	 *
+	 * @return void
+	 */
+	public function test_the_assignment_editor_spans_every_column(): void {
+		$src = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-content-creator.php' );
+
+		// The periods table is the one inside a number's panel.
+		$at = strpos( $src, 'data-phone-row=' );
+		$this->assertNotFalse( $at, 'the tracking numbers no longer render as panels' );
+
+		$head_start = strpos( $src, '<thead>', $at );
+		$head_end   = strpos( $src, '</thead>', (int) $head_start );
+		$this->assertNotFalse( $head_start, 'the periods table has no header' );
+		$this->assertNotFalse( $head_end, 'the periods table header never closes' );
+
+		$thead  = substr( $src, (int) $head_start, (int) $head_end - (int) $head_start );
+		$all    = substr_count( $thead, '<th scope="col">' );
+		$capped = substr_count( $thead, "\$report['knows']" );
+
+		$this->assertGreaterThan( 0, $all, 'the periods table lost its columns' );
+		$this->assertSame(
+			1,
+			$capped,
+			'the periods table no longer has exactly one column that depends on the switchboard reporting talk time, so the editor cannot span a known number of columns'
+		);
+
+		/*
+		 * Written as the two numbers the table actually has rather than as
+		 * a pattern, so adding a column makes this fail instead of quietly
+		 * passing on a span that is now one short.
+		 */
+		$this->assertStringContainsString(
+			"\$report['knows'] ? '" . $all . "' : '" . ( $all - 1 ) . "'",
+			$src,
+			'the period editor spans the wrong number of columns: the table has ' . $all . ' with the answered column and ' . ( $all - 1 ) . ' without'
+		);
+	}
+
+	/**
+	 * The medium field still points at the list of suggestions.
+	 *
+	 * A free-text field with a `<datalist>` behind it, joined by id. The
+	 * join is HTML to HTML, so no script and no save notices when it
+	 * breaks — the field simply stops suggesting, and the same medium
+	 * starts being typed two ways, which splits it into two rows in every
+	 * report built from it.
+	 *
+	 * @return void
+	 */
+	public function test_the_media_suggestions_still_point_at_their_list(): void {
+		$src = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-content-creator.php' );
+
+		$this->assertStringContainsString(
+			'<datalist id="kivun-media-list">',
+			$src,
+			'the list of media suggestions is gone'
+		);
+
+		// Both medium fields — the one on an existing period and the one on
+		// a new period — have to point at it.
+		$this->assertSame(
+			2,
+			substr_count( $src, 'list="kivun-media-list"' ),
+			'one of the medium fields no longer offers the existing media, so the same medium gets typed two ways and splits in the reports'
+		);
+	}
+
+	/**
+	 * The icon button is one shape, not two.
+	 *
+	 * The console grew two: `kivun-cc-iconbtn`, a bordered white square with
+	 * its own hardcoded greys, and `kivun-cc-icon-btn` from the redesign.
+	 * They were on screen at the same time, on different screens.
+	 *
+	 * They are unified by sharing a rule rather than by renaming, because
+	 * the old name is not only in the PHP — `frontend.js` builds the custom
+	 * form's question rows with it, and `ArchiveTest` asserts an exact class
+	 * attribute. So the thing to guard is not the name but the shape: every
+	 * block that styles the old class must style the new one in the same
+	 * breath.
+	 *
+	 * Re-adding a standalone block for either one is the specific regression
+	 * here, and it would not look like a mistake: it would sit LATER in the
+	 * file and quietly win on source order at equal specificity. That is
+	 * how the edit button came out brand-red.
+	 *
+	 * @return void
+	 */
+	public function test_the_icon_button_is_one_shape_not_two(): void {
+		$css = (string) file_get_contents( KIVUN_DIR . 'assets/css/frontend.css' );
+
+		/*
+		 * Note the two names do not contain one another: `kivun-cc-iconbtn`
+		 * is not a substring of `kivun-cc-icon-btn`, because of the hyphen.
+		 * So a plain search for the old name cannot be satisfied by the new
+		 * one — which is what makes this check mean anything.
+		 */
+		$this->assertStringNotContainsString(
+			'kivun-cc-iconbtn',
+			'kivun-cc-icon-btn',
+			'the two class names now overlap, so this test can no longer tell them apart'
+		);
+
+		$blocks = explode( '}', $css );
+		$found  = 0;
+
+		foreach ( $blocks as $block ) {
+			$at = strpos( $block, '{' );
+			if ( false === $at ) {
+				continue;
+			}
+
+			$selectors = substr( $block, 0, $at );
+			if ( false === strpos( $selectors, 'kivun-cc-iconbtn' ) ) {
+				continue;
+			}
+
+			++$found;
+			$this->assertStringContainsString(
+				'kivun-cc-icon-btn',
+				$selectors,
+				'a rule styles kivun-cc-iconbtn without styling kivun-cc-icon-btn, so the console is back to two icon-button shapes: ' . trim( preg_replace( '/\s+/', ' ', $selectors ) ?? '' )
+			);
+		}
+
+		$this->assertGreaterThan(
+			0,
+			$found,
+			'nothing styles kivun-cc-iconbtn any more, so the buttons the script builds for the question rows are unstyled'
+		);
+	}
+
+	/**
+	 * The console's type scale is stated in px, as the handoff states it.
+	 *
+	 * This is the whole of what "the design is not accurate" turned out to
+	 * mean. The console sized its type in `rem`, which resolves against the
+	 * root font size: an 18px label came out at 13.12, a 17px tab at 14.08,
+	 * a 32px section title at 23.2. Every size landed at roughly
+	 * three-quarters, nothing looked broken, and the console simply read a
+	 * size small throughout.
+	 *
+	 * Measured against the reference, not asserted: the numbers below are
+	 * what the design file's own computed styles report.
+	 *
+	 * A `rem` here is not a style preference — it is a silent rescale of
+	 * the whole design by whatever the theme sets on `html`.
+	 *
+	 * @return void
+	 */
+	public function test_the_console_type_scale_is_in_absolute_pixels(): void {
+		$css = (string) file_get_contents( KIVUN_DIR . 'assets/css/frontend.css' );
+
+		/*
+		 * Anchored to the rule that draws each thing, not searched for
+		 * across the file. A first attempt looked the sizes up anywhere in
+		 * the stylesheet and passed happily when the stat label was turned
+		 * back into a rem, because some other rule still said 18px.
+		 */
+		$scale = array(
+			'.kivun-cc-stat__num'     => array( 'font-size: 48px', 'the stat figure (Rubik 48/800)' ),
+			'.kivun-cc-topbar__title' => array( 'font-size: 44px', 'the page title on the band (Rubik 44/900)' ),
+			'.kivun-cc-console .kivun-cc-title' => array( 'font-size: 32px', 'the section title (Rubik 32/800)' ),
+			'.kivun-cc-topbar__sub'   => array( 'font-size: 20px', 'the band subtitle' ),
+			'.kivun-cc-stat__label'   => array( 'font-size: 18px', 'the stat label' ),
+			'.kivun-cc-tabs .kivun-tab' => array( 'font-size: 17px', 'the tab label' ),
+			'.kivun-cc-stat__flag'    => array( 'font-size: 14px', 'the "requires attention" badge' ),
+		);
+
+		$blocks = explode( '}', $css );
+
+		foreach ( $scale as $selector => $expected ) {
+			list( $decl, $what ) = $expected;
+
+			$block = null;
+			foreach ( $blocks as $candidate ) {
+				$at = strpos( $candidate, '{' );
+				if ( false === $at ) {
+					continue;
+				}
+				$selectors = substr( $candidate, 0, $at );
+				// The rule that *declares* this size, not one that only
+				// mentions the selector in passing.
+				if ( false !== strpos( $selectors, $selector ) && false !== strpos( $candidate, 'font-size:' ) ) {
+					$block = $candidate;
+					break;
+				}
+			}
+
+			$this->assertNotNull( $block, 'no rule sets a font size for ' . $selector . ' (' . $what . ')' );
+			$this->assertStringContainsString(
+				$decl,
+				(string) $block,
+				$what . ' is no longer "' . $decl . '" in the rule for ' . $selector . ' — a rem here rescales the design with the theme root'
+			);
+		}
+
+		/*
+		 * And the card radii, which are the other half of the same problem:
+		 * these were 18 and 13 against the design's 36 and 28.
+		 */
+		$this->assertStringContainsString( '--cc-radius: 36px', $css, 'a main card is no longer 36' );
+		$this->assertStringContainsString( '--cc-radius-sm: 28px', $css, 'an inner card is no longer 28' );
+	}
+
+	/**
+	 * Cards are flat; only the stats and popovers are raised.
+	 *
+	 * The handoff says it in one line — "Other cards are flat white on
+	 * #f1f1f3" — and it is the single change that most altered how the
+	 * console reads, because a shadow had been put on every card: panels,
+	 * the tab bar, the table container, the pager, the wizard cards.
+	 *
+	 * @return void
+	 */
+	public function test_only_the_stats_are_raised_off_the_canvas(): void {
+		$css = (string) file_get_contents( KIVUN_DIR . 'assets/css/frontend.css' );
+
+		// The shadow token is the design's stat-card shadow, exactly.
+		$this->assertStringContainsString(
+			'--cc-shadow: 0 14px 34px rgba(17, 17, 20, .10)',
+			$css,
+			'the stat-card shadow is no longer the design\'s'
+		);
+
+		/*
+		 * Which rules may use it. Anything else asking for a shadow means a
+		 * card has been lifted off the canvas again.
+		 */
+		$allowed = array( '.kivun-cc-stat', '.kivun-cc-colpicker__menu', '.kivun-cc-pop' );
+
+		$blocks = explode( '}', $css );
+		$raised = array();
+		foreach ( $blocks as $block ) {
+			$at = strpos( $block, '{' );
+			if ( false === $at || false === strpos( $block, 'box-shadow: var(--cc-shadow' ) ) {
+				continue;
+			}
+			$selectors = trim( preg_replace( '/\s+/', ' ', substr( $block, 0, $at ) ) ?? '' );
+
+			$ok = false;
+			foreach ( $allowed as $good ) {
+				if ( false !== strpos( $selectors, $good ) ) {
+					$ok = true;
+					break;
+				}
+			}
+			if ( ! $ok ) {
+				$raised[] = $selectors;
+			}
+		}
+
+		$this->assertSame(
+			array(),
+			$raised,
+			"these are raised off the canvas, but the design has only the stat cards and popovers raised:\n  " . implode( "\n  ", $raised )
+		);
+	}
+
+	/**
+	 * Every console token a rule asks for is a token that exists.
+	 *
+	 * The console's colours, radii and shadows are all custom properties. A
+	 * reference to one that was renamed or removed does not warn and does
+	 * not fall back to anything sensible: the declaration is simply thrown
+	 * away, so the element keeps whatever it had — usually transparent.
+	 *
+	 * This is not hypothetical. Rewriting the tokens to the design handoff's
+	 * values dropped `--cc-shell` while eleven rules still asked for it, and
+	 * the header band rendered **transparent**. Nothing failed; the band was
+	 * just gone. A browser measurement caught it, and this test is so the
+	 * next one does not need to.
+	 *
+	 * A reference that carries its own fallback — `var(--x, 12px)` — is
+	 * fine by design and is not counted.
+	 *
+	 * @return void
+	 */
+	public function test_every_console_token_used_is_defined(): void {
+		$css = (string) file_get_contents( KIVUN_DIR . 'assets/css/frontend.css' );
+
+		$defined = array();
+		preg_match_all( '/(--cc-[a-z0-9-]+)\s*:/i', $css, $d );
+		foreach ( $d[1] as $name ) {
+			$defined[ $name ] = true;
+		}
+		$this->assertNotEmpty( $defined, 'the console defines no tokens at all' );
+
+		// Only bare references: a var() with a comma has its own fallback.
+		preg_match_all( '/var\(\s*(--cc-[a-z0-9-]+)\s*\)/i', $css, $u );
+
+		$missing = array();
+		foreach ( array_unique( $u[1] ) as $name ) {
+			if ( ! isset( $defined[ $name ] ) ) {
+				$missing[] = $name . ' (' . substr_count( $css, 'var(' . $name . ')' ) . ' uses)';
+			}
+		}
+
+		$this->assertSame(
+			array(),
+			$missing,
+			"these console tokens are used but never defined, so every rule that asks for one silently loses that declaration:\n  " . implode( "\n  ", $missing )
+		);
+	}
+
+	/**
+	 * The tracking-numbers screen keeps both of its scopes.
+	 *
+	 * `kivun-cc-calls` is what the screen's own styling hangs off, and it
+	 * exists because two of the classes this screen draws with —
+	 * `kivun-cc-card` and `kivun-camp-summary` — belong to the jobs board
+	 * as well, which renders inside this same console. Drop the scope and
+	 * the rules written for the numbers redraw the jobs board too.
+	 *
+	 * `kivun-cc-front` has to stay beside it: the library filter walks up
+	 * with `closest('.kivun-cc-front')` to work out which panes it owns.
+	 * Replacing one class with the other would look like a tidy-up and
+	 * would quietly widen that filter's reach to the whole document.
+	 *
+	 * @return void
+	 */
+	public function test_the_numbers_screen_keeps_both_of_its_scopes(): void {
+		$src = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-content-creator.php' );
+
+		$this->assertStringContainsString(
+			'class="kivun-cc-front kivun-cc-calls"',
+			$src,
+			'the tracking-numbers screen lost one of its two scopes: it needs kivun-cc-front for the filter script and kivun-cc-calls so its own styling does not reach the jobs board'
+		);
+	}
 }

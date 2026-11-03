@@ -1096,43 +1096,145 @@ td.kivun-app-contact a { display: block; }
 .kivun-cc-groups__item .kivun-cc-btn { margin-inline-start: auto; }
 
 /* ── Content management console (tabs, library, leads CRM) ───────────────── */
+/*
+ * The tokens are the design handoff's own values, not approximations of them.
+ *
+ * They were approximations once, and that is exactly what went wrong: cards
+ * came out at an 18px radius where the design says 36, inner cards at 13
+ * where it says 24–28, and every card carried a shadow where the handoff
+ * says plainly that cards are flat white on #f1f1f3 and only the stat cards
+ * and popovers are raised. Each gap was small; together they changed how the
+ * whole console reads.
+ *
+ * So the hexes are written out. The one exception is the brand red, which
+ * still follows the site's Elementor global — see --cc-brand below.
+ */
 .kivun-cc-console {
-	/* Brand-driven: --kivun-accent follows the site's Elementor global colour,
-	   so the console re-skins itself with the brand rather than a fixed blue. */
-	--cc-brand: var(--kivun-accent);
-	--cc-ink: var(--kivun-dark);
-	--cc-surface: var(--kivun-bg-card, #fff);
-	--cc-canvas: var(--kivun-card-bg, #f5f5f5);
-	--cc-line: var(--kivun-border);
-	--cc-tint: rgba(0, 0, 0, .04);
-	/* The redesign's own tokens. Every one of them is derived from the brand
-	   colour rather than written as a hex, so the console still re-skins
-	   itself with the site's Elementor palette — the reason --cc-brand exists
-	   in the first place. A fixed red here would have looked right on this
-	   site and wrong on the next one. */
-	--cc-chip: color-mix(in srgb, var(--cc-brand) 13%, #fff);
+	/*
+	 * Brand-driven on purpose. The handoff names #df2950, and the site's own
+	 * Elementor primary is #de2952 — one hex apart, invisible side by side.
+	 * Keeping the variable means the console still re-skins with the palette
+	 * on the next site, and the handoff's value is the fallback, so a site
+	 * with no Elementor global gets exactly the design.
+	 */
+	--cc-brand: var(--kivun-accent, #df2950);
+	--cc-brand-hover: #c81f44;
+	--cc-chip: #fde8ed;
+	--cc-chip-hover: #f9cdd8;
 	--cc-chip-ink: var(--cc-brand);
-	--cc-field: #f1f1f4;
-	--cc-field-ink: #16161a;
-	--cc-note: #eef7fd;
-	--cc-note-dot: #29b6f6;
-	--cc-shell: #232326;
-	--cc-radius: 18px;
-	--cc-radius-sm: 13px;
-	--cc-shadow: 0 1px 3px rgba(16, 16, 20, .06), 0 8px 24px -16px rgba(16, 16, 20, .22);
-	max-width: 1320px;
+	/* The background of a row that is open or selected. */
+	--cc-wash: #fdf3f5;
+
+	/* Charcoal is the console's real second colour: the header band, the dark
+	   buttons, the active tab, and most of the text. */
+	--cc-ink: #2e2e31;
+	--cc-ink-2: #3a3a3e;
+	--cc-ink-hover: #45454a;
+	--cc-on-dark-2: #c2c2c8;
+	/* The header band and the dark buttons are that same charcoal. Kept as a
+	   name of its own because eleven rules already ask for it. */
+	--cc-shell: #2e2e31;
+
+	--cc-surface: #fff;
+	--cc-canvas: #f1f1f3;
+	--cc-field: #f7f7f8;
+	--cc-field-ink: #2e2e31;
+	--cc-line: #e4e4e8;
+	--cc-divider: #eeeef0;
+	--cc-text-2: #6b6b72;
+	--cc-text-3: #a8a8ae;
+	--cc-off: #c9c9cf;
+	--cc-toggle-off: #d4d4d8;
+	--cc-tint: rgba(0, 0, 0, .04);
+
+	/*
+	 * Sky is a shapes-only colour, by the client's own rule in the handoff:
+	 * dots, small fills, dashed borders — never text. --cc-note-dot keeps its
+	 * old name because rules already reference it.
+	 */
+	--cc-note-dot: #5cc8f0;
+	--cc-sky-strong: #d6f1fc;
+	--cc-note: #e3f5fd;
+	--cc-sky-wash: #f2fafd;
+	--cc-sky-line: #bfe8f8;
+
+	--cc-amber: #f0b429;
+	--cc-whatsapp: #25d366;
+
+	/* Pills, buttons and inputs are fully round; cards step down 36 → 28 →
+	   24 → 20, and a small button inside a toolbar is 12. */
+	--cc-radius: 36px;
+	--cc-radius-sm: 28px;
+	--cc-radius-xs: 24px;
+	--cc-radius-inner: 20px;
+	--cc-radius-tool: 12px;
+
+	/*
+	 * Only two things are raised. --cc-shadow is kept for the stat cards that
+	 * already reference it; panels must not use it — they are flat.
+	 */
+	--cc-shadow: 0 14px 34px rgba(17, 17, 20, .10);
+	--cc-shadow-hover: 0 18px 40px rgba(17, 17, 20, .18);
+	--cc-shadow-pop: 0 18px 40px rgba(17, 17, 20, .16);
+
+	/*
+	 * Rubik for headings, numbers and titles; Heebo for everything else.
+	 * Both are listed ahead of the site's own font rather than instead of it,
+	 * so a console on a site that has neither still falls back to the theme
+	 * rather than to a browser default.
+	 */
+	--cc-font-display: Rubik, var(--kivun-font);
+	--cc-font-ui: Heebo, var(--kivun-font);
+
+	/*
+	 * The plugin-wide greys, restated for the console subtree in the
+	 * handoff's own values. They differ from the site's by a hair each —
+	 * #6b7280 against #6b6b72, #e5e7eb against #e4e4e8 — which is too
+	 * little to see on its own and plainly visible across a whole screen.
+	 *
+	 * Done by redefining the variables rather than by rewriting the two
+	 * hundred rules that reference them: these are scoped to the console, so
+	 * the job board, the forms and the rest of the plugin keep the site's
+	 * palette untouched.
+	 */
+	--kivun-muted: #6b6b72;
+	--kivun-border: #e4e4e8;
+	--kivun-dark: #2e2e31;
 	margin: 0 auto;
-	padding: 1.1rem;
-	font-family: var(--kivun-font);
+	/* Max content width 1320, side padding 32. */
+	padding: 0 32px 48px;
+	font-family: var(--cc-font-ui);
 	color: var(--cc-ink);
 	direction: rtl;
 	background: var(--cc-canvas);
-	border-radius: 20px;
 	box-sizing: border-box;
-	max-width: 100%;
+	max-width: 1320px;
 	overflow: hidden;
 	clear: both;
 }
+/*
+ * Form controls do not inherit font-family, so the console's own type has to
+ * be set on them by name or every input falls back to the browser's.
+ */
+.kivun-cc-console input,
+.kivun-cc-console select,
+.kivun-cc-console textarea,
+.kivun-cc-console button { font-family: var(--cc-font-ui); }
+
+/* Headings, titles and figures are Rubik; numbers line up in columns. */
+.kivun-cc-console h1,
+.kivun-cc-console h2,
+.kivun-cc-console h3,
+.kivun-cc-console h4,
+.kivun-cc-console .kivun-cc-title,
+.kivun-cc-console .kivun-cc-stat__num { font-family: var(--cc-font-display); }
+.kivun-cc-console .kivun-cc-stat__num,
+.kivun-cc-console .kivun-cc-table td,
+.kivun-cc-console .kivun-kpi__value { font-variant-numeric: tabular-nums; }
+
+/* Titles and descriptions break on sense rather than on width. */
+.kivun-cc-console .kivun-cc-title,
+.kivun-cc-console .kivun-cc-lead { text-wrap: pretty; }
 /* The sticky sidebar can ride over whatever follows the shortcode (typically
    the theme footer) when the form column is taller than the viewport. */
 .kivun-cc-console .kivun-cc-side { position: static; top: auto; }
@@ -1140,8 +1242,9 @@ td.kivun-app-contact a { display: block; }
 /* Each tab's own heading, in the rail's voice so the list screens and the
    wizard sound like one system. */
 .kivun-cc-console .kivun-cc-head { margin-bottom: 1.1rem; }
-.kivun-cc-console .kivun-cc-title { font-size: 1.45rem; font-weight: 800; margin: 0 0 .3rem; letter-spacing: -.01em; color: var(--cc-ink); }
-.kivun-cc-console .kivun-cc-lead { font-size: .88rem; color: var(--kivun-muted); margin: 0; line-height: 1.65; }
+/* Section title: Rubik 32/800. Body and helper text: 16, text-2. */
+.kivun-cc-console .kivun-cc-title { font-size: 32px; font-weight: 800; margin: 0 0 .3rem; color: var(--cc-ink); }
+.kivun-cc-console .kivun-cc-lead { font-size: 16px; color: var(--cc-text-2); margin: 0; line-height: 1.65; }
 /* The campaign's tracked numbers, under its links. Set apart by a gap and
    a line so the two read as two channels of one campaign rather than as one
    table that changed its columns halfway down. */
@@ -1212,24 +1315,41 @@ td.kivun-app-contact a { display: block; }
    edge — the console already clips to that radius, so the corners come free
    — and carries enough bottom padding for the stat cards to sit across its
    lower edge rather than under it. */
+/*
+ * The header band. It runs the full width of the console and the content
+ * below it rides up over its lower edge, so the deep bottom padding (128)
+ * and the stats' -88 top margin are a pair: together they leave the band
+ * 40px of charcoal showing under the stat cards.
+ *
+ * The negative side margins cancel the console's own 32px padding so the
+ * band reaches the container's edges, which is what makes a radius on the
+ * bottom corners alone read correctly.
+ */
 .kivun-cc-topbar {
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
 	justify-content: space-between;
-	gap: 1rem;
-	margin: -1.1rem -1.1rem 0;
-	padding: 1.5rem 1.7rem 3.1rem;
+	gap: 24px;
+	margin: 0 -32px;
+	padding: 40px 32px 128px;
 	background: var(--cc-shell);
-	border-radius: 0 0 26px 26px;
+	border-radius: 0 0 48px 48px;
 	color: #fff;
 }
-.kivun-cc-topbar__brand { display: flex; align-items: center; gap: .7rem; }
+/*
+ * The reference nests this as a row of [dot, title] with the subtitle under
+ * it; here the title and subtitle share a div beside the dot. Same picture
+ * from a different tree, so the dot is nudged down to sit on the title's
+ * line rather than centred against the title and subtitle together.
+ */
+.kivun-cc-topbar__brand { display: flex; align-items: flex-start; gap: 14px; }
 .kivun-cc-topbar__mark {
 	display: grid;
 	place-items: center;
-	width: 10px;
-	height: 10px;
+	margin-top: 16px;
+	width: 14px;
+	height: 14px;
 	border-radius: 50%;
 	background: var(--cc-note-dot);
 	flex: 0 0 auto;
@@ -1241,18 +1361,35 @@ td.kivun-app-contact a { display: block; }
 	color: transparent;
 }
 .kivun-cc-topbar__mark svg { width: 0; height: 0; }
-.kivun-cc-topbar__title { margin: 0; font-size: 1.45rem; font-weight: 800; color: #fff; line-height: 1.2; letter-spacing: -.01em; }
-.kivun-cc-topbar__sub { margin: .25rem 0 0; font-size: .85rem; color: rgba(255,255,255,.62); font-weight: 500; }
-.kivun-cc-topbar__user { display: flex; align-items: center; gap: .6rem; font-size: .86rem; }
+.kivun-cc-topbar__title {
+	margin: 0;
+	font-family: var(--cc-font-display);
+	font-size: 44px;
+	font-weight: 900;
+	color: #fff;
+	line-height: 1.05;
+}
+/* Already offset by the dot and its gap, so no indent of its own. */
+.kivun-cc-topbar__sub {
+	margin: 6px 0 0;
+	font-size: 20px;
+	color: var(--cc-on-dark-2);
+	font-weight: 400;
+}
+.kivun-cc-topbar__user { display: flex; align-items: center; gap: 12px; font-size: 18px; }
+/*
+ * A chip on the band: charcoal-2 rather than a white film, so it reads the
+ * same on any band colour instead of lightening with it.
+ */
 .kivun-cc-topbar__hello {
 	display: inline-flex;
 	align-items: center;
-	gap: .55rem;
-	padding: .4rem .5rem .4rem 1rem;
-	background: rgba(255,255,255,.08);
+	gap: 12px;
+	padding: 6px 6px 6px 22px;
+	background: var(--cc-ink-2);
 	border-radius: 999px;
-	color: rgba(255,255,255,.92);
-	font-weight: 600;
+	color: #fff;
+	font-weight: 400;
 }
 /* The initial, drawn from the name already in the markup rather than added
    to it: no new field to keep in step with the account. */
@@ -1260,60 +1397,100 @@ td.kivun-app-contact a { display: block; }
 	content: attr(data-initial);
 	display: grid;
 	place-items: center;
-	width: 30px;
-	height: 30px;
+	width: 44px;
+	height: 44px;
 	flex: 0 0 auto;
 	border-radius: 50%;
 	background: var(--cc-brand);
 	color: #fff;
-	font-size: .85rem;
+	font-family: var(--cc-font-display);
+	font-size: 20px;
 	font-weight: 800;
 	text-transform: uppercase;
 }
 .kivun-cc-topbar__logout {
-	color: rgba(255,255,255,.9);
+	display: inline-flex;
+	align-items: center;
+	height: 56px;
+	color: #fff;
 	text-decoration: none;
-	font-weight: 600;
-	padding: .5rem 1.1rem;
-	border: 1px solid rgba(255,255,255,.18);
+	font-weight: 700;
+	font-size: 18px;
+	padding: 0 24px;
+	background: transparent;
+	border: 2px solid #5a5a60;
 	border-radius: 999px;
 	transition: background .15s;
 }
-.kivun-cc-topbar__logout:hover { background: rgba(255,255,255,.14); color: #fff; }
+.kivun-cc-topbar__logout:hover { background: var(--cc-ink-2); color: #fff; }
 
-/* Stat cards, sitting across the shell's bottom edge. */
+/*
+ * The stats ride up over the band's lower edge. -88 against the band's 128
+ * of bottom padding is what leaves 40px of charcoal showing beneath them;
+ * change one without the other and the band either swallows the cards or
+ * grows a bare stripe under them.
+ */
 .kivun-cc-stats {
 	position: relative;
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-	gap: .7rem;
-	margin: -2.2rem 0 1rem;
+	grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+	gap: 16px;
+	margin: -88px 0 20px;
 }
 .kivun-cc-stat {
 	display: flex;
 	flex-direction: column-reverse;
 	justify-content: flex-end;
-	gap: .5rem;
-	min-height: 92px;
-	padding: .95rem 1.15rem;
+	gap: 10px;
+	padding: 24px 28px;
 	background: var(--cc-surface);
 	border: 0;
-	border-radius: var(--cc-radius);
+	/* 28, not the 36 of a main card: the stats are a row of small cards. */
+	border-radius: var(--cc-radius-sm);
+	/*
+	 * The stat cards are one of only two things in the console that are
+	 * raised off the canvas.
+	 *
+	 * No `cursor: pointer` and no hover lift, although the handoff has
+	 * both: there, the cards are clickable and open their tab. Here they
+	 * are plain divs, so a pointer cursor would promise a click that never
+	 * happens. Making them open their tabs is new behaviour rather than a
+	 * reskin, so it is asked about rather than slipped in.
+	 */
 	box-shadow: var(--cc-shadow);
 }
-.kivun-cc-stat__num { font-size: 2.1rem; font-weight: 800; line-height: 1; color: var(--cc-ink); letter-spacing: -.02em; }
+.kivun-cc-stat__num {
+	font-family: var(--cc-font-display);
+	font-size: 48px;
+	font-weight: 800;
+	line-height: 1;
+	color: var(--cc-ink);
+	font-variant-numeric: tabular-nums;
+}
+/*
+ * Absolute px, not rem.
+ *
+ * This is where "close to the design" came from. The console sized its type
+ * in rem against a 16px root, so an 18px label rendered at 13.12 and a 32px
+ * section title at 23.2 — every size roughly three quarters of what the
+ * handoff asks for. Nothing looked broken; the whole console just read a
+ * size small. The handoff states its values in px, so they are px here.
+ */
 .kivun-cc-stat__label {
 	display: flex;
 	align-items: center;
-	gap: .4rem;
-	font-size: .82rem;
-	color: var(--kivun-muted);
-	font-weight: 600;
+	gap: 10px;
+	font-size: 18px;
+	/* 1.5, which is what makes the card 160 tall when the label wraps —
+	   the reference's own figure, derived from its card height. */
+	line-height: 1.5;
+	color: var(--cc-text-2);
+	font-weight: 500;
 }
 .kivun-cc-stat__label::before {
 	content: "";
-	width: 7px;
-	height: 7px;
+	width: 10px;
+	height: 10px;
 	flex: 0 0 auto;
 	border-radius: 50%;
 	background: var(--cc-note-dot);
@@ -1321,18 +1498,31 @@ td.kivun-app-contact a { display: block; }
 .kivun-cc-stat--alert { background: var(--cc-surface); }
 .kivun-cc-stat--alert .kivun-cc-stat__num { color: var(--cc-brand); }
 .kivun-cc-stat--alert .kivun-cc-stat__label::before { background: var(--cc-brand); }
+/* The badge sits at the far end of the label row. */
+.kivun-cc-stat__flag {
+	margin-inline-start: auto;
+	flex: 0 0 auto;
+	padding: 3px 12px;
+	border-radius: 999px;
+	background: var(--cc-brand);
+	color: #fff;
+	font-size: 14px;
+	font-weight: 800;
+	white-space: nowrap;
+}
 
 /* Nav tabs — restyled inside the console only. */
 .kivun-cc-console .kivun-cc-tabs {
 	display: flex;
 	flex-wrap: nowrap;
-	gap: .2rem;
+	gap: 6px;
 	margin-bottom: 1.1rem;
-	padding: .45rem;
+	padding: 8px;
 	background: var(--cc-surface);
 	border: 0;
-	border-radius: var(--cc-radius);
-	box-shadow: var(--cc-shadow);
+	/* A pill container, not a card: fully round, and flat — the handoff
+	   raises only the stat cards and popovers. */
+	border-radius: 999px;
 	/* Seven tabs do not fit a laptop at this size, and wrapping them made the
 	   bar two and three rows deep. One row that scrolls keeps the bar a fixed
 	   height whatever gets added to it. */
@@ -1342,15 +1532,16 @@ td.kivun-app-contact a { display: block; }
 .kivun-cc-console .kivun-cc-tabs .kivun-tab {
 	display: inline-flex;
 	align-items: center;
-	gap: .5rem;
+	gap: 10px;
 	flex: 0 0 auto;
-	padding: .55rem 1rem .55rem .5rem;
+	height: 52px;
+	padding: 0 8px 0 20px;
 	border: none;
 	border-radius: 999px;
 	background: transparent;
 	font: inherit;
-	font-size: .88rem;
-	font-weight: 600;
+	font-size: 17px;
+	font-weight: 700;
 	color: var(--cc-ink);
 	cursor: pointer;
 	white-space: nowrap;
@@ -1418,12 +1609,23 @@ td.kivun-app-contact a { display: block; }
 /* The table is a card, the same card as the wizard's. All seven of them
    share this one shape, so the language set here is the language of every
    list screen in the console. */
+/*
+ * The table is a bordered container, radius 28, flat — the 2px divider line
+ * is what separates it from the card it sits in, not a shadow.
+ *
+ * The handoff also says `overflow:hidden` here. Kept as `overflow-x:auto`
+ * on purpose: hidden clips a table that is wider than its card with no way
+ * to reach the rest, which loses data rather than restyling it. The design
+ * avoids that case by dropping to fewer columns on narrow screens, and this
+ * console does the same by stacking — but if either ever fails to trigger,
+ * scroll degrades to "reachable" instead of "gone". The radius still clips
+ * the corners, so it looks the same.
+ */
 .kivun-cc-tablewrap {
 	overflow-x: auto;
-	border: 0;
-	border-radius: var(--cc-radius, 18px);
-	background: var(--cc-surface, #fff);
-	box-shadow: var(--cc-shadow, 0 1px 3px rgba(15,23,42,.05));
+	border: 2px solid var(--cc-divider);
+	border-radius: var(--cc-radius-sm);
+	background: var(--cc-surface);
 }
 .kivun-cc-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: .89rem; }
 .kivun-cc-table th,
@@ -1477,13 +1679,14 @@ td.kivun-app-contact a { display: block; }
 /* ── The library screen ──────────────────────────────────────────────────── */
 
 /* Heading, filter bar and table in one card, as the design has them. */
+/* A main card: white, radius 36, padding 32 — and flat. */
 .kivun-cc-console .kivun-cc-panel {
-	padding: 1.6rem 1.7rem 1.7rem;
+	padding: 32px;
 	background: var(--cc-surface);
 	border-radius: var(--cc-radius);
-	box-shadow: var(--cc-shadow);
 }
-.kivun-cc-console .kivun-cc-panel .kivun-cc-tablewrap { box-shadow: none; border-radius: 0; }
+/* The table keeps its own bordered container inside the card. */
+.kivun-cc-console .kivun-cc-panel .kivun-cc-tablewrap { box-shadow: none; }
 .kivun-cc-console .kivun-cc-panel .kivun-cc-table thead th { background: var(--cc-field); }
 .kivun-cc-console .kivun-cc-panel .kivun-cc-table thead th:first-child { border-start-start-radius: var(--cc-radius-sm); border-end-start-radius: var(--cc-radius-sm); }
 .kivun-cc-console .kivun-cc-panel .kivun-cc-table thead th:last-child { border-start-end-radius: var(--cc-radius-sm); border-end-end-radius: var(--cc-radius-sm); }
@@ -1643,7 +1846,24 @@ td.kivun-app-contact a { display: block; }
 }
 .kivun-cc-console .kivun-cc-rowactions .kivun-cc-act--edit:hover { background: #000; color: #fff; filter: none; }
 .kivun-cc-console .kivun-cc-rowactions .kivun-cc-act--edit svg { width: 14px; height: 14px; }
-.kivun-cc-icon-btn {
+/*
+ * One icon button, not two. `kivun-cc-iconbtn` came first — a bordered white
+ * square with its own hardcoded greys — and the redesign added this one, so
+ * the console was wearing both: the tracking-numbers and campaigns screens on
+ * the old shape, everything restyled since on this one.
+ *
+ * Unified here by matching the selector rather than by renaming the class,
+ * because that name is not only in the PHP: `frontend.js` builds the custom
+ * form's question rows with it, and a test asserts the archive button's exact
+ * class attribute. Renaming would have been three coordinated edits and a
+ * silent breakage if any one of them was missed; sharing a rule is none.
+ *
+ * The old block is deleted rather than left to lose: it sat LATER in this
+ * file, so at equal specificity it won on source order. That is exactly how
+ * the edit button came out brand-red once already.
+ */
+.kivun-cc-icon-btn,
+.kivun-cc-iconbtn {
 	display: inline-grid;
 	place-items: center;
 	width: 34px;
@@ -1656,10 +1876,14 @@ td.kivun-app-contact a { display: block; }
 	cursor: pointer;
 	transition: background .15s, color .15s;
 }
-.kivun-cc-icon-btn:hover { background: var(--cc-chip); color: var(--cc-chip-ink); }
-.kivun-cc-icon-btn svg { width: 15px; height: 15px; }
-.kivun-cc-icon-btn--danger { color: var(--kivun-error); }
-.kivun-cc-icon-btn--danger:hover { background: #fde7e7; color: var(--kivun-error); }
+.kivun-cc-icon-btn:hover,
+.kivun-cc-iconbtn:hover { background: var(--cc-chip); color: var(--cc-chip-ink); }
+.kivun-cc-icon-btn svg,
+.kivun-cc-iconbtn svg { width: 15px; height: 15px; }
+.kivun-cc-icon-btn--danger,
+.kivun-cc-iconbtn--danger { color: var(--kivun-error); }
+.kivun-cc-icon-btn--danger:hover,
+.kivun-cc-iconbtn--danger:hover { background: #fde7e7; color: var(--kivun-error); }
 
 .kivun-cc-rowactions { display: flex; flex-wrap: wrap; gap: .35rem; align-items: center; }
 .kivun-cc-rowactions form { display: inline; margin: 0; }
@@ -1845,11 +2069,11 @@ td.kivun-cc-rowactions > form > * {
 	gap: .75rem;
 	margin-top: 1rem;
 	padding: .8rem 1rem;
-	background: var(--cc-surface, #fff);
-	border-radius: var(--cc-radius, 18px);
-	box-shadow: var(--cc-shadow, none);
+	/* Pagination is centred on the canvas, not a raised card. */
+	background: transparent;
+	border-radius: 999px;
 }
-.kivun-cc-pager__state { font-size: .85rem; font-weight: 600; color: var(--kivun-muted); }
+.kivun-cc-pager__state { font-size: .85rem; font-weight: 600; color: var(--cc-text-2); }
 .kivun-cc-console .kivun-cc-pager .kivun-cc-btn {
 	padding: .5rem 1.1rem;
 	border-radius: 999px;
@@ -2064,17 +2288,21 @@ td.kivun-cc-rowactions > form > * {
 	color: #fff;
 }
 
-/* Cards */
+/* Cards: white, radius 36, padding 32 — flat. */
 .kivun-cc-wizard .kivun-cc-card {
 	border: 0;
 	border-radius: var(--cc-radius);
-	box-shadow: var(--cc-shadow);
-	padding: 1.5rem 1.6rem;
+	padding: 32px 28px;
 }
+/*
+ * The event section is the one card that has to stand out from its
+ * neighbours. It does it with a border rather than a glow: the handoff is
+ * explicit that there is no glow anywhere, so a 2px ring reads as the
+ * design's own "2px charcoal border" idiom in the brand colour.
+ */
 .kivun-cc-wizard .kivun-cc-card.kivun-cc-section[data-type="event"] {
-	border: 0;
+	border: 2px solid var(--cc-brand);
 	background: var(--cc-surface);
-	box-shadow: 0 0 0 2px var(--cc-brand), var(--cc-shadow);
 }
 
 /* Headings and labels */
@@ -2310,11 +2538,11 @@ td.kivun-cc-rowactions > form > * {
 	align-items: center;
 	gap: .7rem;
 	margin-top: 1.1rem;
-	padding: 1rem 1.2rem;
+	/* The bottom bar is a white pill, padding 12, flat. */
+	padding: 12px;
 	background: var(--cc-surface);
 	border: 0;
-	border-radius: var(--cc-radius);
-	box-shadow: var(--cc-shadow);
+	border-radius: 999px;
 }
 .kivun-cc-wizard .kivun-wiz-progress {
 	display: flex;
@@ -2385,24 +2613,16 @@ td.kivun-cc-rowactions > form > * {
 .kivun-cc-h3 .kivun-icon,
 .kivun-cc-section h3 .kivun-icon { margin-inline-end: .35rem; }
 
-/* Compact icon-only action button (row-level destructive actions). */
-.kivun-cc-iconbtn {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	width: 32px;
-	height: 32px;
-	padding: 0;
-	border: 1px solid var(--cc-line, #e5e7eb);
-	border-radius: 8px;
-	background: #fff;
-	color: var(--kivun-muted);
-	cursor: pointer;
-	transition: background .15s, color .15s, border-color .15s;
-}
-.kivun-cc-iconbtn:hover { background: #f3f4f6; color: var(--cc-ink, #232323); }
-.kivun-cc-iconbtn .kivun-icon { width: 17px; height: 17px; }
-.kivun-cc-iconbtn--danger:hover { background: #dc2626; border-color: #dc2626; color: #fff; }
+/*
+ * Compact icon-only action button — now drawn with `.kivun-cc-icon-btn`,
+ * further up this file. The separate block that used to live here is gone on
+ * purpose: being later in the file, it beat the redesign's rule on source
+ * order at equal specificity, which is how two icon-button shapes ended up
+ * in one console.
+ *
+ * `.kivun-icon` needs no sizing of its own here: `kivun_icon()` emits an
+ * `<svg>`, which the shared rule already sizes.
+ */
 
 /* Campaign (UTM) builder */
 .kivun-camp-builder { margin-bottom: 1.35rem; }
@@ -2585,6 +2805,144 @@ td.kivun-cc-rowactions > form > * {
 .kivun-rank__bar { height: 8px; border-radius: 999px; background: #f1f2f4; overflow: hidden; }
 .kivun-rank__fill { display: block; height: 100%; border-radius: 999px; background: var(--kivun-accent, #de2952); }
 .kivun-rank__count { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--kivun-muted, #6b7280); }
+
+/* ── The tracking-numbers screen ─────────────────────────────────────────────
+ *
+ * Everything below is scoped to `.kivun-cc-calls`. Not caution for its own
+ * sake: `kivun-cc-card` and `kivun-camp-summary` are shared with the jobs
+ * board, which renders inside this same console, so an unscoped rule here
+ * reaches a screen that has not been designed yet.
+ *
+ * No markup was rebuilt for this. The screen already carried the names —
+ * card, block, kpi, rank — so this is the console's language applied to what
+ * is there rather than a new structure, which is why every contract this
+ * screen owes its scripts is untouched by construction.
+ */
+
+/* The figures. Surface and shadow instead of a border, like every other card
+   in the redesign — a 1px line around five tiles reads as a grid of boxes,
+   and these are five separate readings. */
+.kivun-cc-console .kivun-cc-calls .kivun-kpi {
+	grid-template-columns: repeat(auto-fit, minmax(188px, 1fr));
+	gap: .85rem;
+	margin-bottom: 1.3rem;
+}
+/*
+ * Flat, like every card that is not the shell's stats row. These read as
+ * figures, so the temptation was to give them the stat card's shadow — but
+ * the handoff raises only that row, and borrowing it here is how the whole
+ * console ended up looking lifted off its canvas.
+ */
+.kivun-cc-console .kivun-cc-calls .kivun-kpi__tile {
+	gap: .3rem;
+	padding: 24px 28px;
+	border: 0;
+	background: var(--cc-surface);
+	border-radius: var(--cc-radius-sm);
+}
+.kivun-cc-console .kivun-cc-calls .kivun-kpi__label {
+	font-size: .76rem;
+	font-weight: 700;
+	letter-spacing: .01em;
+	color: var(--kivun-muted);
+}
+.kivun-cc-console .kivun-cc-calls .kivun-kpi__value { font-weight: 700; letter-spacing: -.02em; }
+
+/* The two rankings become cards of the same family, so the breakdown reads as
+   a panel of the screen rather than two lists floating on the canvas. */
+.kivun-cc-console .kivun-cc-calls .kivun-rank-pair {
+	gap: .85rem;
+	margin-bottom: 1.3rem;
+}
+/* Its surface comes from `.kivun-cc-card` below — the ranking carries both
+   classes, so only what is particular to a ranking is set here. */
+.kivun-cc-console .kivun-cc-calls .kivun-rank__title { font-size: .95rem; font-weight: 800; color: var(--cc-ink); }
+.kivun-cc-console .kivun-cc-calls .kivun-rank__bar { height: 9px; background: var(--cc-field); }
+.kivun-cc-console .kivun-cc-calls .kivun-rank__fill { background: var(--cc-brand); }
+
+/* Each number, the call log and the one-time setup are all the same kind of
+   thing on this screen: a block you open. They get the panel's surface. */
+.kivun-cc-console .kivun-cc-calls .kivun-cc-card {
+	padding: 32px;
+	border: 0;
+	background: var(--cc-surface);
+	border-radius: var(--cc-radius);
+}
+.kivun-cc-console .kivun-cc-calls .kivun-camp-block { margin-bottom: .85rem; }
+.kivun-cc-console .kivun-cc-calls .kivun-camp-title { font-size: 1.02rem; letter-spacing: -.01em; }
+
+/*
+ * The caret is a chevron rather than a filled triangle, and it turns on a
+ * centre that stays put: rotating a triangle built out of borders swings it
+ * around a corner, which looks like a wobble next to a heading.
+ */
+.kivun-cc-console .kivun-cc-calls .kivun-camp-caret {
+	margin-top: .15rem;
+	width: 22px;
+	height: 22px;
+	border: 0;
+	border-radius: 50%;
+	background: var(--cc-field);
+	position: relative;
+}
+.kivun-cc-console .kivun-cc-calls .kivun-camp-caret::before {
+	content: "";
+	position: absolute;
+	inset: 0;
+	margin: auto;
+	width: 6px;
+	height: 6px;
+	border-inline-start: 2px solid var(--kivun-muted);
+	border-block-start: 2px solid var(--kivun-muted);
+	/* Pointing down while shut: the block below it is what opens. */
+	transform: translateY(-1px) rotate(-135deg);
+	transition: transform .15s;
+}
+.kivun-cc-console .kivun-cc-calls .kivun-camp-block[open] > summary .kivun-camp-caret { transform: none; }
+.kivun-cc-console .kivun-cc-calls .kivun-camp-block[open] > summary .kivun-camp-caret::before {
+	transform: translateY(1px) rotate(45deg);
+}
+.kivun-cc-console .kivun-cc-calls .kivun-camp-block > summary:hover .kivun-camp-caret { background: var(--cc-chip); }
+.kivun-cc-console .kivun-cc-calls .kivun-camp-block > summary:hover .kivun-camp-caret::before { border-color: var(--cc-chip-ink); }
+
+/* The badge on a number says what it is carrying now, so it reads as the
+   status pills do elsewhere rather than as a louder green. */
+.kivun-cc-console .kivun-cc-calls .kivun-camp-total { background: #dcfce7; color: #14702f; }
+
+/*
+ * "+ add" is an action, so it looks like one. Scoped tighter than the rest:
+ * `kivun-camp-summary` is the jobs board's class too, and this is the one
+ * rule here that would otherwise reach it.
+ */
+.kivun-cc-console .kivun-cc-calls .kivun-camp-summary {
+	display: inline-flex;
+	align-items: center;
+	gap: .3rem;
+	padding: .45rem .85rem;
+	border-radius: 999px;
+	background: var(--cc-field);
+	color: var(--cc-field-ink);
+	font-size: .85rem;
+}
+.kivun-cc-console .kivun-cc-calls .kivun-camp-summary:hover {
+	background: var(--cc-chip);
+	color: var(--cc-chip-ink);
+	text-decoration: none;
+}
+
+/* The period editor, which opens in place under the row it belongs to. */
+.kivun-cc-console .kivun-cc-calls .kivun-cc-table .kivun-assignment-editrow > td {
+	padding: 1.1rem 1.15rem;
+	background: var(--cc-field);
+	border-top: 0;
+}
+
+/* The switchboard setup is read-only text to copy out, not a form to fill. */
+.kivun-cc-console .kivun-cc-calls .kivun-camp-saved {
+	background: var(--cc-field);
+	border-color: transparent;
+	font-size: .84rem;
+}
 
 /* These lay out with flex, which outranks the browser's own rule for [hidden]
    — without this, hiding one of them does nothing at all. */
