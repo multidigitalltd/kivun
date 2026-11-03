@@ -2583,6 +2583,68 @@ td.kivun-cc-rowactions > form > * {
 	background-size: 18px 18px;
 }
 
+/*
+ * The address field: the wrapper is the pill, and the input inside it is
+ * bare. Written this way round so the prefix sits inside the border
+ * rather than beside it.
+ */
+.kivun-cc-wizard .kivun-cc-slugfield {
+	position: relative;
+	display: flex;
+	align-items: center;
+	box-sizing: border-box;
+	width: 100%;
+	height: 60px;
+	padding: 0 64px 0 22px;
+	background: var(--cc-field);
+	border: 2px solid var(--cc-line);
+	border-radius: 999px;
+}
+.kivun-cc-wizard .kivun-cc-slugfield:focus-within { border-color: var(--cc-ink); }
+.kivun-cc-wizard .kivun-cc-slugfield__prefix {
+	flex: 0 0 auto;
+	color: var(--cc-text-3);
+	font-size: 17px;
+}
+.kivun-cc-wizard .kivun-cc-input.kivun-cc-slugfield__input {
+	flex: 1 1 auto;
+	min-width: 0;
+	height: auto;
+	min-height: 0;
+	padding: 0;
+	background: transparent;
+	border: 0;
+	border-radius: 0;
+	font-size: 17px;
+}
+.kivun-cc-wizard .kivun-cc-input.kivun-cc-slugfield__input:focus { background: transparent; }
+/*
+ * The mic lands inside this wrapper, because voice.js puts it after the
+ * field it attaches to. Positioned against the wrapper rather than
+ * floated, which is what the fields outside need.
+ *
+ * Scoped through .kivun-cc-console to outrank the floated rule below:
+ * at equal specificity that one wins on source order, and it did — the
+ * mic measured relative and 38.7 wide inside the flex row.
+ */
+.kivun-cc-console .kivun-cc-wizard .kivun-cc-slugfield .kivun-mic {
+	position: absolute;
+	/*
+	 * Physical right, not the logical start. This wrapper is dir="ltr",
+	 * so the inline start is the LEFT — where the prefix begins — and a
+	 * logical property put the mic straight on top of "kivun.org.il/".
+	 * The 64px of padding above is reserved on the right for exactly
+	 * this button.
+	 */
+	right: 8px;
+	top: 8px;
+	float: none;
+	flex: 0 0 auto;
+	margin: 0;
+	width: 44px;
+	height: 44px;
+}
+
 /* The dictation button. voice.js inserts it as the field's next sibling, so
    it cannot be positioned against the field itself — there is no shared
    container to position inside. Floating it and pulling it back up by the

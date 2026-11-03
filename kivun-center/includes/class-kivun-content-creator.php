@@ -3183,7 +3183,24 @@ class Kivun_Content_Creator {
 							<input type="text" id="kivun-ccf-title" name="title" class="kivun-cc-input kivun-cc-input--lg" value="<?php echo esc_attr( $v['title'] ); ?>" required>
 
 							<label class="kivun-cc-sub" for="kivun-ccf-slug"><?php esc_html_e( 'כתובת URL (Slug)', 'kivun' ); ?></label>
-							<input type="text" id="kivun-ccf-slug" name="slug" class="kivun-cc-input" dir="ltr" value="<?php echo esc_attr( $v['slug'] ); ?>" placeholder="my-content">
+							<?php
+							/*
+							 * The address is one field with its own prefix shown
+							 * inside it, so what is being typed reads as the tail
+							 * of a real URL rather than a bare word.
+							 *
+							 * The prefix is decoration: it is not an input, carries
+							 * no name, and nothing is submitted for it. The input
+							 * keeps its id, name, value and dir exactly as before,
+							 * and the dictation button still attaches to the field
+							 * and lands inside this wrapper, which is where it
+							 * should sit anyway.
+							 */
+							?>
+							<span class="kivun-cc-slugfield" dir="ltr">
+								<span class="kivun-cc-slugfield__prefix" aria-hidden="true">kivun.org.il/</span>
+								<input type="text" id="kivun-ccf-slug" name="slug" class="kivun-cc-input kivun-cc-slugfield__input" dir="ltr" value="<?php echo esc_attr( $v['slug'] ); ?>" placeholder="my-content">
+							</span>
 							<p class="kivun-cc-hint"><?php esc_html_e( 'ריק = נוצר אוטומטית מהכותרת.', 'kivun' ); ?></p>
 						</div>
 
