@@ -2497,7 +2497,7 @@ class Kivun_Content_Creator {
 		}
 		if ( $show_calls ) {
 			$console_tabs['calls'] = array(
-				'label' => __( 'מספרי מעקב', 'kivun' ),
+				'label' => __( 'טלפונים', 'kivun' ),
 				'icon'  => 'phone',
 				'count' => null,
 			);
@@ -4673,7 +4673,7 @@ class Kivun_Content_Creator {
 		?>
 		<div class="kivun-cc-front kivun-cc-calls">
 			<div class="kivun-cc-head">
-				<h2 class="kivun-cc-title"><?php esc_html_e( 'מספרי מעקב', 'kivun' ); ?></h2>
+				<h2 class="kivun-cc-title"><?php esc_html_e( 'טלפונים', 'kivun' ); ?></h2>
 				<p class="kivun-cc-lead">
 					<?php esc_html_e( 'לכל מספר וירטואלי אפשר לקבוע במה הוא מתפרסם ובאיזו תקופה. שיחה נרשמת לפי השיוך שהיה פעיל ביום שבו היא הגיעה — כך ששינוי השיוך היום לא משנה את הדוחות של אתמול.', 'kivun' ); ?>
 				</p>

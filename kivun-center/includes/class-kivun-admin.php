@@ -1666,8 +1666,8 @@ class Kivun_Admin {
 		}
 		if ( Kivun_Phones::can_manage() ) {
 			add_menu_page(
-				__( 'מספרי מעקב', 'kivun' ),
-				__( 'מספרי מעקב', 'kivun' ),
+				__( 'טלפונים', 'kivun' ),
+				__( 'טלפונים', 'kivun' ),
 				'read',
 				'kivun-calls',
 				array( 'Kivun_Content_Creator', 'admin_calls_page' ),
