@@ -3645,7 +3645,10 @@ td.kivun-cc-rowactions > form > * {
 	border: 1.5px solid var(--cc-line);
 	border-radius: 20px;
 }
-.kivun-cc-wizard .kivun-cf-row__bar { display: flex; flex-wrap: nowrap; align-items: center; gap: 10px; }
+/* One line while the wording has room; below 180px for it the move pill
+   goes to a line of its own, rather than squeezing the field to nothing on
+   a phone. */
+.kivun-cc-wizard .kivun-cf-row__bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .kivun-cc-wizard .kivun-cf-handle { display: flex; flex: none; color: var(--cc-text-3); cursor: grab; }
 .kivun-cc-wizard .kivun-cf-handle svg { width: 18px; height: 18px; }
 .kivun-cc-wizard .kivun-cf-num {
@@ -3662,7 +3665,7 @@ td.kivun-cc-rowactions > form > * {
 	font-size: 14px;
 	font-weight: 800;
 }
-.kivun-cc-wizard .kivun-cf-field { flex: 1 1 auto; min-width: 0; }
+.kivun-cc-wizard .kivun-cf-field { flex: 1 1 180px; min-width: 0; }
 .kivun-cc-wizard .kivun-form-builder .kivun-cc-input.kivun-cf-label {
 	height: 44px;
 	padding: 0 16px;
@@ -3853,6 +3856,17 @@ td.kivun-cc-rowactions > form > * {
 	border-radius: 50%;
 }
 .kivun-cc-wizard .kivun-cf-pv-check { border-radius: 5px; }
+@media (max-width: 600px) {
+	/* A phone: the panel, the cards and the question cards each keep less of
+	   the width to themselves, and the second line stops lining up under the
+	   wording — 66px of indent is a third of the row there. */
+	.kivun-cc-wizard .kivun-cf-wrap { padding: 12px; }
+	.kivun-cc-wizard .kivun-cf-card,
+	.kivun-cc-wizard .kivun-cf-preview { padding: 18px 14px; }
+	.kivun-cc-wizard .kivun-cf-row { padding: 12px; }
+	.kivun-cc-wizard .kivun-cf-row__meta,
+	.kivun-cc-wizard .kivun-cf-row__options { padding-right: 0; }
+}
 .kivun-cc-wizard .kivun-cf-pv-send {
 	display: flex;
 	align-self: stretch;
