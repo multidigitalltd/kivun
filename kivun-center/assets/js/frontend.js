@@ -908,14 +908,18 @@
 	// in a narrower panel gets the compact layout even on a wide screen.
 	// Without the script it stays compact, which fits any width.
 	var KIVUN_LIB_WIDE = 1190;
+	var KIVUN_LIB_COMPACT = 740;
 
 	function kivunLibMeasure(list) {
 		var w = list.getBoundingClientRect().width;
 		// A hidden pane measures 0; it is measured again when it is shown.
 		if (w > 0) {
 			list.classList.toggle('is-wide', w >= KIVUN_LIB_WIDE);
-			// Under the compact layout's own width: a card per row.
-			list.classList.toggle('is-narrow', w < 640);
+			// Under the compact layout's own width, a card per row. 740 is
+			// what the four columns need: 170 + 52 + 150 + 280, three 14px
+			// gaps, 20px of padding each side and the 2px border. Below it
+			// the actions ran past the list's clipped edge.
+			list.classList.toggle('is-narrow', w < KIVUN_LIB_COMPACT);
 		}
 	}
 

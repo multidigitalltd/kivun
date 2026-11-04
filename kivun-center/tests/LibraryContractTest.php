@@ -106,6 +106,10 @@ final class LibraryContractTest extends TestCase {
 	public function test_the_layout_follows_the_list_width(): void {
 		$js = $this->js();
 		$this->assertStringContainsString( 'var KIVUN_LIB_WIDE = 1190;', $js );
+		// The compact grid's own minimum: 170 + 52 + 150 + 280, three 14px
+		// gaps, 40 of padding and 4 of border is 738. Below it the actions
+		// were clipped by the list's edge, so the cards take over there.
+		$this->assertStringContainsString( 'var KIVUN_LIB_COMPACT = 740;', $js, 'the cards start below the width the compact columns need, so the actions are clipped in between' );
 		$this->assertStringContainsString( 'new ResizeObserver(', $js );
 
 		$css = (string) file_get_contents( KIVUN_DIR . 'assets/css/frontend.css' );

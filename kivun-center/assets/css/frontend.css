@@ -2122,9 +2122,10 @@ td.kivun-app-contact a { display: block; }
 }
 
 /*
- * A phone. The handoff stops at its compact layout, which needs about 700px;
- * below 640 a row is a small card instead — title, then the numbers, then
- * the actions — rather than columns clipped by the card's rounded edge.
+ * A narrow list. The handoff stops at its compact layout, which needs 740px
+ * of list; below that a row is a small card instead — title, then the
+ * numbers, then the actions — rather than columns clipped by the card's
+ * rounded edge.
  */
 .kivun-lib.is-narrow .kivun-lib__head { display: none; }
 .kivun-lib.is-narrow .kivun-lib__row { grid-template-columns: minmax(0, 1fr); gap: 10px; }
