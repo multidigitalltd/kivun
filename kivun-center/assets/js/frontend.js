@@ -3097,6 +3097,7 @@
 	function kivunCfTouch(form, dirty) {
 		kivunCfRenumber(form);
 		kivunCfPreview(form);
+		kivunCfSync(form);
 		if (dirty) {
 			var flag = form.querySelector('.kivun-cf-dirty');
 			if (flag) { flag.hidden = false; }
@@ -3110,32 +3111,57 @@
 		(fields || []).forEach(function (field) { kivunCfRow(form, field); });
 		kivunCfRenumber(form);
 		kivunCfPreview(form);
+		kivunCfSync(form);
 		var flag = form.querySelector('.kivun-cf-dirty');
 		if (flag) { flag.hidden = true; }
 	}
 
-	// Seeded from the definition already saved, so opening the editor shows
-	// the form as it stands rather than an empty one.
-	document.addEventListener('click', function (e) {
-		var open = e.target.closest('.kivun-edit-form');
-		if (!open) { return; }
-		e.preventDefault();
+	// The builder lives in the wizard now, inside the content's own form, so
+	// it has no save of its own: the questions travel as JSON in a hidden
+	// field and are stored with the rest of the content. Kept in step on
+	// every change, and once more just before the wizard submits.
+	function kivunCfSync(form) {
+		var out = form.querySelector('.kivun-cf-out');
+		if (out) { out.value = JSON.stringify(kivunCfRead(form)); }
+	}
 
-		var panel = document.querySelector('[data-form-edit="' + open.dataset.id + '"]');
-		if (!panel) { return; }
-
-		panel.hidden = !panel.hidden;
-		if (panel.hidden) { return; }
-
-		var form = panel.querySelector('.kivun-form-builder');
-		var seed = form && form.querySelector('.kivun-cf-seed');
-		if (!form || !seed || form.dataset.ready === '1') { return; }
-
+	// Seeded from the definition already saved, so editing a page shows its
+	// form as it stands rather than an empty one.
+	document.querySelectorAll('.kivun-form-builder').forEach(function (form) {
+		var seed = form.querySelector('.kivun-cf-seed');
 		var fields = [];
-		try { fields = JSON.parse(seed.dataset.fields || '[]'); } catch (err) { fields = []; }
+		try { fields = JSON.parse((seed && seed.dataset.fields) || '[]'); } catch (err) { fields = []; }
 		kivunCfFill(form, fields);
 		form.dataset.ready = '1';
 	});
+
+	// A question with no wording is dropped by the save without a word, so
+	// the wizard will not submit one: it goes to the step the builder is on
+	// and says which. Only while the page's own form is switched on — off,
+	// nothing of the builder is stored.
+	document.addEventListener('submit', function (e) {
+		var wizard = e.target.closest && e.target.closest('.kivun-cc-wizard');
+		if (!wizard) { return; }
+		var form = wizard.querySelector('.kivun-form-builder');
+		if (!form) { return; }
+		kivunCfSync(form);
+
+		var sw = wizard.querySelector('.kivun-cf-switch');
+		var section = form.closest('.kivun-cc-section');
+		if (!sw || !sw.checked || (section && section.hidden)) { return; }
+
+		var blank = kivunCfRead(form).filter(function (f) { return !f.label; }).length;
+		var err = form.querySelector('.kivun-cf-error');
+		if (blank) {
+			e.preventDefault();
+			e.stopImmediatePropagation();
+			var step = section ? Number(section.dataset.step) : 3;
+			kivunWizShow(wizard, step);
+			showError(err, 'יש שאלה בלי נוסח. מלאו אותה או מחקו אותה.');
+			return;
+		}
+		if (err) { err.style.display = 'none'; }
+	}, true);
 
 	document.addEventListener('click', function (e) {
 		var form = e.target.closest('.kivun-form-builder');
@@ -3247,97 +3273,9 @@
 		if (!form) { return; }
 		if (!e.target.closest('.kivun-cf-label, .kivun-cf-options')) { return; }
 		kivunCfPreview(form);
+		kivunCfSync(form);
 		var flag = form.querySelector('.kivun-cf-dirty');
 		if (flag) { flag.hidden = false; }
-	});
-
-	document.addEventListener('submit', function (e) {
-		var form = e.target.closest('.kivun-form-builder');
-		if (!form) { return; }
-		e.preventDefault();
-
-		var err = form.querySelector('.kivun-cf-error');
-		var status = form.querySelector('.kivun-cf-status');
-		var fields = kivunCfRead(form);
-
-		// Caught here as well as on the server, because the server drops such
-		// a question silently and somebody would be left wondering which one
-		// went.
-		var blank = fields.filter(function (f) { return !f.label; }).length;
-		if (blank) {
-			showError(err, 'יש שאלה בלי נוסח. מלאו אותה או מחקו אותה.');
-			return;
-		}
-		if (err) { err.style.display = 'none'; }
-
-		var builtins = [];
-		Array.prototype.forEach.call(form.querySelectorAll('.kivun-cf-builtin-box'), function (box) {
-			if (box.checked) { builtins.push(box.value); }
-		});
-
-		var body = new URLSearchParams();
-		body.set('action', 'kivun_save_custom_form');
-		body.set('nonce', kivun.nonce);
-		body.set('post_id', form.dataset.id);
-		body.set('fields', JSON.stringify(fields));
-		builtins.forEach(function (b) { body.append('builtins[]', b); });
-
-		if (status) { status.textContent = 'שומר…'; }
-
-		fetch(kivun.ajax_url, { method: 'POST', credentials: 'same-origin', body: body })
-			.then(function (r) { return r.json(); })
-			.then(function (res) {
-				if (!res || !res.success) {
-					if (status) { status.textContent = ''; }
-					showError(err, (res && res.data && res.data.message) || 'השמירה נכשלה.');
-					return;
-				}
-				// Redrawn from what the server kept, so a question it dropped
-				// stops looking saved.
-				kivunCfFill(form, (res.data && res.data.fields) || []);
-				if (status) {
-					status.textContent = (res.data && res.data.message) || 'נשמר.';
-					setTimeout(function () { status.textContent = ''; }, 2500);
-				}
-			})
-			.catch(function () {
-				if (status) { status.textContent = ''; }
-				showError(err, 'אין חיבור. נסו שוב.');
-			});
-	});
-
-	document.addEventListener('click', function (e) {
-		var dup = e.target.closest('.kivun-duplicate-form');
-		if (!dup) { return; }
-		e.preventDefault();
-
-		var row = dup.closest('tr');
-		var status = row && row.querySelector('.kivun-form-status');
-		dup.disabled = true;
-		if (status) { status.textContent = 'משכפל…'; }
-
-		var body = new URLSearchParams();
-		body.set('action', 'kivun_duplicate_landing');
-		body.set('nonce', kivun.nonce);
-		body.set('post_id', dup.dataset.id);
-
-		fetch(kivun.ajax_url, { method: 'POST', credentials: 'same-origin', body: body })
-			.then(function (r) { return r.json(); })
-			.then(function (res) {
-				if (!res || !res.success) {
-					dup.disabled = false;
-					if (status) { status.textContent = (res && res.data && res.data.message) || 'השכפול נכשל.'; }
-					return;
-				}
-				// The copy belongs in the list, and the list is built on the
-				// server — so the page is reloaded rather than a row invented
-				// here that might not match what was actually created.
-				window.location.reload();
-			})
-			.catch(function () {
-				dup.disabled = false;
-				if (status) { status.textContent = 'אין חיבור.'; }
-			});
 	});
 
 }());

@@ -375,33 +375,12 @@ final class CustomFormWiringTest extends TestCase {
 	}
 
 	/**
-	 * Duplication goes through the console's own, not a second copy of it.
+	 * The one duplication — the library's — knows what a copy must not inherit.
 	 *
-	 * The handler first grew a copy loop of its own, and review found three
-	 * things missing from it one at a time: the content group, which would
-	 * have collapsed the two pages into one library row; the centre's record
-	 * id, which would have made the next sync overwrite the original with
-	 * the copy; and the archive mark, which would have born the new draft
-	 * inside the shut section nobody is looking in. The fourth would have
-	 * been found the same way.
-	 *
-	 * So there is one duplication, and it is the one that already knew.
-	 *
-	 * @return void
-	 */
-	public function test_duplication_reuses_the_console_s_own(): void {
-		$src = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-content-creator.php' );
-
-		$at   = (int) strpos( $src, 'public static function ajax_duplicate_landing' );
-		$this->assertNotFalse( $at, 'the handler moved' );
-		$body = substr( $src, $at, 2200 );
-
-		$this->assertStringContainsString( 'self::clone_post( $post_id, wp_generate_uuid4() )', $body );
-		$this->assertStringNotContainsString( 'add_post_meta(', $body, 'the handler is copying meta by hand again' );
-	}
-
-	/**
-	 * And that one knows everything a copy must not inherit.
+	 * The custom pages' tab once had a copy loop of its own, and review found
+	 * three things missing from it one at a time. That tab is gone; copying a
+	 * page, its form included, is the library's duplicate, which copies every
+	 * meta key but these.
 	 *
 	 * @return void
 	 */
@@ -424,31 +403,136 @@ final class CustomFormWiringTest extends TestCase {
 	}
 
 	/**
-	 * The tab is there, and is not offered to the roles that cannot publish.
+	 * The form is built in the wizard, and the old tab is gone.
+	 *
+	 * It is part of creating the content now: a type section for the landing
+	 * page, saved by the same post as the title and the text. A bookmark to
+	 * the old tab lands on the library, where the pages are listed.
 	 *
 	 * @return void
 	 */
-	public function test_the_tab_is_for_whoever_publishes_content(): void {
+	public function test_the_form_is_built_in_the_wizard(): void {
 		$src = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-content-creator.php' );
 
-		$this->assertStringContainsString( "'forms'   => array(", $src );
-		$this->assertStringContainsString( "( 'forms' === \$tab && ( \$leads_only || \$agency ) ) ||", $src, 'an agency can reach the builder by URL' );
+		$this->assertStringNotContainsString( 'data-panel="forms"', $src, 'the separate tab is back' );
+		$this->assertStringNotContainsString( "'forms'   => array(", $src, 'the separate tab is back in the bar' );
+		$this->assertStringContainsString(
+			"if ( 'forms' === \$tab && ! \$leads_only && ! \$agency ) {\n\t\t\t\$tab = 'library';",
+			$src,
+			'a bookmark to the old tab no longer lands on the library'
+		);
 
-		$at = (int) strpos( $src, 'data-panel="forms"' );
-		$this->assertNotFalse( $at, 'the panel is missing' );
-		$before = substr( $src, max( 0, $at - 300 ), min( 300, $at ) );
-		$this->assertStringContainsString( 'if ( ! $leads_only && ! $agency ) :', $before );
+		$at = strpos( $src, 'kivun-cc-formcard' );
+		$this->assertNotFalse( $at, 'the wizard has no form card' );
+		$this->assertStringContainsString( 'data-type="landing"', substr( $src, (int) $at, 200 ), 'the form card is not tied to the landing page type' );
+		$this->assertStringContainsString( 'self::custom_form_builder( $kivun_landing_id );', $src );
+
+		// Inside the wizard's form, so a div: a nested form is never submitted.
+		$at   = (int) strpos( $src, 'private static function custom_form_builder' );
+		$body = substr( $src, $at, 1600 );
+		$this->assertStringContainsString( '<div class="kivun-form-builder"', $body );
+		$this->assertStringContainsString( 'name="custom_form_fields"', $body );
+		$this->assertStringContainsString( 'name="custom_form_builtins[]"', $body );
+		$this->assertStringNotContainsString( '<form', $body );
+
+		// And the save stores it with the landing page it belongs to.
+		$this->assertStringContainsString( 'self::save_landing_form( (int) $landing_id );', $src );
 	}
 
 	/**
-	 * And the built file carries the builder.
+	 * The save: on stores the form, off goes back to the fixed one, absent
+	 * leaves it alone.
+	 *
+	 * @return void
+	 */
+	public function test_the_wizard_saves_the_page_s_form(): void {
+		$save = new ReflectionMethod( Kivun_Content_Creator::class, 'save_landing_form' );
+		$save->setAccessible( true );
+
+		$_POST = array(
+			'custom_form_present'  => '1',
+			'custom_form_on'       => '1',
+			'custom_form_fields'   => wp_slash(
+				wp_json_encode(
+					array(
+						array(
+							'label'    => 'באיזו שכבת גיל?',
+							'type'     => 'text',
+							'required' => true,
+							'options'  => '',
+						),
+					)
+				)
+			),
+			'custom_form_builtins' => array( 'email', 'city', 'not-a-field' ),
+		);
+		$save->invoke( null, 21 );
+
+		$this->assertTrue( Kivun_Custom_Forms::enabled( 21 ) );
+		$fields = Kivun_Custom_Forms::fields( 21 );
+		$this->assertCount( 1, $fields );
+		$this->assertSame( 'באיזו שכבת גיל?', $fields[0]['label'], 'the Hebrew label did not survive the trip' );
+		$this->assertTrue( $fields[0]['required'] );
+		$this->assertSame( array( 'email', 'city' ), Kivun_Custom_Forms::builtins( 21 ) );
+
+		// A save from a form without the builder — wp-admin's — changes nothing.
+		$_POST = array( 'custom_form_fields' => '[]' );
+		$save->invoke( null, 21 );
+		$this->assertTrue( Kivun_Custom_Forms::enabled( 21 ), 'a save without the builder switched the form off' );
+		$this->assertCount( 1, Kivun_Custom_Forms::fields( 21 ) );
+
+		// Switched off: the fixed form again, the questions kept for later.
+		$_POST = array( 'custom_form_present' => '1' );
+		$save->invoke( null, 21 );
+		$this->assertFalse( Kivun_Custom_Forms::enabled( 21 ) );
+		$this->assertCount( 1, Kivun_Custom_Forms::fields( 21 ), 'switching off threw the questions away' );
+
+		$_POST = array();
+	}
+
+	/**
+	 * A landing page made outside the console is adopted into the library.
+	 *
+	 * The old tab listed every landing page; the library lists groups. A page
+	 * from WordPress's own editor has no group, and without this it would
+	 * keep a custom form nobody could reach to change or switch off.
+	 *
+	 * @return void
+	 */
+	public function test_an_ungrouped_landing_page_is_adopted(): void {
+		Kivun_Test_State::$posts[31] = array( 'post_type' => 'kivun_workshop' );
+		Kivun_Test_State::$posts[32] = array( 'post_type' => 'kivun_workshop' );
+		Kivun_Test_State::$posts[33] = array( 'post_type' => 'kivun_course' );
+		update_post_meta( 32, Kivun_Content_Creator::GROUP_META, 'existing-group' );
+
+		$adopt = new ReflectionMethod( Kivun_Content_Creator::class, 'adopt_ungrouped_landings' );
+		$adopt->setAccessible( true );
+		$adopt->invoke( null );
+
+		$given = (string) get_post_meta( 31, Kivun_Content_Creator::GROUP_META, true );
+		$this->assertMatchesRegularExpression( '/^[0-9a-f-]{36}$/', $given, 'the ungrouped landing page was not given a group' );
+		$this->assertSame( 'existing-group', get_post_meta( 32, Kivun_Content_Creator::GROUP_META, true ), 'a page that had a group lost it' );
+		$this->assertSame( '', get_post_meta( 33, Kivun_Content_Creator::GROUP_META, true ), 'something other than a landing page was adopted' );
+
+		// Once: a second pass leaves the group it gave alone.
+		$adopt->invoke( null );
+		$this->assertSame( $given, get_post_meta( 31, Kivun_Content_Creator::GROUP_META, true ) );
+
+		// And the library asks for it before it lists anything.
+		$src = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-content-creator.php' );
+		$at  = (int) strpos( $src, 'private static function front_library(' );
+		$this->assertStringContainsString( 'self::adopt_ungrouped_landings();', substr( $src, $at, 200 ) );
+	}
+
+	/**
+	 * And the built file carries the builder's link to the wizard.
 	 *
 	 * @return void
 	 */
 	public function test_the_built_file_carries_the_builder(): void {
 		$min = (string) file_get_contents( KIVUN_DIR . 'assets/js/frontend.min.js' );
 
-		$this->assertStringContainsString( 'kivun_save_custom_form', $min );
-		$this->assertStringContainsString( 'kivun_duplicate_landing', $min );
+		$this->assertStringContainsString( 'kivun-cf-out', $min, 'the built script no longer writes the questions into the form' );
+		$this->assertStringContainsString( 'kivun-cf-switch', $min );
 	}
 }

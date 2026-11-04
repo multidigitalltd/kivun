@@ -582,6 +582,19 @@ function update_post_meta( int $post_id, string $key, $value ): bool {
 }
 
 /**
+ * Remove post meta.
+ *
+ * @param int    $post_id The post.
+ * @param string $key     The meta key.
+ * @return bool Whether there was anything to remove, as WordPress reports.
+ */
+function delete_post_meta( int $post_id, string $key ): bool {
+	$had = isset( Kivun_Test_State::$meta[ $post_id ][ $key ] );
+	unset( Kivun_Test_State::$meta[ $post_id ][ $key ] );
+	return $had;
+}
+
+/**
  * Terms attached to a post in one taxonomy.
  *
  * Objects with a name, which is all the code under test reads: the two
@@ -800,6 +813,18 @@ function get_posts( array $args = array() ): array {
 	}
 
 	return $found;
+}
+
+/**
+ * A fresh UUID, as core's.
+ *
+ * @return string
+ */
+function wp_generate_uuid4(): string {
+	$b    = random_bytes( 16 );
+	$b[6] = chr( ord( $b[6] ) & 0x0f | 0x40 );
+	$b[8] = chr( ord( $b[8] ) & 0x3f | 0x80 );
+	return vsprintf( '%s%s-%s-%s-%s-%s%s%s', str_split( bin2hex( $b ), 4 ) );
 }
 
 /**
