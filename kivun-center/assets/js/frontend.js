@@ -1424,6 +1424,68 @@
 		}
 	});
 
+	// ── The call log: "טען עוד" adds the next page under the rows shown ─────────
+	//
+	// Paging reloaded the whole console and the log came back closed, so each
+	// page cost a click to go and another to open it again. The button is still
+	// a plain link to the next page — that is what it does with no script, or
+	// if this fetch fails — but here it fetches that page and takes its rows.
+	function kivunCallsCount(log) {
+		var state = log.querySelector('.kivun-calls-more__state');
+		var rows = log.querySelectorAll('.kivun-calls-table tbody tr').length;
+		if (!state) { return; }
+		var total = parseInt(state.dataset.total, 10) || rows;
+		state.textContent = 'מוצגות ' + rows.toLocaleString('he-IL') + ' מתוך ' + total.toLocaleString('he-IL') + ' שיחות';
+	}
+
+	document.addEventListener('click', function (e) {
+		var btn = e.target.closest('.kivun-calls-more__btn');
+		if (!btn) { return; }
+		var log = btn.closest('.kivun-calls-log');
+		var body = log ? log.querySelector('.kivun-calls-table tbody') : null;
+		if (!body || !window.fetch || !window.DOMParser) { return; }
+		e.preventDefault();
+		if (btn.getAttribute('aria-busy') === 'true') { return; }
+
+		var href = btn.href;
+		var label = btn.textContent;
+		btn.setAttribute('aria-busy', 'true');
+		btn.textContent = 'טוען…';
+
+		fetch(href, { credentials: 'same-origin' }).then(function (r) {
+			if (!r.ok) { throw new Error(String(r.status)); }
+			return r.text();
+		}).then(function (html) {
+			var doc = new DOMParser().parseFromString(html, 'text/html');
+			var rows = doc.querySelectorAll('.kivun-calls-table tbody tr');
+			if (!rows.length) { throw new Error('no rows'); }
+
+			Array.prototype.forEach.call(rows, function (row) {
+				body.appendChild(document.importNode(row, true));
+			});
+
+			// The page after this one, if there is one.
+			var next = doc.querySelector('.kivun-calls-more__btn');
+			if (next) {
+				btn.href = next.getAttribute('href');
+				btn.textContent = label;
+				btn.removeAttribute('aria-busy');
+			} else {
+				btn.parentNode.removeChild(btn);
+			}
+			kivunCallsCount(log);
+
+			// The new rows need their column names for the phone layout,
+			// which the table labeller only writes once.
+			var table = body.closest('table');
+			if (table) { delete table.dataset.labelled; }
+			document.dispatchEvent(new CustomEvent('kivun:tables-shown'));
+		}).catch(function () {
+			// Whatever went wrong, the link still goes to that page.
+			window.location.assign(href);
+		});
+	});
+
 	// ── Tracked phone numbers ────────────────────────────────────────────────────
 	function kivunPhonePost(form, body, err) {
 		var btn = form.querySelector('button[type="submit"]');

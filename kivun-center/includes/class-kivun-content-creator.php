@@ -4903,7 +4903,12 @@ class Kivun_Content_Creator {
 			// a campaign's numbers needs to be able to look at what they are
 			// counting rather than take the tile's word for it.
 			?>
-			<details class="kivun-cc-card kivun-camp-block" <?php echo $filtering ? 'open' : ''; ?>>
+			<?php
+			// Open whenever somebody is in the middle of reading it: filtering,
+			// or past its first page — arriving on page 2 to a closed log is
+			// how "הבא" used to read as "close".
+			?>
+			<details class="kivun-cc-card kivun-camp-block kivun-calls-log" <?php echo ( $filtering || $call_paged > 1 ) ? 'open' : ''; ?>>
 				<summary class="kivun-camp-head">
 					<div class="kivun-camp-heading">
 						<span class="kivun-camp-caret" aria-hidden="true"></span>
@@ -4930,7 +4935,7 @@ class Kivun_Content_Creator {
 					</div>
 				<?php else : ?>
 					<div class="kivun-cc-tablewrap">
-						<table class="kivun-cc-table">
+						<table class="kivun-cc-table kivun-calls-table">
 							<thead>
 								<tr>
 									<th scope="col"><?php esc_html_e( 'מועד', 'kivun' ); ?></th>
@@ -4976,25 +4981,47 @@ class Kivun_Content_Creator {
 						</table>
 					</div>
 
+					<?php
+					/*
+					 * "טען עוד" rather than pages. Moving to another page reloaded
+					 * the whole console and closed this log on the way, so every
+					 * page was a click to go and another to open it again. The
+					 * script fetches the next page and adds its rows here; with no
+					 * script the button is still a link to that page, which now
+					 * arrives open.
+					 */
+					$call_from = ( $call_paged - 1 ) * $call_pp + 1;
+					$call_to   = $call_from + count( $call_log['rows'] ) - 1;
+					?>
 					<?php if ( $call_pages > 1 ) : ?>
-						<div class="kivun-cc-pager">
+						<div class="kivun-cc-pager kivun-calls-more">
 							<?php if ( $call_paged > 1 ) : ?>
-								<a class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost" href="<?php echo esc_url( $call_page_link( $call_paged - 1 ) ); ?>"><?php esc_html_e( 'הקודם', 'kivun' ); ?></a>
+								<a class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost" href="<?php echo esc_url( $call_page_link( 1 ) ); ?>"><?php esc_html_e( 'לתחילת היומן', 'kivun' ); ?></a>
 							<?php endif; ?>
-							<span class="kivun-cc-source">
+							<span class="kivun-cc-pager__state kivun-calls-more__state" data-total="<?php echo esc_attr( (string) $call_log['found'] ); ?>">
 								<?php
+								// The first page counts from the top; a later one,
+								// reached by its link, says which stretch it is.
 								echo esc_html(
-									sprintf(
-										/* translators: 1: current page, 2: total pages. */
-										__( 'עמוד %1$s מתוך %2$s', 'kivun' ),
-										number_format_i18n( $call_paged ),
-										number_format_i18n( $call_pages )
-									)
+									1 === $call_paged
+										? sprintf(
+											/* translators: 1: how many calls are listed so far, 2: how many there are. */
+											__( 'מוצגות %1$s מתוך %2$s שיחות', 'kivun' ),
+											number_format_i18n( $call_to ),
+											number_format_i18n( $call_log['found'] )
+										)
+										: sprintf(
+											/* translators: 1: first call listed, 2: last call listed, 3: how many there are. */
+											__( 'שיחות %1$s–%2$s מתוך %3$s', 'kivun' ),
+											number_format_i18n( $call_from ),
+											number_format_i18n( $call_to ),
+											number_format_i18n( $call_log['found'] )
+										)
 								);
 								?>
 							</span>
 							<?php if ( $call_paged < $call_pages ) : ?>
-								<a class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost" href="<?php echo esc_url( $call_page_link( $call_paged + 1 ) ); ?>"><?php esc_html_e( 'הבא', 'kivun' ); ?></a>
+								<a class="kivun-cc-btn kivun-cc-btn--sm kivun-calls-more__btn" href="<?php echo esc_url( $call_page_link( $call_paged + 1 ) ); ?>"><?php esc_html_e( 'טען עוד', 'kivun' ); ?></a>
 							<?php endif; ?>
 						</div>
 					<?php endif; ?>
