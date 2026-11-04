@@ -7339,3 +7339,509 @@ body.kivun-ty-open { overflow: hidden; }
 		grid-template-columns: auto minmax(0, 1fr);
 	}
 }
+
+/* ── קמפיינים, מספרי מעקב, לוח משרות — in the leads' language ────────────────
+ *
+ * The three list screens had no handoff of their own, so they take the one
+ * "לידים והרשמות" was built to (design_handoff_leads): the tab is one white
+ * card, radius 36, padding 32; what sits inside it is flat and bordered with
+ * the 2px divider at radius 28; fields are 44–46 pills on white; tables have
+ * the field-grey header at 14/700 and 14/20 rows; actions are 38 discs;
+ * statuses are filled pills. Scoped to `.kivun-tab-panel--list`, which only
+ * these three panels carry.
+ * ───────────────────────────────────────────────────────────────────────── */
+
+/* ── The card ── */
+.kivun-cc-console > .kivun-tab-panel--list.is-active {
+	padding: 32px;
+	background: var(--cc-surface);
+	border: 0;
+	border-radius: var(--cc-radius);
+	color: var(--cc-ink);
+}
+.kivun-cc-console .kivun-tab-panel--list > .kivun-cc-front,
+.kivun-cc-console .kivun-tab-panel--list .kivun-employer-dashboard {
+	display: flex;
+	flex-direction: column;
+	gap: 22px;
+	max-width: none;
+}
+.kivun-cc-console .kivun-tab-panel--list > .kivun-cc-front + .kivun-employer-dashboard { margin-top: 22px; }
+.kivun-cc-console .kivun-tab-panel--list .kivun-cc-front > *,
+.kivun-cc-console .kivun-tab-panel--list .kivun-employer-dashboard > * { margin-top: 0; margin-bottom: 0; }
+.kivun-cc-console .kivun-tab-panel--list .kivun-cc-head { display: flex; flex-direction: column; gap: 6px; max-width: 760px; margin: 0; }
+.kivun-cc-console .kivun-tab-panel--list .kivun-cc-title {
+	margin: 0;
+	font-family: var(--cc-font-display);
+	font-size: 32px;
+	font-weight: 800;
+	line-height: 1.1;
+	color: var(--cc-ink);
+}
+.kivun-cc-console .kivun-tab-panel--list .kivun-cc-lead { margin: 0; font-size: 17px; line-height: 1.5; color: var(--cc-text-2); }
+.kivun-cc-console .kivun-tab-panel--list .kivun-cc-lead a { color: var(--cc-brand); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+.kivun-cc-console .kivun-tab-panel--list :is(.kivun-camp-title, .kivun-dashboard-header h2, .kivun-rank__title, h3) {
+	margin: 0;
+	font-family: var(--cc-font-display);
+	font-weight: 800;
+	color: var(--cc-ink);
+}
+.kivun-cc-console .kivun-tab-panel--list .kivun-dashboard-header h2 { font-size: 24px; line-height: 1.2; }
+.kivun-cc-console .kivun-tab-panel--list :is(.kivun-camp-title, .kivun-rank__title) { font-size: 18px; line-height: 1.3; }
+.kivun-cc-console .kivun-tab-panel--list :is(.kivun-new-job-form, .kivun-add-employer-form, .kivun-cc-card) > h3 { font-size: 18px; margin-bottom: 14px; }
+.kivun-cc-console .kivun-tab-panel--list :is(.kivun-field-hint, .kivun-hint, .kivun-cc-hint) { font-size: 13px; line-height: 1.5; color: var(--cc-text-2); }
+.kivun-cc-console .kivun-tab-panel--list .kivun-cc-sub { font-size: 14px; font-weight: 700; color: var(--cc-text-2); }
+
+/* ── What sits inside the card: flat, the 2px divider, radius 28 ── */
+.kivun-cc-console .kivun-tab-panel--list .kivun-cc-card,
+.kivun-cc-console .kivun-tab-panel--list :is(.kivun-new-job-form, .kivun-add-employer-form, .kivun-update-employer-form) {
+	margin: 0;
+	padding: 20px 24px;
+	border: 2px solid var(--cc-divider);
+	border-radius: var(--cc-radius-sm);
+	background: var(--cc-surface);
+	box-shadow: none;
+}
+/* A panel that opens to add something: the field grey of the filters. */
+.kivun-cc-console .kivun-tab-panel--list :is(.kivun-camp-new, .kivun-phone-setup) {
+	border: 0;
+	background: var(--cc-field);
+}
+.kivun-cc-console .kivun-tab-panel--list .kivun-camp-summary {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	margin: 0;
+	padding: 0;
+	color: var(--cc-brand);
+	font-size: 15px;
+	font-weight: 800;
+	text-decoration: none;
+	cursor: pointer;
+}
+.kivun-cc-console .kivun-tab-panel--list .kivun-camp-summary:hover { color: var(--cc-brand-hover); text-decoration: none; }
+.kivun-cc-console .kivun-tab-panel--list details[open] > .kivun-camp-summary { margin-bottom: 16px; }
+/* A campaign's or a number's own head: its name, and its counts and marks. */
+.kivun-cc-console .kivun-tab-panel--list .kivun-camp-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; color: var(--cc-ink); }
+.kivun-cc-console .kivun-tab-panel--list .kivun-camp-metrics { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.kivun-cc-console .kivun-tab-panel--list .kivun-camp-block[open] > .kivun-camp-head { margin-bottom: 16px; }
+.kivun-cc-console .kivun-tab-panel--list .kivun-camp-block > :not(summary) + :not(summary) { margin-top: 16px; }
+
+/* The numbers at the top of the tracking screen, on the field grey. */
+.kivun-cc-console .kivun-tab-panel--list .kivun-kpi { gap: 12px; }
+.kivun-cc-console .kivun-tab-panel--list .kivun-kpi__tile,
+.kivun-cc-console .kivun-tab-panel--list .kivun-apps-stats .kivun-stat {
+	padding: 16px 18px;
+	border: 0;
+	border-radius: var(--cc-radius-xs);
+	background: var(--cc-field);
+	box-shadow: none;
+}
+.kivun-cc-console .kivun-tab-panel--list .kivun-kpi__label,
+.kivun-cc-console .kivun-tab-panel--list .kivun-kpi__note { color: var(--cc-text-2); }
+.kivun-cc-console .kivun-tab-panel--list .kivun-kpi__value,
+.kivun-cc-console .kivun-tab-panel--list .kivun-apps-stats .kivun-stat strong { font-family: var(--cc-font-display); color: var(--cc-ink); }
+.kivun-cc-console .kivun-tab-panel--list .kivun-apps-stats .kivun-stat { color: var(--cc-text-2); font-size: 14px; }
+.kivun-cc-console .kivun-tab-panel--list .kivun-rank { padding: 20px 24px; border: 2px solid var(--cc-divider); border-radius: var(--cc-radius-sm); background: var(--cc-surface); box-shadow: none; }
+.kivun-cc-console .kivun-tab-panel--list .kivun-rank__fill { background: var(--cc-brand); }
+.kivun-cc-console .kivun-tab-panel--list .kivun-rank__bar { background: var(--cc-canvas); }
+
+/* ── Fields: 44 pills on white, the mic inside at the left ── */
+.kivun-cc-console .kivun-tab-panel--list :is(.kivun-form-row, .kivun-field) > label,
+.kivun-cc-console .kivun-tab-panel--list .kivun-mgr-as > label {
+	display: block;
+	margin: 0 0 6px;
+	font-size: 14px;
+	font-weight: 700;
+	color: var(--cc-ink);
+}
+.kivun-cc-console .kivun-tab-panel--list :is(input[type="text"], input[type="email"], input[type="tel"], input[type="url"], input[type="search"], input[type="number"], input[type="date"], input:not([type]), select:not([multiple])):not(.kivun-pick__input) {
+	box-sizing: border-box;
+	height: 44px;
+	min-height: 0;
+	margin: 0;
+	padding: 0 16px;
+	border: 1.5px solid var(--cc-line);
+	border-radius: 999px;
+	background-color: var(--cc-surface);
+	box-shadow: none;
+	color: var(--cc-ink);
+	font-family: inherit;
+	font-size: 15px;
+	line-height: 1.2;
+}
+.kivun-cc-console .kivun-tab-panel--list select:not([multiple]) {
+	padding: 0 16px 0 38px;
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232e2e31' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+	background-repeat: no-repeat;
+	background-position: left 14px center;
+	background-size: 14px 14px;
+	-webkit-appearance: none;
+	appearance: none;
+	cursor: pointer;
+}
+.kivun-cc-console .kivun-tab-panel--list textarea {
+	box-sizing: border-box;
+	min-height: 96px;
+	margin: 0;
+	padding: 12px 16px;
+	border: 1.5px solid var(--cc-line);
+	border-radius: 16px;
+	background: var(--cc-field);
+	box-shadow: none;
+	color: var(--cc-ink);
+	font-family: inherit;
+	font-size: 15px;
+	line-height: 1.5;
+}
+.kivun-cc-console .kivun-tab-panel--list :is(input, select, textarea):focus {
+	border-color: var(--cc-ink);
+	box-shadow: none;
+	outline: none;
+}
+.kivun-cc-console .kivun-tab-panel--list :is(input, textarea)::placeholder { color: var(--cc-text-3); }
+.kivun-cc-console .kivun-tab-panel--list :is(input[readonly], .kivun-camp-saved) { background-color: var(--cc-field); }
+/*
+ * The dictation mic. voice.js puts it straight after its field, so it is
+ * placed from there: absolute with no `top`, it keeps the spot it would
+ * have had under the field, and the negative margin lifts it 5px inside the
+ * field's bottom edge — inside a 44 pill that is its middle, inside a
+ * textarea its bottom-left corner. Whatever label or hint sits above.
+ */
+.kivun-cc-console .kivun-tab-panel--list :has(> .kivun-mic) { position: relative; }
+.kivun-cc-console .kivun-tab-panel--list :is(input, textarea) + .kivun-mic {
+	position: absolute;
+	left: 5px;
+	z-index: 1;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 34px;
+	height: 34px;
+	margin: -39px 0 0;
+	padding: 0;
+	border: 0;
+	border-radius: 50%;
+	background: var(--cc-ink);
+	box-shadow: none;
+	color: #fff;
+	cursor: pointer;
+	animation: none;
+}
+.kivun-cc-console .kivun-tab-panel--list :is(input, textarea) + .kivun-mic svg { width: 16px; height: 16px; }
+.kivun-cc-console .kivun-tab-panel--list :is(input, textarea) + .kivun-mic:hover { background: var(--cc-ink-hover); color: #fff; }
+.kivun-cc-console .kivun-tab-panel--list :is(input, textarea) + .kivun-mic.is-rec { background: var(--cc-brand); }
+/* Doubled class: it has to outrank the field rule above, whose type list
+   counts for more than a bare element. */
+.kivun-cc-console .kivun-tab-panel--list.kivun-tab-panel--list :is(input, textarea):has(+ .kivun-mic) { display: block; padding-left: 48px; }
+/* In a filter bar the field is a flex item, where an absolute box has no
+   spot of its own to keep — so there the mic stays in the row and a
+   negative margin draws it back over the field's left end, 5 in. */
+.kivun-cc-console .kivun-tab-panel--list :is(.kivun-cc-leadfilters, .kivun-report-bar, .kivun-apps-filters, .kivun-mgr-bar) > :is(input, textarea) + .kivun-mic {
+	position: relative;
+	left: auto;
+	flex: none;
+	align-self: center;
+	width: 36px;
+	height: 36px;
+	margin: 0;
+	margin-inline-start: -51px;
+}
+.kivun-cc-console .kivun-tab-panel--list.kivun-tab-panel--list :is(.kivun-cc-leadfilters, .kivun-report-bar, .kivun-apps-filters, .kivun-mgr-bar) > :is(input, textarea):has(+ .kivun-mic) { display: inline-block; padding-left: 52px; }
+.kivun-cc-console .kivun-tab-panel--list .kivun-form-grid { gap: 14px 20px; }
+/* A block, not the base flex column: the mic keeps its spot under its
+   field only in block flow. The gaps are margins instead. */
+.kivun-cc-console .kivun-tab-panel--list :is(.kivun-form-row, .kivun-field) { display: block; margin: 0 0 14px; }
+.kivun-cc-console .kivun-tab-panel--list :is(.kivun-form-row, .kivun-field) > :is(input, select, textarea) + :is(input, select, textarea) { margin-top: 8px; }
+.kivun-cc-console .kivun-tab-panel--list .kivun-form-grid :is(.kivun-form-row, .kivun-field) { margin: 0; }
+.kivun-cc-console .kivun-tab-panel--list .kivun-form-row :is(input, select, textarea):not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]) { width: 100%; }
+.kivun-cc-console .kivun-tab-panel--list .kivun-form-row > .kivun-field-hint { margin: 6px 0 0; }
+.kivun-cc-console .kivun-tab-panel--list .kivun-form-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+
+/* ── Buttons: a red pill, a dark one, an outline one ── */
+.kivun-cc-console .kivun-tab-panel--list :is(.kivun-cc-btn, .kivun-btn) {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	box-sizing: border-box;
+	height: 44px;
+	margin: 0;
+	padding: 0 20px;
+	border: 0;
+	border-radius: 999px;
+	background: var(--cc-brand);
+	box-shadow: none;
+	color: #fff;
+	font-family: inherit;
+	font-size: 15px;
+	font-weight: 800;
+	line-height: 1;
+	white-space: nowrap;
+	text-decoration: none;
+	filter: none;
+	cursor: pointer;
+	transition: background-color .15s, border-color .15s;
+}
+.kivun-cc-console .kivun-tab-panel--list :is(.kivun-cc-btn, .kivun-btn):hover { background: var(--cc-brand-hover); color: #fff; filter: none; }
+.kivun-cc-console .kivun-tab-panel--list :is(.kivun-cc-btn--sm, .kivun-btn--sm) { height: 36px; padding: 0 14px; font-size: 14px; font-weight: 700; }
+.kivun-cc-console .kivun-tab-panel--list :is(.kivun-cc-btn--ghost, .kivun-btn--outline),
+.kivun-cc-console .kivun-tab-panel--list .kivun-cc-table a:is(.kivun-cc-btn--ghost, .kivun-btn--outline) {
+	border: 1.5px solid var(--cc-line);
+	background: var(--cc-surface);
+	color: var(--cc-ink);
+	font-weight: 700;
+}
+.kivun-cc-console .kivun-tab-panel--list :is(.kivun-cc-btn--ghost, .kivun-btn--outline):hover { border-color: var(--cc-ink); background: var(--cc-surface); color: var(--cc-ink); }
+.kivun-cc-console .kivun-tab-panel--list :is(.kivun-cc-btn, .kivun-btn) .kivun-icon { width: 16px; height: 16px; stroke-width: 2; }
+.kivun-cc-console .kivun-tab-panel--list :is(.kivun-cc-btn, .kivun-btn):disabled { opacity: .55; cursor: default; }
+.kivun-cc-console .kivun-tab-panel--list .kivun-delete-job { border: 1.5px solid var(--cc-line); background: var(--cc-surface); color: var(--cc-brand); font-weight: 700; }
+.kivun-cc-console .kivun-tab-panel--list .kivun-delete-job:hover { background: var(--cc-chip); color: var(--cc-brand); }
+
+/* The icon-only marks: 38 outline discs; the destructive one is red. */
+.kivun-cc-console .kivun-tab-panel--list :is(.kivun-cc-iconbtn, .kivun-cc-icon-btn) {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	box-sizing: border-box;
+	width: 38px;
+	height: 38px;
+	margin: 0;
+	padding: 0;
+	border: 1.5px solid var(--cc-line);
+	border-radius: 50%;
+	background: var(--cc-surface);
+	box-shadow: none;
+	color: var(--cc-ink);
+	cursor: pointer;
+	transition: background-color .15s, border-color .15s;
+}
+.kivun-cc-console .kivun-tab-panel--list :is(.kivun-cc-iconbtn, .kivun-cc-icon-btn):hover { border-color: var(--cc-ink); background: var(--cc-surface); }
+.kivun-cc-console .kivun-tab-panel--list :is(.kivun-cc-iconbtn--danger, .kivun-cc-icon-btn--danger) { color: var(--cc-brand); }
+.kivun-cc-console .kivun-tab-panel--list :is(.kivun-cc-iconbtn--danger, .kivun-cc-icon-btn--danger):hover { border-color: var(--cc-line); background: var(--cc-chip); }
+.kivun-cc-console .kivun-tab-panel--list :is(.kivun-cc-iconbtn, .kivun-cc-icon-btn) .kivun-icon { width: 17px; height: 17px; stroke-width: 1.8; }
+
+/* Small facts: the canvas pill the leads' sources use. */
+.kivun-cc-console .kivun-tab-panel--list .kivun-cc-badge {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	margin: 0;
+	padding: 3px 10px;
+	border-radius: 999px;
+	background: var(--cc-canvas);
+	color: var(--cc-ink);
+	font-size: 13px;
+	font-weight: 700;
+	line-height: 1.4;
+}
+/* A call nobody picked up is the one row state worth chasing: the red tint. */
+.kivun-cc-console .kivun-tab-panel--list .kivun-cc-badge--warn { background: var(--cc-chip); color: var(--cc-brand); }
+.kivun-cc-console .kivun-tab-panel--list .kivun-cc-source { font-size: 12px; line-height: 1.4; color: var(--cc-text-2); }
+
+/* ── Filters: the leads' panel ── */
+.kivun-cc-console .kivun-tab-panel--list :is(.kivun-cc-leadfilters, .kivun-report-bar, .kivun-apps-filters, .kivun-mgr-bar) {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 10px;
+	margin: 0;
+	padding: 18px;
+	border: 0;
+	border-radius: var(--cc-radius-sm);
+	background: var(--cc-field);
+	box-shadow: none;
+}
+.kivun-cc-console .kivun-tab-panel--list :is(.kivun-cc-leadfilters, .kivun-report-bar, .kivun-apps-filters, .kivun-mgr-bar) :is(input, select):not([type="hidden"]):not(.kivun-pick__input) { height: 46px; }
+.kivun-cc-console .kivun-tab-panel--list :is(.kivun-cc-leadfilters, .kivun-report-bar, .kivun-apps-filters, .kivun-mgr-bar) :is(.kivun-cc-btn, .kivun-btn) { height: 46px; }
+.kivun-cc-console .kivun-tab-panel--list :is(.kivun-report-bar, .kivun-apps-filters, .kivun-mgr-bar) > :is(label, .kivun-cc-sub) { flex: 1 1 100%; margin: 0; }
+.kivun-cc-console .kivun-tab-panel--list :is(.kivun-report-bar__row, .kivun-cc-daterange) { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.kivun-cc-console .kivun-tab-panel--list .kivun-cc-daterange label { font-size: 14px; font-weight: 700; color: var(--cc-text-2); }
+.kivun-cc-console .kivun-tab-panel--list .kivun-cc-leadfilters .kivun-pick__input {
+	box-sizing: border-box;
+	height: 46px;
+	min-height: 0;
+	padding: 0 16px 0 38px;
+	border: 1.5px solid var(--cc-line);
+	border-radius: 999px;
+	background-color: var(--cc-surface);
+	background-position: left 14px center;
+	font-size: 15px;
+}
+.kivun-cc-console .kivun-tab-panel--list .kivun-cc-leadfilters .kivun-stat { font-size: 14px; color: var(--cc-text-2); }
+.kivun-cc-console .kivun-tab-panel--list .kivun-cc-leadfilters .kivun-stat strong { font-family: var(--cc-font-display); font-size: 17px; font-weight: 700; color: var(--cc-ink); }
+.kivun-cc-console .kivun-tab-panel--list :is(.kivun-apps-filters, .kivun-mgr-bar) > * { flex: 1 1 180px; min-width: 0; }
+.kivun-cc-console .kivun-tab-panel--list .kivun-mgr-bar > .kivun-btn { flex: 0 0 auto; }
+.kivun-cc-console .kivun-tab-panel--list :is(.kivun-apps-filters, .kivun-mgr-bar, .kivun-mgr-as) :is(input, select) { width: 100%; }
+
+/* ── Tables: the field-grey header, 14/20 rows, no hover tint ── */
+.kivun-cc-console .kivun-tab-panel--list :is(.kivun-cc-tablewrap, .kivun-jobs-table-wrap, .kivun-apps-table-wrap) {
+	overflow-x: auto;
+	margin: 0;
+	border: 2px solid var(--cc-divider);
+	border-radius: var(--cc-radius-sm);
+	background: var(--cc-surface);
+	box-shadow: none;
+}
+.kivun-cc-console .kivun-tab-panel--list :is(.kivun-cc-table, .kivun-jobs-table, .kivun-apps-table) {
+	width: 100%;
+	margin: 0;
+	border: 0;
+	border-collapse: separate;
+	border-spacing: 0;
+	background: transparent;
+	box-shadow: none;
+	font-size: 14px;
+	color: var(--cc-ink);
+}
+.kivun-cc-console .kivun-tab-panel--list :is(.kivun-cc-table, .kivun-jobs-table, .kivun-apps-table):not(.is-stacked) thead th {
+	padding: 14px 20px;
+	border: 0;
+	border-bottom: 2px solid var(--cc-divider);
+	border-radius: 0;
+	background: var(--cc-field);
+	color: var(--cc-text-2);
+	font-size: 14px;
+	font-weight: 700;
+	letter-spacing: 0;
+	text-align: right;
+	text-transform: none;
+	white-space: nowrap;
+}
+.kivun-cc-console .kivun-tab-panel--list :is(.kivun-cc-table, .kivun-jobs-table, .kivun-apps-table):not(.is-stacked) tbody td {
+	height: auto;
+	padding: 14px 20px;
+	border: 0;
+	border-bottom: 1px solid var(--cc-divider);
+	background: transparent;
+	vertical-align: middle;
+	text-align: right;
+}
+.kivun-cc-console .kivun-tab-panel--list :is(.kivun-cc-table, .kivun-jobs-table, .kivun-apps-table):not(.is-stacked) tbody tr:last-child td { border-bottom: 0; }
+.kivun-cc-console .kivun-tab-panel--list :is(.kivun-cc-table, .kivun-jobs-table, .kivun-apps-table):not(.is-stacked) tbody tr { height: auto; min-height: 72px; background: var(--cc-surface); }
+.kivun-cc-console .kivun-tab-panel--list :is(.kivun-cc-table, .kivun-jobs-table, .kivun-apps-table) tbody tr:hover,
+.kivun-cc-console .kivun-tab-panel--list :is(.kivun-jobs-table, .kivun-apps-table) tbody tr:nth-child(even) { background: var(--cc-surface); }
+.kivun-cc-console .kivun-tab-panel--list :is(.kivun-cc-table, .kivun-jobs-table, .kivun-apps-table) td strong { font-size: 16px; font-weight: 700; line-height: 1.3; color: var(--cc-ink); }
+.kivun-cc-console .kivun-tab-panel--list :is(.kivun-cc-table, .kivun-jobs-table, .kivun-apps-table) td a:not(:is(.kivun-cc-btn, .kivun-btn)) { color: var(--cc-ink); font-weight: 700; text-decoration: none; }
+.kivun-cc-console .kivun-tab-panel--list :is(.kivun-cc-table, .kivun-jobs-table, .kivun-apps-table) td a:not(:is(.kivun-cc-btn, .kivun-btn)):hover { color: var(--cc-brand); text-decoration: none; }
+.kivun-cc-console .kivun-tab-panel--list :is(.kivun-cc-table, .kivun-jobs-table, .kivun-apps-table) :is(a[href^="tel:"], a[href^="mailto:"]) { direction: ltr; unicode-bidi: isolate; font-variant-numeric: tabular-nums; }
+.kivun-cc-console .kivun-tab-panel--list.kivun-tab-panel--list :is(.kivun-cc-table, .kivun-jobs-table, .kivun-apps-table) td a[href^="mailto:"] { font-size: 13px; font-weight: 400; }
+.kivun-cc-console .kivun-tab-panel--list :is(.kivun-cc-table, .kivun-jobs-table, .kivun-apps-table) :is(.kivun-muted, .kivun-job-id) { color: var(--cc-text-3); }
+.kivun-cc-console .kivun-tab-panel--list :is(.kivun-cc-date, .kivun-app-date, .kivun-job-deadline) { font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* Inside a row, fields and buttons come down to the leads' 38. */
+.kivun-cc-console .kivun-tab-panel--list :is(.kivun-cc-table, .kivun-jobs-table, .kivun-apps-table) :is(input[type="text"], input[type="url"], select:not([multiple])) { height: 38px; font-size: 14px; }
+.kivun-cc-console .kivun-tab-panel--list :is(.kivun-cc-table, .kivun-jobs-table, .kivun-apps-table) :is(.kivun-cc-btn, .kivun-btn) { height: 36px; }
+.kivun-cc-console .kivun-tab-panel--list :is(.kivun-cc-table, .kivun-jobs-table, .kivun-apps-table) td:last-child :is(.kivun-cc-iconbtn, .kivun-cc-icon-btn, .kivun-btn) + :is(.kivun-cc-iconbtn, .kivun-cc-icon-btn, .kivun-btn) { margin-inline-start: 6px; }
+.kivun-cc-console .kivun-tab-panel--list .kivun-camp-cell__row { display: flex; align-items: center; gap: 8px; }
+.kivun-cc-console .kivun-tab-panel--list .kivun-camp-cell__row + .kivun-camp-cell__row { margin-top: 8px; }
+.kivun-cc-console .kivun-tab-panel--list .kivun-camp-cell__row input { flex: 1 1 auto; min-width: 0; }
+.kivun-cc-console .kivun-tab-panel--list .kivun-camp-clicks { font-size: 13px; color: var(--cc-text-2); white-space: nowrap; }
+
+/* A job's state, as the library draws a piece of content's. */
+.kivun-cc-console .kivun-tab-panel--list .kivun-status {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 4px 12px;
+	border: 1.5px solid var(--cc-line);
+	border-radius: 999px;
+	background: var(--cc-surface);
+	color: var(--cc-ink);
+	font-size: 13px;
+	font-weight: 700;
+}
+.kivun-cc-console .kivun-tab-panel--list .kivun-status::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--cc-amber); }
+.kivun-cc-console .kivun-tab-panel--list .kivun-status--publish { border-color: var(--cc-ink); background: var(--cc-ink); color: #fff; }
+.kivun-cc-console .kivun-tab-panel--list .kivun-status--publish::before { background: var(--cc-note-dot); }
+
+/* An application's status: the leads' filled pill. */
+.kivun-cc-console .kivun-tab-panel--list.kivun-tab-panel--list select.kivun-app-status-select {
+	width: auto;
+	min-width: 124px;
+	border: 0;
+	background-color: var(--cc-chip);
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23df2950' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+	color: var(--cc-brand);
+	font-weight: 800;
+}
+.kivun-cc-console .kivun-tab-panel--list.kivun-tab-panel--list select.kivun-app-status-select:is(:has(option[value="viewed"]:checked), :has(option[value="interview"]:checked)) {
+	background-color: var(--cc-note);
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232e2e31' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+	color: var(--cc-ink);
+}
+.kivun-cc-console .kivun-tab-panel--list.kivun-tab-panel--list select.kivun-app-status-select:has(option[value="contacted"]:checked) {
+	background-color: var(--cc-canvas);
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232e2e31' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+	color: var(--cc-ink);
+}
+.kivun-cc-console .kivun-tab-panel--list.kivun-tab-panel--list select.kivun-app-status-select:has(option[value="hired"]:checked) {
+	background-color: var(--cc-ink);
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+	color: #fff;
+}
+.kivun-cc-console .kivun-tab-panel--list.kivun-tab-panel--list select.kivun-app-status-select:has(option[value="rejected"]:checked) {
+	background-color: var(--cc-field);
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a8a8ae' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+	color: var(--cc-text-3);
+}
+.kivun-cc-console .kivun-tab-panel--list.kivun-tab-panel--list select.kivun-app-status-select option { background: #fff; color: var(--cc-ink); font-weight: 400; }
+
+/* ── The jobs board's own sections: a segmented control, like table/cards ── */
+.kivun-cc-console .kivun-tab-panel--list .kivun-employer-dashboard > .kivun-cc-tabs {
+	display: inline-flex;
+	flex-wrap: wrap;
+	align-self: flex-start;
+	gap: 4px;
+	margin: 0;
+	padding: 5px;
+	border: 0;
+	border-radius: 999px;
+	background: var(--cc-canvas);
+	box-shadow: none;
+}
+.kivun-cc-console .kivun-tab-panel--list .kivun-employer-dashboard > .kivun-cc-tabs .kivun-tab {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	height: 40px;
+	margin: 0;
+	padding: 0 16px;
+	border: 0;
+	border-radius: 999px;
+	background: transparent;
+	box-shadow: none;
+	color: var(--cc-ink);
+	font-size: 15px;
+	font-weight: 700;
+}
+/* Said with !important because the jobs board's own sheet paints these
+   tabs that way (`.kivun-employer-dashboard .kivun-tab`), red when active. */
+.kivun-cc-console .kivun-tab-panel--list .kivun-employer-dashboard > .kivun-cc-tabs .kivun-tab:not(.is-active):hover { color: var(--cc-brand) !important; }
+.kivun-cc-console .kivun-tab-panel--list .kivun-employer-dashboard > .kivun-cc-tabs .kivun-tab:not(.is-active) { color: var(--cc-ink) !important; }
+.kivun-cc-console .kivun-tab-panel--list.kivun-tab-panel--list .kivun-employer-dashboard > .kivun-cc-tabs .kivun-tab:is(.is-active, [aria-selected="true"]) { background: var(--cc-ink) !important; color: #fff !important; box-shadow: none; }
+.kivun-cc-console .kivun-tab-panel--list .kivun-employer-dashboard > .kivun-cc-tabs .kivun-tab-badge { padding: 1px 8px; border-radius: 999px; background: var(--cc-chip); color: var(--cc-brand); font-size: 12px; font-weight: 800; }
+.kivun-cc-console .kivun-tab-panel--list .kivun-employer-dashboard > .kivun-tab-panel { display: none; margin: 0; padding: 0; border: 0; background: none; }
+.kivun-cc-console .kivun-tab-panel--list .kivun-employer-dashboard > .kivun-tab-panel.is-active { display: flex; flex-direction: column; gap: 22px; }
+.kivun-cc-console .kivun-tab-panel--list .kivun-employer-dashboard > .kivun-tab-panel > * { margin: 0; }
+.kivun-cc-console .kivun-tab-panel--list .kivun-dashboard-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin: 0; padding: 0; border: 0; }
+.kivun-cc-console .kivun-tab-panel--list .kivun-apps-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+
+/* ── Pages ── */
+.kivun-cc-console .kivun-tab-panel--list .kivun-cc-pager { gap: 12px; margin: 0; padding: 0; background: transparent; }
+.kivun-cc-console .kivun-tab-panel--list .kivun-cc-pager__state { font-size: 15px; font-weight: 400; color: var(--cc-text-2); }
+.kivun-cc-console .kivun-tab-panel--list .kivun-cc-pager :is(.kivun-cc-btn, .kivun-btn) { height: 44px; padding: 0 18px; font-size: 15px; }
+
+@media (max-width: 600px) {
+	.kivun-cc-console > .kivun-tab-panel--list.is-active { padding: 20px; border-radius: var(--cc-radius-sm); }
+	.kivun-cc-console .kivun-tab-panel--list .kivun-cc-title { font-size: 26px; }
+	.kivun-cc-console .kivun-tab-panel--list :is(.kivun-cc-card, .kivun-rank, .kivun-new-job-form, .kivun-add-employer-form) { padding: 16px; }
+}
+/* On a narrow screen every filter takes the row, as the leads' do — a row
+   that wraps rather than the base column, where the search's mic cannot
+   sit inside the field. */
+@media (max-width: 782px) {
+	.kivun-cc-console .kivun-tab-panel--list.kivun-tab-panel--list :is(.kivun-cc-leadfilters, .kivun-report-bar, .kivun-apps-filters, .kivun-mgr-bar) { flex-direction: row; flex-wrap: wrap; align-items: center; }
+	.kivun-cc-console .kivun-tab-panel--list.kivun-tab-panel--list :is(.kivun-cc-leadfilters, .kivun-report-bar, .kivun-apps-filters, .kivun-mgr-bar) > :not(.kivun-mic):not([type="hidden"]):not(.kivun-sr-only) { flex: 1 1 100%; width: auto; min-width: 0; max-width: 100%; }
+	.kivun-cc-console .kivun-tab-panel--list.kivun-tab-panel--list :is(.kivun-cc-leadfilters, .kivun-report-bar) > :is(.kivun-cc-btn, button):not(.kivun-mic) { flex: 1 1 calc(50% - 5px); }
+	.kivun-cc-console .kivun-tab-panel--list.kivun-tab-panel--list :is(.kivun-cc-leadfilters, .kivun-report-bar, .kivun-apps-filters, .kivun-mgr-bar) > :is(input, textarea) + .kivun-mic { flex: none; width: 36px; height: 36px; max-width: none; }
+}

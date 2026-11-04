@@ -269,4 +269,30 @@ final class LeadsContractTest extends TestCase {
 	public function test_the_mic_is_on_the_search_only(): void {
 		$this->assertStringContainsString( "field.closest('.kivun-pick, .kivun-leads-access')", $this->js( 'voice.js' ) );
 	}
+
+	/**
+	 * The other list screens speak the same language.
+	 *
+	 * Campaigns, tracking numbers and the jobs board had no handoff of their
+	 * own, so they take the leads': one white card, fields as pills with the
+	 * mic inside, the field-grey table header, 38 discs for the marks.
+	 *
+	 * @return void
+	 */
+	public function test_the_other_list_screens_share_the_leads_language(): void {
+		$src = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-content-creator.php' );
+		foreach ( array( 'campaigns', 'calls', 'jobs' ) as $tab ) {
+			$this->assertStringContainsString(
+				'<section class="kivun-tab-panel kivun-tab-panel--list <?php echo \'' . $tab . '\' === $tab',
+				$src,
+				"the {$tab} tab no longer carries the list screens' scope, so it falls back to the old look"
+			);
+		}
+
+		$css = (string) file_get_contents( KIVUN_DIR . 'assets/css/frontend.css' );
+		$this->assertMatchesRegularExpression( '/\.kivun-cc-console > \.kivun-tab-panel--list\.is-active \{\s*padding: 32px;\s*background: var\(--cc-surface\);\s*border: 0;\s*border-radius: var\(--cc-radius\);/', $css );
+		// The mic keeps its spot under its field only in block flow.
+		$this->assertStringContainsString( '.kivun-cc-console .kivun-tab-panel--list :is(.kivun-form-row, .kivun-field) { display: block;', $css, 'the form rows are a flex column again, and every mic floats to the top of its row' );
+		$this->assertStringContainsString( 'margin-inline-start: -51px;', $css, 'the filter search mic no longer sits inside its field' );
+	}
 }

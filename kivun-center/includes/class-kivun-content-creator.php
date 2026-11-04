@@ -2675,19 +2675,19 @@ class Kivun_Content_Creator {
 			<?php endif; ?>
 
 			<?php if ( $show_camp ) : ?>
-				<section class="kivun-tab-panel <?php echo 'campaigns' === $tab ? 'is-active' : ''; ?>" data-panel="campaigns" id="kivun-ccpanel-campaigns" role="tabpanel" aria-labelledby="kivun-cctab-campaigns" tabindex="0" <?php echo 'campaigns' === $tab ? '' : 'hidden'; ?>>
+				<section class="kivun-tab-panel kivun-tab-panel--list <?php echo 'campaigns' === $tab ? 'is-active' : ''; ?>" data-panel="campaigns" id="kivun-ccpanel-campaigns" role="tabpanel" aria-labelledby="kivun-cctab-campaigns" tabindex="0" <?php echo 'campaigns' === $tab ? '' : 'hidden'; ?>>
 					<?php self::front_campaigns(); ?>
 				</section>
 			<?php endif; ?>
 
 			<?php if ( $show_calls ) : ?>
-				<section class="kivun-tab-panel <?php echo 'calls' === $tab ? 'is-active' : ''; ?>" data-panel="calls" id="kivun-ccpanel-calls" role="tabpanel" aria-labelledby="kivun-cctab-calls" tabindex="0" <?php echo 'calls' === $tab ? '' : 'hidden'; ?>>
+				<section class="kivun-tab-panel kivun-tab-panel--list <?php echo 'calls' === $tab ? 'is-active' : ''; ?>" data-panel="calls" id="kivun-ccpanel-calls" role="tabpanel" aria-labelledby="kivun-cctab-calls" tabindex="0" <?php echo 'calls' === $tab ? '' : 'hidden'; ?>>
 					<?php self::front_calls(); ?>
 				</section>
 			<?php endif; ?>
 
 			<?php if ( $show_jobs ) : ?>
-				<section class="kivun-tab-panel <?php echo 'jobs' === $tab ? 'is-active' : ''; ?>" data-panel="jobs" id="kivun-ccpanel-jobs" role="tabpanel" aria-labelledby="kivun-cctab-jobs" tabindex="0" <?php echo 'jobs' === $tab ? '' : 'hidden'; ?>>
+				<section class="kivun-tab-panel kivun-tab-panel--list <?php echo 'jobs' === $tab ? 'is-active' : ''; ?>" data-panel="jobs" id="kivun-ccpanel-jobs" role="tabpanel" aria-labelledby="kivun-cctab-jobs" tabindex="0" <?php echo 'jobs' === $tab ? '' : 'hidden'; ?>>
 					<div class="kivun-cc-front">
 						<div class="kivun-cc-head">
 							<h2 class="kivun-cc-title"><?php esc_html_e( 'לוח המשרות', 'kivun' ); ?></h2>
