@@ -1337,6 +1337,93 @@
 			.catch(function () { del.disabled = false; });
 	});
 
+	// ── The leads screen, to its handoff ─────────────────────────────────────────
+
+	// "גישה לצפייה בלידים" opens the panel under the heading, and closes it.
+	document.addEventListener('click', function (e) {
+		var btn = e.target.closest('.kivun-leads-accessbtn');
+		if (!btn) { return; }
+		var panel = document.getElementById(btn.getAttribute('aria-controls'));
+		if (!panel) { return; }
+		var open = panel.hidden;
+		panel.hidden = !open;
+		btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+		if (open) {
+			var email = panel.querySelector('.kivun-viewer-email');
+			if (email) { email.focus(); }
+		}
+	});
+
+	// "פרטי הפנייה" opens the lead's details under its row — one row at a
+	// time, so the table never turns into a column of open panels.
+	function kivunLeadClose(table, except) {
+		Array.prototype.forEach.call(table.querySelectorAll('.kivun-lead__more[aria-expanded="true"]'), function (btn) {
+			if (btn === except) { return; }
+			var more = document.getElementById(btn.getAttribute('aria-controls'));
+			if (more) { more.hidden = true; }
+			btn.setAttribute('aria-expanded', 'false');
+			var row = btn.closest('tr');
+			if (row) { row.classList.remove('is-open'); }
+		});
+	}
+
+	document.addEventListener('click', function (e) {
+		var btn = e.target.closest('.kivun-lead__more');
+		if (!btn) { return; }
+		var table = btn.closest('table');
+		var more = document.getElementById(btn.getAttribute('aria-controls'));
+		if (!table || !more) { return; }
+
+		kivunLeadClose(table, btn);
+		var open = more.hidden;
+		more.hidden = !open;
+		btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+		var row = btn.closest('tr');
+		if (row) { row.classList.toggle('is-open', open); }
+	});
+
+	// Deleting a lead is asked in the row: the mark gives way to "מחיקה /
+	// ביטול", and "מחיקה" is the delete button admin-crm.js binds to.
+	function kivunLeadAskDone(cell) {
+		var ask = cell.querySelector('.kivun-lead__ask');
+		var box = cell.querySelector('.kivun-lead__confirm');
+		if (box) { box.hidden = true; }
+		if (ask) {
+			ask.hidden = false;
+			ask.setAttribute('aria-expanded', 'false');
+		}
+	}
+
+	document.addEventListener('click', function (e) {
+		var ask = e.target.closest('.kivun-lead__ask');
+		if (ask) {
+			var table = ask.closest('table');
+			if (table) {
+				Array.prototype.forEach.call(table.querySelectorAll('.kivun-lead__confirm:not([hidden])'), function (box) {
+					kivunLeadAskDone(box.parentNode);
+				});
+			}
+			var box = ask.parentNode.querySelector('.kivun-lead__confirm');
+			if (!box) { return; }
+			ask.hidden = true;
+			ask.setAttribute('aria-expanded', 'true');
+			box.hidden = false;
+			var yes = box.querySelector('.kivun-lead__yes');
+			if (yes) { yes.focus(); }
+			return;
+		}
+
+		var no = e.target.closest('.kivun-lead__no');
+		if (no) {
+			var cell = no.closest('td');
+			if (cell) {
+				kivunLeadAskDone(cell);
+				var back = cell.querySelector('.kivun-lead__ask');
+				if (back) { back.focus(); }
+			}
+		}
+	});
+
 	// ── Tracked phone numbers ────────────────────────────────────────────────────
 	function kivunPhonePost(form, body, err) {
 		var btn = form.querySelector('button[type="submit"]');

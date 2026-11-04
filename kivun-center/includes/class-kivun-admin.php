@@ -896,9 +896,12 @@ class Kivun_Admin {
 	 * @param int    $id      The row ID.
 	 * @param string $current The currently selected status.
 	 * @param array  $options Map of status value => label.
+	 * @param string $blank   What the empty option says. Nothing, by default;
+	 *                        the console's leads table, whose handoff names an
+	 *                        untouched lead "חדש", passes that word.
 	 * @return string
 	 */
-	public static function status_select( string $table, int $id, string $current, array $options ): string {
+	public static function status_select( string $table, int $id, string $current, array $options, string $blank = '' ): string {
 		$shown = self::is_shown( $table, $current );
 
 		if ( ! self::may_write_row( $table ) ) {
@@ -930,7 +933,7 @@ class Kivun_Admin {
 		// an empty one, so offering it there would be a choice that can only
 		// fail.
 		if ( self::blank_statuses( $table ) ) {
-			$html .= sprintf( '<option value=""%s></option>', selected( $shown, false, false ) );
+			$html .= sprintf( '<option value=""%s>%s</option>', selected( $shown, false, false ), esc_html( $blank ) );
 		}
 
 		foreach ( $options as $val => $label ) {

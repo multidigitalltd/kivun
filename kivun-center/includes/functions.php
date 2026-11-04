@@ -250,6 +250,14 @@ function kivun_icon( string $name, string $classes = '' ): string {
 		'l-archive' => '<rect x="2" y="3" width="20" height="5" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/>',
 		'l-trash'   => '<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><path d="M10 11v6"/><path d="M14 11v6"/>',
 		'l-search'  => '<circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/>',
+		// And the leads screen's, from the "לידים והרשמות" handoff.
+		'l-adduser' => '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6"/><path d="M22 11h-6"/>',
+		'l-filter'  => '<path d="M22 3H2l8 9.46V19l4 2v-8.54z"/>',
+		'l-columns' => '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/><path d="M15 3v18"/>',
+		'l-table'   => '<path d="M3 3h18v18H3z M3 9h18 M3 15h18 M9 3v18"/>',
+		'l-cards'   => '<path d="M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z"/>',
+		'l-chev'    => '<path d="M6 9l6 6 6-6"/>',
+		'l-check'   => '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
 	);
 
 	if ( ! isset( $paths[ $name ] ) ) {
