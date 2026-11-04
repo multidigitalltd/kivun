@@ -178,7 +178,10 @@
 		if (!btn) { return; }
 		e.preventDefault();
 
-		if (!window.confirm('למחוק את הרשומה? הפעולה אינה הפיכה.')) { return; }
+		// The leads screen has already asked, in the row — "מחיקה / ביטול"
+		// in place of the mark — and this is its "מחיקה". Asking again in
+		// the browser's voice would be the same question twice.
+		if (!btn.closest('.kivun-lead__confirm') && !window.confirm('למחוק את הרשומה? הפעולה אינה הפיכה.')) { return; }
 
 		btn.disabled = true;
 		post({
@@ -189,6 +192,10 @@
 		}).then(function (res) {
 			if (res.success) {
 				var row = btn.closest('tr');
+				// A lead's details sit in a row of their own just under it,
+				// and go with it.
+				var more = row ? row.nextElementSibling : null;
+				if (more && more.classList.contains('kivun-lead-more')) { more.parentNode.removeChild(more); }
 				if (row) { row.parentNode.removeChild(row); }
 			} else {
 				btn.disabled = false;
@@ -271,6 +278,9 @@
 	// columns this much is shown as cards instead.
 	var MIN_COLUMN_WIDTH = 80;
 
+	// Below this the leads start as cards rather than as the table.
+	var LEADS_CARDS_BELOW = 640;
+
 	var VIEW_KEY = 'kivun-leads-view';
 	var COLS_KEY = 'kivun-leads-cols';
 
@@ -293,11 +303,40 @@
 		}
 	}
 
-	// Columns the reader has put away, as a list of names.
+	// Columns the reader has put away, as a list of names. Never the name
+	// or the delete mark: the picker no longer offers either, and a name
+	// put away by an older version would otherwise stay away for good.
 	function hiddenColumns() {
 		var stored = remembered(COLS_KEY);
 		if (!stored) { return []; }
-		return stored.split(',').filter(function (name) { return name !== ''; });
+		return stored.split(',').filter(function (name) { return name !== '' && name !== 'name' && name !== 'delete'; });
+	}
+
+	// The leads table is a grid of rows, so a column put away has to leave
+	// the grid as well as the row — or every cell after it slides one track
+	// over. Rebuilt from the headings still showing, each of which carries
+	// its width: a number of pixels, or a floor that shares the slack.
+	// The minimum is what makes the table scroll sideways rather than
+	// squeeze: the widths, the 12px gaps and the row's 20px either side.
+	var LEAD_GAP = 12;
+	var LEAD_PAD = 40;
+
+	function layLeadColumns(table) {
+		var tracks = [];
+		var least = LEAD_PAD;
+
+		Array.prototype.forEach.call(table.querySelectorAll('thead th[data-w]'), function (th) {
+			if (th.classList.contains('kivun-col-off')) { return; }
+			var w = th.dataset.w;
+			var px = parseInt(w, 10) || 0;
+			tracks.push(/fr$/.test(w) ? 'minmax(' + px + 'px, 1fr)' : px + 'px');
+			least += px;
+		});
+		if (!tracks.length) { return; }
+
+		least += LEAD_GAP * (tracks.length - 1);
+		table.style.setProperty('--lead-cols', tracks.join(' '));
+		table.style.setProperty('--lead-min', least + 'px');
 	}
 
 	function applyColumns(table) {
@@ -306,6 +345,8 @@
 		Array.prototype.forEach.call(table.querySelectorAll('[data-col]'), function (cell) {
 			cell.classList.toggle('kivun-col-off', hidden.indexOf(cell.dataset.col) !== -1);
 		});
+
+		if (table.classList.contains('kivun-cc-leadtable')) { layLeadColumns(table); }
 
 		// Keep the checkboxes saying what is actually on screen.
 		Array.prototype.forEach.call(document.querySelectorAll('[data-col-toggle]'), function (box) {
@@ -368,8 +409,14 @@
 			// A choice made on this screen wins over the measurement. Asking
 			// for the table and being given cards anyway is the complaint
 			// this setting exists to answer.
-			if (table.classList.contains('kivun-cc-leadtable') && choice) {
-				stacked = (choice === 'cards');
+			//
+			// And with no choice made, the leads are not measured at all.
+			// Their table is wider than any laptop on purpose — fourteen
+			// columns, scrolled sideways, as the handoff draws it — so the
+			// overflow test above would always say cards. It is cards on a
+			// phone, where a row could not be read even scrolled.
+			if (table.classList.contains('kivun-cc-leadtable')) {
+				stacked = choice ? (choice === 'cards') : (table.parentNode.clientWidth < LEADS_CARDS_BELOW);
 			}
 
 			table.classList.toggle('is-stacked', stacked);

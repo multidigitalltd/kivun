@@ -1312,7 +1312,8 @@ final class ConsoleContractTest extends TestCase {
 		 * Which rules may use it. Anything else asking for a shadow means a
 		 * card has been lifted off the canvas again.
 		 */
-		$allowed = array( '.kivun-cc-stat', '.kivun-cc-colpicker__menu', '.kivun-cc-pop' );
+		// The filter pickers' open list is a popover too.
+		$allowed = array( '.kivun-cc-stat', '.kivun-cc-colpicker__menu', '.kivun-cc-pop', '.kivun-pick__list' );
 
 		$blocks = explode( '}', $css );
 		$raised = array();

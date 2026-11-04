@@ -6451,12 +6451,55 @@ class Kivun_Content_Creator {
 		$page_link = static function ( int $p ) use ( $base_args, $page_url ): string {
 			return add_query_arg( array_merge( $base_args, array( 'kivun_lpaged' => $p ) ), $page_url );
 		};
+
+		/*
+		 * The table's columns, in the system's order, each with the width the
+		 * "לידים והרשמות" handoff gives it. A width with `true` beside it is a
+		 * floor that shares the slack (`minmax(…, 1fr)`); the rest are fixed.
+		 * One list, because the header, the column picker and the grid all
+		 * read from it — and a cell drawn without a matching heading is the
+		 * row slipping a column out of line.
+		 *
+		 * "סוג" is not a column of its own here: the handoff writes it under
+		 * the content title, with its colour, so it is read with what it is
+		 * the type of. It is still on every row.
+		 */
+		$lead_cols = array(
+			'name'    => array( __( 'שם', 'kivun' ), 120, true, false ),
+			'content' => array( __( 'תוכן', 'kivun' ), 160, true, true ),
+		);
+		if ( $show_source ) {
+			$lead_cols['utm'] = array( __( 'מקור (UTM)', 'kivun' ), 150, false, true );
+		}
+		$lead_cols += array(
+			'contact' => array( __( 'יצירת קשר', 'kivun' ), 180, false, true ),
+			'city'    => array( __( 'עיר', 'kivun' ), 84, false, true ),
+			'gender'  => array( __( 'מגדר', 'kivun' ), 64, false, true ),
+			'handler' => array( __( 'רכז/ת מטפל/ת', 'kivun' ), 150, false, true ),
+			'consent' => array( __( 'דיוור', 'kivun' ), 56, false, true ),
+			'privacy' => array( __( 'פרטיות', 'kivun' ), 60, false, true ),
+			'message' => array( __( 'פרטי הפנייה', 'kivun' ), 170, false, true ),
+			'notes'   => array( __( 'הערות פנימיות', 'kivun' ), 190, false, true ),
+			'date'    => array( __( 'תאריך', 'kivun' ), 92, false, true ),
+			'status'  => array( __( 'סטטוס', 'kivun' ), 124, false, true ),
+		);
+		if ( $can_delete_rows ) {
+			$lead_cols['delete'] = array( __( 'מחיקה', 'kivun' ), 52, false, false );
+		}
+		$lead_tracks = array();
+		$lead_min    = 40 + 12 * ( count( $lead_cols ) - 1 );
+		foreach ( $lead_cols as $lead_col ) {
+			$lead_tracks[] = $lead_col[2] ? 'minmax(' . $lead_col[1] . 'px, 1fr)' : $lead_col[1] . 'px';
+			$lead_min     += $lead_col[1];
+		}
+
+		$filtered = $content_filter || $type_filter || $status_filter || $gender_filter || $city_filter || '' !== $search || '' !== $date_from || '' !== $date_to;
 		?>
-		<div class="kivun-cc-front">
-			<div class="kivun-cc-head">
-				<h2 class="kivun-cc-title"><?php esc_html_e( 'לידים והרשמות', 'kivun' ); ?></h2>
-				<p class="kivun-cc-lead">
-					<?php esc_html_e( 'פניות שהתקבלו מהתכנים — קורסים, סדנאות, דפי נחיתה ואירועים — וכן פניות מטפסים כלליים באתר (צור קשר וכד׳), המסומנות "טופס באתר".', 'kivun' ); ?>
+		<div class="kivun-cc-front kivun-leads">
+			<div class="kivun-leads-head">
+				<div class="kivun-cc-head kivun-leads-intro">
+					<h2 class="kivun-cc-title"><?php esc_html_e( 'לידים והרשמות', 'kivun' ); ?></h2>
+					<p class="kivun-cc-lead"><?php esc_html_e( 'פניות שהתקבלו מהתכנים — קורסים, סדנאות, דפי נחיתה ואירועים — וכן פניות מטפסים כלליים באתר (צור קשר וכדו׳), המסומנות "טופס באתר".', 'kivun' ); ?></p>
 					<?php
 					// Only where that tab is actually on the screen. A leads
 					// reader has one tab and no others to reach, so pointing
@@ -6468,196 +6511,199 @@ class Kivun_Content_Creator {
 							esc_html__( 'לוח משרות', 'kivun' )
 						);
 						?>
-						<br><span class="kivun-cc-sep-note">
+						<p class="kivun-cc-sep-note">
 							<?php
 							printf(
 								/* translators: %s: a link whose text is the name of the jobs board tab. */
-								esc_html__( 'הגשות מועמדות למשרות (עם קורות חיים) נמצאות בלשונית %s.', 'kivun' ),
+								esc_html__( 'הגשות מועמדים למשרות (עם קורות חיים) נמצאות בלשונית %s.', 'kivun' ),
 								$kivun_jobs_tab // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built from the escaped parts above.
 							);
 							?>
-						</span>
+						</p>
 					<?php endif; ?>
-				</p>
+				</div>
+
+				<div class="kivun-leads-actions">
+					<?php if ( self::can_grant_leads_access() ) : ?>
+						<?php $kivun_viewers = self::leads_viewers(); ?>
+						<button type="button" class="kivun-leads-btn kivun-leads-accessbtn" aria-expanded="false" aria-controls="kivun-leads-access">
+							<?php echo kivun_icon( 'l-adduser' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?>
+							<?php esc_html_e( 'גישה לצפייה בלידים', 'kivun' ); ?>
+							<span class="kivun-leads-count"><?php echo esc_html( number_format_i18n( count( $kivun_viewers ) ) ); ?></span>
+						</button>
+					<?php endif; ?>
+					<?php
+					// Not offered to whoever the export refuses. An agency reads
+					// this table and does not take it away, so the handler turns
+					// the request down — and a button whose every press ends at
+					// "Unauthorized" reads as a fault rather than a boundary.
+					//
+					// The ids the table below was actually queried with, not
+					// the ones the filter names: the same list, so the two
+					// cannot disagree about what the filter means.
+					if ( self::can_manage_leads() ) :
+						?>
+						<a class="kivun-leads-btn kivun-leads-btn--dark" href="<?php echo esc_url( Kivun_Export::url( 'registrations', $content_scope ) ); ?>">
+							<?php echo kivun_icon( 'download' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?>
+							<?php esc_html_e( 'ייצוא CSV', 'kivun' ); ?>
+						</a>
+					<?php endif; ?>
+				</div>
 			</div>
 
 			<?php if ( self::can_grant_leads_access() ) : ?>
-				<?php $kivun_viewers = self::leads_viewers(); ?>
-				<details class="kivun-cc-card kivun-camp-new kivun-viewers">
-					<summary class="kivun-camp-summary">
-						<?php esc_html_e( '+ הוספת גישה לצפייה בלידים', 'kivun' ); ?>
-						<?php if ( $kivun_viewers ) : ?>
-							<span class="kivun-cc-badge"><?php echo esc_html( number_format_i18n( count( $kivun_viewers ) ) ); ?></span>
-						<?php endif; ?>
-					</summary>
-
+				<div class="kivun-leads-access kivun-viewers" id="kivun-leads-access" hidden>
 					<form class="kivun-viewer-form">
-						<div class="kivun-form-grid">
-							<div class="kivun-form-row">
-								<label><?php esc_html_e( 'אימייל *', 'kivun' ); ?></label>
-								<input type="email" class="kivun-cc-input kivun-viewer-email" dir="ltr" autocomplete="off" placeholder="name@example.com">
-							</div>
-							<div class="kivun-form-row">
-								<label><?php esc_html_e( 'שם', 'kivun' ); ?></label>
-								<input type="text" class="kivun-cc-input kivun-viewer-name" placeholder="<?php esc_attr_e( 'למשל: רחל לוי', 'kivun' ); ?>">
-							</div>
-						</div>
-
-						<p class="kivun-field-hint">
+						<label class="kivun-leads-access__title" for="kivun-viewer-email"><?php esc_html_e( 'הוספת גישה לצפייה בלידים', 'kivun' ); ?></label>
+						<input type="email" id="kivun-viewer-email" class="kivun-viewer-email" dir="ltr" autocomplete="off" placeholder="name@example.com">
+						<input type="text" class="kivun-viewer-name" aria-label="<?php esc_attr_e( 'שם', 'kivun' ); ?>" placeholder="<?php esc_attr_e( 'שם (לא חובה)', 'kivun' ); ?>">
+						<button type="submit" class="kivun-leads-access__add"><?php esc_html_e( 'הוספה', 'kivun' ); ?></button>
+						<span class="kivun-leads-access__count">
+							<?php
+							$kivun_viewer_count = count( $kivun_viewers );
+							/* translators: %s: how many people may read the leads. */
+							echo esc_html( sprintf( _n( '%s משתמש עם גישה', '%s משתמשים עם גישה', $kivun_viewer_count, 'kivun' ), number_format_i18n( $kivun_viewer_count ) ) );
+							?>
+						</span>
+						<p class="kivun-field-hint kivun-leads-access__hint">
 							<?php esc_html_e( 'נוצר משתמש חדש ונשלח אליו מייל עם קישור ישיר לרשימת הלידים, ולצידו קישור לבחירת סיסמה. הוא יראה את טבלת הלידים בלבד ויוכל לעדכן סטטוס — בלי גישה לתוכן, לקמפיינים או לשאר האתר. אם כבר יש לו חשבון, תתווסף לו ההרשאה והוא יקבל מייל עם הקישור.', 'kivun' ); ?>
 						</p>
-
-						<p class="kivun-error kivun-viewer-error" style="display:none;color:var(--kivun-error)"></p>
+						<?php // A div, not a paragraph: wpautop() reads an empty one as a gap to fill and leaves it unclosed. ?>
+						<div class="kivun-error kivun-viewer-error" role="alert" style="display:none;color:var(--kivun-error)"></div>
 						<span class="kivun-cc-wa-status kivun-viewer-status" role="status" aria-live="polite"></span>
-
-						<div class="kivun-form-actions">
-							<button type="submit" class="kivun-cc-btn"><?php esc_html_e( 'שליחת הזמנה', 'kivun' ); ?></button>
-						</div>
 					</form>
 
 					<?php if ( $kivun_viewers ) : ?>
-						<label class="kivun-cc-sub"><?php esc_html_e( 'בעלי גישה כרגע', 'kivun' ); ?></label>
-						<div class="kivun-cc-tablewrap">
-							<table class="kivun-cc-table">
-								<tbody>
-								<?php foreach ( $kivun_viewers as $kivun_viewer ) : ?>
-									<tr data-viewer-row="<?php echo esc_attr( $kivun_viewer->ID ); ?>">
-										<td><strong><?php echo esc_html( $kivun_viewer->display_name ); ?></strong></td>
-										<td dir="ltr"><?php echo esc_html( $kivun_viewer->user_email ); ?></td>
-										<td>
-											<button
-												type="button"
-												class="kivun-cc-iconbtn kivun-cc-iconbtn--danger kivun-remove-viewer"
-												data-id="<?php echo esc_attr( $kivun_viewer->ID ); ?>"
-												title="<?php esc_attr_e( 'הסרת הגישה', 'kivun' ); ?>"
-											>
-												<?php echo kivun_icon( 'trash' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?>
-												<span class="kivun-sr-only"><?php esc_html_e( 'הסרת הגישה', 'kivun' ); ?></span>
-											</button>
-										</td>
-									</tr>
-								<?php endforeach; ?>
-								</tbody>
-							</table>
-						</div>
-						<p class="kivun-field-hint"><?php esc_html_e( 'הסרה מבטלת את ההרשאה בלבד — חשבון המשתמש נשאר.', 'kivun' ); ?></p>
+						<ul class="kivun-leads-viewers">
+							<?php foreach ( $kivun_viewers as $kivun_viewer ) : ?>
+								<li class="kivun-leads-viewer" data-viewer-row="<?php echo esc_attr( $kivun_viewer->ID ); ?>">
+									<strong><?php echo esc_html( $kivun_viewer->display_name ); ?></strong>
+									<span dir="ltr"><?php echo esc_html( $kivun_viewer->user_email ); ?></span>
+									<button
+										type="button"
+										class="kivun-cc-iconbtn kivun-cc-iconbtn--danger kivun-remove-viewer"
+										data-id="<?php echo esc_attr( $kivun_viewer->ID ); ?>"
+										title="<?php esc_attr_e( 'הסרת הגישה', 'kivun' ); ?>"
+									>
+										<?php echo kivun_icon( 'l-trash' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?>
+										<span class="kivun-sr-only"><?php esc_html_e( 'הסרת הגישה', 'kivun' ); ?></span>
+									</button>
+								</li>
+							<?php endforeach; ?>
+						</ul>
+						<p class="kivun-field-hint kivun-leads-access__hint"><?php esc_html_e( 'הסרה מבטלת את ההרשאה בלבד — חשבון המשתמש נשאר.', 'kivun' ); ?></p>
 					<?php endif; ?>
-				</details>
+				</div>
 			<?php endif; ?>
-
-			<div class="kivun-cc-leadbar">
-				<?php
-				// Not offered to whoever the export refuses. An agency reads
-				// this table and does not take it away, so the handler turns
-				// the request down — and a button whose every press ends at
-				// "Unauthorized" reads as a fault rather than a boundary.
-				if ( self::can_manage_leads() ) :
-					?>
-					<?php
-					// The ids the table above was actually queried with, not
-					// the ones the filter names: the same list, so the two
-					// cannot disagree about what the filter means.
-					?>
-					<a class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost" href="<?php echo esc_url( Kivun_Export::url( 'registrations', $content_scope ) ); ?>">
-						<?php echo kivun_icon( 'download' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?><?php esc_html_e( 'ייצוא CSV', 'kivun' ); ?>
-					</a>
-				<?php endif; ?>
-			</div>
 
 			<form class="kivun-cc-leadfilters" method="get" action="<?php echo esc_url( $page_url ); ?>">
 				<input type="hidden" name="kivun_tab" value="leads">
 
-				<label class="kivun-sr-only" for="kivun-lf-content"><?php esc_html_e( 'סינון לפי תוכן', 'kivun' ); ?></label>
-				<select id="kivun-lf-content" name="kivun_content[]" multiple class="kivun-pick-src" data-pick-label="סינון לפי תוכן" data-pick-empty="<?php esc_attr_e( 'אין התאמה', 'kivun' ); ?>" data-pick-all="<?php esc_attr_e( 'כל התכנים', 'kivun' ); ?>">
-					<?php foreach ( $content_list['options'] as $c_id => $c_title ) : ?>
-						<option value="<?php echo esc_attr( $c_id ); ?>" <?php echo in_array( (int) $c_id, $selected_content, true ) ? 'selected' : ''; ?>><?php echo esc_html( $c_title ); ?></option>
-					<?php endforeach; ?>
-				</select>
-
-				<label class="kivun-sr-only" for="kivun-lf-type"><?php esc_html_e( 'סינון לפי סוג', 'kivun' ); ?></label>
-				<select id="kivun-lf-type" name="kivun_ltype[]" multiple class="kivun-pick-src" data-pick-label="סינון לפי סוג" data-pick-empty="<?php esc_attr_e( 'אין התאמה', 'kivun' ); ?>" data-pick-all="<?php esc_attr_e( 'כל הסוגים', 'kivun' ); ?>">
-					<?php foreach ( $type_labels as $tv => $tl ) : ?>
-						<option value="<?php echo esc_attr( $tv ); ?>" <?php echo in_array( (string) $tv, $type_filter, true ) ? 'selected' : ''; ?>><?php echo esc_html( $tl ); ?></option>
-					<?php endforeach; ?>
-				</select>
-
-				<label class="kivun-sr-only" for="kivun-lf-status"><?php esc_html_e( 'סינון לפי סטטוס', 'kivun' ); ?></label>
-				<select id="kivun-lf-status" name="kivun_lstatus[]" multiple class="kivun-pick-src" data-pick-label="סינון לפי סטטוס" data-pick-empty="<?php esc_attr_e( 'אין התאמה', 'kivun' ); ?>" data-pick-all="<?php esc_attr_e( 'כל הסטטוסים', 'kivun' ); ?>">
-					<?php foreach ( $filter_statuses as $sv => $sl ) : ?>
-						<option value="<?php echo esc_attr( $sv ); ?>" <?php echo in_array( (string) $sv, $status_filter, true ) ? 'selected' : ''; ?>><?php echo esc_html( $sl ); ?></option>
-					<?php endforeach; ?>
-				</select>
-
-				<label class="kivun-sr-only" for="kivun-lf-gender"><?php esc_html_e( 'סינון לפי מגדר', 'kivun' ); ?></label>
-				<select id="kivun-lf-gender" name="kivun_lgender[]" multiple class="kivun-pick-src" data-pick-label="סינון לפי מגדר" data-pick-empty="<?php esc_attr_e( 'אין התאמה', 'kivun' ); ?>" data-pick-all="<?php esc_attr_e( 'כל המגדרים', 'kivun' ); ?>">
-					<option value="male" <?php echo in_array( 'male', $gender_filter, true ) ? 'selected' : ''; ?>><?php esc_html_e( 'גברים', 'kivun' ); ?></option>
-					<option value="female" <?php echo in_array( 'female', $gender_filter, true ) ? 'selected' : ''; ?>><?php esc_html_e( 'נשים', 'kivun' ); ?></option>
-					<?php
-					// Worth having its own entry: a lead with no gender is one
-					// the rota could not place, so this lists exactly the ones
-					// that never reached a coordinator.
-					?>
-					<option value="none" <?php echo in_array( 'none', $gender_filter, true ) ? 'selected' : ''; ?>><?php esc_html_e( 'ללא מגדר', 'kivun' ); ?></option>
-				</select>
-
-				<?php if ( $city_list ) : ?>
-					<label class="kivun-sr-only" for="kivun-lf-city"><?php esc_html_e( 'סינון לפי עיר', 'kivun' ); ?></label>
-					<select id="kivun-lf-city" name="kivun_lcity[]" multiple class="kivun-pick-src" data-pick-label="סינון לפי עיר" data-pick-empty="<?php esc_attr_e( 'אין התאמה', 'kivun' ); ?>" data-pick-all="<?php esc_attr_e( 'כל הערים', 'kivun' ); ?>">
-						<?php foreach ( $city_list as $kivun_city ) : ?>
-							<option value="<?php echo esc_attr( $kivun_city ); ?>" <?php echo in_array( (string) $kivun_city, $city_filter, true ) ? 'selected' : ''; ?>><?php echo esc_html( $kivun_city ); ?></option>
-						<?php endforeach; ?>
-					</select>
-				<?php endif; ?>
-
-				<label class="kivun-sr-only" for="kivun-lf-search"><?php esc_html_e( 'חיפוש', 'kivun' ); ?></label>
-				<input type="search" id="kivun-lf-search" name="kivun_ls" value="<?php echo esc_attr( $search ); ?>" placeholder="<?php esc_attr_e( 'שם, אימייל, טלפון או מקור…', 'kivun' ); ?>">
-
-				<span class="kivun-cc-daterange">
-					<label for="kivun-lf-from"><?php esc_html_e( 'מתאריך', 'kivun' ); ?></label>
-					<input type="date" id="kivun-lf-from" name="kivun_lfrom" dir="ltr" value="<?php echo esc_attr( $date_from ); ?>">
-					<label for="kivun-lf-to"><?php esc_html_e( 'עד', 'kivun' ); ?></label>
-					<input type="date" id="kivun-lf-to" name="kivun_lto" dir="ltr" value="<?php echo esc_attr( $date_to ); ?>">
-				</span>
-
-				<?php
-				/*
-				 * What the filter is currently showing, inside the card that
-				 * sets it, rather than in a bar above it. The freshness clock
-				 * comes along because it qualifies the same number: a page
-				 * served from a cache shows the moment the copy was taken,
-				 * so if this time does not change on reload, the count cannot
-				 * be trusted either.
-				 */
-				?>
-				<div class="kivun-cc-filterbar__read">
-					<span class="kivun-stat"><strong><?php echo esc_html( number_format_i18n( $found ) ); ?></strong> <?php esc_html_e( 'רשומות בתצוגה', 'kivun' ); ?></span>
-					<span class="kivun-stat kivun-freshness" title="<?php esc_attr_e( 'אם השעה לא משתנה ברענון — הדף מוגש ממטמון והנתונים אינם מעודכנים.', 'kivun' ); ?>">
-						<?php
-						printf(
-							/* translators: %s: time the page was generated. */
-							esc_html__( 'עודכן %s', 'kivun' ),
-							esc_html( wp_date( 'H:i:s' ) )
-						);
-						?>
-					</span>
+				<div class="kivun-leads-frow">
+					<div class="kivun-leads-search">
+						<?php echo kivun_icon( 'l-search', 'kivun-leads-search__icon' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?>
+						<label class="kivun-sr-only" for="kivun-lf-search"><?php esc_html_e( 'חיפוש', 'kivun' ); ?></label>
+						<input type="search" id="kivun-lf-search" name="kivun_ls" value="<?php echo esc_attr( $search ); ?>" placeholder="<?php esc_attr_e( 'שם, אימייל, טלפון או מקור…', 'kivun' ); ?>">
+					</div>
+					<div class="kivun-cc-daterange">
+						<label for="kivun-lf-from"><?php esc_html_e( 'מתאריך', 'kivun' ); ?></label>
+						<input type="date" id="kivun-lf-from" name="kivun_lfrom" dir="ltr" value="<?php echo esc_attr( $date_from ); ?>">
+						<label for="kivun-lf-to"><?php esc_html_e( 'עד', 'kivun' ); ?></label>
+						<input type="date" id="kivun-lf-to" name="kivun_lto" dir="ltr" value="<?php echo esc_attr( $date_to ); ?>">
+					</div>
 				</div>
 
-				<label class="kivun-sr-only" for="kivun-lf-pp"><?php esc_html_e( 'רשומות בעמוד', 'kivun' ); ?></label>
-				<select id="kivun-lf-pp" name="kivun_lpp">
-					<?php foreach ( array( 25, 50, 100, 200 ) as $pp ) : ?>
-						<option value="<?php echo esc_attr( $pp ); ?>" <?php selected( $per_page, $pp ); ?>>
+				<div class="kivun-leads-picks">
+					<div class="kivun-leads-pick">
+						<label class="kivun-sr-only" for="kivun-lf-content"><?php esc_html_e( 'סינון לפי תוכן', 'kivun' ); ?></label>
+						<select id="kivun-lf-content" name="kivun_content[]" multiple class="kivun-pick-src" data-pick-label="סינון לפי תוכן" data-pick-empty="<?php esc_attr_e( 'אין התאמה', 'kivun' ); ?>" data-pick-all="<?php esc_attr_e( 'כל התכנים', 'kivun' ); ?>">
+							<?php foreach ( $content_list['options'] as $c_id => $c_title ) : ?>
+								<option value="<?php echo esc_attr( $c_id ); ?>" <?php echo in_array( (int) $c_id, $selected_content, true ) ? 'selected' : ''; ?>><?php echo esc_html( $c_title ); ?></option>
+							<?php endforeach; ?>
+						</select>
+					</div>
+					<div class="kivun-leads-pick">
+						<label class="kivun-sr-only" for="kivun-lf-type"><?php esc_html_e( 'סינון לפי סוג', 'kivun' ); ?></label>
+						<select id="kivun-lf-type" name="kivun_ltype[]" multiple class="kivun-pick-src" data-pick-label="סינון לפי סוג" data-pick-empty="<?php esc_attr_e( 'אין התאמה', 'kivun' ); ?>" data-pick-all="<?php esc_attr_e( 'כל הסוגים', 'kivun' ); ?>">
+							<?php foreach ( $type_labels as $tv => $tl ) : ?>
+								<option value="<?php echo esc_attr( $tv ); ?>" <?php echo in_array( (string) $tv, $type_filter, true ) ? 'selected' : ''; ?>><?php echo esc_html( $tl ); ?></option>
+							<?php endforeach; ?>
+						</select>
+					</div>
+					<div class="kivun-leads-pick">
+						<label class="kivun-sr-only" for="kivun-lf-status"><?php esc_html_e( 'סינון לפי סטטוס', 'kivun' ); ?></label>
+						<select id="kivun-lf-status" name="kivun_lstatus[]" multiple class="kivun-pick-src" data-pick-label="סינון לפי סטטוס" data-pick-empty="<?php esc_attr_e( 'אין התאמה', 'kivun' ); ?>" data-pick-all="<?php esc_attr_e( 'כל הסטטוסים', 'kivun' ); ?>">
+							<?php foreach ( $filter_statuses as $sv => $sl ) : ?>
+								<option value="<?php echo esc_attr( $sv ); ?>" <?php echo in_array( (string) $sv, $status_filter, true ) ? 'selected' : ''; ?>><?php echo esc_html( $sl ); ?></option>
+							<?php endforeach; ?>
+						</select>
+					</div>
+					<div class="kivun-leads-pick">
+						<label class="kivun-sr-only" for="kivun-lf-gender"><?php esc_html_e( 'סינון לפי מגדר', 'kivun' ); ?></label>
+						<select id="kivun-lf-gender" name="kivun_lgender[]" multiple class="kivun-pick-src" data-pick-label="סינון לפי מגדר" data-pick-empty="<?php esc_attr_e( 'אין התאמה', 'kivun' ); ?>" data-pick-all="<?php esc_attr_e( 'כל המגדרים', 'kivun' ); ?>">
+							<option value="male" <?php echo in_array( 'male', $gender_filter, true ) ? 'selected' : ''; ?>><?php esc_html_e( 'גברים', 'kivun' ); ?></option>
+							<option value="female" <?php echo in_array( 'female', $gender_filter, true ) ? 'selected' : ''; ?>><?php esc_html_e( 'נשים', 'kivun' ); ?></option>
 							<?php
-							/* translators: %d: number of rows shown per page. */
-							echo esc_html( sprintf( __( '%d בעמוד', 'kivun' ), $pp ) );
+							// Worth having its own entry: a lead with no gender is one
+							// the rota could not place, so this lists exactly the ones
+							// that never reached a coordinator.
 							?>
-						</option>
-					<?php endforeach; ?>
-				</select>
+							<option value="none" <?php echo in_array( 'none', $gender_filter, true ) ? 'selected' : ''; ?>><?php esc_html_e( 'ללא מגדר', 'kivun' ); ?></option>
+						</select>
+					</div>
+					<?php if ( $city_list ) : ?>
+						<div class="kivun-leads-pick">
+							<label class="kivun-sr-only" for="kivun-lf-city"><?php esc_html_e( 'סינון לפי עיר', 'kivun' ); ?></label>
+							<select id="kivun-lf-city" name="kivun_lcity[]" multiple class="kivun-pick-src" data-pick-label="סינון לפי עיר" data-pick-empty="<?php esc_attr_e( 'אין התאמה', 'kivun' ); ?>" data-pick-all="<?php esc_attr_e( 'כל הערים', 'kivun' ); ?>">
+								<?php foreach ( $city_list as $kivun_city ) : ?>
+									<option value="<?php echo esc_attr( $kivun_city ); ?>" <?php echo in_array( (string) $kivun_city, $city_filter, true ) ? 'selected' : ''; ?>><?php echo esc_html( $kivun_city ); ?></option>
+								<?php endforeach; ?>
+							</select>
+						</div>
+					<?php endif; ?>
+				</div>
 
-				<button type="submit" class="kivun-cc-btn kivun-cc-btn--sm"><?php echo kivun_icon( 'filter' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?><?php esc_html_e( 'סינון', 'kivun' ); ?></button>
-				<?php if ( $content_filter || $type_filter || $status_filter || $gender_filter || $city_filter || '' !== $search || '' !== $date_from || '' !== $date_to ) : ?>
-					<a class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost" href="<?php echo esc_url( add_query_arg( 'kivun_tab', 'leads', $page_url ) ); ?>"><?php esc_html_e( 'ניקוי', 'kivun' ); ?></a>
-				<?php endif; ?>
+				<div class="kivun-leads-frow kivun-leads-frow--foot">
+					<?php
+					/*
+					 * What the filter is currently showing, inside the card that
+					 * sets it, rather than in a bar above it. The freshness clock
+					 * comes along because it qualifies the same number: a page
+					 * served from a cache shows the moment the copy was taken,
+					 * so if this time does not change on reload, the count cannot
+					 * be trusted either.
+					 */
+					?>
+					<div class="kivun-cc-filterbar__read">
+						<span class="kivun-stat"><strong><?php echo esc_html( number_format_i18n( $found ) ); ?></strong> <?php esc_html_e( 'רשומות בתצוגה', 'kivun' ); ?></span>
+						<span class="kivun-stat kivun-freshness" title="<?php esc_attr_e( 'אם השעה לא משתנה ברענון — הדף מוגש ממטמון והנתונים אינם מעודכנים.', 'kivun' ); ?>">
+							<?php
+							printf(
+								/* translators: %s: time the page was generated. */
+								esc_html__( 'עודכן %s', 'kivun' ),
+								esc_html( wp_date( 'H:i:s' ) )
+							);
+							?>
+						</span>
+						<?php if ( $filtered ) : ?>
+							<a class="kivun-leads-clear" href="<?php echo esc_url( add_query_arg( 'kivun_tab', 'leads', $page_url ) ); ?>"><?php esc_html_e( 'ניקוי סינון', 'kivun' ); ?></a>
+						<?php endif; ?>
+					</div>
+					<div class="kivun-leads-apply">
+						<label class="kivun-sr-only" for="kivun-lf-pp"><?php esc_html_e( 'רשומות בעמוד', 'kivun' ); ?></label>
+						<select id="kivun-lf-pp" name="kivun_lpp">
+							<?php foreach ( array( 25, 50, 100, 200 ) as $pp ) : ?>
+								<option value="<?php echo esc_attr( $pp ); ?>" <?php selected( $per_page, $pp ); ?>>
+									<?php
+									/* translators: %d: number of rows shown per page. */
+									echo esc_html( sprintf( __( '%d בעמוד', 'kivun' ), $pp ) );
+									?>
+								</option>
+							<?php endforeach; ?>
+						</select>
+						<button type="submit" class="kivun-leads-filterbtn"><?php echo kivun_icon( 'l-filter' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?><?php esc_html_e( 'סינון', 'kivun' ); ?></button>
+					</div>
+				</div>
 			</form>
 
 			<?php if ( ! $rows ) : ?>
@@ -6666,132 +6712,99 @@ class Kivun_Content_Creator {
 				<?php
 				// How the table is shown is the reader's choice, not the screen's.
 				// Cards are easier on a phone and heavy going at a desk, so neither
-				// can be the answer for everybody. Left alone it picks whichever
-				// fits; once somebody chooses, that choice is remembered.
+				// can be the answer for everybody. Left alone it is the table, which
+				// scrolls sideways, and cards on a phone; once somebody chooses,
+				// that choice is remembered.
 				//
-				// And the columns can be put away. Eleven of them is what stopped
-				// the table fitting in the first place, and most of the time three
-				// or four of them are not being read.
+				// And the columns can be put away: most of the time three or four
+				// of them are not being read.
 				?>
 				<div class="kivun-cc-viewbar" data-for="leads">
 					<div class="kivun-cc-viewtoggle" role="group" aria-label="<?php esc_attr_e( 'צורת התצוגה', 'kivun' ); ?>">
 						<?php
-						// The shape beside its name. The icon is what the eye picks
-						// out once the control is familiar; the word is what makes it
-						// legible the first time, and neither costs the other
-						// anything at this size.
 						foreach ( array(
 							'table' => __( 'טבלה', 'kivun' ),
 							'cards' => __( 'כרטיסים', 'kivun' ),
 						) as $kivun_view => $kivun_view_label ) :
 							?>
-							<button
-								type="button"
-								class="kivun-cc-viewbtn"
-								data-view="<?php echo esc_attr( $kivun_view ); ?>"
-								aria-pressed="false"
-							>
-								<?php echo kivun_icon( $kivun_view, 'kivun-cc-viewbtn__icon' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?>
+							<button type="button" class="kivun-cc-viewbtn" data-view="<?php echo esc_attr( $kivun_view ); ?>" aria-pressed="false">
+								<?php echo kivun_icon( 'l-' . $kivun_view, 'kivun-cc-viewbtn__icon' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?>
 								<?php echo esc_html( $kivun_view_label ); ?>
 							</button>
 						<?php endforeach; ?>
 					</div>
 
 					<details class="kivun-cc-colpicker">
-						<summary class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost"><?php esc_html_e( 'עמודות', 'kivun' ); ?></summary>
+						<summary class="kivun-leads-btn kivun-leads-colbtn"><?php echo kivun_icon( 'l-columns' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?><?php esc_html_e( 'עמודות', 'kivun' ); ?></summary>
 						<div class="kivun-cc-colpicker__menu">
 							<?php
-							// A column withheld from this reader is not offered back to them here.
-							foreach ( array_filter(
-								array(
-									'name'    => __( 'שם', 'kivun' ),
-									'content' => __( 'תוכן', 'kivun' ),
-									'utm'     => $show_source ? __( 'מקור (UTM)', 'kivun' ) : '',
-									'type'    => __( 'סוג', 'kivun' ),
-									'contact' => __( 'יצירת קשר', 'kivun' ),
-									'city'    => __( 'עיר', 'kivun' ),
-									'gender'  => __( 'מגדר', 'kivun' ),
-									'handler' => __( 'רכז/ת מטפל/ת', 'kivun' ),
-									'consent' => __( 'דיוור', 'kivun' ),
-									'privacy' => __( 'פרטיות', 'kivun' ),
-									'message' => __( 'פרטי הפנייה', 'kivun' ),
-									'notes'   => __( 'הערות פנימיות', 'kivun' ),
-									'date'    => __( 'תאריך', 'kivun' ),
-									'status'  => __( 'סטטוס', 'kivun' ),
-								)
-							) as $kivun_col => $kivun_col_label ) :
+							// A column withheld from this reader is not offered back
+							// to them here, and the name stays: a row nobody can
+							// tell apart from the next is no row at all.
+							foreach ( $lead_cols as $kivun_col => $lead_col ) :
+								if ( ! $lead_col[3] ) {
+									continue;
+								}
 								?>
 								<label class="kivun-cc-colpicker__row">
 									<input type="checkbox" data-col-toggle="<?php echo esc_attr( $kivun_col ); ?>" checked>
-									<?php echo esc_html( $kivun_col_label ); ?>
+									<span class="kivun-cc-colpicker__box" aria-hidden="true"><?php echo kivun_icon( 'l-check' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?></span>
+									<?php echo esc_html( $lead_col[0] ); ?>
 								</label>
 							<?php endforeach; ?>
-							<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-colpicker__reset"><?php esc_html_e( 'איפוס', 'kivun' ); ?></button>
+							<button type="button" class="kivun-cc-colpicker__reset"><?php esc_html_e( 'איפוס', 'kivun' ); ?></button>
 						</div>
 					</details>
 				</div>
 
 				<div class="kivun-cc-tablewrap kivun-cc-tablewrap--stacks">
-				<table class="kivun-cc-table kivun-cc-leadtable">
+				<table class="kivun-cc-table kivun-cc-leadtable" style="<?php echo esc_attr( '--lead-cols: ' . implode( ' ', $lead_tracks ) . '; --lead-min: ' . $lead_min . 'px;' ); ?>">
 					<thead>
 						<tr>
-							<th scope="col" data-col="name"><?php esc_html_e( 'שם', 'kivun' ); ?></th>
-							<th scope="col" data-col="content"><?php esc_html_e( 'תוכן', 'kivun' ); ?></th>
-							<?php if ( $show_source ) : ?>
-								<?php if ( $show_source ) : ?>
-									<th scope="col" data-col="utm"><?php esc_html_e( 'מקור (UTM)', 'kivun' ); ?></th>
-								<?php endif; ?>
-							<?php endif; ?>
-							<th scope="col" data-col="type"><?php esc_html_e( 'סוג', 'kivun' ); ?></th>
-							<th scope="col" data-col="contact"><?php esc_html_e( 'יצירת קשר', 'kivun' ); ?></th>
-							<th scope="col" data-col="city"><?php esc_html_e( 'עיר', 'kivun' ); ?></th>
-							<th scope="col" data-col="gender"><?php esc_html_e( 'מגדר', 'kivun' ); ?></th>
-							<th scope="col" data-col="handler"><?php esc_html_e( 'רכז/ת מטפל/ת', 'kivun' ); ?></th>
-							<th scope="col" data-col="consent"><?php esc_html_e( 'דיוור', 'kivun' ); ?></th>
-							<th scope="col" data-col="privacy"><?php esc_html_e( 'פרטיות', 'kivun' ); ?></th>
-							<th scope="col" data-col="message"><?php esc_html_e( 'פרטי הפנייה', 'kivun' ); ?></th>
-							<th scope="col" data-col="notes"><?php esc_html_e( 'הערות פנימיות', 'kivun' ); ?></th>
-							<th scope="col"><?php esc_html_e( 'תאריך', 'kivun' ); ?></th>
-							<th scope="col"><?php esc_html_e( 'סטטוס', 'kivun' ); ?></th>
-							<?php if ( $can_delete_rows ) : ?>
-								<th scope="col" data-col="delete"><?php esc_html_e( 'מחיקה', 'kivun' ); ?></th>
-							<?php endif; ?>
+							<?php foreach ( $lead_cols as $kivun_col => $lead_col ) : ?>
+								<th scope="col" data-col="<?php echo esc_attr( $kivun_col ); ?>" data-w="<?php echo esc_attr( $lead_col[1] . ( $lead_col[2] ? 'fr' : '' ) ); ?>"<?php echo 'delete' === $kivun_col ? ' class="kivun-lead__delhead"' : ''; ?>><?php echo esc_html( $lead_col[0] ); ?></th>
+							<?php endforeach; ?>
 						</tr>
 					</thead>
 					<tbody>
 					<?php foreach ( $rows as $r ) : ?>
-						<tr>
+						<?php
+						// A lead with no post was never filed against one — the jobs
+						// board is an archive, so it is named instead. Only a lead
+						// that had a post and lost it is deleted.
+						if ( $r->course_title ) {
+							$row_title = (string) $r->course_title;
+						} elseif ( $r->course_id ) {
+							$row_title = __( '(נמחק)', 'kivun' );
+						} else {
+							$row_title = $type_labels[ $r->type ?? '' ] ?? __( 'לוח משרות', 'kivun' );
+						}
+						$row_link    = $r->course_id ? (string) get_permalink( (int) $r->course_id ) : '';
+						$row_type    = (string) ( $r->type ?? 'registration' );
+						$src         = self::lead_source( $r );
+						$row_answers = self::lead_answers( (string) ( $r->message ?? '' ) );
+						$row_more    = 'kivun-lead-more-' . (int) $r->id;
+						$row_utm     = self::lead_utm_line( $src, $show_full_source );
+						$row_city    = trim( (string) ( $r->city ?? '' ) );
+						$row_gender  = trim( (string) ( $r->gender ?? '' ) );
+						?>
+						<tr class="kivun-lead">
 							<td data-label="<?php esc_attr_e( 'שם', 'kivun' ); ?>" data-col="name"><strong><?php echo esc_html( $r->name ); ?></strong></td>
 							<td data-label="<?php esc_attr_e( 'תוכן', 'kivun' ); ?>" data-col="content">
-								<?php
-								// A lead with no post was never filed against one — the jobs
-								// board is an archive, so it is named instead. Only a lead
-								// that had a post and lost it is deleted.
-								if ( $r->course_title ) {
-									$row_title = (string) $r->course_title;
-								} elseif ( $r->course_id ) {
-									$row_title = __( '(נמחק)', 'kivun' );
-								} else {
-									$row_title = $type_labels[ $r->type ?? '' ] ?? __( 'לוח משרות', 'kivun' );
-								}
-								$row_link = $r->course_id ? (string) get_permalink( (int) $r->course_id ) : '';
-								if ( $row_link ) :
-									?>
-									<a href="<?php echo esc_url( $row_link ); ?>" target="_blank" rel="noopener"><?php echo esc_html( $row_title ); ?></a>
+								<?php if ( $row_link ) : ?>
+									<a class="kivun-lead__title" href="<?php echo esc_url( $row_link ); ?>" target="_blank" rel="noopener"><?php echo esc_html( $row_title ); ?></a>
 								<?php else : ?>
-									<?php echo esc_html( $row_title ); ?>
+									<span class="kivun-lead__title"><?php echo esc_html( $row_title ); ?></span>
 								<?php endif; ?>
-								<?php
-								$src = self::lead_source( $r );
-								if ( '' !== $src['origin'] ) :
-									?>
+								<span class="kivun-lead__type" data-type="<?php echo esc_attr( $row_type ); ?>"><?php echo esc_html( $type_labels[ $row_type ] ?? $row_type ); ?></span>
+								<?php if ( '' !== $src['origin'] ) : ?>
 									<span class="kivun-cc-source"><?php echo esc_html( $src['origin'] ); ?></span>
 								<?php endif; ?>
 							</td>
 							<?php if ( $show_source ) : ?>
 							<td class="kivun-cc-utm" data-label="<?php esc_attr_e( 'מקור (UTM)', 'kivun' ); ?>" data-col="utm">
 								<?php if ( '' !== $src['source'] ) : ?>
-									<span class="kivun-cc-badge"><?php echo esc_html( $src['source'] ); ?></span>
+									<span class="kivun-lead__src" data-src="<?php echo esc_attr( self::lead_source_tone( $src['source'] ) ); ?>"><?php echo esc_html( $src['source'] ); ?></span>
 									<?php
 									/*
 									 * Everything past the medium is the advertising
@@ -6801,31 +6814,24 @@ class Kivun_Content_Creator {
 									 * it came in from and nothing further.
 									 */
 									?>
-									<?php if ( $show_full_source ) : ?>
-										<?php if ( '' !== $src['medium'] ) : ?>
-											<span class="kivun-cc-badge"><?php echo esc_html( $src['medium'] ); ?></span>
-										<?php endif; ?>
-										<?php if ( '' !== $src['campaign'] ) : ?>
-											<span class="kivun-cc-source">
-												<?php echo esc_html( $src['campaign'] ); ?>
-												<?php echo '' !== $src['content'] ? esc_html( ' · ' . $src['content'] ) : ''; ?>
-											</span>
-										<?php endif; ?>
+									<?php if ( '' !== $row_utm ) : ?>
+										<span class="kivun-cc-source"><?php echo esc_html( $row_utm ); ?></span>
 									<?php endif; ?>
 								<?php else : ?>
 									<span class="kivun-muted" aria-hidden="true">—</span>
 								<?php endif; ?>
 							</td>
 							<?php endif; ?>
-							<td data-label="<?php esc_attr_e( 'סוג', 'kivun' ); ?>" data-col="type"><span class="kivun-cc-badge"><?php echo esc_html( $type_labels[ $r->type ?? 'registration' ] ?? (string) $r->type ); ?></span></td>
 							<td class="kivun-app-contact" data-label="<?php esc_attr_e( 'יצירת קשר', 'kivun' ); ?>" data-col="contact">
-								<a href="mailto:<?php echo esc_attr( $r->email ); ?>"><?php echo esc_html( $r->email ); ?></a>
+								<?php if ( $r->email ) : ?>
+									<a href="mailto:<?php echo esc_attr( $r->email ); ?>" dir="ltr"><?php echo esc_html( $r->email ); ?></a>
+								<?php endif; ?>
 								<?php if ( $r->phone ) : ?>
-									<a href="tel:<?php echo esc_attr( $r->phone ); ?>"><?php echo esc_html( $r->phone ); ?></a>
+									<a class="kivun-lead__phone" href="tel:<?php echo esc_attr( $r->phone ); ?>" dir="ltr"><?php echo esc_html( $r->phone ); ?></a>
 								<?php endif; ?>
 							</td>
-							<td data-label="<?php esc_attr_e( 'עיר', 'kivun' ); ?>" data-col="city"><?php echo esc_html( (string) ( $r->city ?? '' ) ); ?></td>
-							<td data-label="<?php esc_attr_e( 'מגדר', 'kivun' ); ?>" data-col="gender"><?php echo esc_html( '' !== trim( (string) ( $r->gender ?? '' ) ) ? (string) $r->gender : '—' ); ?></td>
+							<td data-label="<?php esc_attr_e( 'עיר', 'kivun' ); ?>" data-col="city"><?php echo '' !== $row_city ? esc_html( $row_city ) : '<span class="kivun-muted">—</span>'; ?></td>
+							<td data-label="<?php esc_attr_e( 'מגדר', 'kivun' ); ?>" data-col="gender"><?php echo '' !== $row_gender ? esc_html( $row_gender ) : '<span class="kivun-muted">—</span>'; ?></td>
 							<td data-label="<?php esc_attr_e( 'רכז/ת מטפל/ת', 'kivun' ); ?>" data-col="handler">
 								<?php
 								// A control rather than a word. The rota places
@@ -6837,7 +6843,7 @@ class Kivun_Content_Creator {
 								echo Kivun_Admin::handler_select( (int) $r->id, (string) ( $r->coordinator ?? '' ) );
 								?>
 								<span class="kivun-saved-indicator" role="status" aria-live="polite" style="display:none"></span>
-								<?php if ( '' === trim( (string) ( $r->coordinator ?? '' ) ) && '' === trim( (string) ( $r->gender ?? '' ) ) ) : ?>
+								<?php if ( '' === trim( (string) ( $r->coordinator ?? '' ) ) && '' === $row_gender ) : ?>
 									<?php
 									// Why this one is empty. A lead the rota was
 									// never asked about is not the same as one it
@@ -6849,10 +6855,17 @@ class Kivun_Content_Creator {
 									<span class="kivun-muted kivun-handler-why"><?php esc_html_e( 'הגיע ללא מגדר', 'kivun' ); ?></span>
 								<?php endif; ?>
 							</td>
-							<td data-label="<?php esc_attr_e( 'דיוור', 'kivun' ); ?>" data-col="consent"><?php echo esc_html( empty( $r->marketing_consent ) ? '—' : '✓' ); ?></td>
-							<td data-label="<?php esc_attr_e( 'פרטיות', 'kivun' ); ?>" data-col="privacy"><?php echo esc_html( empty( $r->privacy_consent ) ? '—' : '✓' ); ?></td>
+							<td data-label="<?php esc_attr_e( 'דיוור', 'kivun' ); ?>" data-col="consent"><?php echo self::lead_tick( ! empty( $r->marketing_consent ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static markup. ?></td>
+							<td data-label="<?php esc_attr_e( 'פרטיות', 'kivun' ); ?>" data-col="privacy"><?php echo self::lead_tick( ! empty( $r->privacy_consent ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static markup. ?></td>
 							<td data-label="<?php esc_attr_e( 'פרטי הפנייה', 'kivun' ); ?>" data-col="message">
-								<?php echo kivun_submission_details( (string) ( $r->message ?? '' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Helper escapes the saved text and labels. ?>
+								<button type="button" class="kivun-lead__more" aria-expanded="false" aria-controls="<?php echo esc_attr( $row_more ); ?>"><?php echo kivun_icon( 'l-chev' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?><?php esc_html_e( 'פרטי הפנייה', 'kivun' ); ?></button>
+								<?php if ( $row_answers ) : ?>
+									<?php foreach ( $row_answers as $row_answer ) : ?>
+										<span class="kivun-lead__answer" dir="auto"><?php echo esc_html( ( '' !== $row_answer[0] ? $row_answer[0] . ': ' : '' ) . $row_answer[1] ); ?></span>
+									<?php endforeach; ?>
+								<?php else : ?>
+									<span class="kivun-lead__answer kivun-muted">—</span>
+								<?php endif; ?>
 							</td>
 							<td data-label="<?php esc_attr_e( 'הערות פנימיות', 'kivun' ); ?>" data-col="notes">
 								<?php
@@ -6864,54 +6877,176 @@ class Kivun_Content_Creator {
 								?>
 								<span class="kivun-saved-indicator" role="status" aria-live="polite" style="display:none"></span>
 							</td>
-							<td class="kivun-cc-date" data-label="<?php esc_attr_e( 'תאריך', 'kivun' ); ?>" data-col="date"><?php echo esc_html( kivun_local_date( (string) $r->created_at ) ); ?></td>
+							<td class="kivun-cc-date" data-label="<?php esc_attr_e( 'תאריך', 'kivun' ); ?>" data-col="date"><span><?php echo esc_html( kivun_local_date( (string) $r->created_at, 'd/m/Y' ) ); ?></span> <span class="kivun-lead__time"><?php echo esc_html( kivun_local_date( (string) $r->created_at, 'H:i' ) ); ?></span></td>
 							<td data-label="<?php esc_attr_e( 'סטטוס', 'kivun' ); ?>" data-col="status">
 								<?php
 								// Everyone who can see the leads can move one along;
-								// tracking progress is the point of the table.
+								// tracking progress is the point of the table. A
+								// lead nobody has reached reads "חדש", as the
+								// handoff names it, rather than an empty pill.
 								// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Returns pre-escaped HTML.
-								echo Kivun_Admin::status_select( 'registrations', (int) $r->id, (string) $r->status, $statuses );
+								echo Kivun_Admin::status_select( 'registrations', (int) $r->id, (string) $r->status, $statuses, __( 'חדש', 'kivun' ) );
 								?>
 								<span class="kivun-saved-indicator" role="status" aria-live="polite" style="display:none"></span>
 							</td>
 							<?php if ( $can_delete_rows ) : ?>
 								<td data-label="<?php esc_attr_e( 'מחיקה', 'kivun' ); ?>" data-col="delete">
-									<button
-										type="button"
-										class="kivun-cc-iconbtn kivun-cc-iconbtn--danger kivun-delete-row"
-										data-table="registrations"
-										data-id="<?php echo esc_attr( $r->id ); ?>"
-										title="<?php esc_attr_e( 'מחיקת הרשומה', 'kivun' ); ?>"
-									>
-										<?php echo kivun_icon( 'trash' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?>
-										<span class="kivun-sr-only"><?php esc_html_e( 'מחיקת הרשומה', 'kivun' ); ?></span>
+									<?php
+									// Asked in the row, and asked once: the mark opens
+									// "מחיקה / ביטול" in its place, and "מחיקה" is the
+									// button the delete handler has always bound to.
+									?>
+									<button type="button" class="kivun-lead__ask" aria-expanded="false" aria-label="<?php esc_attr_e( 'מחיקת הרשומה', 'kivun' ); ?>" title="<?php esc_attr_e( 'מחיקת הרשומה', 'kivun' ); ?>">
+										<?php echo kivun_icon( 'l-trash' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?>
 									</button>
+									<div class="kivun-lead__confirm" hidden>
+										<button type="button" class="kivun-delete-row kivun-lead__yes" data-table="registrations" data-id="<?php echo esc_attr( $r->id ); ?>"><?php esc_html_e( 'מחיקה', 'kivun' ); ?></button>
+										<button type="button" class="kivun-lead__no"><?php esc_html_e( 'ביטול', 'kivun' ); ?></button>
+									</div>
 								</td>
 							<?php endif; ?>
+						</tr>
+						<tr class="kivun-lead-more" id="<?php echo esc_attr( $row_more ); ?>" hidden>
+							<td colspan="<?php echo esc_attr( (string) count( $lead_cols ) ); ?>">
+								<dl class="kivun-lead-more__card">
+									<?php
+									$row_facts = array(
+										array( __( 'שם', 'kivun' ), (string) $r->name ),
+										array( __( 'טלפון', 'kivun' ), (string) $r->phone ),
+										array( __( 'אימייל', 'kivun' ), (string) $r->email ),
+									);
+									if ( $show_source ) {
+										$row_facts[] = array( __( 'מקור (UTM)', 'kivun' ), implode( ' · ', array_filter( array( $src['source'], $row_utm ), 'strlen' ) ) );
+									}
+									foreach ( array_merge( $row_facts, $row_answers ) as $row_fact ) :
+										?>
+										<div class="kivun-lead-more__item">
+											<dt><?php echo esc_html( '' !== $row_fact[0] ? $row_fact[0] : __( 'הודעה', 'kivun' ) ); ?></dt>
+											<dd dir="auto"><?php echo '' !== trim( $row_fact[1] ) ? nl2br( esc_html( $row_fact[1] ), false ) : '—'; ?></dd>
+										</div>
+									<?php endforeach; ?>
+								</dl>
+							</td>
 						</tr>
 					<?php endforeach; ?>
 					</tbody>
 				</table>
 				</div>
+				<p class="kivun-leads-hint"><?php esc_html_e( 'אפשר לגלול את הטבלה הצידה · עמודות אפשר להסתיר בכפתור "עמודות"', 'kivun' ); ?></p>
 
 				<?php if ( $total_pages > 1 ) : ?>
 					<div class="kivun-cc-pager">
 						<?php if ( $paged > 1 ) : ?>
-							<a class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost" href="<?php echo esc_url( $page_link( $paged - 1 ) ); ?>">‹ <?php esc_html_e( 'הקודם', 'kivun' ); ?></a>
+							<a class="kivun-leads-page" href="<?php echo esc_url( $page_link( $paged - 1 ) ); ?>">‹ <?php esc_html_e( 'הקודם', 'kivun' ); ?></a>
+						<?php else : ?>
+							<span class="kivun-leads-page is-off" aria-disabled="true">‹ <?php esc_html_e( 'הקודם', 'kivun' ); ?></span>
 						<?php endif; ?>
 						<span class="kivun-cc-pager__state">
 							<?php
-							/* translators: 1: current page, 2: total pages. */
-							echo esc_html( sprintf( __( 'עמוד %1$d מתוך %2$d', 'kivun' ), $paged, $total_pages ) );
+							printf(
+								/* translators: 1: current page, 2: total pages. */
+								esc_html__( 'עמוד %1$s מתוך %2$s', 'kivun' ),
+								'<strong>' . esc_html( number_format_i18n( $paged ) ) . '</strong>',
+								esc_html( number_format_i18n( $total_pages ) )
+							);
 							?>
 						</span>
 						<?php if ( $paged < $total_pages ) : ?>
-							<a class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-btn--ghost" href="<?php echo esc_url( $page_link( $paged + 1 ) ); ?>"><?php esc_html_e( 'הבא', 'kivun' ); ?> ›</a>
+							<a class="kivun-leads-page kivun-leads-page--next" href="<?php echo esc_url( $page_link( $paged + 1 ) ); ?>"><?php esc_html_e( 'הבא', 'kivun' ); ?> ›</a>
+						<?php else : ?>
+							<span class="kivun-leads-page kivun-leads-page--next is-off" aria-disabled="true"><?php esc_html_e( 'הבא', 'kivun' ); ?> ›</span>
 						<?php endif; ?>
 					</div>
 				<?php endif; ?>
 			<?php endif; ?>
 		</div>
 		<?php
+	}
+
+	/**
+	 * A lead's form answers, one [label, value] pair per line.
+	 *
+	 * The message is stored as the visitor's own words, if any, followed by a
+	 * "label: value" line for every other field the form asked. Lines that are
+	 * not in that shape are the free text, and come back as one entry with no
+	 * label.
+	 *
+	 * @param string $message The stored message.
+	 * @return array<int,array{0:string,1:string}>
+	 */
+	public static function lead_answers( string $message ): array {
+		$pairs = array();
+		$free  = array();
+
+		foreach ( preg_split( '/\r\n|\r|\n/', $message ) as $line ) {
+			$line = trim( (string) $line );
+			if ( '' === $line ) {
+				continue;
+			}
+			if ( preg_match( '/^([^:]{1,60}):\s(.*)$/u', $line, $m ) ) {
+				$pairs[] = array( trim( $m[1] ), trim( $m[2] ) );
+			} else {
+				$free[] = $line;
+			}
+		}
+
+		if ( $free ) {
+			array_unshift( $pairs, array( '', implode( "\n", $free ) ) );
+		}
+
+		return $pairs;
+	}
+
+	/**
+	 * The line under a lead's source: what else the UTM says, for whoever may
+	 * read it.
+	 *
+	 * Everything past the medium is the advertising ledger, so it is only
+	 * spelled out for the managers and the agency.
+	 *
+	 * @param array<string,string> $src              The lead's source, from lead_source().
+	 * @param bool                 $show_full_source Whether the reader may see the whole UTM.
+	 * @return string
+	 */
+	private static function lead_utm_line( array $src, bool $show_full_source ): string {
+		if ( ! $show_full_source ) {
+			return '';
+		}
+
+		$campaign = implode( ' · ', array_filter( array( (string) ( $src['campaign'] ?? '' ), (string) ( $src['content'] ?? '' ) ), 'strlen' ) );
+
+		return implode( ' · ', array_filter( array( $campaign, (string) ( $src['medium'] ?? '' ) ), 'strlen' ) );
+	}
+
+	/**
+	 * Which colour a source's dot takes.
+	 *
+	 * @param string $source A lead's utm_source.
+	 * @return string One of whatsapp, facebook, google, other.
+	 */
+	public static function lead_source_tone( string $source ): string {
+		$source = strtolower( trim( $source ) );
+		if ( 'wa' === $source || false !== strpos( $source, 'whatsapp' ) ) {
+			return 'whatsapp';
+		}
+		if ( in_array( $source, array( 'fb', 'ig', 'meta' ), true ) || false !== strpos( $source, 'facebook' ) || false !== strpos( $source, 'instagram' ) ) {
+			return 'facebook';
+		}
+		if ( false !== strpos( $source, 'google' ) || false !== strpos( $source, 'youtube' ) ) {
+			return 'google';
+		}
+		return 'other';
+	}
+
+	/**
+	 * A consent cell: a ticked sky disc, or a dash.
+	 *
+	 * @param bool $given Whether the visitor agreed.
+	 * @return string
+	 */
+	private static function lead_tick( bool $given ): string {
+		return $given
+			? '<span class="kivun-lead__tick" role="img" aria-label="' . esc_attr__( 'כן', 'kivun' ) . '">' . kivun_icon( 'l-check' ) . '</span>'
+			: '<span class="kivun-muted" aria-label="' . esc_attr__( 'לא', 'kivun' ) . '">—</span>';
 	}
 }

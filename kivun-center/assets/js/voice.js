@@ -72,6 +72,10 @@
 		// A list's search box filters as it is typed; the library's has no
 		// room for a button and its design has none.
 		if (field.closest && field.closest('.kivun-lib-search')) { return; }
+		// The leads filters keep it on the search alone, as their handoff
+		// does: a filter is a list to pick from, and the access panel's
+		// field is an email address.
+		if (field.closest && field.closest('.kivun-pick, .kivun-leads-access')) { return; }
 		field.dataset.kivunMic = '1';
 		var btn = micButton(function (txt) {
 			var cur = field.value || '';
