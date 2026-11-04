@@ -205,6 +205,31 @@ final class LeadsContractTest extends TestCase {
 			Kivun_Content_Creator::lead_answers( "שלום\nאשמח לפרטים\nרמת אנגלית: בסיסית\r\nfield_6ff8c9b: on\n" )
 		);
 		$this->assertSame( array(), Kivun_Content_Creator::lead_answers( " \n " ) );
+
+		// A textarea's own lines stay with the answer they belong to.
+		$this->assertSame(
+			array(
+				array( 'ניסיון', "עבודה ראשונה\nעבודה שנייה" ),
+				array( 'עיר', 'ירושלים' ),
+			),
+			Kivun_Content_Creator::lead_answers( "ניסיון: עבודה ראשונה\nעבודה שנייה\nעיר: ירושלים" )
+		);
+	}
+
+	/**
+	 * A multi-line answer keeps its lines when the details are opened.
+	 *
+	 * The screen hides every <br> (wpautop()'s), and the output is flattened
+	 * onto one line, so each line is its own block instead.
+	 *
+	 * @return void
+	 */
+	public function test_an_answer_keeps_its_lines_in_the_details(): void {
+		$src = $this->leads();
+		$this->assertStringNotContainsString( 'nl2br(', $src, 'the details break lines with <br>, which this screen hides' );
+		$this->assertStringContainsString( '<span class="kivun-lead-more__line">', $src );
+		$css = (string) file_get_contents( KIVUN_DIR . 'assets/css/frontend.css' );
+		$this->assertStringContainsString( '.kivun-cc-console .kivun-leads .kivun-lead-more__line { display: block; }', $css );
 	}
 
 	/**

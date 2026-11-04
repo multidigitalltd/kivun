@@ -7155,6 +7155,7 @@ body.kivun-ty-open { overflow: hidden; }
 	text-align: left;
 	overflow-wrap: anywhere;
 }
+.kivun-cc-console .kivun-leads .kivun-lead-more__line { display: block; }
 
 .kivun-cc-console .kivun-leads .kivun-leads-hint {
 	margin: -10px 0 0;

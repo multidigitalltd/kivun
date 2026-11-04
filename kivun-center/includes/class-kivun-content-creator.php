@@ -6922,7 +6922,23 @@ class Kivun_Content_Creator {
 										?>
 										<div class="kivun-lead-more__item">
 											<dt><?php echo esc_html( '' !== $row_fact[0] ? $row_fact[0] : __( 'הודעה', 'kivun' ) ); ?></dt>
-											<dd dir="auto"><?php echo '' !== trim( $row_fact[1] ) ? nl2br( esc_html( $row_fact[1] ), false ) : '—'; ?></dd>
+											<dd dir="auto">
+												<?php
+												// One block per line rather than a break tag: the
+												// shortcode's output is flattened onto one
+												// line, and the screen hides wpautop()'s breaks.
+												$row_lines = array_filter( array_map( 'trim', explode( "\n", $row_fact[1] ) ), 'strlen' );
+												if ( $row_lines ) :
+													foreach ( $row_lines as $row_line ) :
+														?>
+														<span class="kivun-lead-more__line"><?php echo esc_html( $row_line ); ?></span>
+														<?php
+													endforeach;
+												else :
+													echo '—';
+												endif;
+												?>
+											</dd>
 										</div>
 									<?php endforeach; ?>
 								</dl>
@@ -6985,6 +7001,11 @@ class Kivun_Content_Creator {
 			}
 			if ( preg_match( '/^([^:]{1,60}):\s(.*)$/u', $line, $m ) ) {
 				$pairs[] = array( trim( $m[1] ), trim( $m[2] ) );
+			} elseif ( $pairs ) {
+				// A line after an answer is more of that answer: a textarea
+				// on the form keeps its own line breaks in the stored text.
+				$last               = count( $pairs ) - 1;
+				$pairs[ $last ][1] .= "\n" . $line;
 			} else {
 				$free[] = $line;
 			}
