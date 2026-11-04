@@ -1698,6 +1698,17 @@ td.kivun-app-contact a { display: block; }
 /* No zebra. The rows sit on a white card now, and striping them fought the
    flat surfaces everywhere else; one quiet hover says which row you are on. */
 .kivun-cc-table tbody tr:hover { background: var(--cc-field, rgba(0,0,0,.03)); }
+/*
+ * The site's theme has opinions about every table. Hello Elementor's reset
+ * greys each cell of an odd body row (`table tbody>tr:nth-child(odd)>td`)
+ * and each hovered one, and gives every cell a 1px box. On the leads, whose
+ * rows alternate with their hidden details rows, every lead is odd — so each
+ * cell of each lead came out as a grey box of its own, which is nothing the
+ * handoff draws. A console cell takes its row's background, and the only
+ * line it has is the one the console gives it.
+ */
+.kivun-cc-console :is(.kivun-cc-table, .kivun-jobs-table, .kivun-apps-table) tbody > tr > :is(td, th) { background-color: transparent; }
+.kivun-cc-console :is(.kivun-cc-table, .kivun-jobs-table, .kivun-apps-table) :is(td, th) { border-top: 0; border-left: 0; border-right: 0; }
 .kivun-cc-table a { color: var(--cc-brand, var(--kivun-accent)); text-decoration: none; font-weight: 600; }
 .kivun-cc-table a:hover { text-decoration: underline; }
 /* The title cell: 17/700, the one thing in a row read before the rest. */

@@ -317,4 +317,22 @@ final class LeadsContractTest extends TestCase {
 		$this->assertStringContainsString( 'window.location.assign(href);', $js, 'a failed fetch leaves the button doing nothing instead of following its link' );
 		$this->assertStringContainsString( 'delete table.dataset.labelled;', $js, 'the added rows go without their column names on a phone' );
 	}
+
+	/**
+	 * The site theme's table striping does not reach the console.
+	 *
+	 * Hello Elementor greys each cell of an odd body row. The leads alternate
+	 * a row with its hidden details row, so every lead is odd, and each cell
+	 * came out as a grey box — reported from the live site.
+	 *
+	 * @return void
+	 */
+	public function test_the_theme_does_not_grey_the_cells(): void {
+		$css = (string) file_get_contents( KIVUN_DIR . 'assets/css/frontend.css' );
+		$this->assertStringContainsString(
+			'.kivun-cc-console :is(.kivun-cc-table, .kivun-jobs-table, .kivun-apps-table) tbody > tr > :is(td, th) { background-color: transparent; }',
+			$css,
+			'the theme\'s odd-row grey paints every lead cell again'
+		);
+	}
 }
