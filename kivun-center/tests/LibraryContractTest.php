@@ -84,7 +84,7 @@ final class LibraryContractTest extends TestCase {
 	public function test_deleting_is_asked_in_the_row_and_once(): void {
 		$src = $this->php();
 
-		$at  = (int) strpos( $src, '<span class="kivun-lib__confirm" hidden>' );
+		$at  = (int) strpos( $src, '<div class="kivun-lib__confirm" hidden>' );
 		$this->assertNotFalse( $at, 'the row has no confirm step' );
 		$box = substr( $src, $at, 600 );
 		$this->assertStringContainsString( 'self::delete_form( (string) $gid, $page_url, __( \'מחיקה\', \'kivun\' ), \'kivun-lib__yes\' )', $box, 'the confirm step does not submit the existing delete form' );
@@ -92,6 +92,11 @@ final class LibraryContractTest extends TestCase {
 
 		// The trash mark opens the question; it does not submit anything.
 		$this->assertMatchesRegularExpression( '/<button type="button" class="kivun-cc-icon-btn kivun-cc-icon-btn--danger kivun-lib__ask"/', $src );
+
+		// Blocks, because they hold forms: a <form> inside a <span> is what
+		// wpautop() splits, leaving the confirm buttons outside their row.
+		$this->assertStringContainsString( '<div class="kivun-cc-actgroup">', $src );
+		$this->assertStringContainsString( '<div class="kivun-lib__acts">', $src );
 
 		$js = $this->js();
 		$this->assertStringContainsString( "if (f.closest('.kivun-lib__confirm')) { return; }", $js, 'the row\'s delete form asks a second time through confirm()' );

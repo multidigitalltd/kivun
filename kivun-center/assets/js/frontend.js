@@ -3038,20 +3038,22 @@
 		// attribute.
 		row.innerHTML =
 			'<div class="kivun-cf-row__bar">' +
-				'<span class="kivun-cf-handle" title="גרירה לשינוי הסדר" aria-hidden="true">⠿</span>' +
+				'<span class="kivun-cf-handle" title="גרירה לשינוי הסדר" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="9" cy="6" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="6" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="18" r="1"/></svg></span>' +
 				'<span class="kivun-cf-num" aria-hidden="true"></span>' +
-				'<input type="text" class="kivun-cc-input kivun-cf-label" placeholder="נוסח השאלה, כפי שהמבקר יקרא אותה">' +
-				'<button type="button" class="kivun-cc-iconbtn kivun-cf-up" title="העלאה" aria-label="העלאת השאלה למעלה">↑</button>' +
-				'<button type="button" class="kivun-cc-iconbtn kivun-cf-down" title="הורדה" aria-label="הורדת השאלה למטה">↓</button>' +
-				'<button type="button" class="kivun-cc-iconbtn kivun-cc-iconbtn--danger kivun-cf-remove" title="מחיקה" aria-label="מחיקת השאלה">✕</button>' +
+				'<span class="kivun-cc-field kivun-cf-field"><input type="text" class="kivun-cc-input kivun-cf-label" placeholder="נוסח השאלה, כפי שהמבקר יקרא אותה"></span>' +
+				'<span class="kivun-cf-moves">' +
+					'<button type="button" class="kivun-cf-up" title="הזזה למעלה" aria-label="הזזת השאלה למעלה"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m18 15-6-6-6 6"/></svg></button>' +
+					'<button type="button" class="kivun-cf-down" title="הזזה למטה" aria-label="הזזת השאלה למטה"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m6 9 6 6 6-6"/></svg></button>' +
+					'<button type="button" class="kivun-cf-remove" title="הסרה" aria-label="הסרת השאלה"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>' +
+				'</span>' +
 			'</div>' +
 			'<div class="kivun-cf-row__meta">' +
 				'<label class="kivun-cf-pick"><span>סוג</span><select class="kivun-cc-input kivun-cf-type">' + options + '</select></label>' +
-				'<label class="kivun-cf-req"><input type="checkbox" class="kivun-cf-required"><span>שאלת חובה</span></label>' +
+				'<label class="kivun-cf-req"><input type="checkbox" class="kivun-cf-required"><span class="kivun-cf-track" aria-hidden="true"></span><span>שאלת חובה</span></label>' +
 			'</div>' +
 			'<div class="kivun-cf-row__options"' + (kivunCfHasOptions(field.type) ? '' : ' hidden') + '>' +
 				'<label class="kivun-cc-sub">אפשרויות לבחירה — אחת בכל שורה</label>' +
-				'<textarea class="kivun-cc-input kivun-cf-options" rows="3"></textarea>' +
+				'<span class="kivun-cc-field kivun-cc-field--top"><textarea class="kivun-cc-input kivun-cc-textarea kivun-cf-options" rows="3"></textarea></span>' +
 			'</div>';
 
 		row.querySelector('.kivun-cf-label').value = field.label || '';
@@ -3081,42 +3083,54 @@
 		var note = form.querySelector('.kivun-cf-dragnote');
 		if (note) { note.hidden = rows.length < 2; }
 		var count = form.querySelector('.kivun-cf-count');
-		if (count) { count.textContent = rows.length ? '(' + rows.length + ')' : ''; }
+		if (count) { count.textContent = String(rows.length); }
 	}
 
-	// One preview field, inert. Labels and options are set as text, never as
-	// markup: they are the client's own words.
+	// One preview field, drawn rather than made of disabled inputs: boxes,
+	// circles and squares in the handoff's shapes, so the preview looks like
+	// the form and cannot be mistaken for one to fill in. Labels and options
+	// are set as text, never as markup: they are the client's own words.
 	function kivunCfPreviewField(field, required) {
 		var wrap = document.createElement('div');
 		wrap.className = 'kivun-cf-pv-field';
+		var shape = function (cls) {
+			var el = document.createElement('span');
+			el.className = cls;
+			el.setAttribute('aria-hidden', 'true');
+			return el;
+		};
+		var star = function (into) {
+			if (!required) { return; }
+			var s = document.createElement('span');
+			s.className = 'kivun-cf-pv-star';
+			s.textContent = ' *';
+			into.appendChild(s);
+		};
 
 		if (field.type === 'consent') {
-			var line = document.createElement('label');
+			var line = document.createElement('span');
 			line.className = 'kivun-cf-pv-consent';
-			var box = document.createElement('input');
-			box.type = 'checkbox';
-			box.disabled = true;
-			line.appendChild(box);
-			line.appendChild(document.createTextNode(field.label + (required ? ' *' : '')));
+			line.appendChild(shape('kivun-cf-pv-check'));
+			line.appendChild(document.createTextNode(field.label));
+			star(line);
 			wrap.appendChild(line);
 			return wrap;
 		}
 
 		var label = document.createElement('span');
 		label.className = 'kivun-cf-pv-label';
-		label.textContent = field.label + (required ? ' *' : '');
+		label.textContent = field.label;
+		star(label);
 		wrap.appendChild(label);
 
 		var opts = field.options || [];
 		if (field.type === 'radio' || field.type === 'checkbox') {
-			var group = document.createElement('div');
+			var group = document.createElement('span');
 			group.className = 'kivun-cf-pv-group';
 			opts.forEach(function (opt) {
-				var one = document.createElement('label');
-				var input = document.createElement('input');
-				input.type = field.type === 'radio' ? 'radio' : 'checkbox';
-				input.disabled = true;
-				one.appendChild(input);
+				var one = document.createElement('span');
+				one.className = 'kivun-cf-pv-opt';
+				one.appendChild(shape(field.type === 'radio' ? 'kivun-cf-pv-radio' : 'kivun-cf-pv-check'));
 				one.appendChild(document.createTextNode(opt));
 				group.appendChild(one);
 			});
@@ -3124,29 +3138,8 @@
 			return wrap;
 		}
 
-		if (field.type === 'select') {
-			var select = document.createElement('select');
-			select.disabled = true;
-			var first = document.createElement('option');
-			first.textContent = 'בחר/י';
-			select.appendChild(first);
-			opts.forEach(function (opt) {
-				var o = document.createElement('option');
-				o.textContent = opt;
-				select.appendChild(o);
-			});
-			wrap.appendChild(select);
-			return wrap;
-		}
-
-		var control = document.createElement(field.type === 'textarea' ? 'textarea' : 'input');
-		if (field.type !== 'textarea') {
-			control.type = field.type === 'date' ? 'date' : (field.type === 'number' ? 'number' : 'text');
-		} else {
-			control.rows = 2;
-		}
-		control.disabled = true;
-		wrap.appendChild(control);
+		var box = shape('kivun-cf-pv-box' + (field.type === 'textarea' ? ' kivun-cf-pv-box--tall' : '') + (field.type === 'select' ? ' kivun-cf-pv-box--select' : ''));
+		wrap.appendChild(box);
 		return wrap;
 	}
 

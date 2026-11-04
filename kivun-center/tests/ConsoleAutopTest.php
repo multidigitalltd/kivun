@@ -106,6 +106,34 @@ final class ConsoleAutopTest extends TestCase {
 	}
 
 	/**
+	 * What wpautop() still adds after the flattening is not drawn.
+	 *
+	 * With no newlines left it can no longer make breaks, but it still wraps
+	 * any run of inline markup between two blocks in a paragraph of its own —
+	 * a hidden input and the switch beside it, a label and its field — each
+	 * with 16px of margin. Every paragraph of the wizard's and the library's
+	 * own carries a class, so a classless one is wpautop()'s, and is taken
+	 * out of the layout.
+	 *
+	 * @return void
+	 */
+	public function test_wpautop_s_own_paragraphs_take_no_room(): void {
+		$css = (string) file_get_contents( KIVUN_DIR . 'assets/css/frontend.css' );
+		$this->assertMatchesRegularExpression(
+			'/\.kivun-cc-wizard p:not\(\[class\]\),\s*\.kivun-lib-card p:not\(\[class\]\)\s*\{\s*display:\s*contents;/',
+			$css,
+			'wpautop()\'s wrapping paragraphs are drawn again, each with its margins'
+		);
+
+		// Which is only safe while no paragraph of ours goes without a class.
+		$src  = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-content-creator.php' );
+		$from = (int) strpos( $src, 'private static function front_form(' );
+		$to   = (int) strpos( $src, 'private static function library_table(', $from );
+		$to   = (int) strpos( $src, "\n\t}\n", $to );
+		$this->assertStringNotContainsString( '<p>', substr( $src, $from, $to - $from ), 'a classless paragraph of our own would be flattened away with wpautop()\'s' );
+	}
+
+	/**
 	 * The shortcode is what hands the console back flattened.
 	 *
 	 * The function on its own fixes nothing; the page builder sees whatever

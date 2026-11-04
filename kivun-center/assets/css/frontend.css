@@ -2740,7 +2740,18 @@ td.kivun-cc-rowactions > form > * {
    the wizard is text that needs a <br> — a textarea's breaks are its
    content, not elements. */
 .kivun-cc-wizard br,
-.kivun-cc-wizard p:empty { display: none !important; }
+.kivun-cc-wizard p:empty,
+.kivun-lib-card br,
+.kivun-lib-card p:empty { display: none !important; }
+/*
+ * And the paragraphs it wraps around runs of inline markup — a label and
+ * the field beside it, a hidden input and a switch. Every paragraph of the
+ * wizard's and the library's own carries a class, so one without is
+ * wpautop()'s; `display: contents` takes its box and its 16px margins away
+ * and leaves what it wrapped where it was.
+ */
+.kivun-cc-wizard p:not([class]),
+.kivun-lib-card p:not([class]) { display: contents; }
 
 /* The form tab sits on the canvas, not on a panel card: the design draws the
    rail and the step's cards straight onto the page, each its own white card.
@@ -3503,6 +3514,374 @@ td.kivun-cc-rowactions > form > * {
 /* The preview's caption is a caption, not an aside in a box. */
 .kivun-cc-wizard .kivun-cf-preview__head .kivun-field-hint { padding: 0; background: none; font-size: 14px; color: var(--cc-text-2); }
 .kivun-cc-wizard .kivun-cf-preview__head .kivun-field-hint::before { content: none; }
+/*
+ * The landing page's form builder, to the "Landing Pages" handoff (§3) —
+ * the builder in its open, editing state, which now lives here in the
+ * wizard rather than under a row of its own tab.
+ *
+ * The panel is the field grey with white cards in it: the fixed fields,
+ * the questions and, beside them, the preview. Scoped through the wizard
+ * so every rule here outranks the console-wide builder rules above it.
+ */
+.kivun-cc-wizard .kivun-cf-wrap {
+	padding: 24px 20px;
+	background: var(--cc-field);
+	border-radius: var(--cc-radius-sm);
+}
+.kivun-cc-wizard .kivun-form-builder { display: flex; flex-direction: column; gap: 20px; }
+.kivun-cc-wizard .kivun-cf-split {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-start;
+	gap: 20px;
+	grid-template-columns: none;
+}
+.kivun-cc-wizard .kivun-cf-edit { display: flex; flex-direction: column; gap: 16px; flex: 999 1 480px; min-width: 0; }
+.kivun-cc-wizard .kivun-cf-preview { flex: 1 1 300px; min-width: 0; max-width: 420px; }
+
+.kivun-cc-wizard .kivun-cf-card,
+.kivun-cc-wizard .kivun-cf-preview {
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+	box-sizing: border-box;
+	margin: 0;
+	padding: 22px 24px;
+	background: var(--cc-surface);
+	border: 0;
+	border-radius: var(--cc-radius-xs);
+}
+.kivun-cc-wizard .kivun-cf-preview { gap: 16px; }
+.kivun-cc-wizard .kivun-cf-card__head { display: flex; align-items: center; gap: 10px; }
+.kivun-cc-wizard .kivun-cf-card__title {
+	margin: 0;
+	font-family: var(--cc-font-display);
+	font-size: 20px;
+	font-weight: 800;
+	color: var(--cc-ink);
+}
+.kivun-cc-wizard .kivun-cf-count {
+	padding: 2px 10px;
+	background: var(--cc-chip);
+	border-radius: 999px;
+	color: var(--cc-brand);
+	font-size: 13px;
+	font-weight: 800;
+	font-variant-numeric: tabular-nums;
+}
+.kivun-cc-wizard .kivun-cf-help {
+	margin: 0;
+	color: var(--cc-text-2);
+	font-size: 15px;
+	line-height: 1.5;
+	text-wrap: pretty;
+}
+.kivun-cc-wizard .kivun-cf-empty {
+	margin: 0;
+	padding: 18px;
+	border: 1.5px dashed var(--cc-line);
+	border-radius: 20px;
+	color: var(--cc-text-2);
+	font-size: 15px;
+	text-align: center;
+}
+
+/* The fixed fields: chips that never wrap their own words. On is charcoal
+   with a red tick; off is an outline with an empty circle. The checkbox is
+   the circle, so the save reads it exactly as before. */
+.kivun-cc-wizard .kivun-cf-builtins { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; }
+.kivun-cc-console .kivun-cc-wizard .kivun-cf-builtin {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 8px;
+	flex: none;
+	height: 40px;
+	box-sizing: border-box;
+	padding: 0 16px 0 10px;
+	background: var(--cc-surface);
+	border: 1.5px solid var(--cc-line);
+	border-radius: 999px;
+	color: var(--cc-ink);
+	font-size: 15px;
+	font-weight: 700;
+	white-space: nowrap;
+	cursor: pointer;
+}
+.kivun-cc-console .kivun-cc-wizard .kivun-cf-builtin input {
+	display: block;
+	flex: none;
+	width: 20px;
+	height: 20px;
+	box-sizing: border-box;
+	margin: 0;
+	appearance: none;
+	-webkit-appearance: none;
+	background: var(--cc-surface);
+	border: 1.5px solid var(--cc-off);
+	border-radius: 50%;
+	cursor: pointer;
+}
+.kivun-cc-console .kivun-cc-wizard .kivun-cf-builtin input::after { content: none; }
+.kivun-cc-console .kivun-cc-wizard .kivun-cf-builtin:has(input:checked) {
+	background: var(--cc-shell);
+	border-color: var(--cc-shell);
+	color: #fff;
+}
+.kivun-cc-console .kivun-cc-wizard .kivun-cf-builtin:has(input:checked) input {
+	background: var(--cc-brand) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center / 12px 12px no-repeat;
+	border-color: var(--cc-brand);
+}
+
+/* One question: a bordered card, the handle, its number, the wording, then
+   the move-and-remove pill. */
+.kivun-cc-wizard .kivun-cf-list { display: flex; flex-direction: column; gap: 12px; margin: 0; }
+.kivun-cc-wizard .kivun-cf-row {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	padding: 14px;
+	background: var(--cc-surface);
+	border: 1.5px solid var(--cc-line);
+	border-radius: 20px;
+}
+/* One line while the wording has room; below 180px for it the move pill
+   goes to a line of its own, rather than squeezing the field to nothing on
+   a phone. */
+.kivun-cc-wizard .kivun-cf-row__bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.kivun-cc-wizard .kivun-cf-handle { display: flex; flex: none; color: var(--cc-text-3); cursor: grab; }
+.kivun-cc-wizard .kivun-cf-handle svg { width: 18px; height: 18px; }
+.kivun-cc-wizard .kivun-cf-num {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex: none;
+	width: 28px;
+	height: 28px;
+	background: var(--cc-ink);
+	border-radius: 50%;
+	color: #fff;
+	font-family: var(--cc-font-display);
+	font-size: 14px;
+	font-weight: 800;
+}
+.kivun-cc-wizard .kivun-cf-field { flex: 1 1 180px; min-width: 0; }
+.kivun-cc-wizard .kivun-form-builder .kivun-cc-input.kivun-cf-label {
+	height: 44px;
+	padding: 0 16px;
+	background: var(--cc-field);
+	border: 1.5px solid var(--cc-line);
+	border-radius: 999px;
+	font-size: 16px;
+}
+.kivun-cc-wizard .kivun-form-builder .kivun-cc-input.kivun-cf-label:focus { border-color: var(--cc-ink); }
+/* The dictation button stays — the wording is the one field here worth
+   speaking into — sized down to sit inside the 44 pill. */
+.kivun-cc-wizard .kivun-form-builder .kivun-cf-field > .kivun-cc-input.kivun-cf-label { padding-left: 48px; }
+.kivun-cc-wizard .kivun-form-builder .kivun-cf-field > .kivun-mic { left: 5px; top: 5px; width: 34px; height: 34px; }
+.kivun-cc-wizard .kivun-form-builder .kivun-cf-field > .kivun-mic svg { width: 16px; height: 16px; }
+
+.kivun-cc-wizard .kivun-cf-moves {
+	display: flex;
+	flex: none;
+	align-items: center;
+	overflow: hidden;
+	background: var(--cc-surface);
+	border: 1.5px solid var(--cc-line);
+	border-radius: 999px;
+}
+.kivun-cc-wizard .kivun-cf-moves button {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 36px;
+	height: 34px;
+	margin: 0;
+	padding: 0;
+	background: transparent;
+	border: 0;
+	border-radius: 0;
+	color: var(--cc-ink);
+	cursor: pointer;
+}
+.kivun-cc-wizard .kivun-cf-moves button:not(:last-child) { border-inline-end: 1.5px solid var(--cc-divider); }
+.kivun-cc-wizard .kivun-cf-moves button:hover { background: var(--cc-field); color: var(--cc-brand); }
+.kivun-cc-wizard .kivun-cf-moves button:disabled { cursor: default; }
+.kivun-cc-wizard .kivun-cf-moves button:disabled:hover { background: transparent; color: var(--cc-ink); }
+.kivun-cc-wizard .kivun-cf-moves .kivun-cf-remove,
+.kivun-cc-wizard .kivun-cf-moves .kivun-cf-remove:hover { color: var(--cc-brand); }
+.kivun-cc-wizard .kivun-cf-moves svg { width: 18px; height: 18px; }
+
+/* The type and "required" line, lined up under the wording: 66 is the
+   handle, the number and their gaps. */
+.kivun-cc-wizard .kivun-cf-row__meta {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 16px;
+	margin: 0;
+	padding-right: 66px;
+}
+.kivun-cc-wizard .kivun-cf-pick {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	color: var(--cc-text-2);
+	font-size: 14px;
+	font-weight: 700;
+}
+.kivun-cc-wizard .kivun-form-builder select.kivun-cc-input.kivun-cf-type {
+	width: auto;
+	height: 38px;
+	padding: 0 14px 0 38px;
+	background-color: var(--cc-surface);
+	background-position: left 14px center;
+	background-size: 14px 14px;
+	border: 1.5px solid var(--cc-line);
+	border-radius: 999px;
+	color: var(--cc-ink);
+	font-size: 15px;
+}
+
+/* A switch: the track red when on, grey when off, the knob moving across.
+   The checkbox under it is still the control. */
+.kivun-cc-wizard .kivun-cf-req,
+.kivun-cc-wizard .kivun-cf-toggle {
+	position: relative;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	height: 38px;
+	padding: 0 4px;
+	color: var(--cc-ink);
+	font-size: 15px;
+	font-weight: 700;
+	cursor: pointer;
+}
+.kivun-cc-wizard .kivun-cf-req input,
+.kivun-cc-wizard .kivun-cc-optcheck.kivun-cf-toggle input {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	margin: 0;
+	opacity: 0;
+}
+.kivun-cc-wizard .kivun-cf-track {
+	position: relative;
+	flex: none;
+	width: 38px;
+	height: 22px;
+	background: var(--cc-toggle-off);
+	border-radius: 999px;
+}
+.kivun-cc-wizard .kivun-cf-track::after {
+	content: "";
+	position: absolute;
+	top: 3px;
+	left: 3px;
+	width: 16px;
+	height: 16px;
+	background: #fff;
+	border-radius: 50%;
+}
+.kivun-cc-wizard input:checked + .kivun-cf-track { background: var(--cc-brand); }
+.kivun-cc-wizard input:checked + .kivun-cf-track::after { left: 19px; }
+.kivun-cc-wizard input:focus-visible + .kivun-cf-track { outline: 2px solid var(--cc-ink); outline-offset: 2px; }
+
+.kivun-cc-wizard .kivun-cf-row__options { display: flex; flex-direction: column; gap: 8px; padding-right: 66px; }
+
+/* "הוספת שאלה": a full-width dashed pill in red, the one control here that
+   invites rather than acts on something already there. */
+.kivun-cc-wizard .kivun-cf-add-btn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	width: 100%;
+	height: 48px;
+	margin: 0;
+	background: var(--cc-surface);
+	border: 1.5px dashed var(--cc-brand);
+	border-radius: 999px;
+	color: var(--cc-brand);
+	font-family: inherit;
+	font-size: 16px;
+	font-weight: 800;
+	cursor: pointer;
+}
+.kivun-cc-wizard .kivun-cf-add-btn:hover { background: var(--cc-wash); }
+.kivun-cc-wizard .kivun-cf-add-btn svg { width: 18px; height: 18px; stroke-width: 2; }
+
+/* The preview: the form as the visitor meets it, in the handoff's shapes. */
+.kivun-cc-wizard .kivun-cf-preview__head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.kivun-cc-wizard .kivun-cf-preview__tag {
+	padding: 4px 12px;
+	background: var(--cc-shell);
+	border-radius: 999px;
+	color: #fff;
+	font-size: 13px;
+	font-weight: 800;
+}
+.kivun-cc-wizard .kivun-cf-preview__caption { color: var(--cc-text-2); font-size: 14px; }
+.kivun-cc-wizard .kivun-cf-preview__body { display: flex; flex-direction: column; gap: 14px; }
+.kivun-cc-wizard .kivun-cf-pv-field { display: flex; flex-direction: column; gap: 6px; }
+.kivun-cc-wizard .kivun-cf-pv-label { color: var(--cc-ink); font-size: 14px; font-weight: 700; }
+.kivun-cc-wizard .kivun-cf-pv-field.is-blank .kivun-cf-pv-label { color: var(--cc-text-3); }
+.kivun-cc-wizard .kivun-cf-pv-star { color: var(--cc-brand); }
+.kivun-cc-wizard .kivun-cf-pv-box {
+	display: block;
+	height: 40px;
+	box-sizing: border-box;
+	background: var(--cc-field);
+	border: 1.5px solid var(--cc-line);
+	border-radius: 999px;
+}
+.kivun-cc-wizard .kivun-cf-pv-box--tall { height: 64px; border-radius: 16px; }
+.kivun-cc-wizard .kivun-cf-pv-group { display: flex; flex-wrap: wrap; gap: 16px; }
+.kivun-cc-wizard .kivun-cf-pv-opt,
+.kivun-cc-wizard .kivun-cf-pv-consent {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	color: var(--cc-ink);
+	font-size: 14px;
+}
+.kivun-cc-wizard .kivun-cf-pv-radio,
+.kivun-cc-wizard .kivun-cf-pv-check {
+	flex: none;
+	width: 16px;
+	height: 16px;
+	box-sizing: border-box;
+	border: 1.5px solid var(--cc-off);
+	border-radius: 50%;
+}
+.kivun-cc-wizard .kivun-cf-pv-check { border-radius: 5px; }
+@media (max-width: 600px) {
+	/* A phone: the panel, the cards and the question cards each keep less of
+	   the width to themselves, and the second line stops lining up under the
+	   wording — 66px of indent is a third of the row there. */
+	.kivun-cc-wizard .kivun-cf-wrap { padding: 12px; }
+	.kivun-cc-wizard .kivun-cf-card,
+	.kivun-cc-wizard .kivun-cf-preview { padding: 18px 14px; }
+	.kivun-cc-wizard .kivun-cf-row { padding: 12px; }
+	.kivun-cc-wizard .kivun-cf-row__meta,
+	.kivun-cc-wizard .kivun-cf-row__options { padding-right: 0; }
+}
+.kivun-cc-wizard .kivun-cf-pv-send {
+	display: flex;
+	align-self: stretch;
+	width: auto;
+	align-items: center;
+	justify-content: center;
+	height: 46px;
+	margin-top: 2px;
+	background: var(--cc-brand);
+	border-radius: 999px;
+	color: #fff;
+	font-size: 16px;
+	font-weight: 800;
+}
+
 
 /* Buttons */
 .kivun-cc-wizard .kivun-cc-btn {
