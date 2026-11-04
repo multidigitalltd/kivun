@@ -295,4 +295,26 @@ final class LeadsContractTest extends TestCase {
 		$this->assertStringContainsString( '.kivun-cc-console .kivun-tab-panel--list :is(.kivun-form-row, .kivun-field) { display: block;', $css, 'the form rows are a flex column again, and every mic floats to the top of its row' );
 		$this->assertStringContainsString( 'margin-inline-start: -51px;', $css, 'the filter search mic no longer sits inside its field' );
 	}
+
+	/**
+	 * The call log loads more in place instead of paging away.
+	 *
+	 * Each page reloaded the console and the log came back closed. "טען עוד"
+	 * adds the next page's rows under the ones shown; with no script it is
+	 * still the link to that page, which now arrives open.
+	 *
+	 * @return void
+	 */
+	public function test_the_call_log_loads_more_in_place(): void {
+		$src = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-content-creator.php' );
+		$this->assertStringContainsString( '<details class="kivun-cc-card kivun-camp-block kivun-calls-log" <?php echo ( $filtering || $call_paged > 1 ) ? \'open\' : \'\'; ?>>', $src, 'a later page of the log arrives closed again' );
+		$this->assertStringContainsString( 'class="kivun-cc-btn kivun-cc-btn--sm kivun-calls-more__btn" href="<?php echo esc_url( $call_page_link( $call_paged + 1 ) ); ?>"', $src, '"טען עוד" is no longer a real link to the next page, so it does nothing without the script' );
+		$this->assertStringContainsString( '<table class="kivun-cc-table kivun-calls-table">', $src );
+
+		$js = $this->js( 'frontend.js' );
+		$this->assertStringContainsString( "e.target.closest('.kivun-calls-more__btn')", $js );
+		$this->assertStringContainsString( "body.appendChild(document.importNode(row, true));", $js, 'the next page\'s rows are not added to the log' );
+		$this->assertStringContainsString( 'window.location.assign(href);', $js, 'a failed fetch leaves the button doing nothing instead of following its link' );
+		$this->assertStringContainsString( 'delete table.dataset.labelled;', $js, 'the added rows go without their column names on a phone' );
+	}
 }
