@@ -3774,6 +3774,7 @@ class Kivun_Content_Creator {
 							<input type="hidden" name="custom_form_present" value="1">
 							<label class="kivun-cc-optcheck kivun-cf-toggle">
 								<input type="checkbox" name="custom_form_on" value="1" class="kivun-cf-switch" <?php checked( $kivun_form_on ); ?>>
+								<span class="kivun-cf-track" aria-hidden="true"></span>
 								<span><?php esc_html_e( 'טופס מותאם לדף הזה', 'kivun' ); ?></span>
 							</label>
 							<div class="kivun-cf-wrap">
@@ -4058,7 +4059,7 @@ class Kivun_Content_Creator {
 				<div class="kivun-cf-edit">
 					<section class="kivun-cf-card">
 						<h3 class="kivun-cf-card__title"><?php esc_html_e( 'שדות קבועים', 'kivun' ); ?></h3>
-						<p class="kivun-field-hint">
+						<p class="kivun-cf-help">
 							<?php esc_html_e( 'אלה העמודות של הליד עצמו — לפיהן עובדות חלוקת הרכזים, סינון העיר והשידור למרכז כיוון. שם וטלפון תמיד נשאלים.', 'kivun' ); ?>
 						</p>
 						<div class="kivun-cf-builtins">
@@ -4072,10 +4073,10 @@ class Kivun_Content_Creator {
 					</section>
 
 					<section class="kivun-cf-card">
-						<h3 class="kivun-cf-card__title">
-							<?php esc_html_e( 'השאלות שלכם', 'kivun' ); ?>
+						<div class="kivun-cf-card__head">
+							<h3 class="kivun-cf-card__title"><?php esc_html_e( 'השאלות שלכם', 'kivun' ); ?></h3>
 							<span class="kivun-cf-count" aria-hidden="true"></span>
-						</h3>
+						</div>
 
 						<?php
 						// Shown only while there are no questions, and hidden
@@ -4087,10 +4088,10 @@ class Kivun_Content_Creator {
 
 						<div class="kivun-cf-list"></div>
 
-						<button type="button" class="kivun-cc-btn kivun-cc-btn--sm kivun-cf-add-btn">
-							<?php esc_html_e( '+ הוספת שאלה', 'kivun' ); ?>
+						<button type="button" class="kivun-cf-add-btn">
+							<?php echo kivun_icon( 'plus' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?><?php esc_html_e( 'הוספת שאלה', 'kivun' ); ?>
 						</button>
-						<p class="kivun-field-hint kivun-cf-dragnote">
+						<p class="kivun-cf-help kivun-cf-dragnote">
 							<?php esc_html_e( 'אפשר לגרור שאלה כדי לשנות את הסדר, או להזיז אותה בחצים.', 'kivun' ); ?>
 						</p>
 					</section>
@@ -4104,7 +4105,7 @@ class Kivun_Content_Creator {
 				<aside class="kivun-cf-preview" aria-label="<?php esc_attr_e( 'תצוגה מקדימה של הטופס', 'kivun' ); ?>">
 					<div class="kivun-cf-preview__head">
 						<span class="kivun-cf-preview__tag"><?php esc_html_e( 'תצוגה מקדימה', 'kivun' ); ?></span>
-						<span class="kivun-field-hint"><?php esc_html_e( 'כך המבקר יראה את הטופס', 'kivun' ); ?></span>
+						<span class="kivun-cf-preview__caption"><?php esc_html_e( 'כך המבקר יראה את הטופס', 'kivun' ); ?></span>
 					</div>
 					<div class="kivun-cf-preview__body" aria-live="polite"></div>
 				</aside>
@@ -4459,15 +4460,20 @@ class Kivun_Content_Creator {
 					 * drawn, so it is lost to the pixels and not to a screen
 					 * reader or a hover.
 					 *
+					 * Divs, not spans, around the actions: two of them hold a
+					 * <form>, and a block inside an inline element is what a
+					 * page builder's wpautop() splits — the form ends up
+					 * outside its group, and the confirm step outside its row.
+					 *
 					 * Deleting asks first, in the row itself: the trash mark
 					 * swaps the actions for "למחוק? מחיקה / ביטול", and the
 					 * existing delete form is what "מחיקה" submits.
 					 */
 					?>
 					<div class="kivun-cc-rowactions kivun-lib__actions" role="cell">
-						<span class="kivun-lib__acts">
+						<div class="kivun-lib__acts">
 							<a class="kivun-cc-btn kivun-cc-act kivun-cc-act--edit kivun-lib__edit" href="<?php echo esc_url( $edit_url ); ?>"><?php echo kivun_icon( 'l-pencil' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?><?php esc_html_e( 'עריכה', 'kivun' ); ?></a>
-							<span class="kivun-cc-actgroup">
+							<div class="kivun-cc-actgroup">
 							<?php if ( '' !== $view_url ) : ?>
 								<a class="kivun-cc-icon-btn" href="<?php echo esc_url( $view_url ); ?>" target="_blank" rel="noopener" aria-label="<?php esc_attr_e( 'צפייה', 'kivun' ); ?>" title="<?php esc_attr_e( 'צפייה', 'kivun' ); ?>"><?php echo kivun_icon( 'l-eye' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?></a>
 							<?php endif; ?>
@@ -4485,14 +4491,14 @@ class Kivun_Content_Creator {
 							<?php if ( $can_delete ) : ?>
 								<button type="button" class="kivun-cc-icon-btn kivun-cc-icon-btn--danger kivun-lib__ask" aria-label="<?php esc_attr_e( 'מחיקה', 'kivun' ); ?>" title="<?php esc_attr_e( 'מחיקה', 'kivun' ); ?>"><?php echo kivun_icon( 'l-trash' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?></button>
 							<?php endif; ?>
-							</span>
-						</span>
+							</div>
+						</div>
 						<?php if ( $can_delete ) : ?>
-							<span class="kivun-lib__confirm" hidden>
+							<div class="kivun-lib__confirm" hidden>
 								<span class="kivun-lib__q"><?php esc_html_e( 'למחוק?', 'kivun' ); ?></span>
 								<?php echo self::delete_form( (string) $gid, $page_url, __( 'מחיקה', 'kivun' ), 'kivun-lib__yes' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built from escaped parts in delete_form(). ?>
 								<button type="button" class="kivun-lib__no"><?php esc_html_e( 'ביטול', 'kivun' ); ?></button>
-							</span>
+							</div>
 						<?php endif; ?>
 					</div>
 				</div>
