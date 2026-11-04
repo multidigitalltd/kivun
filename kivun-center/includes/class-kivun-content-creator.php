@@ -4145,28 +4145,28 @@ class Kivun_Content_Creator {
 		$lead_counts = self::leads_per_content();
 		?>
 		<div class="kivun-cc-front">
-			<div class="kivun-cc-panel">
-			<div class="kivun-cc-head">
-				<h2 class="kivun-cc-title"><?php esc_html_e( 'התכנים שלי', 'kivun' ); ?></h2>
-				<p class="kivun-cc-lead"><?php esc_html_e( 'כל התכנים שנוצרו כאן — עריכה, שכפול, צפייה ומחיקה, ומספר הפניות שהתקבלו לכל תוכן.', 'kivun' ); ?></p>
-			</div>
-
-			<?php if ( ! $groups && ! $put_away ) : ?>
-				<div class="kivun-cc-note"><?php esc_html_e( 'עדיין לא נוצרו תכנים. עברו ללשונית "פרסום תוכן" כדי להתחיל.', 'kivun' ); ?></div>
-			<?php else : ?>
-				<?php
-				/*
-				 * Both lists are already here — the archive used to sit below
-				 * the table in a shut <details>, which is why switching
-				 * between them needs nothing from the server. The search
-				 * filters the rows that are on the page for the same reason.
-				 *
-				 * Archiving leaves the content itself untouched: its pages
-				 * are still published and still taking enquiries. This is
-				 * only where it is listed.
-				 */
-				?>
-				<div class="kivun-cc-filterbar">
+			<div class="kivun-cc-panel kivun-lib-card">
+			<?php
+			/*
+			 * The "התכנים שלי" handoff: one card holding the heading, the
+			 * search and the live/archive switch on one row, and the list.
+			 *
+			 * Both lists are already here, which is why switching between them
+			 * and searching need nothing from the server. Archiving leaves the
+			 * content itself untouched — its pages stay published and keep
+			 * taking enquiries; this is only where it is listed.
+			 *
+			 * The switch is always drawn, an empty archive included: it is
+			 * where the archive is found, and an archive that only appears
+			 * once something is in it is one nobody knows is there.
+			 */
+			?>
+			<div class="kivun-lib-head">
+				<div class="kivun-lib-head__text">
+					<h2 class="kivun-cc-title"><?php esc_html_e( 'התכנים שלי', 'kivun' ); ?></h2>
+					<p class="kivun-cc-lead"><?php esc_html_e( 'כל התכנים שנוצרו כאן — עריכה, שכפול, צפייה ומחיקה, ומספר הפניות שהתקבלו לכל תוכן.', 'kivun' ); ?></p>
+				</div>
+				<div class="kivun-cc-filterbar kivun-lib-tools">
 					<?php
 					/*
 					 * The field is named with aria-label rather than a
@@ -4176,8 +4176,7 @@ class Kivun_Content_Creator {
 					 * would simply be drawn next to the box.
 					 */
 					?>
-					<div class="kivun-cc-search">
-						<?php echo kivun_icon( 'filter' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?>
+					<div class="kivun-cc-search kivun-lib-search">
 						<input
 							type="search"
 							class="kivun-cc-search__input"
@@ -4185,34 +4184,29 @@ class Kivun_Content_Creator {
 							aria-label="<?php esc_attr_e( 'חיפוש לפי כותרת', 'kivun' ); ?>"
 							autocomplete="off"
 						>
+						<?php echo kivun_icon( 'l-search', 'kivun-lib-search__icon' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?>
 					</div>
 
-					<?php if ( $put_away ) : ?>
-						<div class="kivun-cc-segmented" role="tablist">
-							<button type="button" class="kivun-cc-seg is-active" data-shows="live" role="tab" aria-selected="true">
-								<?php esc_html_e( 'פעילים', 'kivun' ); ?>
-								<span class="kivun-cc-seg__count"><?php echo esc_html( number_format_i18n( count( $groups ) ) ); ?></span>
-							</button>
-							<button type="button" class="kivun-cc-seg" data-shows="archive" role="tab" aria-selected="false">
-								<?php esc_html_e( 'ארכיון', 'kivun' ); ?>
-								<span class="kivun-cc-seg__count"><?php echo esc_html( number_format_i18n( count( $put_away ) ) ); ?></span>
-							</button>
-						</div>
-					<?php endif; ?>
-				</div>
-
-				<div class="kivun-cc-pane" data-pane="live">
-					<?php self::library_table( $groups, $lead_counts, $page_url, $can_delete, false ); ?>
-					<p class="kivun-cc-noresults" hidden><?php esc_html_e( 'אין תוכן שמתאים לחיפוש.', 'kivun' ); ?></p>
-				</div>
-
-				<?php if ( $put_away ) : ?>
-					<div class="kivun-cc-pane" data-pane="archive" hidden>
-						<?php self::library_table( $put_away, $lead_counts, $page_url, $can_delete, true ); ?>
-						<p class="kivun-cc-noresults" hidden><?php esc_html_e( 'אין תוכן שמתאים לחיפוש.', 'kivun' ); ?></p>
+					<div class="kivun-cc-segmented kivun-lib-seg" role="tablist">
+						<button type="button" class="kivun-cc-seg is-active" data-shows="live" role="tab" aria-selected="true">
+							<?php esc_html_e( 'פעילים', 'kivun' ); ?>
+							<span class="kivun-cc-seg__count"><?php echo esc_html( number_format_i18n( count( $groups ) ) ); ?></span>
+						</button>
+						<button type="button" class="kivun-cc-seg" data-shows="archive" role="tab" aria-selected="false">
+							<?php esc_html_e( 'ארכיון', 'kivun' ); ?>
+							<span class="kivun-cc-seg__count"><?php echo esc_html( number_format_i18n( count( $put_away ) ) ); ?></span>
+						</button>
 					</div>
-				<?php endif; ?>
-			<?php endif; ?>
+				</div>
+			</div>
+
+			<div class="kivun-cc-pane" data-pane="live">
+				<?php self::library_table( $groups, $lead_counts, $page_url, $can_delete, false ); ?>
+			</div>
+
+			<div class="kivun-cc-pane" data-pane="archive" hidden>
+				<?php self::library_table( $put_away, $lead_counts, $page_url, $can_delete, true ); ?>
+			</div>
 			</div>
 		</div>
 		<?php
@@ -4242,6 +4236,7 @@ class Kivun_Content_Creator {
 				$groups[ $g ] = array(
 					'title'   => get_the_title( $p->ID ),
 					'types'   => array(),
+					'kinds'   => array(),
 					'ids'     => array(),
 					'view_id' => (int) $p->ID,
 					'status'  => $p->post_status,
@@ -4249,6 +4244,7 @@ class Kivun_Content_Creator {
 				);
 			}
 			$groups[ $g ]['types'][] = $labels[ $p->post_type ] ?? $p->post_type;
+			$groups[ $g ]['kinds'][] = $p->post_type;
 			$groups[ $g ]['ids'][]   = (int) $p->ID;
 			// The landing page's own form, said on its row — the list it is
 			// found in now that it has no tab of its own.
@@ -4279,7 +4275,20 @@ class Kivun_Content_Creator {
 	}
 
 	/**
-	 * One table of content groups — the ones in use, or the ones put away.
+	 * One list of content groups — the ones in use, or the ones put away.
+	 *
+	 * Drawn as the handoff's grid of rows rather than an HTML table, because
+	 * the columns change with the list's own width rather than the screen's:
+	 * seven when it is wide, four when it is not, with the types and status
+	 * moving under the title and the date into the מרכז כיוון cell. Both
+	 * placements are in the markup and the stylesheet shows one; the script
+	 * only says which, by measuring the list. A cell needed in one layout
+	 * alone carries `kivun-lib__w` (wide) or `kivun-lib__c` (compact).
+	 *
+	 * Nothing scrolls sideways: the compact layout is the answer to a
+	 * narrow list, not a scrollbar.
+	 *
+	 * Roles are table roles, so it is still read as a table.
 	 *
 	 * @param array<string,array<string,mixed>> $groups      The rows.
 	 * @param array<int,int>                    $lead_counts Leads per content id.
@@ -4289,184 +4298,211 @@ class Kivun_Content_Creator {
 	 * @return void
 	 */
 	private static function library_table( array $groups, array $lead_counts, string $page_url, bool $can_delete, bool $archived ): void {
-		if ( ! $groups ) {
-			return;
-		}
+		$mercaz = Kivun_Mercaz::configured();
+
+		$type_keys     = array(
+			'kivun_workshop' => 'landing',
+			'kivun_course'   => 'course',
+			'kivun_session'  => 'session',
+			'kivun_event'    => 'event',
+		);
+		$type_labels   = array(
+			'kivun_workshop' => __( 'דף נחיתה', 'kivun' ),
+			'kivun_course'   => __( 'קורס', 'kivun' ),
+			'kivun_session'  => __( 'סדנה', 'kivun' ),
+			'kivun_event'    => __( 'אירוע', 'kivun' ),
+		);
+		$status_labels = array(
+			'publish'  => __( 'פורסם', 'kivun' ),
+			'draft'    => __( 'טיוטה', 'kivun' ),
+			'pending'  => __( 'ממתין לאישור', 'kivun' ),
+			'private'  => __( 'פרטי', 'kivun' ),
+			'future'   => __( 'מתוזמן', 'kivun' ),
+			'archived' => __( 'בארכיון', 'kivun' ),
+		);
 		?>
-			<div class="kivun-cc-tablewrap">
-				<table class="kivun-cc-table">
-					<thead>
-						<tr>
-							<th scope="col"><?php esc_html_e( 'כותרת', 'kivun' ); ?></th>
-							<th scope="col"><?php esc_html_e( 'פניות', 'kivun' ); ?></th>
-							<th scope="col" data-col="date">
-								<?php
-								echo esc_html(
-									Kivun_Mercaz::configured()
-										? __( 'תאריך ומרכז כיוון', 'kivun' )
-										: __( 'תאריך', 'kivun' )
-								);
-								?>
-							</th>
-							<th scope="col"><?php esc_html_e( 'פעולות', 'kivun' ); ?></th>
-						</tr>
-					</thead>
-					<tbody>
-					<?php
-					foreach ( $groups as $gid => $g ) :
-						$view_url = (string) get_permalink( (int) $g['view_id'] );
-
-						$group_leads = 0;
-						foreach ( $g['ids'] as $gpid ) {
-							$group_leads += (int) ( $lead_counts[ $gpid ] ?? 0 );
-						}
-
-						$edit_url = add_query_arg(
-							'kivun_group',
-							rawurlencode( (string) $gid ),
-							remove_query_arg( array( 'kivun_saved', 'kivun_cc_error', 'kivun_deleted', 'kivun_duplicated' ), $page_url )
-						);
-						?>
-						<tr>
-							<?php
-							$status_labels = array(
-								'publish' => __( 'פורסם', 'kivun' ),
-								'draft'   => __( 'טיוטה', 'kivun' ),
-								'pending' => __( 'ממתין לאישור', 'kivun' ),
-								'private' => __( 'פרטי', 'kivun' ),
-								'future'  => __( 'מתוזמן', 'kivun' ),
-							);
-							?>
-							<?php
-							/*
-							 * Status and types used to be two columns of their
-							 * own. They say what this row IS rather than
-							 * carrying a value you scan down a column for, so
-							 * they read better as a line under the title —
-							 * which is also what buys the table room for four
-							 * columns instead of seven.
-							 */
-							?>
-							<td data-search="<?php echo esc_attr( $g['title'] ); ?>">
-								<strong><?php echo esc_html( $g['title'] ); ?></strong>
-								<span class="kivun-cc-facts">
-									<span class="kivun-cc-fact kivun-cc-fact--<?php echo esc_attr( $g['status'] ); ?>">
-										<?php echo esc_html( $status_labels[ $g['status'] ] ?? $g['status'] ); ?>
-									</span>
-									<?php foreach ( array_unique( $g['types'] ) as $type_label ) : ?>
-										<span class="kivun-cc-fact"><?php echo esc_html( $type_label ); ?></span>
-									<?php endforeach; ?>
-									<?php if ( isset( $g['form'] ) ) : ?>
-										<span class="kivun-cc-fact kivun-cc-fact--own">
-											<?php
-											printf(
-												/* translators: %d: number of questions on the landing page's own form. */
-												esc_html( _n( 'טופס מותאם · %d שאלה', 'טופס מותאם · %d שאלות', (int) $g['form'], 'kivun' ) ),
-												(int) $g['form']
-											);
-											?>
-										</span>
-									<?php endif; ?>
-									<?php if ( ! empty( $g['scheduled'] ) && 'future' === $g['status'] ) : ?>
-										<span class="kivun-cc-fact"><?php echo esc_html( $g['scheduled'] ); ?></span>
-									<?php endif; ?>
-								</span>
-							</td>
-							<td>
-								<?php if ( $group_leads ) : ?>
-									<a class="kivun-cc-leadlink" href="
-									<?php
-									echo esc_url(
-										add_query_arg(
-											array(
-												'kivun_tab' => 'leads',
-												'kivun_content' => (int) $g['view_id'],
-											),
-											$page_url
-										)
-									);
-									?>
-																		">
-										<?php echo esc_html( number_format_i18n( $group_leads ) ); ?>
-									</a>
-								<?php else : ?>
-									<span class="kivun-muted" aria-hidden="true">—</span>
-								<?php endif; ?>
-							</td>
-							<?php
-							/*
-							 * When it was sent to מרכז כיוון is a fact about
-							 * this date, not a column of its own — so the two
-							 * share a cell, with the button that sends it
-							 * underneath them.
-							 */
-							?>
-							<td class="kivun-cc-when<?php echo Kivun_Mercaz::configured() ? ' kivun-mercaz-cell' : ''; ?>">
-								<span class="kivun-cc-date"><?php echo esc_html( $g['date'] ); ?></span>
-								<?php if ( Kivun_Mercaz::configured() ) : ?>
-									<?php
-									$kivun_push_id = (int) $g['view_id'];
-									$kivun_synced  = (string) get_post_meta( $kivun_push_id, Kivun_Mercaz_Sync::SYNCED_AT, true );
-									$kivun_failed  = (string) get_post_meta( $kivun_push_id, Kivun_Mercaz_Sync::LAST_ERROR, true );
-									?>
-									<span class="kivun-mercaz-status <?php echo $kivun_failed ? 'is-error' : ''; ?>">
-										<?php
-										if ( $kivun_failed ) {
-											echo esc_html( $kivun_failed );
-										} elseif ( $kivun_synced ) {
-											echo esc_html( sprintf( /* translators: %s: date and time. */ __( 'נשלח ב-%s', 'kivun' ), kivun_local_date( (string) $kivun_synced ) ) );
-										} else {
-											esc_html_e( 'עוד לא נשלח', 'kivun' );
-										}
-										?>
-									</span>
-									<button type="button" class="kivun-cc-linkbtn kivun-mercaz-push" data-id="<?php echo esc_attr( (string) $kivun_push_id ); ?>">
-										<?php echo $kivun_synced ? esc_html__( 'שליחה מחדש', 'kivun' ) : esc_html__( 'שליחה', 'kivun' ); ?>
-									</button>
-								<?php endif; ?>
-							</td>
-							<?php
-							/*
-							 * One action carries its word and the rest are
-							 * icons. Editing is what this row is mostly for,
-							 * so it keeps the label and the fill; the others
-							 * are recognisable enough as marks and would push
-							 * the row to two lines if they all kept theirs.
-							 *
-							 * Each icon-only control still says what it is —
-							 * `aria-label` and `title` carry the word that is
-							 * no longer drawn, so it is lost to the pixels and
-							 * not to a screen reader or a hover.
-							 */
-							$kivun_archive_label = $archived ? __( 'החזרה מהארכיון', 'kivun' ) : __( 'העברה לארכיון', 'kivun' );
-							?>
-							<td class="kivun-cc-rowactions">
-								<a class="kivun-cc-btn kivun-cc-btn--sm kivun-cc-act kivun-cc-act--edit" href="<?php echo esc_url( $edit_url ); ?>"><?php echo kivun_icon( 'edit' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?><?php esc_html_e( 'עריכה', 'kivun' ); ?></a>
-								<span class="kivun-cc-actgroup">
-								<?php if ( '' !== $view_url ) : ?>
-									<a class="kivun-cc-icon-btn" href="<?php echo esc_url( $view_url ); ?>" target="_blank" rel="noopener" aria-label="<?php esc_attr_e( 'צפייה', 'kivun' ); ?>" title="<?php esc_attr_e( 'צפייה', 'kivun' ); ?>"><?php echo kivun_icon( 'eye' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?></a>
-								<?php endif; ?>
-								<?php echo self::duplicate_form( (int) ( $g['view_id'] ?? 0 ), $page_url, 'kivun-cc-icon-btn', 'copy' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built from escaped parts in duplicate_form(). ?>
-								<?php if ( current_user_can( 'edit_posts' ) ) : ?>
-									<button
-										type="button"
-										class="kivun-cc-icon-btn kivun-archive-content"
-										data-group="<?php echo esc_attr( (string) $gid ); ?>"
-										data-archived="<?php echo $archived ? '0' : '1'; ?>"
-										aria-label="<?php echo esc_attr( $kivun_archive_label ); ?>"
-										title="<?php echo esc_attr( $kivun_archive_label ); ?>"
-									><?php echo kivun_icon( $archived ? 'restore' : 'archive' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?></button>
-								<?php endif; ?>
-								<?php if ( $can_delete ) : ?>
-									<?php echo self::delete_form( (string) $gid, $page_url, __( 'מחיקה', 'kivun' ), 'kivun-cc-icon-btn kivun-cc-icon-btn--danger', 'trash' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built from escaped parts in delete_form(). ?>
-								<?php endif; ?>
-								</span>
-							</td>
-						</tr>
-					<?php endforeach; ?>
-					</tbody>
-				</table>
+		<div class="kivun-lib<?php echo $mercaz ? '' : ' kivun-lib--nomercaz'; ?>" role="table" aria-label="<?php echo esc_attr( $archived ? __( 'ארכיון', 'kivun' ) : __( 'התכנים שלי', 'kivun' ) ); ?>">
+			<div class="kivun-lib__head" role="row">
+				<span role="columnheader"><?php esc_html_e( 'כותרת', 'kivun' ); ?></span>
+				<span role="columnheader" class="kivun-lib__w"><?php esc_html_e( 'סוגים', 'kivun' ); ?></span>
+				<span role="columnheader" class="kivun-lib__w"><?php esc_html_e( 'סטטוס', 'kivun' ); ?></span>
+				<span role="columnheader"><?php esc_html_e( 'פניות', 'kivun' ); ?></span>
+				<span role="columnheader" class="kivun-lib__w"><?php esc_html_e( 'תאריך', 'kivun' ); ?></span>
+				<span role="columnheader" class="kivun-lib__whenhead">
+					<?php if ( $mercaz ) : ?>
+						<span class="kivun-lib__w"><?php esc_html_e( 'מרכז כיוון', 'kivun' ); ?></span>
+						<span class="kivun-lib__c"><?php esc_html_e( 'תאריך ומרכז כיוון', 'kivun' ); ?></span>
+					<?php else : ?>
+						<span class="kivun-lib__c"><?php esc_html_e( 'תאריך', 'kivun' ); ?></span>
+					<?php endif; ?>
+				</span>
+				<span role="columnheader"><?php esc_html_e( 'פעולות', 'kivun' ); ?></span>
 			</div>
+
+			<?php
+			foreach ( $groups as $gid => $g ) :
+				$view_url = (string) get_permalink( (int) $g['view_id'] );
+
+				$group_leads = 0;
+				foreach ( $g['ids'] as $gpid ) {
+					$group_leads += (int) ( $lead_counts[ $gpid ] ?? 0 );
+				}
+
+				$edit_url = add_query_arg(
+					'kivun_group',
+					rawurlencode( (string) $gid ),
+					remove_query_arg( array( 'kivun_saved', 'kivun_cc_error', 'kivun_deleted', 'kivun_duplicated' ), $page_url )
+				);
+
+				$leads_url = add_query_arg(
+					array(
+						'kivun_tab'     => 'leads',
+						'kivun_content' => (int) $g['view_id'],
+					),
+					$page_url
+				);
+
+				$kinds      = array_values( array_unique( $g['kinds'] ?? array() ) );
+				$status_key = $archived ? 'archived' : (string) $g['status'];
+				$status     = $status_labels[ $status_key ] ?? $status_key;
+
+				// What the row is beyond its types and status: its own form,
+				// and when it goes live if it is scheduled.
+				$meta = array();
+				if ( isset( $g['form'] ) ) {
+					/* translators: %d: number of questions on the landing page's own form. */
+					$meta[] = sprintf( _n( 'טופס מותאם · %d שאלה', 'טופס מותאם · %d שאלות', (int) $g['form'], 'kivun' ), (int) $g['form'] );
+				}
+				if ( ! empty( $g['scheduled'] ) && 'future' === $g['status'] ) {
+					/* translators: %s: date and time the content goes live. */
+					$meta[] = sprintf( __( 'יפורסם ב-%s', 'kivun' ), (string) $g['scheduled'] );
+				}
+
+				$kivun_archive_label = $archived ? __( 'שחזור מהארכיון', 'kivun' ) : __( 'העברה לארכיון', 'kivun' );
+				?>
+				<div class="kivun-lib__row" role="row">
+					<div class="kivun-lib__title" role="cell" data-search="<?php echo esc_attr( $g['title'] ); ?>">
+						<span class="kivun-lib__name"><?php echo esc_html( $g['title'] ); ?></span>
+						<span class="kivun-lib__facts kivun-lib__c">
+							<?php foreach ( $kinds as $kind ) : ?>
+								<span class="kivun-lib__dot kivun-lib__dot--<?php echo esc_attr( $type_keys[ $kind ] ?? 'other' ); ?>"><?php echo esc_html( $type_labels[ $kind ] ?? $kind ); ?></span>
+							<?php endforeach; ?>
+							<span class="kivun-lib__dot kivun-lib__dot--st kivun-lib__dot--<?php echo esc_attr( $status_key ); ?>"><?php echo esc_html( $status ); ?></span>
+						</span>
+						<?php if ( $meta ) : ?>
+							<span class="kivun-lib__meta"><?php echo esc_html( implode( ' · ', $meta ) ); ?></span>
+						<?php endif; ?>
+					</div>
+
+					<div class="kivun-lib__types kivun-lib__w" role="cell">
+						<?php foreach ( $kinds as $kind ) : ?>
+							<span class="kivun-lib__dot kivun-lib__dot--<?php echo esc_attr( $type_keys[ $kind ] ?? 'other' ); ?>"><?php echo esc_html( $type_labels[ $kind ] ?? $kind ); ?></span>
+						<?php endforeach; ?>
+					</div>
+
+					<div class="kivun-lib__status kivun-lib__w" role="cell">
+						<span class="kivun-lib__dot kivun-lib__dot--<?php echo esc_attr( $status_key ); ?>"><?php echo esc_html( $status ); ?></span>
+					</div>
+
+					<div class="kivun-lib__leads" role="cell" data-label="<?php esc_attr_e( 'פניות:', 'kivun' ); ?>">
+						<?php if ( $group_leads ) : ?>
+							<a class="kivun-cc-leadlink" href="<?php echo esc_url( $leads_url ); ?>"><?php echo esc_html( number_format_i18n( $group_leads ) ); ?></a>
+						<?php else : ?>
+							<span class="kivun-lib__none" aria-label="<?php esc_attr_e( 'אין פניות', 'kivun' ); ?>">—</span>
+						<?php endif; ?>
+					</div>
+
+					<div class="kivun-lib__date kivun-lib__w" role="cell"><?php echo esc_html( $g['date'] ); ?></div>
+
+					<?php
+					/*
+					 * When it went to מרכז כיוון, and the button that sends it.
+					 * In the compact layout the date moves in here, above the
+					 * "sent" line. The status and the button are siblings: the
+					 * sending script finds the one from the other through
+					 * their shared parent.
+					 */
+					?>
+					<div class="kivun-lib__when<?php echo $mercaz ? ' kivun-mercaz-cell' : ''; ?>" role="cell">
+						<span class="kivun-lib__whendate kivun-lib__c"><?php echo esc_html( $g['date'] ); ?></span>
+						<?php if ( $mercaz ) : ?>
+							<?php
+							$kivun_push_id = (int) $g['view_id'];
+							$kivun_synced  = (string) get_post_meta( $kivun_push_id, Kivun_Mercaz_Sync::SYNCED_AT, true );
+							$kivun_failed  = (string) get_post_meta( $kivun_push_id, Kivun_Mercaz_Sync::LAST_ERROR, true );
+							$kivun_state   = $kivun_failed ? 'is-error' : ( $kivun_synced ? 'is-ok' : 'is-unsent' );
+							/* translators: %s: date and time the content was sent. */
+							$kivun_sent_tpl = __( 'נשלח ב-%s', 'kivun' );
+							?>
+							<span class="kivun-mercaz-status <?php echo esc_attr( $kivun_state ); ?>">
+								<?php
+								if ( $kivun_failed ) {
+									echo esc_html( $kivun_failed );
+								} elseif ( $kivun_synced ) {
+									echo esc_html( sprintf( /* translators: %s: date and time. */ __( 'נשלח ב-%s', 'kivun' ), kivun_local_date( (string) $kivun_synced ) ) );
+								} else {
+									esc_html_e( 'עוד לא נשלח', 'kivun' );
+								}
+								?>
+							</span>
+							<button type="button" class="kivun-cc-linkbtn kivun-mercaz-push" data-id="<?php echo esc_attr( (string) $kivun_push_id ); ?>" data-sent="<?php echo esc_attr( $kivun_sent_tpl ); ?>" data-again="<?php esc_attr_e( 'שליחה מחדש', 'kivun' ); ?>">
+								<?php echo $kivun_synced ? esc_html__( 'שליחה מחדש', 'kivun' ) : esc_html__( 'שליחה', 'kivun' ); ?>
+							</button>
+						<?php endif; ?>
+					</div>
+
+					<?php
+					/*
+					 * Editing keeps its word and the fill; the rest are marks in
+					 * one segmented pill. Each mark still says what it is —
+					 * aria-label and title carry the word that is no longer
+					 * drawn, so it is lost to the pixels and not to a screen
+					 * reader or a hover.
+					 *
+					 * Deleting asks first, in the row itself: the trash mark
+					 * swaps the actions for "למחוק? מחיקה / ביטול", and the
+					 * existing delete form is what "מחיקה" submits.
+					 */
+					?>
+					<div class="kivun-cc-rowactions kivun-lib__actions" role="cell">
+						<span class="kivun-lib__acts">
+							<a class="kivun-cc-btn kivun-cc-act kivun-cc-act--edit kivun-lib__edit" href="<?php echo esc_url( $edit_url ); ?>"><?php echo kivun_icon( 'l-pencil' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?><?php esc_html_e( 'עריכה', 'kivun' ); ?></a>
+							<span class="kivun-cc-actgroup">
+							<?php if ( '' !== $view_url ) : ?>
+								<a class="kivun-cc-icon-btn" href="<?php echo esc_url( $view_url ); ?>" target="_blank" rel="noopener" aria-label="<?php esc_attr_e( 'צפייה', 'kivun' ); ?>" title="<?php esc_attr_e( 'צפייה', 'kivun' ); ?>"><?php echo kivun_icon( 'l-eye' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?></a>
+							<?php endif; ?>
+							<?php echo self::duplicate_form( (int) ( $g['view_id'] ?? 0 ), $page_url, 'kivun-cc-icon-btn', 'l-copy' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built from escaped parts in duplicate_form(). ?>
+							<?php if ( current_user_can( 'edit_posts' ) ) : ?>
+								<button
+									type="button"
+									class="kivun-cc-icon-btn kivun-archive-content"
+									data-group="<?php echo esc_attr( (string) $gid ); ?>"
+									data-archived="<?php echo $archived ? '0' : '1'; ?>"
+									aria-label="<?php echo esc_attr( $kivun_archive_label ); ?>"
+									title="<?php echo esc_attr( $kivun_archive_label ); ?>"
+								><?php echo kivun_icon( 'l-archive' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?></button>
+							<?php endif; ?>
+							<?php if ( $can_delete ) : ?>
+								<button type="button" class="kivun-cc-icon-btn kivun-cc-icon-btn--danger kivun-lib__ask" aria-label="<?php esc_attr_e( 'מחיקה', 'kivun' ); ?>" title="<?php esc_attr_e( 'מחיקה', 'kivun' ); ?>"><?php echo kivun_icon( 'l-trash' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, escaped SVG. ?></button>
+							<?php endif; ?>
+							</span>
+						</span>
+						<?php if ( $can_delete ) : ?>
+							<span class="kivun-lib__confirm" hidden>
+								<span class="kivun-lib__q"><?php esc_html_e( 'למחוק?', 'kivun' ); ?></span>
+								<?php echo self::delete_form( (string) $gid, $page_url, __( 'מחיקה', 'kivun' ), 'kivun-lib__yes' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built from escaped parts in delete_form(). ?>
+								<button type="button" class="kivun-lib__no"><?php esc_html_e( 'ביטול', 'kivun' ); ?></button>
+							</span>
+						<?php endif; ?>
+					</div>
+				</div>
+			<?php endforeach; ?>
+
+			<p class="kivun-lib__empty kivun-lib__empty--base"<?php echo $groups ? ' hidden' : ''; ?>>
+				<?php echo $archived ? esc_html__( 'תכנים שתעבירו לארכיון יופיעו כאן', 'kivun' ) : esc_html__( 'אין תכנים פעילים', 'kivun' ); ?>
+			</p>
+			<p class="kivun-lib__empty kivun-cc-noresults" hidden><?php esc_html_e( 'לא נמצאו תכנים בחיפוש הזה', 'kivun' ); ?></p>
+		</div>
 		<?php
 	}
 

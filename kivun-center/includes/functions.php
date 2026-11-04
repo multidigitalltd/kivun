@@ -241,6 +241,15 @@ function kivun_icon( string $name, string $classes = '' ): string {
 		// between them is the shape and not the detail.
 		'table'     => '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9.5h18"/><path d="M3 15h18"/><path d="M9.5 9.5V20"/>',
 		'cards'     => '<rect x="3" y="3.5" width="18" height="7" rx="2"/><path d="M7 7h7"/><rect x="3" y="13.5" width="18" height="7" rx="2"/><path d="M7 17h7"/>',
+		// The library's row actions, drawn to the "התכנים שלי" handoff — its
+		// own Lucide shapes, path for path. Separate names rather than new
+		// drawings of eye/copy/archive/trash above, which other screens use.
+		'l-pencil'  => '<path d="M21.17 6.81a1 1 0 0 0-3.98-3.98L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5z"/><path d="M15 5l4 4"/>',
+		'l-eye'     => '<path d="M2.06 12.35a1 1 0 0 1 0-.7 10.75 10.75 0 0 1 19.88 0 1 1 0 0 1 0 .7 10.75 10.75 0 0 1-19.88 0"/><circle cx="12" cy="12" r="3"/>',
+		'l-copy'    => '<rect x="8" y="8" width="14" height="14" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>',
+		'l-archive' => '<rect x="2" y="3" width="20" height="5" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/>',
+		'l-trash'   => '<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><path d="M10 11v6"/><path d="M14 11v6"/>',
+		'l-search'  => '<circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/>',
 	);
 
 	if ( ! isset( $paths[ $name ] ) ) {
