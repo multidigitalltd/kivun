@@ -902,6 +902,85 @@
 			.catch(function () { say(''); });
 	}, true);
 
+	// ── The library: layout by width, and deleting from the row ─────────────────
+	// The list lays itself out by its own width, not the screen's: seven
+	// columns from 1190px, four below that. Measured on the list, so a list
+	// in a narrower panel gets the compact layout even on a wide screen.
+	// Without the script it stays compact, which fits any width.
+	var KIVUN_LIB_WIDE = 1190;
+
+	function kivunLibMeasure(list) {
+		var w = list.getBoundingClientRect().width;
+		// A hidden pane measures 0; it is measured again when it is shown.
+		if (w > 0) {
+			list.classList.toggle('is-wide', w >= KIVUN_LIB_WIDE);
+			// Under the compact layout's own width: a card per row.
+			list.classList.toggle('is-narrow', w < 640);
+		}
+	}
+
+	(function () {
+		var lists = document.querySelectorAll('.kivun-lib');
+		if (!lists.length) { return; }
+		if (window.ResizeObserver) {
+			var ro = new ResizeObserver(function (entries) {
+				entries.forEach(function (entry) { kivunLibMeasure(entry.target); });
+			});
+			lists.forEach(function (list) { ro.observe(list); kivunLibMeasure(list); });
+		} else {
+			var all = function () { lists.forEach(kivunLibMeasure); };
+			window.addEventListener('resize', all);
+			document.addEventListener('click', function (e) {
+				if (e.target.closest('.kivun-tab, .kivun-cc-seg')) { setTimeout(all, 0); }
+			});
+			all();
+		}
+	}());
+
+	// One row asks at a time; the others go back to their actions.
+	function kivunLibCancel(scope) {
+		(scope || document).querySelectorAll('.kivun-lib__row.is-confirming').forEach(function (row) {
+			row.classList.remove('is-confirming');
+			var ask = row.querySelector('.kivun-lib__confirm');
+			var acts = row.querySelector('.kivun-lib__acts');
+			if (ask) { ask.hidden = true; }
+			if (acts) { acts.hidden = false; }
+		});
+	}
+
+	document.addEventListener('click', function (e) {
+		var ask = e.target.closest('.kivun-lib__ask');
+		if (ask) {
+			var row = ask.closest('.kivun-lib__row');
+			if (!row) { return; }
+			kivunLibCancel(document);
+			row.classList.add('is-confirming');
+			var box = row.querySelector('.kivun-lib__confirm');
+			var acts = row.querySelector('.kivun-lib__acts');
+			if (acts) { acts.hidden = true; }
+			if (box) {
+				box.hidden = false;
+				var no = box.querySelector('.kivun-lib__no');
+				if (no) { no.focus(); }
+			}
+			return;
+		}
+		var no = e.target.closest('.kivun-lib__no');
+		if (no) {
+			var back = no.closest('.kivun-lib__row');
+			kivunLibCancel(document);
+			var trash = back && back.querySelector('.kivun-lib__ask');
+			if (trash) { trash.focus(); }
+		}
+	});
+
+	// "נשלח ב-DD/MM/YYYY HH:MM", in the reader's own clock.
+	function kivunNowStamp() {
+		var d = new Date();
+		var two = function (n) { return (n < 10 ? '0' : '') + n; };
+		return two(d.getDate()) + '/' + two(d.getMonth() + 1) + '/' + d.getFullYear() + ' ' + two(d.getHours()) + ':' + two(d.getMinutes());
+	}
+
 	// ── Send one item to Mercaz Kivun ────────────────────────────────────────────
 	document.addEventListener('click', function (e) {
 		var btn = e.target.closest('.kivun-mercaz-push');
@@ -916,7 +995,15 @@
 				btn.disabled = false;
 				if (!status) { return; }
 				if (res.success) {
-					status.textContent = res.data.message;
+					// The library shows when it was sent rather than the
+					// server's sentence about it: "נשלח ב-…" with the time
+					// it just went, and the button now offers to send again.
+					if (btn.dataset.sent) {
+						status.textContent = btn.dataset.sent.replace('%s', kivunNowStamp());
+						if (btn.dataset.again) { btn.textContent = btn.dataset.again; }
+					} else {
+						status.textContent = res.data.message;
+					}
 					status.className = 'kivun-mercaz-status is-ok';
 				} else {
 					status.textContent = (res.data && res.data.message) || kivun.i18n.error_generic;
@@ -2590,35 +2677,36 @@
 
 				ccPanes.forEach(function (pane) {
 					var shown = 0;
-					pane.querySelectorAll('.kivun-cc-table tbody tr').forEach(function (row) {
+					var total = 0;
+					pane.querySelectorAll('.kivun-cc-table tbody tr, .kivun-lib__row').forEach(function (row) {
 						// The title is on the cell that holds it, so the test
 						// is against the title alone and not against every
 						// word in the row — searching for "קורס" should not
 						// match every row that happens to be one.
 						var cell = row.querySelector('[data-search]');
-
-						// Not every <tr> is a row of the list. The custom
-						// forms table puts each page's builder in a row of
-						// its own beneath it, which carries no title and
-						// must follow whatever happened to its parent rather
-						// than be searched on the words inside the builder.
 						if (!cell) {
-							if (row.dataset.formEdit !== undefined) { return; }
 							row.removeAttribute('data-filtered');
 							return;
 						}
+						total++;
 
 						var hit = !term || (cell.getAttribute('data-search') || '').toLowerCase().indexOf(term) !== -1;
 						// The rows ship visible; only a miss sets the flag, so
 						// a row the script never saw is never left hidden.
 						if (hit) { row.removeAttribute('data-filtered'); } else { row.setAttribute('data-filtered', ''); }
 						if (hit) { shown++; }
-
-						var editor = row.nextElementSibling;
-						if (editor && editor.dataset.formEdit !== undefined) {
-							if (hit) { editor.removeAttribute('data-filtered'); } else { editor.setAttribute('data-filtered', ''); }
-						}
 					});
+
+					// The library says which kind of empty it is: there is
+					// nothing in this list at all, or nothing matched the
+					// search. Never both.
+					var base = pane.querySelector('.kivun-lib__empty--base');
+					if (base) {
+						var none = pane.querySelector('.kivun-cc-noresults');
+						base.hidden = total !== 0;
+						if (none) { none.hidden = !(total !== 0 && shown === 0); }
+						return;
+					}
 
 					var empty = pane.querySelector('.kivun-cc-noresults');
 					if (empty) { empty.hidden = shown !== 0; }
@@ -2652,6 +2740,7 @@
 						other.setAttribute('aria-selected', on ? 'true' : 'false');
 					});
 					ccPanes.forEach(function (pane) { pane.hidden = pane.dataset.pane !== wanted; });
+					kivunLibCancel(scope);
 					ccApplyFilter();
 				});
 			});
@@ -2659,6 +2748,9 @@
 
 		var ccConfirm = 'למחוק את כל התוכן המקושר? הפעולה תעביר לפח את דף הנחיתה, הקורס והסדנה.';
 		document.querySelectorAll('.kivun-cc-delete-form').forEach(function (f) {
+			// The library asks in the row itself ("למחוק? מחיקה / ביטול"),
+			// so its form has already been confirmed when it is submitted.
+			if (f.closest('.kivun-lib__confirm')) { return; }
 			f.addEventListener('submit', function (e) {
 				if (!window.confirm(ccConfirm)) { e.preventDefault(); }
 			});

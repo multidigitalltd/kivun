@@ -69,6 +69,9 @@
 	function attachToField(field) {
 		if (field.dataset.kivunMic || field.classList.contains('wp-editor-area')) { return; }
 		if (field.readOnly || field.disabled) { return; }
+		// A list's search box filters as it is typed; the library's has no
+		// room for a button and its design has none.
+		if (field.closest && field.closest('.kivun-lib-search')) { return; }
 		field.dataset.kivunMic = '1';
 		var btn = micButton(function (txt) {
 			var cur = field.value || '';

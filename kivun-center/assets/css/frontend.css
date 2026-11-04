@@ -1808,6 +1808,340 @@ td.kivun-app-contact a { display: block; }
 	color: var(--kivun-muted);
 	font-size: .9rem;
 }
+
+/* ── "התכנים שלי", to its handoff ────────────────────────────────────────────
+ *
+ * Measured against `My Content.dc.html`. Every figure is the reference's,
+ * in px. Scoped to `.kivun-lib-card` and `.kivun-lib`, so the other tabs'
+ * tables, searches and segments keep the rules above.
+ * ───────────────────────────────────────────────────────────────────────── */
+
+/* The tab sits on the canvas; the card is the one white surface. */
+.kivun-cc-console > .kivun-tab-panel[data-panel="library"].is-active {
+	padding: 0;
+	background: transparent;
+	border: 0;
+	border-radius: 0;
+}
+.kivun-cc-console .kivun-cc-panel.kivun-lib-card {
+	display: flex;
+	flex-direction: column;
+	gap: 24px;
+	padding: 32px;
+	background: var(--cc-surface);
+	border: 0;
+	border-radius: var(--cc-radius);
+	box-shadow: none;
+}
+.kivun-lib-card [hidden] { display: none !important; }
+
+/* The head: title and lead on the right, search and switch on the left. */
+.kivun-lib-head {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	justify-content: space-between;
+	gap: 20px;
+}
+.kivun-lib-head__text { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.kivun-cc-console .kivun-lib-head .kivun-cc-title {
+	margin: 0;
+	font-family: var(--cc-font-display);
+	font-size: 32px;
+	font-weight: 800;
+	line-height: 1.1;
+	color: var(--cc-ink);
+}
+.kivun-cc-console .kivun-lib-head .kivun-cc-lead {
+	margin: 0;
+	font-size: 17px;
+	line-height: 1.5;
+	color: var(--cc-text-2);
+	text-wrap: pretty;
+}
+.kivun-cc-filterbar.kivun-lib-tools {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 12px;
+	margin: 0;
+}
+
+/* Search: a 52 pill on the field grey, the magnifier inside on the right. */
+.kivun-cc-search.kivun-lib-search {
+	position: relative;
+	display: block;
+	flex: none;
+	width: 280px;
+	max-width: 100%;
+	padding: 0;
+	background: none;
+	border: 0;
+	border-radius: 0;
+	box-shadow: none;
+}
+.kivun-cc-search.kivun-lib-search:focus-within { box-shadow: none; }
+.kivun-lib-search .kivun-cc-search__input {
+	box-sizing: border-box;
+	display: block;
+	width: 100%;
+	height: 52px;
+	margin: 0;
+	padding: 0 48px 0 20px;
+	background: var(--cc-field);
+	border: 2px solid var(--cc-line);
+	border-radius: 999px;
+	color: var(--cc-ink);
+	font-family: inherit;
+	font-size: 17px;
+	outline: none;
+	-webkit-appearance: none;
+	appearance: none;
+}
+.kivun-lib-search .kivun-cc-search__input::placeholder { color: var(--cc-text-3); opacity: 1; }
+.kivun-lib-search .kivun-cc-search__input:focus { border-color: var(--cc-ink); }
+.kivun-cc-search.kivun-lib-search svg.kivun-lib-search__icon {
+	position: absolute;
+	right: 18px;
+	top: 16px;
+	width: 20px;
+	height: 20px;
+	color: var(--cc-text-2);
+	stroke-width: 2.4;
+	pointer-events: none;
+}
+
+/* The live/archive switch: a pale track, the chosen one charcoal. */
+.kivun-cc-segmented.kivun-lib-seg {
+	display: flex;
+	gap: 4px;
+	padding: 5px;
+	background: var(--cc-canvas);
+	border-radius: 999px;
+}
+.kivun-lib-seg .kivun-cc-seg {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	height: 42px;
+	padding: 0 18px;
+	background: transparent;
+	border: 0;
+	border-radius: 999px;
+	color: var(--cc-ink);
+	font-family: inherit;
+	font-size: 16px;
+	font-weight: 700;
+	cursor: pointer;
+}
+.kivun-lib-seg .kivun-cc-seg.is-active { background: var(--cc-shell); color: #fff; }
+.kivun-lib-seg .kivun-cc-seg__count {
+	padding: 1px 8px;
+	background: var(--cc-surface);
+	border-radius: 999px;
+	color: var(--cc-ink);
+	font-size: 13px;
+	font-weight: 800;
+	font-variant-numeric: tabular-nums;
+}
+.kivun-lib-seg .kivun-cc-seg.is-active .kivun-cc-seg__count { background: var(--cc-brand); color: #fff; }
+
+/*
+ * The list. Compact is the default — it is what fits when the script has
+ * not measured yet — and `.is-wide` is set from 1190px of the list's own
+ * width. Each layout's own cells are `__w` and `__c`.
+ */
+.kivun-lib {
+	border: 2px solid var(--cc-divider);
+	border-radius: var(--cc-radius-sm);
+	overflow: hidden;
+	--lib-cols: minmax(170px, 1fr) 52px 150px 280px;
+}
+.kivun-lib.is-wide { --lib-cols: minmax(200px, 1fr) 110px 84px 56px 96px 160px 280px; }
+.kivun-lib.is-wide.kivun-lib--nomercaz { --lib-cols: minmax(200px, 1fr) 110px 84px 56px 96px 280px; }
+.kivun-lib:not(.is-wide) .kivun-lib__w,
+.kivun-lib.is-wide .kivun-lib__c,
+.kivun-lib.is-wide.kivun-lib--nomercaz .kivun-lib__when,
+.kivun-lib.is-wide.kivun-lib--nomercaz .kivun-lib__whenhead { display: none !important; }
+
+.kivun-lib__head,
+.kivun-lib__row {
+	display: grid;
+	grid-template-columns: var(--lib-cols);
+	gap: 14px;
+	align-items: center;
+	box-sizing: border-box;
+}
+.kivun-lib__head {
+	padding: 14px 20px;
+	background: var(--cc-field);
+	border-bottom: 2px solid var(--cc-divider);
+	color: var(--cc-text-2);
+	font-size: 14px;
+	font-weight: 700;
+}
+.kivun-lib__row {
+	min-height: 72px;
+	padding: 16px 20px;
+	background: var(--cc-surface);
+	border-bottom: 1px solid var(--cc-divider);
+}
+.kivun-lib__row[data-filtered] { display: none !important; }
+
+/* The title, and in the compact layout the types and status under it. */
+.kivun-lib__title { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.kivun-lib__name {
+	color: var(--cc-ink);
+	font-size: 17px;
+	font-weight: 700;
+	line-height: 1.35;
+	text-wrap: pretty;
+	overflow-wrap: anywhere;
+}
+.kivun-lib__facts {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px 14px;
+	color: var(--cc-ink);
+	font-size: 14px;
+}
+.kivun-lib__facts .kivun-lib__dot { gap: 6px; }
+.kivun-lib__facts .kivun-lib__dot::before { width: 7px; height: 7px; }
+.kivun-lib__facts .kivun-lib__dot--st { color: var(--cc-text-2); }
+.kivun-lib__meta { color: var(--cc-text-2); font-size: 13px; }
+
+/* A dot and its word: the types, and the status. Sky is a shape colour —
+   it marks the dot, never the word. */
+.kivun-lib__types { display: flex; flex-direction: column; gap: 4px; }
+.kivun-lib__dot {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	color: var(--cc-ink);
+	font-size: 15px;
+}
+.kivun-lib__dot::before {
+	content: "";
+	flex: 0 0 auto;
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: var(--cc-text-3);
+}
+.kivun-lib__status .kivun-lib__dot { font-weight: 500; }
+.kivun-lib__dot--landing::before { background: var(--cc-brand); }
+.kivun-lib__dot--course::before,
+.kivun-lib__dot--publish::before { background: var(--cc-note-dot); }
+.kivun-lib__dot--session::before,
+.kivun-lib__dot--private::before { background: var(--cc-ink); }
+.kivun-lib__dot--event::before,
+.kivun-lib__dot--archived::before { background: var(--cc-text-3); }
+.kivun-lib__dot--draft::before,
+.kivun-lib__dot--pending::before,
+.kivun-lib__dot--future::before { background: var(--cc-amber); }
+
+.kivun-lib__leads { font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.kivun-cc-console .kivun-lib__leads .kivun-cc-leadlink { color: var(--cc-ink); font-weight: 700; text-decoration: none; }
+.kivun-cc-console .kivun-lib__leads .kivun-cc-leadlink:hover { color: var(--cc-brand); }
+.kivun-lib__none { color: var(--cc-text-3); }
+.kivun-lib__date { color: var(--cc-text-2); font-size: 15px; font-variant-numeric: tabular-nums; }
+
+/* מרכז כיוון: when it went, and the button that sends it. */
+.kivun-lib__when { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0; }
+.kivun-lib__whendate { color: var(--cc-ink); font-size: 14px; font-variant-numeric: tabular-nums; }
+.kivun-lib__when .kivun-mercaz-status,
+.kivun-lib__when .kivun-mercaz-status.is-ok {
+	display: block;
+	color: var(--cc-text-2);
+	font-size: 13px;
+	font-variant-numeric: tabular-nums;
+}
+.kivun-lib__when .kivun-mercaz-status.is-unsent,
+.kivun-lib__when .kivun-mercaz-status.is-error { color: var(--cc-brand); }
+.kivun-lib__when .kivun-cc-linkbtn.kivun-mercaz-push {
+	padding: 0;
+	background: transparent;
+	border: 0;
+	color: var(--cc-ink);
+	font-family: inherit;
+	font-size: 14px;
+	font-weight: 700;
+	text-decoration: underline;
+	text-underline-offset: 3px;
+	cursor: pointer;
+}
+
+/* The actions: "עריכה", then the four marks in one pill. */
+.kivun-lib__actions { display: flex; align-items: center; }
+.kivun-lib__acts { display: flex; align-items: center; gap: 8px; }
+.kivun-cc-console .kivun-lib__actions .kivun-cc-btn.kivun-lib__edit {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	height: 40px;
+	padding: 0 16px 0 14px;
+	background: var(--cc-shell);
+	border: 0;
+	border-radius: 999px;
+	box-shadow: none;
+	color: #fff;
+	font-size: 14px;
+	font-weight: 700;
+	text-decoration: none;
+	white-space: nowrap;
+	transition: background-color .15s;
+}
+.kivun-cc-console .kivun-lib__actions .kivun-cc-btn.kivun-lib__edit:hover { background: var(--cc-brand); color: #fff; }
+.kivun-lib__edit svg { width: 16px; height: 16px; stroke-width: 2; }
+.kivun-cc-console .kivun-lib__actions .kivun-cc-actgroup .kivun-cc-icon-btn svg { width: 19px; height: 19px; }
+
+/* Deleting asks in the row: "למחוק?", then the red "מחיקה" and "ביטול". */
+.kivun-lib__confirm { display: flex; align-items: center; gap: 6px; }
+.kivun-lib__confirm .kivun-cc-delete-form { display: contents; }
+.kivun-lib__q { margin-left: 4px; color: var(--cc-ink); font-size: 14px; font-weight: 700; }
+.kivun-lib__yes,
+.kivun-lib__no {
+	height: 34px;
+	padding: 0 14px;
+	border-radius: 999px;
+	font-family: inherit;
+	font-size: 14px;
+	cursor: pointer;
+}
+.kivun-lib__yes { background: var(--cc-brand); border: 0; color: #fff; font-weight: 800; }
+.kivun-lib__yes:hover { background: var(--cc-brand-hover); }
+.kivun-lib__no { background: var(--cc-surface); border: 2px solid var(--cc-line); color: var(--cc-ink); font-weight: 700; }
+.kivun-lib__no:hover { border-color: var(--cc-ink); }
+
+.kivun-lib .kivun-lib__empty {
+	margin: 0;
+	padding: 40px;
+	text-align: center;
+	color: var(--cc-text-2);
+	font-size: 17px;
+}
+
+/*
+ * A phone. The handoff stops at its compact layout, which needs about 700px;
+ * below 640 a row is a small card instead — title, then the numbers, then
+ * the actions — rather than columns clipped by the card's rounded edge.
+ */
+.kivun-lib.is-narrow .kivun-lib__head { display: none; }
+.kivun-lib.is-narrow .kivun-lib__row { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+.kivun-lib.is-narrow .kivun-lib__leads::before {
+	content: attr(data-label) " ";
+	color: var(--cc-text-2);
+	font-size: 14px;
+	font-weight: 500;
+}
+.kivun-lib.is-narrow .kivun-lib__row { padding: 14px 16px; }
+.kivun-lib.is-narrow .kivun-lib__actions,
+.kivun-lib.is-narrow .kivun-lib__acts,
+.kivun-lib.is-narrow .kivun-lib__confirm { flex-wrap: wrap; }
+@media (max-width: 600px) {
+	.kivun-cc-console .kivun-cc-panel.kivun-lib-card { padding: 20px; }
+	.kivun-cc-search.kivun-lib-search { width: 100%; }
+}
 /* A row the search ruled out. An attribute rather than `hidden`, so it never
    argues with the stacked table's own `tr[hidden]` rule.
  *

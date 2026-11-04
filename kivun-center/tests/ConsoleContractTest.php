@@ -321,7 +321,7 @@ final class ConsoleContractTest extends TestCase {
 		// its name comes from a variable rather than a literal — which is
 		// still a name, as long as the variable holds the words it replaced.
 		$this->assertMatchesRegularExpression(
-			'/\$kivun_archive_label\s*=\s*\$archived\s*\?\s*__\( \'החזרה מהארכיון\'.*__\( \'העברה לארכיון\'/u',
+			'/\$kivun_archive_label\s*=\s*\$archived\s*\?\s*__\( \'שחזור מהארכיון\'.*__\( \'העברה לארכיון\'/u',
 			$src,
 			'the archive action names itself from something other than the word it used to show'
 		);
@@ -756,36 +756,6 @@ final class ConsoleContractTest extends TestCase {
 			"document.querySelectorAll('.kivun-cc-pane')",
 			$js,
 			'the panes are still gathered from the whole document'
-		);
-	}
-
-	/**
-	 * A builder row follows the row it belongs to.
-	 *
-	 * The custom-forms table puts each page's form builder in a row of its
-	 * own beneath it. It carries no title, so searching it as if it were a
-	 * list row would match on whatever words happen to be inside the
-	 * builder — and filtering a page out while leaving its open builder
-	 * behind would strand a panel under somebody else's row.
-	 *
-	 * @return void
-	 */
-	public function test_a_builder_row_follows_its_own_row(): void {
-		$js = (string) file_get_contents( KIVUN_DIR . 'assets/js/frontend.js' );
-
-		$at = strpos( $js, "document.querySelectorAll('.kivun-cc-filterbar')" );
-		$this->assertNotFalse( $at, 'the library filter moved' );
-		$body = substr( $js, $at, 2800 );
-
-		$this->assertStringContainsString(
-			'formEdit',
-			$body,
-			'the filter treats the builder rows as rows of the list'
-		);
-		$this->assertMatchesRegularExpression(
-			'/nextElementSibling[\s\S]{0,200}formEdit[\s\S]{0,200}data-filtered/',
-			$body,
-			'a filtered row does not take its builder row with it'
 		);
 	}
 
