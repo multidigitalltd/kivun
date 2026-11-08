@@ -362,6 +362,8 @@ class Kivun_Export {
 			'session'      => 'סדנה',
 			'event'        => 'אירוע',
 			'form'         => 'טופס',
+			'jobs_board'   => 'לוח משרות',
+			'holland'      => 'שאלון הולנד',
 		);
 
 		foreach ( $rows as $r ) {

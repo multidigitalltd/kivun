@@ -1,0 +1,475 @@
+/* global kivun */
+/*
+ * Kivun Center — the Holland questionnaire ([kivun_holland]).
+ *
+ * Every screen is already in the page; this shows one at a time, keeps the
+ * answers, and hands them to the server, which is the only place they are
+ * scored. Answers are saved as the person goes — on every "next", and a few
+ * seconds after the last click — so closing the tab costs nothing: logging
+ * in again with the same phone and ID number picks up where they stopped.
+ *
+ * Nothing that identifies the person is kept in the browser. sessionStorage
+ * holds the row number, its token and the answers so a refresh does not send
+ * them back to the login; it is gone when the tab is.
+ */
+(function () {
+	'use strict';
+
+	var root = document.querySelector('.kivun-holland');
+	if (!root || typeof kivun === 'undefined') {
+		return;
+	}
+
+	var TOTAL = parseInt(root.getAttribute('data-total'), 10) || 0;
+	var PAGE = root.getAttribute('data-page') || '0';
+	var STORE = 'kivun_holland_' + PAGE;
+	var SAVE_DELAY = 3000;
+
+	var login = root.querySelector('[data-hl-login]');
+	var form = root.querySelector('[data-hl-form]');
+	var alertBox = root.querySelector('[data-hl-alert]');
+	var quiz = root.querySelector('[data-hl-quiz]');
+	var results = root.querySelector('[data-hl-results]');
+	var screens = Array.prototype.slice.call(root.querySelectorAll('[data-hl-screen]'));
+	var partLabel = root.querySelector('[data-hl-part]');
+	var answeredEl = root.querySelector('[data-hl-answered]');
+	var fill = root.querySelector('[data-hl-fill]');
+
+	var state = { lead: 0, token: '', responses: blank(), screen: 0 };
+	var saveTimer = null;
+	var saving = null;
+
+	function blank() {
+		return new Array(TOTAL + 1).join('-');
+	}
+
+	function msg(key, fallback) {
+		return (kivun.i18n && kivun.i18n[key]) || fallback;
+	}
+
+	// ── Talking to the server ───────────────────────────────────────────────
+
+	function post(action, fields) {
+		var body = new FormData();
+		body.append('action', 'kivun_holland_' + action);
+		body.append('nonce', kivun.nonce);
+		Object.keys(fields).forEach(function (k) {
+			body.append(k, fields[k]);
+		});
+
+		return fetch(kivun.ajax_url, { method: 'POST', credentials: 'same-origin', body: body })
+			.then(function (r) {
+				return r.text().then(function (text) {
+					var trimmed = (text || '').trim();
+					// A rejected nonce is a bare "-1": the page is older than
+					// the session it was drawn for.
+					if (trimmed === '-1' || trimmed === '0') {
+						throw new Error(msg('session_expired', 'פג תוקף החיבור. רעננו את הדף ונסו שוב.'));
+					}
+					try {
+						return JSON.parse(trimmed);
+					} catch (e) {
+						throw new Error(r.ok ? msg('bad_response', 'התקבלה תשובה לא תקינה מהשרת.') : msg('error_generic', 'אירעה שגיאה, נסה שוב.'));
+					}
+				});
+			});
+	}
+
+	function remember() {
+		try {
+			sessionStorage.setItem(STORE, JSON.stringify(state));
+		} catch (e) { /* Private mode: the server copy is enough. */ }
+	}
+
+	function forget() {
+		try {
+			sessionStorage.removeItem(STORE);
+		} catch (e) { /* Nothing to do. */ }
+	}
+
+	function save(finish) {
+		clearTimeout(saveTimer);
+		saveTimer = null;
+		remember();
+
+		var fields = { lead: state.lead, token: state.token, responses: state.responses };
+		if (finish) {
+			fields.finish = '1';
+		}
+
+		saving = post('save', fields).then(function (res) {
+			if (!res || !res.success) {
+				var data = (res && res.data) || {};
+				if (data.relogin) {
+					backToLogin(data.message);
+				}
+				throw new Error(data.message || msg('error_generic', 'אירעה שגיאה, נסה שוב.'));
+			}
+			return res.data || {};
+		});
+		return saving;
+	}
+
+	function saveSoon() {
+		clearTimeout(saveTimer);
+		saveTimer = setTimeout(function () {
+			save(false).catch(function () { /* Tried again on the next "next". */ });
+		}, SAVE_DELAY);
+	}
+
+	// ── Answers ─────────────────────────────────────────────────────────────
+
+	function answeredCount() {
+		return state.responses.replace(/-/g, '').length;
+	}
+
+	function setAnswer(num, value) {
+		var i = num - 1;
+		state.responses = state.responses.slice(0, i) + value + state.responses.slice(i + 1);
+	}
+
+	function paintAnswers() {
+		root.querySelectorAll('[data-hl-item]').forEach(function (item) {
+			var num = parseInt(item.getAttribute('data-hl-item'), 10);
+			var value = state.responses.charAt(num - 1);
+			item.querySelectorAll('input[type="radio"]').forEach(function (input) {
+				input.checked = input.value === value;
+			});
+		});
+		paintProgress();
+	}
+
+	function paintProgress() {
+		var n = answeredCount();
+		if (answeredEl) {
+			answeredEl.textContent = String(n);
+		}
+		if (fill) {
+			fill.style.width = (TOTAL ? Math.round(100 * n / TOTAL) : 0) + '%';
+		}
+	}
+
+	function missingIn(screen) {
+		return Array.prototype.filter.call(screen.querySelectorAll('[data-hl-item]'), function (item) {
+			var num = parseInt(item.getAttribute('data-hl-item'), 10);
+			return state.responses.charAt(num - 1) === '-';
+		});
+	}
+
+	// ── Screens ─────────────────────────────────────────────────────────────
+
+	function show(index, focus) {
+		state.screen = Math.max(0, Math.min(index, screens.length - 1));
+		screens.forEach(function (s, i) {
+			s.hidden = i !== state.screen;
+		});
+
+		var current = screens[state.screen];
+		if (partLabel) {
+			partLabel.textContent = current.getAttribute('data-hl-label') || '';
+		}
+		var alertEl = current.querySelector('[data-hl-page-alert]');
+		if (alertEl) {
+			alertEl.hidden = true;
+		}
+		remember();
+
+		if (focus !== false) {
+			var top = root.getBoundingClientRect().top + window.pageYOffset - 24;
+			if (window.pageYOffset > top) {
+				window.scrollTo(0, Math.max(0, top));
+			}
+			var heading = current.querySelector('[data-hl-focus]');
+			if (heading) {
+				heading.focus({ preventScroll: true });
+			}
+		}
+	}
+
+	// Where somebody coming back should land: the page holding their first
+	// unanswered question, or the very start when there is none yet.
+	function resumeScreen() {
+		if (answeredCount() === 0) {
+			return 0;
+		}
+		for (var i = 0; i < screens.length; i++) {
+			if (missingIn(screens[i]).length) {
+				return i;
+			}
+		}
+		return screens.length - 1;
+	}
+
+	function enterQuiz(index) {
+		login.hidden = true;
+		results.hidden = true;
+		quiz.hidden = false;
+		paintAnswers();
+		show(index);
+	}
+
+	function backToLogin(message) {
+		forget();
+		state = { lead: 0, token: '', responses: blank(), screen: 0 };
+		quiz.hidden = true;
+		results.hidden = true;
+		login.hidden = false;
+		if (message) {
+			alertBox.textContent = message;
+			alertBox.hidden = false;
+		}
+	}
+
+	function showResults(html) {
+		forget();
+		quiz.hidden = true;
+		login.hidden = true;
+		results.innerHTML = html;
+		results.hidden = false;
+
+		var top = root.getBoundingClientRect().top + window.pageYOffset - 24;
+		window.scrollTo(0, Math.max(0, top));
+		var heading = results.querySelector('[data-hl-focus]');
+		if (heading) {
+			heading.focus({ preventScroll: true });
+		}
+	}
+
+	// ── Login ───────────────────────────────────────────────────────────────
+
+	function fieldError(name, text) {
+		var input = form.querySelector('[name="' + name + '"]');
+		var slot = form.querySelector('[data-hl-error="' + name + '"]');
+		if (slot) {
+			slot.textContent = text || '';
+		}
+		if (input) {
+			if (text) {
+				input.setAttribute('aria-invalid', 'true');
+			} else {
+				input.removeAttribute('aria-invalid');
+			}
+		}
+	}
+
+	function clearErrors() {
+		['name', 'phone', 'id_number', 'privacy_consent'].forEach(function (n) {
+			fieldError(n, '');
+		});
+		alertBox.hidden = true;
+		alertBox.textContent = '';
+	}
+
+	form.addEventListener('submit', function (e) {
+		e.preventDefault();
+		clearErrors();
+
+		var name = form.elements.name.value.trim();
+		var phone = form.elements.phone.value.trim();
+		var id = form.elements.id_number.value.trim();
+		var consent = form.elements.privacy_consent;
+
+		var missing = false;
+		if (!name) {
+			fieldError('name', 'נא למלא שם מלא.');
+			missing = true;
+		}
+		if (!phone) {
+			fieldError('phone', 'נא למלא מספר טלפון.');
+			missing = true;
+		}
+		if (!id) {
+			fieldError('id_number', 'נא למלא מספר תעודת זהות.');
+			missing = true;
+		}
+		if (consent && !consent.checked) {
+			fieldError('privacy_consent', 'יש לאשר את מדיניות הפרטיות.');
+			missing = true;
+		}
+		if (missing) {
+			var first = form.querySelector('[aria-invalid="true"]');
+			if (first) {
+				first.focus();
+			}
+			return;
+		}
+
+		var btn = form.querySelector('[data-hl-login-btn]');
+		btn.disabled = true;
+
+		var fields = { name: name, phone: phone, id_number: id, page: PAGE };
+		if (consent && consent.checked) {
+			fields.privacy_consent = '1';
+		}
+
+		post('start', fields)
+			.then(function (res) {
+				if (!res || !res.success) {
+					var data = (res && res.data) || {};
+					Object.keys(data.fields || {}).forEach(function (k) {
+						fieldError(k, data.fields[k]);
+					});
+					throw new Error(data.message || msg('error_generic', 'אירעה שגיאה, נסה שוב.'));
+				}
+				state.lead = res.data.lead;
+				state.token = res.data.token;
+				state.responses = typeof res.data.responses === 'string' && res.data.responses.length === TOTAL ? res.data.responses : blank();
+				enterQuiz(resumeScreen());
+			})
+			.catch(function (err) {
+				alertBox.textContent = err.message;
+				alertBox.hidden = false;
+				var first = form.querySelector('[aria-invalid="true"]');
+				if (first) {
+					first.focus();
+				}
+			})
+			.then(function () {
+				btn.disabled = false;
+			});
+	});
+
+	// ── The questionnaire ───────────────────────────────────────────────────
+
+	quiz.addEventListener('change', function (e) {
+		var input = e.target;
+		if (!input || input.type !== 'radio') {
+			return;
+		}
+		var item = input.closest('[data-hl-item]');
+		if (!item) {
+			return;
+		}
+		setAnswer(parseInt(item.getAttribute('data-hl-item'), 10), input.value === 'y' ? 'y' : 'n');
+		item.classList.remove('is-missing');
+
+		// The page's warning goes once there is nothing left to warn about.
+		var screen = item.closest('[data-hl-screen]');
+		var alertEl = screen && screen.querySelector('[data-hl-page-alert]');
+		if (alertEl && !alertEl.hidden && !missingIn(screen).length) {
+			alertEl.hidden = true;
+		}
+		paintProgress();
+		remember();
+		saveSoon();
+	});
+
+	quiz.addEventListener('click', function (e) {
+		var prev = e.target.closest('[data-hl-prev]');
+		var next = e.target.closest('[data-hl-next]');
+		if (prev) {
+			show(state.screen - 1);
+			return;
+		}
+		if (!next) {
+			return;
+		}
+
+		var screen = screens[state.screen];
+		var alertEl = screen.querySelector('[data-hl-page-alert]');
+		var missing = missingIn(screen);
+
+		if (missing.length) {
+			missing.forEach(function (item) {
+				item.classList.add('is-missing');
+			});
+			if (alertEl) {
+				alertEl.textContent = missing.length === 1
+					? 'נשארה שאלה אחת ללא תשובה בעמוד הזה. יש לענות על כל השאלות.'
+					: 'נשארו ' + missing.length + ' שאלות ללא תשובה בעמוד הזה. יש לענות על כל השאלות.';
+				alertEl.hidden = false;
+			}
+			var radio = missing[0].querySelector('input[type="radio"]');
+			if (radio) {
+				missing[0].scrollIntoView({ block: 'center' });
+				radio.focus({ preventScroll: true });
+			}
+			return;
+		}
+
+		if (!next.hasAttribute('data-hl-finish')) {
+			// Only pages hold answers; an intro has nothing new to save.
+			if (screen.querySelector('[data-hl-item]')) {
+				save(false).catch(function () { /* Tried again on the next "next". */ });
+			}
+			show(state.screen + 1);
+			return;
+		}
+
+		// The last page. Anything still blank elsewhere — a page skipped
+		// with "back" — is found before the server is asked.
+		var firstGap = resumeScreen();
+		if (answeredCount() < TOTAL && firstGap !== state.screen) {
+			show(firstGap);
+			var gapScreen = screens[firstGap];
+			var gapAlert = gapScreen.querySelector('[data-hl-page-alert]');
+			missingIn(gapScreen).forEach(function (item) {
+				item.classList.add('is-missing');
+			});
+			if (gapAlert) {
+				gapAlert.textContent = 'יש לענות על כל השאלות לפני הסיום — נשארו כאן שאלות ללא תשובה.';
+				gapAlert.hidden = false;
+			}
+			return;
+		}
+
+		next.disabled = true;
+		save(true)
+			.then(function (data) {
+				if (data.html) {
+					showResults(data.html);
+				}
+			})
+			.catch(function (err) {
+				if (alertEl) {
+					alertEl.textContent = err.message;
+					alertEl.hidden = false;
+				}
+			})
+			.then(function () {
+				next.disabled = false;
+			});
+	});
+
+	// The result's own button. Everything on it is printed, the folded
+	// section included.
+	results.addEventListener('click', function (e) {
+		if (!e.target.closest('[data-hl-print]')) {
+			return;
+		}
+		results.querySelectorAll('details').forEach(function (d) {
+			d.open = true;
+		});
+		window.print();
+	});
+
+	// A save that is still waiting when the tab closes goes out with it.
+	window.addEventListener('pagehide', function () {
+		if (!saveTimer || !state.lead || !navigator.sendBeacon) {
+			return;
+		}
+		var body = new FormData();
+		body.append('action', 'kivun_holland_save');
+		body.append('nonce', kivun.nonce);
+		body.append('lead', state.lead);
+		body.append('token', state.token);
+		body.append('responses', state.responses);
+		navigator.sendBeacon(kivun.ajax_url, body);
+	});
+
+	// ── A refresh in the middle ─────────────────────────────────────────────
+
+	(function restore() {
+		var saved = null;
+		try {
+			saved = JSON.parse(sessionStorage.getItem(STORE) || 'null');
+		} catch (e) {
+			saved = null;
+		}
+		if (!saved || !saved.lead || !saved.token || typeof saved.responses !== 'string' || saved.responses.length !== TOTAL) {
+			return;
+		}
+		state = saved;
+		enterQuiz(Math.min(state.screen || 0, screens.length - 1));
+	})();
+})();

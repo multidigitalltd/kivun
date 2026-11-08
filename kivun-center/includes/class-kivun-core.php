@@ -58,6 +58,7 @@ class Kivun_Core {
 		Kivun_AI_Content::init();
 		Kivun_Event_Popup::init();
 		Kivun_Share_Image::init();
+		Kivun_Holland::init();
 
 		// Elementor — only when Elementor Pro is active.
 		add_action(
@@ -137,6 +138,7 @@ class Kivun_Core {
 			'class-kivun-ai-image',
 			'class-kivun-ai-content',
 			'class-kivun-event-popup',
+			'class-kivun-holland',
 		) as $file ) {
 			require_once $dir . $file . '.php';
 		}
@@ -154,6 +156,10 @@ class Kivun_Core {
 			'kivun_content_creator',
 			'kivun_employer_dashboard',
 			'kivun_my_applications',
+			// Not a management screen, but cached it fails the same way: the
+			// nonce baked into the page goes stale, and every login is then
+			// refused as an expired session.
+			'kivun_holland',
 		);
 	}
 
@@ -366,6 +372,24 @@ class Kivun_Core {
 		);
 		wp_script_add_data( 'kivun-picker', 'defer', true );
 
+		// The Holland questionnaire's own pair. Registered here with the rest
+		// so the list below can see it; enqueued only on the page that has
+		// the shortcode (Kivun_Holland::enqueue()).
+		wp_register_style(
+			'kivun-holland',
+			KIVUN_URL . 'assets/css/' . self::asset( 'holland', 'css' ),
+			array(),
+			KIVUN_VERSION
+		);
+		wp_register_script(
+			'kivun-holland',
+			KIVUN_URL . 'assets/js/' . self::asset( 'holland', 'js' ),
+			array( 'kivun-frontend' ),
+			KIVUN_VERSION,
+			true
+		);
+		wp_script_add_data( 'kivun-holland', 'defer', true );
+
 		/*
 		 * Keep the stylesheet out of "unused CSS" optimisers.
 		 *
@@ -388,7 +412,7 @@ class Kivun_Core {
 		 * finds not one of its classes and an optimiser drops the file
 		 * whole — leaving a bare text input beside a native select.
 		 */
-		$kivun_unoptimised = array( 'kivun-frontend', 'kivun-picker' );
+		$kivun_unoptimised = array( 'kivun-frontend', 'kivun-picker', 'kivun-holland' );
 
 		add_filter(
 			'style_loader_tag',
@@ -512,6 +536,7 @@ class Kivun_Core {
 					'kivun_my_applications',
 					'kivun_employer_register',
 					'kivun_employer_dashboard',
+					'kivun_holland',
 				);
 
 				// Elementor keeps page content (including Shortcode widgets) in

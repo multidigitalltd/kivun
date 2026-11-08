@@ -1,0 +1,601 @@
+/*
+ * Kivun Center — the Holland questionnaire ([kivun_holland]).
+ *
+ * A page of its own, so a stylesheet of its own: nothing here is wanted
+ * anywhere else, and the page should not have to wait on the console's
+ * eight thousand lines to draw a login box.
+ *
+ * Sizes are px, like the rest of the plugin's screens — rem follows the
+ * theme's root size and shrank everything once already. The card is flat;
+ * the site's red is the one accent.
+ */
+
+.kivun-holland {
+	--hl-accent: var(--kivun-accent, #de2952);
+	--hl-accent-tint: rgba(222, 41, 82, .08);
+	--hl-ink: #232323;
+	--hl-text-2: #6b6b72;
+	--hl-line: #e4e4e8;
+	--hl-field: #f5f5f7;
+	--hl-yes: #16a34a;
+	--hl-yes-tint: rgba(22, 163, 74, .1);
+	--hl-error: #dc2626;
+	--hl-font: var(--kivun-font, 'Heebo', 'Assistant', sans-serif);
+
+	direction: rtl;
+	max-width: 860px;
+	margin: 0 auto;
+	font-family: var(--hl-font);
+	font-size: 16px;
+	line-height: 1.6;
+	color: var(--hl-ink);
+	box-sizing: border-box;
+}
+.kivun-holland *,
+.kivun-holland *::before,
+.kivun-holland *::after { box-sizing: border-box; }
+.kivun-holland input,
+.kivun-holland button { font-family: inherit; }
+.kivun-holland [hidden] { display: none !important; }
+
+/* What wpautop() adds after the output was flattened. Every paragraph of
+   ours carries a class, so a classless one is the page builder's, and it
+   takes no room. */
+.kivun-holland p:not([class]) { display: contents; }
+.kivun-holland p:empty,
+.kivun-holland br { display: none !important; }
+
+/* ── Card ─────────────────────────────────────────────────────────────── */
+
+.kivun-hl-card {
+	background: #fff;
+	border: 1px solid var(--hl-line);
+	border-radius: 24px;
+	padding: 40px;
+}
+
+.kivun-hl-title {
+	margin: 0 0 12px;
+	font-size: 32px;
+	font-weight: 800;
+	line-height: 1.25;
+	color: var(--hl-ink);
+}
+.kivun-hl-title:focus { outline: none; }
+.kivun-hl-lead {
+	margin: 0 0 24px;
+	font-size: 18px;
+	color: var(--hl-text-2);
+	text-wrap: pretty;
+}
+
+.kivun-hl-facts {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin: 0 0 32px;
+	padding: 0;
+	list-style: none;
+}
+.kivun-hl-facts__item {
+	margin: 0;
+	padding: 6px 14px;
+	border-radius: 999px;
+	background: var(--hl-accent-tint);
+	color: var(--hl-accent);
+	font-size: 14px;
+	font-weight: 600;
+}
+
+/* ── Login ────────────────────────────────────────────────────────────── */
+
+.kivun-hl-form {
+	display: grid;
+	gap: 16px;
+	max-width: 440px;
+	margin: 0;
+	padding: 24px;
+	border-radius: 20px;
+	background: var(--hl-field);
+}
+.kivun-hl-form__title {
+	margin: 0;
+	font-size: 20px;
+	font-weight: 700;
+}
+.kivun-hl-field {
+	display: grid;
+	gap: 6px;
+}
+.kivun-hl-field__label {
+	font-size: 15px;
+	font-weight: 600;
+}
+.kivun-hl-req { color: var(--hl-accent); }
+.kivun-holland .kivun-hl-field__input {
+	width: 100%;
+	height: 48px;
+	margin: 0;
+	padding: 0 16px;
+	border: 1px solid var(--hl-line);
+	border-radius: 999px;
+	background: #fff;
+	color: var(--hl-ink);
+	font-size: 16px;
+	box-shadow: none;
+}
+.kivun-holland .kivun-hl-field__input[dir="ltr"] { text-align: right; }
+.kivun-holland .kivun-hl-field__input:focus {
+	outline: none;
+	border-color: var(--hl-accent);
+	box-shadow: 0 0 0 3px var(--hl-accent-tint);
+}
+.kivun-holland .kivun-hl-field__input[aria-invalid="true"] { border-color: var(--hl-error); }
+.kivun-hl-field__error {
+	display: block;
+	min-height: 0;
+	color: var(--hl-error);
+	font-size: 14px;
+}
+.kivun-hl-field__error:empty { display: none; }
+
+.kivun-hl-consent {
+	display: flex;
+	gap: 10px;
+	align-items: flex-start;
+	font-size: 14px;
+	color: var(--hl-text-2);
+}
+.kivun-hl-consent input { margin-top: 4px; accent-color: var(--hl-accent); }
+.kivun-hl-consent a { color: var(--hl-accent); }
+
+.kivun-hl-hint {
+	margin: 0;
+	font-size: 14px;
+	color: var(--hl-text-2);
+}
+
+/* ── Buttons ──────────────────────────────────────────────────────────── */
+
+.kivun-holland .kivun-hl-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 48px;
+	margin: 0;
+	padding: 0 28px;
+	border: 1px solid transparent;
+	border-radius: 999px;
+	font-size: 16px;
+	font-weight: 700;
+	line-height: 1;
+	text-decoration: none;
+	cursor: pointer;
+	transition: background-color .15s, border-color .15s, color .15s;
+}
+.kivun-holland .kivun-hl-btn--primary {
+	background: var(--hl-accent);
+	border-color: var(--hl-accent);
+	color: #fff;
+}
+.kivun-holland .kivun-hl-btn--primary:hover,
+.kivun-holland .kivun-hl-btn--primary:focus-visible {
+	background: var(--hl-ink);
+	border-color: var(--hl-ink);
+	color: #fff;
+}
+.kivun-holland .kivun-hl-btn--ghost {
+	background: #fff;
+	border-color: var(--hl-line);
+	color: var(--hl-ink);
+}
+.kivun-holland .kivun-hl-btn--ghost:hover,
+.kivun-holland .kivun-hl-btn--ghost:focus-visible {
+	background: #fff;
+	border-color: var(--hl-ink);
+	color: var(--hl-ink);
+}
+.kivun-holland .kivun-hl-btn:focus-visible { outline: 2px solid var(--hl-ink); outline-offset: 2px; }
+.kivun-holland .kivun-hl-btn[disabled] { opacity: .6; cursor: progress; }
+.kivun-holland .kivun-hl-form .kivun-hl-btn { width: 100%; }
+
+.kivun-hl-alert {
+	margin: 0;
+	padding: 12px 16px;
+	border-radius: 14px;
+	background: rgba(220, 38, 38, .08);
+	color: var(--hl-error);
+	font-size: 15px;
+	font-weight: 600;
+}
+
+/* ── Progress ─────────────────────────────────────────────────────────── */
+
+.kivun-hl-progress {
+	margin: 0 0 32px;
+}
+.kivun-hl-progress__row {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: space-between;
+	gap: 4px 16px;
+	margin-bottom: 10px;
+	font-size: 14px;
+	color: var(--hl-text-2);
+}
+.kivun-hl-progress__part { font-weight: 700; color: var(--hl-ink); }
+.kivun-hl-progress__num { font-weight: 700; color: var(--hl-ink); font-variant-numeric: tabular-nums; }
+.kivun-hl-progress__track {
+	display: block;
+	height: 8px;
+	border-radius: 999px;
+	background: var(--hl-field);
+	overflow: hidden;
+}
+.kivun-hl-progress__fill {
+	display: block;
+	width: 0;
+	height: 100%;
+	border-radius: 999px;
+	background: var(--hl-accent);
+	transition: width .25s;
+}
+
+/* ── Part intro ───────────────────────────────────────────────────────── */
+
+.kivun-hl-intro {
+	padding: 8px 0;
+}
+.kivun-hl-intro__step {
+	margin: 0 0 8px;
+	font-size: 14px;
+	font-weight: 700;
+	color: var(--hl-accent);
+}
+.kivun-hl-intro__title {
+	margin: 0 0 16px;
+	font-size: 28px;
+	font-weight: 800;
+	line-height: 1.25;
+}
+.kivun-hl-intro__title:focus,
+.kivun-hl-page__title:focus { outline: none; }
+.kivun-hl-intro__text {
+	margin: 0 0 32px;
+	padding: 20px 24px;
+	border-radius: 20px;
+	background: var(--hl-field);
+	font-size: 18px;
+	line-height: 1.7;
+	text-wrap: pretty;
+}
+
+/* ── A page of questions ──────────────────────────────────────────────── */
+
+.kivun-hl-page__head { margin-bottom: 20px; }
+.kivun-hl-page__title {
+	margin: 0 0 6px;
+	font-size: 22px;
+	font-weight: 800;
+	line-height: 1.3;
+}
+.kivun-hl-page__hint {
+	margin: 0;
+	font-size: 14px;
+	color: var(--hl-text-2);
+}
+
+.kivun-hl-items {
+	display: grid;
+	gap: 0;
+	margin-bottom: 24px;
+	border-top: 1px solid var(--hl-line);
+}
+.kivun-holland .kivun-hl-item {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	min-width: 0;
+	margin: 0;
+	padding: 14px 4px;
+	border: 0;
+	border-bottom: 1px solid var(--hl-line);
+	background: none;
+}
+/* A legend refuses to be a flex item in some engines; floating it is the
+   documented way to have it sit in the row like any other child. */
+.kivun-holland .kivun-hl-item__text {
+	float: right;
+	flex: 1 1 auto;
+	margin: 0;
+	padding: 0;
+	font-size: 17px;
+	font-weight: 500;
+	line-height: 1.5;
+	color: var(--hl-ink);
+}
+.kivun-hl-item__num {
+	display: inline-block;
+	min-width: 32px;
+	color: var(--hl-text-2);
+	font-variant-numeric: tabular-nums;
+}
+.kivun-hl-item__opts {
+	display: flex;
+	flex: 0 0 auto;
+	gap: 8px;
+}
+.kivun-holland .kivun-hl-opt {
+	position: relative;
+	display: inline-flex;
+	margin: 0;
+	cursor: pointer;
+}
+.kivun-holland .kivun-hl-opt input {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	margin: 0;
+	opacity: 0;
+	cursor: pointer;
+}
+.kivun-hl-opt__text {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 72px;
+	height: 44px;
+	padding: 0 18px;
+	border: 1px solid var(--hl-line);
+	border-radius: 999px;
+	background: #fff;
+	font-size: 16px;
+	font-weight: 700;
+	color: var(--hl-ink);
+	transition: background-color .12s, border-color .12s, color .12s;
+}
+.kivun-hl-opt:hover .kivun-hl-opt__text { border-color: var(--hl-ink); }
+.kivun-hl-opt input:focus-visible + .kivun-hl-opt__text {
+	outline: 2px solid var(--hl-ink);
+	outline-offset: 2px;
+}
+.kivun-hl-opt--yes input:checked + .kivun-hl-opt__text {
+	background: var(--hl-yes);
+	border-color: var(--hl-yes);
+	color: #fff;
+}
+.kivun-hl-opt--no input:checked + .kivun-hl-opt__text {
+	background: var(--hl-ink);
+	border-color: var(--hl-ink);
+	color: #fff;
+}
+
+/* Left unanswered when "next" was pressed. */
+.kivun-holland .kivun-hl-item.is-missing {
+	background: rgba(220, 38, 38, .05);
+	box-shadow: inset -4px 0 0 var(--hl-error);
+	padding-right: 14px;
+}
+.kivun-hl-item.is-missing .kivun-hl-opt__text { border-color: var(--hl-error); }
+
+.kivun-hl-page .kivun-hl-alert { margin-bottom: 16px; }
+
+.kivun-hl-nav {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: space-between;
+	gap: 12px;
+}
+/* The forward button sits at the far end even when there is no "back". */
+.kivun-hl-nav [data-hl-next] { margin-inline-start: auto; }
+.kivun-hl-nav--end { justify-content: flex-start; }
+
+/* ── Result ───────────────────────────────────────────────────────────── */
+
+.kivun-hl-code {
+	margin: 8px 0 24px;
+	padding: 28px 24px;
+	border-radius: 20px;
+	background: var(--hl-ink);
+	color: #fff;
+	text-align: center;
+}
+.kivun-hl-code__label {
+	margin: 0 0 4px;
+	font-size: 15px;
+	font-weight: 600;
+	opacity: .8;
+}
+.kivun-hl-code__value {
+	margin: 0 0 6px;
+	font-size: 56px;
+	font-weight: 800;
+	line-height: 1.1;
+	letter-spacing: .08em;
+	color: #fff;
+}
+.kivun-hl-code__names {
+	margin: 0;
+	font-size: 17px;
+	font-weight: 600;
+}
+
+.kivun-hl-note {
+	margin: 0 0 20px;
+	padding: 12px 16px;
+	border-radius: 14px;
+	background: var(--hl-accent-tint);
+	font-size: 15px;
+}
+
+.kivun-hl-text {
+	margin: 0 0 16px;
+	font-size: 17px;
+	line-height: 1.7;
+	text-wrap: pretty;
+}
+.kivun-hl-text--muted { margin-top: 24px; color: var(--hl-text-2); font-size: 15px; }
+
+.kivun-hl-subtitle {
+	margin: 32px 0 16px;
+	font-size: 22px;
+	font-weight: 800;
+	line-height: 1.3;
+}
+
+.kivun-hl-bars {
+	display: grid;
+	gap: 12px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+.kivun-hl-bars__row {
+	display: grid;
+	grid-template-columns: 180px 1fr 88px;
+	align-items: center;
+	gap: 12px;
+	margin: 0;
+	font-size: 15px;
+}
+.kivun-hl-bars__name { font-weight: 600; }
+.kivun-hl-bars__track {
+	display: block;
+	height: 14px;
+	border-radius: 999px;
+	background: var(--hl-field);
+	overflow: hidden;
+}
+.kivun-hl-bars__fill {
+	display: block;
+	height: 100%;
+	border-radius: 999px;
+	background: #b8b8bf;
+}
+.kivun-hl-bars__row.is-top .kivun-hl-bars__fill { background: var(--hl-accent); }
+.kivun-hl-bars__row.is-top .kivun-hl-bars__name { font-weight: 800; }
+.kivun-hl-bars__num {
+	color: var(--hl-text-2);
+	font-variant-numeric: tabular-nums;
+	text-align: left;
+}
+
+.kivun-hl-type {
+	margin: 0 0 16px;
+	padding: 20px 24px;
+	border: 1px solid var(--hl-line);
+	border-radius: 20px;
+}
+.kivun-hl-type__title {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin: 0 0 8px;
+	font-size: 20px;
+	font-weight: 800;
+}
+.kivun-hl-type__rank {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 32px;
+	height: 32px;
+	border-radius: 50%;
+	background: var(--hl-accent);
+	color: #fff;
+	font-size: 16px;
+}
+.kivun-hl-type__text {
+	margin: 0 0 6px;
+	font-size: 16px;
+	line-height: 1.7;
+}
+.kivun-hl-type__text:last-child { margin-bottom: 0; }
+.kivun-hl-type--muted { background: var(--hl-field); border-color: transparent; }
+
+.kivun-hl-more { margin: 8px 0 0; }
+.kivun-hl-more__summary {
+	display: inline-block;
+	margin-bottom: 16px;
+	font-weight: 700;
+	color: var(--hl-accent);
+	cursor: pointer;
+}
+
+.kivun-hl-table-wrap { overflow-x: auto; }
+.kivun-holland .kivun-hl-table {
+	width: 100%;
+	margin: 0;
+	border: 0;
+	border-collapse: collapse;
+	font-size: 15px;
+	font-variant-numeric: tabular-nums;
+}
+/* The theme's reset paints every odd body row grey and boxes every cell. */
+.kivun-holland .kivun-hl-table th,
+.kivun-holland .kivun-hl-table td {
+	padding: 10px 12px;
+	border: 0;
+	border-bottom: 1px solid var(--hl-line);
+	background-color: transparent;
+	text-align: center;
+}
+.kivun-holland .kivun-hl-table th[scope="row"] { text-align: right; font-weight: 600; }
+.kivun-holland .kivun-hl-table thead th { color: var(--hl-text-2); font-weight: 700; }
+.kivun-holland .kivun-hl-table__total th,
+.kivun-holland .kivun-hl-table__total td { font-weight: 800; border-bottom: 0; }
+
+.kivun-hl-result .kivun-hl-nav { margin-top: 24px; }
+
+/* ── Narrow screens ───────────────────────────────────────────────────── */
+
+@media (max-width: 640px) {
+	.kivun-hl-card { padding: 24px 16px; border-radius: 20px; }
+	.kivun-hl-title { font-size: 26px; }
+	.kivun-hl-lead { font-size: 16px; }
+	.kivun-hl-form { padding: 20px 16px; }
+	.kivun-hl-intro__title { font-size: 24px; }
+	.kivun-hl-intro__text { font-size: 16px; padding: 16px; }
+
+	.kivun-holland .kivun-hl-item {
+		flex-direction: column;
+		align-items: stretch;
+		gap: 10px;
+	}
+	.kivun-holland .kivun-hl-item__text { float: none; font-size: 16px; }
+	.kivun-hl-item__opts { gap: 8px; }
+	.kivun-holland .kivun-hl-opt { flex: 1 1 0; }
+	.kivun-hl-opt__text { width: 100%; }
+
+	.kivun-hl-nav .kivun-hl-btn { flex: 1 1 0; padding: 0 16px; }
+
+	.kivun-hl-code__value { font-size: 44px; }
+	.kivun-hl-bars__row { grid-template-columns: 1fr 72px; }
+	.kivun-hl-bars__track { grid-column: 1 / -1; grid-row: 2; }
+}
+
+/* ── Print: the result alone ──────────────────────────────────────────── */
+
+@media print {
+	body * { visibility: hidden; }
+	.kivun-hl-result,
+	.kivun-hl-result * { visibility: visible; }
+	.kivun-hl-result {
+		position: absolute;
+		top: 0;
+		right: 0;
+		left: 0;
+		border: 0;
+		padding: 0;
+	}
+	.kivun-hl-result .kivun-hl-nav { display: none; }
+	.kivun-hl-more:not([open]) > *:not(summary) { display: block; }
+	.kivun-hl-code,
+	.kivun-hl-bars__fill,
+	.kivun-hl-type__rank {
+		-webkit-print-color-adjust: exact;
+		print-color-adjust: exact;
+	}
+}

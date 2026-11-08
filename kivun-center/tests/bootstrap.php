@@ -102,6 +102,13 @@ final class Kivun_Test_State {
 	public static array $updates = array();
 
 	/**
+	 * Rows written by $wpdb->insert(), newest last.
+	 *
+	 * @var array<int,array<string,mixed>>
+	 */
+	public static array $inserts = array();
+
+	/**
 	 * The site's timezone for the run.
 	 */
 	public static string $timezone = 'Asia/Jerusalem';
@@ -143,6 +150,13 @@ final class Kivun_Test_State {
 		self::$mail       = array();
 		self::$mail_fails = false;
 		self::$updates    = array();
+		self::$inserts    = array();
+		if ( isset( $GLOBALS['wpdb'] ) && $GLOBALS['wpdb'] instanceof Kivun_Test_Wpdb ) {
+			$GLOBALS['wpdb']->var_handler     = null;
+			$GLOBALS['wpdb']->row_handler     = null;
+			$GLOBALS['wpdb']->results_handler = null;
+			$GLOBALS['wpdb']->insert_id       = 0;
+		}
 		self::$timezone   = 'Asia/Jerusalem';
 		self::$current_post = 0;
 		self::$templates    = array();
@@ -927,6 +941,18 @@ function wp_send_json_error( $data = null, int $code = 200 ): void {
 }
 
 /**
+ * WordPress's keyed hash. Keyed with a fixed salt here, which is all a test
+ * needs: the same input always gives the same token, and a different one
+ * does not.
+ *
+ * @param string $data What to hash.
+ * @return string
+ */
+function wp_hash( string $data ): string {
+	return hash_hmac( 'md5', $data, 'kivun-test-salt' );
+}
+
+/**
  * The nonce check. Tests drive the handlers directly, so there is no request
  * to have signed; what the check is for — a stale page — has its own path in
  * the handlers and is not what these tests are about.
@@ -1292,6 +1318,54 @@ class Kivun_Test_Wpdb {
 	}
 
 	/**
+	 * Answers single-row reads, the same way $var_handler answers values.
+	 *
+	 * @var callable|null
+	 */
+	public $row_handler = null;
+
+	/**
+	 * Answers many-row reads.
+	 *
+	 * @var callable|null
+	 */
+	public $results_handler = null;
+
+	/**
+	 * Read one row.
+	 *
+	 * @param string $sql The query.
+	 * @return object|null
+	 */
+	public function get_row( string $sql ) {
+		return is_callable( $this->row_handler ) ? call_user_func( $this->row_handler, $sql ) : null;
+	}
+
+	/**
+	 * Read many rows.
+	 *
+	 * @param string $sql The query.
+	 * @return array<int,object>
+	 */
+	public function get_results( string $sql ): array {
+		return is_callable( $this->results_handler ) ? (array) call_user_func( $this->results_handler, $sql ) : array();
+	}
+
+	/**
+	 * Record an insert and hand out the next id.
+	 *
+	 * @param string              $table  The table.
+	 * @param array<string,mixed> $data   The row.
+	 * @param array<int,string>   $format Value formats.
+	 * @return int
+	 */
+	public function insert( string $table, array $data, array $format = array() ): int {
+		Kivun_Test_State::$inserts[] = compact( 'table', 'data', 'format' );
+		$this->insert_id             = 100 + count( Kivun_Test_State::$inserts );
+		return 1;
+	}
+
+	/**
 	 * Interpolate a query. Faithful enough for the fragments under test: %s
 	 * is quoted, %d is cast, and nothing else is claimed.
 	 *
@@ -1360,6 +1434,7 @@ foreach ( array(
 	'class-kivun-custom-forms',
 	'class-kivun-privacy-consent',
 	'class-kivun-share-image',
+	'class-kivun-holland',
 ) as $kivun_test_class ) {
 	require_once KIVUN_DIR . 'includes/' . $kivun_test_class . '.php';
 }
