@@ -690,15 +690,22 @@ class Kivun_Holland {
 	 * The shape the landing pages already use — a list of key / label /
 	 * value — so the CSV export gives the ID number, the code and each score
 	 * a column of its own without knowing anything about this questionnaire.
-	 * The raw answers ride along without a label, which is what keeps them
-	 * out of the export's columns.
+	 * The raw answers, whether it was submitted and the save's sequence ride
+	 * along without a label, which is what keeps them out of the export's
+	 * columns.
+	 *
+	 * Finished means submitted, not merely complete. The autosave can carry
+	 * all 216 answers while the person is still looking them over; until
+	 * they press "finish" the answers stay theirs to change.
 	 *
 	 * @param string $id        Normalized ID number.
 	 * @param string $responses Normalized answers.
+	 * @param bool   $done      Whether it was submitted.
+	 * @param int    $seq       The save's sequence number.
 	 * @return array<int,array<string,string>>
 	 */
-	public static function stored_answers( string $id, string $responses ): array {
-		$done = self::answered( $responses ) === self::total();
+	public static function stored_answers( string $id, string $responses, bool $done = false, int $seq = 0 ): array {
+		$done = $done && self::answered( $responses ) === self::total();
 		$out  = array(
 			array(
 				'key'   => 'holland_id',
@@ -708,7 +715,7 @@ class Kivun_Holland {
 			array(
 				'key'   => 'holland_progress',
 				'label' => __( 'שאלון הולנד', 'kivun' ),
-				'value' => self::progress_label( $responses ),
+				'value' => self::progress_label( $responses, $done ),
 			),
 		);
 
@@ -733,6 +740,14 @@ class Kivun_Holland {
 			'key'   => 'holland_responses',
 			'value' => $responses,
 		);
+		$out[] = array(
+			'key'   => 'holland_done',
+			'value' => $done ? '1' : '0',
+		);
+		$out[] = array(
+			'key'   => 'holland_seq',
+			'value' => (string) $seq,
+		);
 
 		return $out;
 	}
@@ -741,12 +756,14 @@ class Kivun_Holland {
 	 * Read the ID number and the answers back out of a stored row.
 	 *
 	 * @param string $stored The `answers` column.
-	 * @return array{id:string,responses:string}
+	 * @return array{id:string,responses:string,done:bool,seq:int}
 	 */
 	public static function read_stored( string $stored ): array {
 		$out     = array(
 			'id'        => '',
 			'responses' => self::normalize_responses( '' ),
+			'done'      => false,
+			'seq'       => 0,
 		);
 		$decoded = json_decode( $stored, true );
 		if ( ! is_array( $decoded ) ) {
@@ -760,6 +777,10 @@ class Kivun_Holland {
 				$out['id'] = (string) ( $entry['value'] ?? '' );
 			} elseif ( 'holland_responses' === $entry['key'] ) {
 				$out['responses'] = self::normalize_responses( (string) ( $entry['value'] ?? '' ) );
+			} elseif ( 'holland_done' === $entry['key'] ) {
+				$out['done'] = '1' === (string) ( $entry['value'] ?? '' );
+			} elseif ( 'holland_seq' === $entry['key'] ) {
+				$out['seq'] = (int) ( $entry['value'] ?? 0 );
 			}
 		}
 		return $out;
@@ -769,12 +790,13 @@ class Kivun_Holland {
 	 * "Finished" or "in progress, N of 216", for the console and the export.
 	 *
 	 * @param string $responses Normalized answers.
+	 * @param bool   $done      Whether it was submitted.
 	 * @return string
 	 */
-	public static function progress_label( string $responses ): string {
+	public static function progress_label( string $responses, bool $done = false ): string {
 		$answered = self::answered( $responses );
 		$total    = self::total();
-		if ( $answered === $total ) {
+		if ( $done && $answered === $total ) {
 			return __( 'הושלם', 'kivun' );
 		}
 		/* translators: 1: questions answered, 2: questions in all. */
@@ -789,15 +811,17 @@ class Kivun_Holland {
 	 *
 	 * @param string $id        Normalized ID number.
 	 * @param string $responses Normalized answers.
+	 * @param bool   $done      Whether it was submitted.
 	 * @return string
 	 */
-	public static function message( string $id, string $responses ): string {
+	public static function message( string $id, string $responses, bool $done = false ): string {
+		$done  = $done && self::answered( $responses ) === self::total();
 		$lines = array(
 			__( 'תעודת זהות', 'kivun' ) . ': ' . $id,
-			__( 'שאלון הולנד', 'kivun' ) . ': ' . self::progress_label( $responses ),
+			__( 'שאלון הולנד', 'kivun' ) . ': ' . self::progress_label( $responses, $done ),
 		);
 
-		if ( self::answered( $responses ) === self::total() ) {
+		if ( $done ) {
 			$score  = self::score( $responses );
 			$ranked = self::rank( $score['totals'] );
 
@@ -851,7 +875,7 @@ class Kivun_Holland {
 
 		foreach ( (array) $rows as $row ) {
 			$stored = self::read_stored( (string) $row->answers );
-			if ( $stored['id'] === $id && self::answered( $stored['responses'] ) < self::total() ) {
+			if ( $stored['id'] === $id && ! $stored['done'] ) {
 				return array(
 					'lead_id'   => (int) $row->id,
 					'responses' => $stored['responses'],
@@ -972,8 +996,8 @@ class Kivun_Holland {
 	}
 
 	/**
-	 * Save the answers so far; when they are all there, score them and
-	 * return the result page.
+	 * Save the answers so far; on "finish", with every answer there, score
+	 * them, close the questionnaire and return the result page.
 	 *
 	 * @return void
 	 */
@@ -984,6 +1008,7 @@ class Kivun_Holland {
 		$token   = sanitize_text_field( wp_unslash( $_POST['token'] ?? '' ) );
 		$posted  = self::normalize_responses( sanitize_text_field( wp_unslash( $_POST['responses'] ?? '' ) ) );
 		$finish  = ! empty( $_POST['finish'] );
+		$seq     = absint( $_POST['seq'] ?? 0 );
 
 		global $wpdb;
 		$table = $wpdb->prefix . 'kivun_registrations';
@@ -1006,9 +1031,18 @@ class Kivun_Holland {
 
 		// A finished questionnaire is a record. Posting to it again changes
 		// nothing; the result is handed back as it was.
-		if ( self::answered( $stored['responses'] ) === self::total() ) {
+		if ( $stored['done'] ) {
 			wp_send_json_success( array( 'html' => self::results_html( $stored['responses'] ) ) );
 		}
+
+		// Saves can arrive out of order — an autosave still in flight when
+		// the next one leaves, or the one sent as the tab closes. An older
+		// snapshot must not overwrite a newer one, so each carries the time
+		// it left and anything older than what is stored is dropped.
+		if ( ! $finish && $seq > 0 && $seq < $stored['seq'] ) {
+			wp_send_json_success( array( 'saved' => self::answered( $stored['responses'] ) ) );
+		}
+		$seq = max( $seq, $stored['seq'] );
 
 		if ( $finish && self::answered( $posted ) < self::total() ) {
 			wp_send_json_error(
@@ -1023,20 +1057,21 @@ class Kivun_Holland {
 		$wpdb->update(
 			$table,
 			array(
-				'message' => self::message( $stored['id'], $posted ),
-				'answers' => (string) wp_json_encode( self::stored_answers( $stored['id'], $posted ) ),
+				'message' => self::message( $stored['id'], $posted, $finish ),
+				'answers' => (string) wp_json_encode( self::stored_answers( $stored['id'], $posted, $finish, $seq ) ),
 			),
 			array( 'id' => $lead_id ),
 			array( '%s', '%s' ),
 			array( '%d' )
 		);
 
-		if ( self::answered( $posted ) < self::total() ) {
+		// Every answer there but "finish" not pressed: saved, and still open.
+		if ( ! $finish ) {
 			wp_send_json_success( array( 'saved' => self::answered( $posted ) ) );
 		}
 
 		/**
-		 * Fires once, when somebody answers the last question.
+		 * Fires once, when somebody submits the last answers.
 		 *
 		 * @param int   $lead_id The lead row.
 		 * @param array $score   The result, as score() returns it.

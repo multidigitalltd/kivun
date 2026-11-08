@@ -37,7 +37,7 @@
 
 	var state = { lead: 0, token: '', responses: blank(), screen: 0 };
 	var saveTimer = null;
-	var saving = null;
+	var saving = Promise.resolve();
 
 	function blank() {
 		return new Array(TOTAL + 1).join('-');
@@ -87,27 +87,37 @@
 		} catch (e) { /* Nothing to do. */ }
 	}
 
+	// One save at a time. A save that started while another was in flight
+	// could otherwise reach the server first and then be overwritten by the
+	// older snapshot. Each waits for the one before it, and reads the answers
+	// when it actually leaves, so it always carries the latest. The time it
+	// leaves goes with it, so the server can also drop anything older (the
+	// one sent as the tab closes does not join this queue).
 	function save(finish) {
 		clearTimeout(saveTimer);
 		saveTimer = null;
 		remember();
 
-		var fields = { lead: state.lead, token: state.token, responses: state.responses };
-		if (finish) {
-			fields.finish = '1';
-		}
-
-		saving = post('save', fields).then(function (res) {
-			if (!res || !res.success) {
-				var data = (res && res.data) || {};
-				if (data.relogin) {
-					backToLogin(data.message);
-				}
-				throw new Error(data.message || msg('error_generic', 'אירעה שגיאה, נסה שוב.'));
+		var run = function () {
+			var fields = { lead: state.lead, token: state.token, responses: state.responses, seq: Date.now() };
+			if (finish) {
+				fields.finish = '1';
 			}
-			return res.data || {};
-		});
-		return saving;
+			return post('save', fields).then(function (res) {
+				if (!res || !res.success) {
+					var data = (res && res.data) || {};
+					if (data.relogin) {
+						backToLogin(data.message);
+					}
+					throw new Error(data.message || msg('error_generic', 'אירעה שגיאה, נסה שוב.'));
+				}
+				return res.data || {};
+			});
+		};
+
+		var next = saving.catch(function () { /* The previous one's failure is its own. */ }).then(run);
+		saving = next;
+		return next;
 	}
 
 	function saveSoon() {
@@ -454,6 +464,7 @@
 		body.append('lead', state.lead);
 		body.append('token', state.token);
 		body.append('responses', state.responses);
+		body.append('seq', Date.now());
 		navigator.sendBeacon(kivun.ajax_url, body);
 	});
 

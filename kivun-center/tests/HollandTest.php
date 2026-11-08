@@ -248,7 +248,7 @@ final class HollandTest extends TestCase {
 	 */
 	public function test_stored_answers_round_trip_and_suit_the_export(): void {
 		$responses = $this->answers( range( 37, 48 ) );
-		$stored    = Kivun_Holland::stored_answers( self::ID, $responses );
+		$stored    = Kivun_Holland::stored_answers( self::ID, $responses, true, 5 );
 
 		$labelled = array();
 		foreach ( $stored as $entry ) {
@@ -256,7 +256,7 @@ final class HollandTest extends TestCase {
 			if ( isset( $entry['label'] ) ) {
 				$labelled[ $entry['key'] ] = $entry['value'];
 			} else {
-				$this->assertSame( 'holland_responses', $entry['key'], 'only the raw answers go unlabelled' );
+				$this->assertContains( $entry['key'], array( 'holland_responses', 'holland_done', 'holland_seq' ), 'only the bookkeeping goes unlabelled' );
 			}
 		}
 
@@ -268,6 +268,14 @@ final class HollandTest extends TestCase {
 		$back = Kivun_Holland::read_stored( (string) wp_json_encode( $stored ) );
 		$this->assertSame( self::ID, $back['id'] );
 		$this->assertSame( $responses, $back['responses'] );
+		$this->assertTrue( $back['done'] );
+		$this->assertSame( 5, $back['seq'] );
+
+		// Every answer there but not submitted: still open, no code.
+		$open = Kivun_Holland::stored_answers( self::ID, $responses );
+		$this->assertNotContains( 'holland_code', array_column( $open, 'key' ) );
+		$this->assertSame( 'בתהליך — 216 מתוך 216', $open[1]['value'] );
+		$this->assertFalse( Kivun_Holland::read_stored( (string) wp_json_encode( $open ) )['done'] );
 
 		// Unfinished: no code, and the progress says how far.
 		$partial  = str_repeat( 'y', 40 ) . str_repeat( '-', 176 );
@@ -284,7 +292,7 @@ final class HollandTest extends TestCase {
 	 * @return void
 	 */
 	public function test_the_message_reads_as_answers_in_the_console(): void {
-		$message = Kivun_Holland::message( self::ID, $this->answers( range( 37, 48 ) ) );
+		$message = Kivun_Holland::message( self::ID, $this->answers( range( 37, 48 ) ), true );
 		$pairs   = Kivun_Content_Creator::lead_answers( $message );
 		$labels  = array_column( $pairs, 0 );
 
@@ -398,16 +406,18 @@ final class HollandTest extends TestCase {
 	 *
 	 * @param int    $id        The row id.
 	 * @param string $responses Its stored answers.
+	 * @param bool   $done      Whether it was submitted.
+	 * @param int    $seq       The last save's sequence number.
 	 * @return void
 	 */
-	private function stored_row( int $id, string $responses ): void {
-		$GLOBALS['wpdb']->row_handler = static function ( string $sql ) use ( $id, $responses ) {
+	private function stored_row( int $id, string $responses, bool $done = false, int $seq = 0 ): void {
+		$GLOBALS['wpdb']->row_handler = static function ( string $sql ) use ( $id, $responses, $done, $seq ) {
 			if ( false === strpos( $sql, 'WHERE id = ' . $id . ' ' ) ) {
 				return null;
 			}
 			return (object) array(
 				'id'      => $id,
-				'answers' => (string) wp_json_encode( Kivun_Holland::stored_answers( self::ID, $responses ) ),
+				'answers' => (string) wp_json_encode( Kivun_Holland::stored_answers( self::ID, $responses, $done, $seq ) ),
 			);
 		};
 	}
@@ -479,7 +489,7 @@ final class HollandTest extends TestCase {
 	 * @return void
 	 */
 	public function test_a_finished_questionnaire_is_not_rewritten(): void {
-		$this->stored_row( 7, $this->answers( range( 37, 48 ) ) );
+		$this->stored_row( 7, $this->answers( range( 37, 48 ) ), true );
 		$_POST = array(
 			'lead'      => '7',
 			'token'     => Kivun_Holland::token( 7, self::ID ),
@@ -491,6 +501,93 @@ final class HollandTest extends TestCase {
 		$this->assertTrue( $sent->ok );
 		$this->assertSame( array(), Kivun_Test_State::$updates );
 		$this->assertSame( array( 'S', 'R', 'I' ), end( Kivun_Test_State::$templates )['vars']['top'] );
+	}
+
+	/**
+	 * An autosave that happens to carry all 216 answers does not close the
+	 * questionnaire: the answers can still change until "finish" is pressed,
+	 * and the result is scored from what was submitted.
+	 *
+	 * @return void
+	 */
+	public function test_a_complete_autosave_does_not_finish(): void {
+		$this->stored_row( 7, str_repeat( '-', 216 ) );
+		$_POST = array(
+			'lead'      => '7',
+			'token'     => Kivun_Holland::token( 7, self::ID ),
+			'responses' => $this->answers( range( 61, 72 ) ),
+		);
+		$sent  = $this->call( 'ajax_save' );
+
+		$this->assertTrue( $sent->ok );
+		$this->assertSame( 216, $sent->data['saved'] );
+		$this->assertArrayNotHasKey( 'html', $sent->data );
+
+		$written = Kivun_Test_State::$updates[0]['data'];
+		$this->assertStringNotContainsString( 'קוד הולנד', $written['message'] );
+		$this->assertFalse( Kivun_Holland::read_stored( $written['answers'] )['done'] );
+
+		// The row is as the autosave left it; a changed answer and "finish"
+		// are both taken, and the result is scored from the changed answers.
+		$this->stored_row( 7, $this->answers( range( 61, 72 ) ) );
+		$_POST['responses'] = $this->answers( range( 37, 48 ) );
+		$_POST['finish']    = '1';
+		$sent               = $this->call( 'ajax_save' );
+
+		$this->assertTrue( $sent->ok );
+		$this->assertArrayHasKey( 'html', $sent->data );
+		$this->assertStringContainsString( 'קוד הולנד: SRI', Kivun_Test_State::$updates[1]['data']['message'] );
+		$this->assertTrue( Kivun_Holland::read_stored( Kivun_Test_State::$updates[1]['data']['answers'] )['done'] );
+	}
+
+	/**
+	 * A save older than the one already stored is dropped, so a snapshot
+	 * that arrives late cannot undo newer answers.
+	 *
+	 * @return void
+	 */
+	public function test_an_older_save_does_not_overwrite_a_newer_one(): void {
+		$this->stored_row( 7, str_repeat( 'y', 40 ) . str_repeat( '-', 176 ), false, 2000 );
+		$_POST = array(
+			'lead'      => '7',
+			'token'     => Kivun_Holland::token( 7, self::ID ),
+			'responses' => str_repeat( 'y', 20 ) . str_repeat( '-', 196 ),
+			'seq'       => '1000',
+		);
+		$sent  = $this->call( 'ajax_save' );
+
+		$this->assertTrue( $sent->ok );
+		$this->assertSame( 40, $sent->data['saved'] );
+		$this->assertSame( array(), Kivun_Test_State::$updates );
+
+		$_POST['seq']       = '3000';
+		$_POST['responses'] = str_repeat( 'y', 50 ) . str_repeat( '-', 166 );
+		$this->call( 'ajax_save' );
+		$this->assertSame( 3000, Kivun_Holland::read_stored( Kivun_Test_State::$updates[0]['data']['answers'] )['seq'] );
+	}
+
+	/**
+	 * A submitted questionnaire is never reopened by logging in again; that
+	 * starts a new row.
+	 *
+	 * @return void
+	 */
+	public function test_logging_in_after_finishing_starts_afresh(): void {
+		$GLOBALS['wpdb']->results_handler = static fn(): array => array(
+			(object) array(
+				'id'      => 55,
+				'answers' => (string) wp_json_encode( Kivun_Holland::stored_answers( self::ID, str_repeat( 'y', 216 ), true ) ),
+			),
+		);
+		$_POST = array(
+			'name'      => 'ישראל',
+			'phone'     => '0501234567',
+			'id_number' => self::ID,
+		);
+		$sent  = $this->call( 'ajax_start' );
+
+		$this->assertNotSame( 55, $sent->data['lead'] );
+		$this->assertCount( 1, Kivun_Test_State::$inserts );
 	}
 
 	// ── The page ──────────────────────────────────────────────────────────────
