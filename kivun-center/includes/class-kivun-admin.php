@@ -647,6 +647,7 @@ class Kivun_Admin {
 			'event'        => __( 'אירוע', 'kivun' ),
 			'form'         => __( 'טופס באתר', 'kivun' ),
 			'jobs_board'   => __( 'לוח משרות', 'kivun' ),
+			'holland'      => __( 'שאלון הולנד', 'kivun' ),
 		);
 	}
 
@@ -1989,6 +1990,7 @@ class Kivun_Admin {
 						'session'      => __( 'סדנה', 'kivun' ),
 						'event'        => __( 'אירוע', 'kivun' ),
 						'form'         => __( 'טופס', 'kivun' ),
+						'holland'      => __( 'שאלון הולנד', 'kivun' ),
 					) as $kivun_ct => $kivun_ct_label ) :
 						?>
 						<option value="<?php echo esc_attr( $kivun_ct ); ?>"><?php echo esc_html( $kivun_ct_label ); ?></option>
