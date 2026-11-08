@@ -392,9 +392,12 @@
 		}
 		pressed = null;
 		var screen = input.closest('[data-hl-screen]');
-		if (!screen || !screen.classList.contains('kivun-hl-page--single')) {
-			return;
+		if (screen && screen.classList.contains('kivun-hl-page--single')) {
+			advanceFrom(screen);
 		}
+	});
+
+	function advanceFrom(screen) {
 		var index = screens.indexOf(screen);
 		clearTimeout(advanceTimer);
 		// Long enough to see the choice light up.
@@ -414,6 +417,70 @@
 			}
 			show(index + 1);
 		}, 300);
+	}
+
+	// ── Swipe on a phone: right for "yes", left for "no" ───────────────────
+
+	// A deliberate sideways stroke across the question only: long enough,
+	// clearly more sideways than down, and quick, so that scrolling the page
+	// or a finger resting on the screen answers nothing. The question follows
+	// the finger a little, tinted toward the answer it is about to give.
+	var swipe = null;
+	var SWIPE_MIN = 70;
+
+	quiz.addEventListener('touchstart', function (e) {
+		var item = e.target.closest('.kivun-hl-page--single [data-hl-item]');
+		if (!item || e.touches.length !== 1) {
+			swipe = null;
+			return;
+		}
+		swipe = { item: item, x: e.touches[0].clientX, y: e.touches[0].clientY, t: Date.now(), dx: 0, sideways: null };
+	}, { passive: true });
+
+	quiz.addEventListener('touchmove', function (e) {
+		if (!swipe) {
+			return;
+		}
+		var dx = e.touches[0].clientX - swipe.x;
+		var dy = e.touches[0].clientY - swipe.y;
+		if (swipe.sideways === null && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) {
+			swipe.sideways = Math.abs(dx) > Math.abs(dy) * 1.5;
+		}
+		if (!swipe.sideways) {
+			return;
+		}
+		swipe.dx = dx;
+		swipe.item.classList.add('is-swiping');
+		swipe.item.style.transform = 'translateX(' + Math.round(dx * 0.4) + 'px)';
+		swipe.item.classList.toggle('is-swipe-yes', dx > SWIPE_MIN);
+		swipe.item.classList.toggle('is-swipe-no', dx < -SWIPE_MIN);
+	}, { passive: true });
+
+	function endSwipe() {
+		if (!swipe) {
+			return;
+		}
+		var s = swipe;
+		swipe = null;
+		s.item.style.transform = '';
+		s.item.classList.remove('is-swiping', 'is-swipe-yes', 'is-swipe-no');
+		if (!s.sideways || Math.abs(s.dx) < SWIPE_MIN || Date.now() - s.t > 1000) {
+			return;
+		}
+		var input = s.item.querySelector('input[value="' + (s.dx > 0 ? 'y' : 'n') + '"]');
+		if (!input) {
+			return;
+		}
+		input.checked = true;
+		input.dispatchEvent(new Event('change', { bubbles: true }));
+		advanceFrom(s.item.closest('[data-hl-screen]'));
+	}
+	quiz.addEventListener('touchend', endSwipe);
+	quiz.addEventListener('touchcancel', function () {
+		if (swipe) {
+			swipe.dx = 0;
+		}
+		endSwipe();
 	});
 
 	quiz.addEventListener('click', function (e) {

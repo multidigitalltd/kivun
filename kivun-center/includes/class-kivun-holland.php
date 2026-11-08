@@ -579,6 +579,13 @@ class Kivun_Holland {
 	 * Score a full set of answers.
 	 *
 	 * @param string $responses Normalized answers.
+	 * The code is the three highest types, with two refinements. A type
+	 * that scored the same as the third is part of the code too — picking
+	 * one of two equal scores would be the order of the alphabet speaking,
+	 * not the answers — so a tie for third gives a code of four letters (or
+	 * more). And a type nobody said "yes" to is no tendency at all, so a
+	 * zero never makes it into the code, even to fill it out to three.
+	 *
 	 * @return array{totals:array<string,int>,sections:array<string,array<string,int>>,code:string,tie:bool,max:int}
 	 */
 	public static function score( string $responses ): array {
@@ -596,14 +603,20 @@ class Kivun_Holland {
 		}
 
 		$ranked = self::rank( $totals );
+		$third  = $totals[ $ranked[2] ];
+		$code   = '';
+		foreach ( $ranked as $i => $type ) {
+			if ( $totals[ $type ] <= 0 || ( $i >= 3 && $totals[ $type ] !== $third ) ) {
+				break;
+			}
+			$code .= $type;
+		}
 
 		return array(
 			'totals'   => $totals,
 			'sections' => $sections,
-			'code'     => implode( '', array_slice( $ranked, 0, 3 ) ),
-			// The third letter is a choice, not a finding, when the fourth
-			// type scored the same. Said on the page rather than hidden.
-			'tie'      => $totals[ $ranked[2] ] === $totals[ $ranked[3] ],
+			'code'     => $code,
+			'tie'      => strlen( $code ) > 3,
 			'max'      => self::PER_TYPE * count( self::sections() ),
 		);
 	}
@@ -731,7 +744,7 @@ class Kivun_Holland {
 			$out[] = array(
 				'key'   => 'holland_code',
 				'label' => __( 'קוד הולנד', 'kivun' ),
-				'value' => $score['code'],
+				'value' => '' !== $score['code'] ? $score['code'] : '—',
 			);
 			foreach ( self::TYPES as $type ) {
 				$out[] = array(
@@ -831,7 +844,7 @@ class Kivun_Holland {
 			$score  = self::score( $responses );
 			$ranked = self::rank( $score['totals'] );
 
-			$lines[] = __( 'קוד הולנד', 'kivun' ) . ': ' . $score['code'];
+			$lines[] = __( 'קוד הולנד', 'kivun' ) . ': ' . ( '' !== $score['code'] ? $score['code'] : '—' ) . ( $score['tie'] ? ' ' . __( '(שוויון במקום השלישי)', 'kivun' ) : '' );
 
 			$parts = array();
 			foreach ( $ranked as $type ) {
@@ -1125,6 +1138,25 @@ class Kivun_Holland {
 		$score  = self::score( $responses );
 		$info   = self::type_info();
 		$ranked = self::rank( $score['totals'] );
+		$top    = '' === $score['code'] ? array() : str_split( $score['code'] );
+
+		// The professions the questionnaire itself asked about, by type: the
+		// "career directions" for each leading type, drawn from the client's
+		// own list rather than invented. The ones they said "yes" to first.
+		$jobs = array();
+		foreach ( self::items() as $num => $item ) {
+			if ( 'professions' !== $item['section'] ) {
+				continue;
+			}
+			$jobs[ $item['type'] ][] = array(
+				'text' => $item['text'],
+				'yes'  => 'y' === ( $responses[ $num - 1 ] ?? '' ),
+			);
+		}
+		foreach ( $jobs as $type => $list ) {
+			usort( $list, static fn( array $a, array $b ): int => (int) $b['yes'] <=> (int) $a['yes'] );
+			$jobs[ $type ] = $list;
+		}
 
 		ob_start();
 		kivun_get_template(
@@ -1133,7 +1165,8 @@ class Kivun_Holland {
 				'score'    => $score,
 				'info'     => $info,
 				'ranked'   => $ranked,
-				'top'      => array_slice( $ranked, 0, 3 ),
+				'top'      => $top,
+				'jobs'     => $jobs,
 				'intro'    => self::results_intro(),
 				'sections' => self::sections(),
 			)

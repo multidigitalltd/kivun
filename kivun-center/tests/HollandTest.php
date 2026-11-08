@@ -174,22 +174,39 @@ final class HollandTest extends TestCase {
 	}
 
 	/**
-	 * Equal scores keep R I A S E C order, and a third place shared with the
-	 * fourth is reported rather than decided silently.
+	 * A type that scored the same as the third is part of the code too, so a
+	 * tie for third gives four letters (or more); equal scores are listed in
+	 * R I A S E C order.
 	 *
 	 * @return void
 	 */
-	public function test_ties_are_broken_in_riasec_order_and_flagged(): void {
+	public function test_a_tie_for_third_gives_a_longer_code(): void {
 		$all = Kivun_Holland::score( str_repeat( 'y', 216 ) );
-		$this->assertSame( 'RIA', $all['code'] );
+		$this->assertSame( 'RIASEC', $all['code'] );
 		$this->assertTrue( $all['tie'] );
 
-		// S 20, A 13, then E and C level on 12: E takes third place by the
-		// order, and the tie with C is reported.
+		// S 20, A 13, then E and C level on 12: both are the third letter.
 		$score = Kivun_Holland::score( $this->answers( array_merge( range( 37, 48 ), range( 109, 116 ), range( 25, 36 ), array( 97 ), range( 49, 60 ), range( 61, 72 ) ) ) );
-		$this->assertSame( 'SAE', $score['code'] );
+		$this->assertSame( 'SAEC', $score['code'] );
 		$this->assertTrue( $score['tie'] );
 		$this->assertSame( array( 'S', 'A', 'E', 'C', 'R', 'I' ), Kivun_Holland::rank( $score['totals'] ) );
+		$this->assertStringContainsString( 'קוד הולנד: SAEC (שוויון במקום השלישי)', Kivun_Holland::message( self::ID, $this->answers( array_merge( range( 37, 48 ), range( 109, 116 ), range( 25, 36 ), array( 97 ), range( 49, 60 ), range( 61, 72 ) ) ), true ) );
+	}
+
+	/**
+	 * A type nobody said "yes" to is no tendency, and never fills the code
+	 * out to three letters.
+	 *
+	 * @return void
+	 */
+	public function test_a_type_with_no_yes_is_not_in_the_code(): void {
+		$this->assertSame( 'S', Kivun_Holland::score( $this->answers( range( 37, 48 ) ) )['code'] );
+		$this->assertSame( 'SE', Kivun_Holland::score( $this->answers( array( 37, 38, 49 ) ) )['code'] );
+
+		$none = Kivun_Holland::score( str_repeat( 'n', 216 ) );
+		$this->assertSame( '', $none['code'] );
+		$this->assertFalse( $none['tie'] );
+		$this->assertStringContainsString( 'קוד הולנד: —', Kivun_Holland::message( self::ID, str_repeat( 'n', 216 ), true ) );
 	}
 
 	/**
@@ -262,7 +279,7 @@ final class HollandTest extends TestCase {
 
 		$this->assertSame( self::ID, $labelled['holland_id'] );
 		$this->assertSame( 'הושלם', $labelled['holland_progress'] );
-		$this->assertSame( 'SRI', $labelled['holland_code'] );
+		$this->assertSame( 'S', $labelled['holland_code'] );
 		$this->assertSame( '12', $labelled['holland_S'] );
 
 		$back = Kivun_Holland::read_stored( (string) wp_json_encode( $stored ) );
@@ -297,7 +314,7 @@ final class HollandTest extends TestCase {
 		$labels  = array_column( $pairs, 0 );
 
 		$this->assertSame( array( 'תעודת זהות', 'שאלון הולנד', 'קוד הולנד', 'ציונים (מתוך 36)', 'פעילויות', 'כשרים', 'מקצועות' ), $labels );
-		$this->assertSame( 'SRI', $pairs[2][1] );
+		$this->assertSame( 'S', $pairs[2][1] );
 		$this->assertStringStartsWith( 'S 12 · ', $pairs[3][1] );
 		$this->assertSame( 'R 0 · I 0 · A 0 · S 12 · E 0 · C 0', $pairs[4][1] );
 	}
@@ -474,12 +491,12 @@ final class HollandTest extends TestCase {
 		$this->assertArrayHasKey( 'html', $sent->data );
 
 		$written = Kivun_Test_State::$updates[1]['data'];
-		$this->assertStringContainsString( 'קוד הולנד: CRI', $written['message'] );
+		$this->assertStringContainsString( 'קוד הולנד: C', $written['message'] );
 		$this->assertSame( array( 'id' => 7 ), Kivun_Test_State::$updates[1]['where'] );
 
 		$template = end( Kivun_Test_State::$templates );
 		$this->assertSame( 'holland/results.php', $template['template'] );
-		$this->assertSame( array( 'C', 'R', 'I' ), $template['vars']['top'] );
+		$this->assertSame( array( 'C' ), $template['vars']['top'] );
 	}
 
 	/**
@@ -500,7 +517,7 @@ final class HollandTest extends TestCase {
 
 		$this->assertTrue( $sent->ok );
 		$this->assertSame( array(), Kivun_Test_State::$updates );
-		$this->assertSame( array( 'S', 'R', 'I' ), end( Kivun_Test_State::$templates )['vars']['top'] );
+		$this->assertSame( array( 'S' ), end( Kivun_Test_State::$templates )['vars']['top'] );
 	}
 
 	/**
@@ -536,7 +553,7 @@ final class HollandTest extends TestCase {
 
 		$this->assertTrue( $sent->ok );
 		$this->assertArrayHasKey( 'html', $sent->data );
-		$this->assertStringContainsString( 'קוד הולנד: SRI', Kivun_Test_State::$updates[1]['data']['message'] );
+		$this->assertStringContainsString( 'קוד הולנד: S', Kivun_Test_State::$updates[1]['data']['message'] );
 		$this->assertTrue( Kivun_Holland::read_stored( Kivun_Test_State::$updates[1]['data']['answers'] )['done'] );
 	}
 
@@ -652,22 +669,66 @@ final class HollandTest extends TestCase {
 	}
 
 	/**
-	 * The result shows the code, every score, and the three leading types'
-	 * descriptions.
+	 * Render the result page for a set of "yes" answers.
+	 *
+	 * @param array<int,int> $yes Item numbers answered "yes".
+	 * @return string
+	 */
+	private function result_page( array $yes ): string {
+		Kivun_Holland::results_html( $this->answers( $yes ) );
+		$call = end( Kivun_Test_State::$templates );
+		return $this->render( $call['template'], $call['vars'] );
+	}
+
+	/**
+	 * The result shows the profile, a column for every type, the leading
+	 * types' descriptions, and the professions of each leading type with the
+	 * ones answered "yes" first.
 	 *
 	 * @return void
 	 */
 	public function test_the_result_page(): void {
-		$responses = $this->answers( array_merge( range( 37, 48 ), range( 109, 120 ), range( 49, 60 ), range( 25, 30 ) ) );
-		Kivun_Holland::results_html( $responses );
-		$call = end( Kivun_Test_State::$templates );
-		$html = $this->render( $call['template'], $call['vars'] );
+		// S 25 (183 is a profession: יועץ זוגי או משפחתי), E 12, A 6.
+		$html = $this->result_page( array_merge( range( 37, 48 ), range( 109, 120 ), array( 183 ), range( 49, 60 ), range( 25, 30 ) ) );
+		$text = (string) preg_replace( '/\s+/u', ' ', wp_strip_all_tags( $html ) );
 
-		$this->assertStringContainsString( 'S E A', $html );
-		$this->assertStringContainsString( 'חברתי-טיפולי · יזמי-ניהולי · אמנותי-יצירתי', $html );
-		$this->assertStringContainsString( '24 מתוך 36', $html );
-		$this->assertStringContainsString( Kivun_Holland::type_info()['S']['about'], $html );
-		$this->assertSame( 6, substr_count( $html, 'kivun-hl-bars__row' ) );
+		$this->assertMatchesRegularExpression( '#kivun-hl-code__letter kivun-hl-t--S">S</span>\s*<span class="kivun-hl-code__letter kivun-hl-t--E">E</span>\s*<span class="kivun-hl-code__letter kivun-hl-t--A">A</span>#', $html );
+		$this->assertStringContainsString( 'חברתי-טיפולי · יזמי-ניהולי · אמנותי-יצירתי', $text );
+		$this->assertStringContainsString( '25 מתוך 36', $text );
+		$this->assertStringContainsString( '69%', $text );
+		$this->assertStringContainsString( Kivun_Holland::type_info()['S']['about'], $text );
+
+		// Six columns, in R I A S E C order, the leading three marked.
+		$this->assertSame( 6, substr_count( $html, 'kivun-hl-chart__col ' ) );
+		preg_match_all( '/kivun-hl-chart__col kivun-hl-t--([RIASEC])( is-top)?"/', $html, $cols );
+		$this->assertSame( Kivun_Holland::TYPES, $cols[1] );
+		$this->assertSame( array( '', '', ' is-top', ' is-top', ' is-top', '' ), $cols[2] );
+
+		// The professions for S: the one answered "yes" first, all twelve listed.
+		$this->assertMatchesRegularExpression( '#<li class="kivun-hl-jobs__item is-yes">יועץ זוגי או משפחתי</li>#', $html );
+		$this->assertSame( 1, substr_count( $html, 'kivun-hl-jobs__item is-yes' ) );
+		$this->assertSame( 3 * 12, substr_count( $html, 'class="kivun-hl-jobs__item' ) );
+		$s_list = substr( $html, (int) strpos( $html, 'kivun-hl-type kivun-hl-t--S' ) );
+		$this->assertLessThan( strpos( $s_list, 'מורה בבית ספר' ), strpos( $s_list, 'יועץ זוגי או משפחתי' ) );
+
 		$this->assertDoesNotMatchRegularExpression( '/<p(\s(?![^>]*class=)[^>]*)?>/', $html );
+	}
+
+	/**
+	 * A tie for third shows every tied type in the profile and says so; no
+	 * "yes" at all shows no profile rather than three arbitrary letters.
+	 *
+	 * @return void
+	 */
+	public function test_the_result_page_for_ties_and_for_nothing(): void {
+		$tie = $this->result_page( array_merge( range( 37, 48 ), range( 109, 116 ), range( 25, 36 ), array( 97 ), range( 49, 60 ), range( 61, 72 ) ) );
+		$this->assertSame( 4, substr_count( $tie, 'kivun-hl-code__letter ' ) );
+		$this->assertStringContainsString( 'יזמי-ניהולי ומנהלי-ארגוני קיבלו ניקוד זהה (12)', $tie );
+		$this->assertSame( 4, substr_count( $tie, 'class="kivun-hl-type kivun-hl-t--' ) );
+
+		$none = $this->result_page( array() );
+		$this->assertSame( 0, substr_count( $none, 'kivun-hl-code__letter' ) );
+		$this->assertStringContainsString( 'לא סומנו תשובות', $none );
+		$this->assertSame( 0, substr_count( $none, 'kivun-hl-chart__col kivun-hl-t--R is-top' ) );
 	}
 }

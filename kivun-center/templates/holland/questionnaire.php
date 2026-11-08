@@ -104,6 +104,7 @@ $kivun_hl_parts   = count( $sections );
 				</span>
 			</div>
 			<div class="kivun-hl-progress__track" aria-hidden="true"><span class="kivun-hl-progress__fill" data-hl-fill></span></div>
+			<p class="kivun-hl-swipe-hint" aria-hidden="true"><?php esc_html_e( 'אפשר גם להחליק את השאלה: ימינה = כן, שמאלה = לא', 'kivun' ); ?></p>
 		</div>
 
 		<?php foreach ( $sections as $kivun_hl_key => $kivun_hl_section ) : ?>
