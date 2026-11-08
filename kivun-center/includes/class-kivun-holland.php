@@ -49,9 +49,15 @@ class Kivun_Holland {
 	const PER_TYPE = 12;
 
 	/**
-	 * Items shown on one page of the questionnaire.
+	 * Items shown on one screen of the questionnaire.
+	 *
+	 * One: each question has the screen to itself, with the two answers as
+	 * large buttons and the next question coming up as soon as one is
+	 * chosen. Twelve to a page read as a long form, which is not how the
+	 * client wants it taken. The template still handles more than one, should
+	 * that ever be wanted back.
 	 */
-	const PAGE_SIZE = 12;
+	const PAGE_SIZE = 1;
 
 	/**
 	 * Registers the shortcode and the two endpoints.

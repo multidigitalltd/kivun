@@ -382,6 +382,57 @@
 
 .kivun-hl-page .kivun-hl-alert { margin-bottom: 16px; }
 
+/* ── One question to a screen ─────────────────────────────────────────── */
+
+/* The question is the screen: its words large and centred, the two answers
+   as big buttons under it, and the part's instructions kept small above. */
+.kivun-hl-page--single .kivun-hl-page__head {
+	margin-bottom: 48px;
+	text-align: center;
+}
+.kivun-hl-page--single .kivun-hl-page__title {
+	font-size: 15px;
+	font-weight: 700;
+	color: var(--hl-accent);
+}
+.kivun-hl-page--single .kivun-hl-items {
+	margin-bottom: 24px;
+	border-top: 0;
+}
+.kivun-holland .kivun-hl-page--single .kivun-hl-item {
+	/* A legend is drawn in the fieldset's border, outside its flex layout,
+	   so the space between question and answers is the legend's own margin
+	   and the box is sized by padding rather than a centred min-height. */
+	display: block;
+	padding: 0 0 56px;
+	border-bottom: 0;
+}
+.kivun-holland .kivun-hl-page--single .kivun-hl-item__text {
+	float: none;
+	width: 100%;
+	margin-bottom: 36px;
+	font-size: 28px;
+	font-weight: 700;
+	line-height: 1.4;
+	text-align: center;
+	text-wrap: balance;
+}
+.kivun-hl-page--single .kivun-hl-item__opts {
+	justify-content: center;
+	gap: 16px;
+}
+.kivun-holland .kivun-hl-page--single .kivun-hl-opt { flex: 0 1 200px; }
+.kivun-hl-page--single .kivun-hl-opt__text {
+	width: 100%;
+	height: 64px;
+	font-size: 20px;
+}
+.kivun-holland .kivun-hl-page--single .kivun-hl-item.is-missing {
+	padding-right: 0;
+	background: none;
+	box-shadow: none;
+}
+
 .kivun-hl-nav {
 	display: flex;
 	flex-wrap: wrap;
@@ -570,6 +621,11 @@
 	.kivun-hl-opt__text { width: 100%; }
 
 	.kivun-hl-nav .kivun-hl-btn { flex: 1 1 0; padding: 0 16px; }
+
+	.kivun-hl-page--single .kivun-hl-page__head { margin-bottom: 32px; }
+	.kivun-holland .kivun-hl-page--single .kivun-hl-item { padding: 0 0 40px; }
+	.kivun-holland .kivun-hl-page--single .kivun-hl-item__text { font-size: 22px; margin-bottom: 28px; }
+	.kivun-holland .kivun-hl-page--single .kivun-hl-opt { flex: 1 1 0; }
 
 	.kivun-hl-code__value { font-size: 44px; }
 	.kivun-hl-bars__row { grid-template-columns: 1fr 72px; }

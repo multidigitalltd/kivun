@@ -126,13 +126,21 @@ $kivun_hl_parts   = count( $sections );
 			</div>
 
 			<?php foreach ( $kivun_hl_pages as $kivun_hl_page_i => $kivun_hl_nums ) : ?>
-				<?php $kivun_hl_last = ( $kivun_hl_sec_num === $kivun_hl_parts && count( $kivun_hl_pages ) - 1 === $kivun_hl_page_i ); ?>
-				<div class="kivun-hl-screen kivun-hl-page" data-hl-screen data-hl-label="<?php echo esc_attr( $kivun_hl_label ); ?>" hidden>
+				<?php
+				$kivun_hl_last = ( $kivun_hl_sec_num === $kivun_hl_parts && count( $kivun_hl_pages ) - 1 === $kivun_hl_page_i );
+				$kivun_hl_one  = ( 1 === count( $kivun_hl_nums ) );
+				?>
+				<div class="kivun-hl-screen kivun-hl-page<?php echo $kivun_hl_one ? ' kivun-hl-page--single' : ''; ?>" data-hl-screen data-hl-label="<?php echo esc_attr( $kivun_hl_label ); ?>" hidden>
 					<div class="kivun-hl-page__head">
 						<h3 class="kivun-hl-page__title" tabindex="-1" data-hl-focus>
 						<?php
-						/* translators: 1: part title, 2: page number, 3: pages in the part. */
-						echo esc_html( sprintf( __( '%1$s · עמוד %2$d מתוך %3$d', 'kivun' ), $kivun_hl_section['title'], $kivun_hl_page_i + 1, count( $kivun_hl_pages ) ) );
+						if ( $kivun_hl_one ) {
+							/* translators: 1: part title, 2: question number within the part, 3: questions in the part. */
+							echo esc_html( sprintf( __( '%1$s · שאלה %2$d מתוך %3$d', 'kivun' ), $kivun_hl_section['title'], $kivun_hl_page_i + 1, count( $kivun_hl_pages ) ) );
+						} else {
+							/* translators: 1: part title, 2: page number, 3: pages in the part. */
+							echo esc_html( sprintf( __( '%1$s · עמוד %2$d מתוך %3$d', 'kivun' ), $kivun_hl_section['title'], $kivun_hl_page_i + 1, count( $kivun_hl_pages ) ) );
+						}
 						?>
 						</h3>
 						<p class="kivun-hl-page__hint"><?php echo esc_html( $kivun_hl_section['instructions'] ); ?></p>
@@ -142,7 +150,12 @@ $kivun_hl_parts   = count( $sections );
 						<?php foreach ( $kivun_hl_nums as $kivun_hl_num ) : ?>
 							<?php ++$kivun_hl_running; ?>
 							<fieldset class="kivun-hl-item" data-hl-item="<?php echo esc_attr( (string) $kivun_hl_num ); ?>">
-								<legend class="kivun-hl-item__text"><span class="kivun-hl-item__num"><?php echo esc_html( (string) $kivun_hl_running ); ?>.</span> <?php echo esc_html( $items[ $kivun_hl_num ]['text'] ); ?></legend>
+								<legend class="kivun-hl-item__text">
+									<?php if ( ! $kivun_hl_one ) : ?>
+										<span class="kivun-hl-item__num"><?php echo esc_html( (string) $kivun_hl_running ); ?>.</span>
+									<?php endif; ?>
+									<?php echo esc_html( $items[ $kivun_hl_num ]['text'] ); ?>
+								</legend>
 								<div class="kivun-hl-item__opts">
 									<label class="kivun-hl-opt kivun-hl-opt--yes"><input type="radio" name="kivun_hl_<?php echo esc_attr( (string) $kivun_hl_num ); ?>" value="y"><span class="kivun-hl-opt__text"><?php esc_html_e( 'כן', 'kivun' ); ?></span></label>
 									<label class="kivun-hl-opt kivun-hl-opt--no"><input type="radio" name="kivun_hl_<?php echo esc_attr( (string) $kivun_hl_num ); ?>" value="n"><span class="kivun-hl-opt__text"><?php esc_html_e( 'לא', 'kivun' ); ?></span></label>

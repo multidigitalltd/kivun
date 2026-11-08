@@ -634,8 +634,11 @@ final class HollandTest extends TestCase {
 			$this->assertSame( 2, substr_count( $html, 'name="kivun_hl_' . $n . '"' ), 'item ' . $n );
 		}
 
-		// Three intros and six pages a part.
-		$this->assertSame( 21, substr_count( $html, 'data-hl-screen' ) );
+		// Three intros, and every question a screen of its own.
+		$this->assertSame( 3 + 216, substr_count( $html, 'data-hl-screen' ) );
+		$this->assertSame( 216, substr_count( $html, 'kivun-hl-page--single' ) );
+		$this->assertStringContainsString( 'פעילויות · שאלה 1 מתוך 72', $html );
+		$this->assertStringContainsString( 'מקצועות · שאלה 72 מתוך 72', $html );
 		$this->assertSame( 1, substr_count( $html, 'data-hl-finish' ) );
 
 		// The rules from wpautop(): every paragraph of ours has a class, and
