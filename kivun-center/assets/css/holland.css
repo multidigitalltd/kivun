@@ -427,15 +427,25 @@
 	height: 64px;
 	font-size: 20px;
 }
-/* Swiping: the question follows the finger, tinted toward the answer. */
+/* Swiping: the question follows the finger, and the answer it is about to
+   give lights up. */
 .kivun-holland .kivun-hl-page--single .kivun-hl-item {
-	border-radius: 20px;
-	transition: transform .2s, background-color .15s;
+	transition: transform .2s;
 	touch-action: pan-y;
 }
-.kivun-holland .kivun-hl-page--single .kivun-hl-item.is-swiping { transition: background-color .15s; }
-.kivun-holland .kivun-hl-page--single .kivun-hl-item.is-swipe-yes { background: var(--hl-yes-tint); transition: background-color .15s; }
-.kivun-holland .kivun-hl-page--single .kivun-hl-item.is-swipe-no { background: rgba(35, 35, 35, .06); transition: background-color .15s; }
+.kivun-holland .kivun-hl-page--single .kivun-hl-item.is-swiping { transition: none; }
+.kivun-holland .kivun-hl-page--single .kivun-hl-item.is-swipe-yes .kivun-hl-opt--yes .kivun-hl-opt__text {
+	background: var(--hl-yes);
+	border-color: var(--hl-yes);
+	color: #fff;
+}
+.kivun-holland .kivun-hl-page--single .kivun-hl-item.is-swipe-no .kivun-hl-opt--no .kivun-hl-opt__text {
+	background: var(--hl-ink);
+	border-color: var(--hl-ink);
+	color: #fff;
+}
+/* What follows the finger stays inside the card. */
+.kivun-holland .kivun-hl-quiz { overflow: hidden; }
 
 /* Only where there is a finger to swipe with. */
 .kivun-hl-swipe-hint {
