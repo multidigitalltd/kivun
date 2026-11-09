@@ -73,6 +73,10 @@ class Kivun_Holland {
 		}
 
 		add_action( 'wp_enqueue_scripts', array( __CLASS__, 'enqueue_for_page' ), 20 );
+
+		// The representative's printable report. Logged-in staff only: there
+		// is no nopriv hook, and the handler checks the leads capability too.
+		add_action( 'wp_ajax_kivun_holland_report', array( __CLASS__, 'ajax_report' ) );
 	}
 
 	/**
@@ -112,23 +116,93 @@ class Kivun_Holland {
 	// ── The content ───────────────────────────────────────────────────────────
 
 	/**
-	 * The three parts, with the instructions the spreadsheet gives each.
+	 * The three parts, with the instructions the spreadsheet gives each — as
+	 * two sentences, "yes" and "no", because the screens set them apart.
 	 *
-	 * @return array<string,array{title:string,instructions:string}>
+	 * The names and wording follow the design handoff (holland v2), which took
+	 * them from the sheet: the second part is "כישורים", and its instructions
+	 * keep the sheet's own spelling.
+	 *
+	 * @return array<string,array{title:string,yes:string,no:string,instructions:string}>
 	 */
 	public static function sections(): array {
-		return array(
+		$parts = array(
 			'activities'  => array(
-				'title'        => __( 'פעילויות', 'kivun' ),
-				'instructions' => __( 'בחר ב"כן" עבור פעילויות שהנך אוהב לעשות או שיש לך עניין ללמוד לעשות. בחר ב"לא" עבור פעילויות שאינך אוהב לעשות או שאין לך כל יחס אליהן ואין לך כל עניין ללמוד לעשות.', 'kivun' ),
+				'title' => __( 'פעילויות', 'kivun' ),
+				'yes'   => __( 'בחר ב"כן" עבור פעילויות שהנך אוהב לעשות או שיש לך עניין ללמוד לעשות.', 'kivun' ),
+				'no'    => __( 'בחר ב"לא" עבור פעילויות שאינך אוהב לעשות או שאין לך כל יחס אליהן ואין לך כל עניין ללמוד לעשות.', 'kivun' ),
 			),
 			'skills'      => array(
-				'title'        => __( 'כשרים', 'kivun' ),
-				'instructions' => __( 'בחר ב"כן" את הפעילויות שהנך יכול לבצע היטב או במומחיות. בחר ב"לא" את הפעילויות שמעולם לא ביצעת או שביצעת באופן גרוע.', 'kivun' ),
+				'title' => __( 'כישורים', 'kivun' ),
+				'yes'   => __( 'בחר ב"כן" את הפעילויות שהנך יכול לבצע היטב או במומחיות.', 'kivun' ),
+				'no'    => __( 'בחר ב"לא" את הפעילויות שמעולם לא בצעת או שבצעת באופן גרוע.', 'kivun' ),
 			),
 			'professions' => array(
-				'title'        => __( 'מקצועות', 'kivun' ),
-				'instructions' => __( 'בחר ב"כן" את המקצועות שמעניינים או מושכים אותך. בחר ב"לא" את המקצועות שאינך מחבב או שאתה מוצא אותם כלא מעניינים.', 'kivun' ),
+				'title' => __( 'מקצועות', 'kivun' ),
+				'yes'   => __( 'בחר ב"כן" את המקצועות שמעניינים או מושכים אותך.', 'kivun' ),
+				'no'    => __( 'בחר ב"לא" את המקצועות שאינך מחבב או שאתה מוצא אותם כלא מעניינים.', 'kivun' ),
+			),
+		);
+		foreach ( $parts as $key => $part ) {
+			$parts[ $key ]['instructions'] = $part['yes'] . ' ' . $part['no'];
+		}
+		return $parts;
+	}
+
+	/**
+	 * The questionnaire's title, as the screens and the report give it.
+	 *
+	 * @return string
+	 */
+	public static function title(): string {
+		return __( 'שאלון הכוון תעסוקתי – מודל הולנד', 'kivun' );
+	}
+
+	/**
+	 * Each type's colours: its fill, its text colour on white, its tint, and
+	 * the colour of a letter set on its fill. From the design handoff — the
+	 * orange is darker than before so a white letter on it reaches 3:1, and
+	 * a letter on the yellow is near-black.
+	 *
+	 * @return array<string,array{c:string,t:string,tint:string,fg:string}>
+	 */
+	public static function type_colors(): array {
+		return array(
+			'R' => array(
+				'c'    => '#2e9e5b',
+				't'    => '#1d7a45',
+				'tint' => '#e8f6ee',
+				'fg'   => '#ffffff',
+			),
+			'I' => array(
+				'c'    => '#7c3aed',
+				't'    => '#6d28d9',
+				'tint' => '#f2ecfe',
+				'fg'   => '#ffffff',
+			),
+			'A' => array(
+				'c'    => '#e06b12',
+				't'    => '#a9520a',
+				'tint' => '#fef1e4',
+				'fg'   => '#ffffff',
+			),
+			'S' => array(
+				'c'    => '#e8b400',
+				't'    => '#7a5c00',
+				'tint' => '#fdf6dc',
+				'fg'   => '#2b2100',
+			),
+			'E' => array(
+				'c'    => '#d6304f',
+				't'    => '#b3203d',
+				'tint' => '#fceaee',
+				'fg'   => '#ffffff',
+			),
+			'C' => array(
+				'c'    => '#2a7fd0',
+				't'    => '#1c64a8',
+				'tint' => '#e8f1fb',
+				'fg'   => '#ffffff',
 			),
 		);
 	}
@@ -721,9 +795,10 @@ class Kivun_Holland {
 	 * @param string $responses Normalized answers.
 	 * @param bool   $done      Whether it was submitted.
 	 * @param int    $seq       The save's sequence number.
+	 * @param string $done_at   When it was submitted (site time, Y-m-d H:i:s).
 	 * @return array<int,array<string,string>>
 	 */
-	public static function stored_answers( string $id, string $responses, bool $done = false, int $seq = 0 ): array {
+	public static function stored_answers( string $id, string $responses, bool $done = false, int $seq = 0, string $done_at = '' ): array {
 		$done = $done && self::answered( $responses ) === self::total();
 		$out  = array(
 			array(
@@ -767,6 +842,12 @@ class Kivun_Holland {
 			'key'   => 'holland_seq',
 			'value' => (string) $seq,
 		);
+		if ( $done && '' !== $done_at ) {
+			$out[] = array(
+				'key'   => 'holland_done_at',
+				'value' => $done_at,
+			);
+		}
 
 		return $out;
 	}
@@ -775,7 +856,7 @@ class Kivun_Holland {
 	 * Read the ID number and the answers back out of a stored row.
 	 *
 	 * @param string $stored The `answers` column.
-	 * @return array{id:string,responses:string,done:bool,seq:int}
+	 * @return array{id:string,responses:string,done:bool,seq:int,done_at:string}
 	 */
 	public static function read_stored( string $stored ): array {
 		$out     = array(
@@ -783,6 +864,7 @@ class Kivun_Holland {
 			'responses' => self::normalize_responses( '' ),
 			'done'      => false,
 			'seq'       => 0,
+			'done_at'   => '',
 		);
 		$decoded = json_decode( $stored, true );
 		if ( ! is_array( $decoded ) ) {
@@ -800,6 +882,8 @@ class Kivun_Holland {
 				$out['done'] = '1' === (string) ( $entry['value'] ?? '' );
 			} elseif ( 'holland_seq' === $entry['key'] ) {
 				$out['seq'] = (int) ( $entry['value'] ?? 0 );
+			} elseif ( 'holland_done_at' === $entry['key'] ) {
+				$out['done_at'] = (string) ( $entry['value'] ?? '' );
 			}
 		}
 		return $out;
@@ -915,28 +999,38 @@ class Kivun_Holland {
 	public static function ajax_start(): void {
 		check_ajax_referer( 'kivun_nonce', 'nonce' );
 
-		$name    = sanitize_text_field( wp_unslash( $_POST['name'] ?? '' ) );
-		$phone   = self::normalize_phone( sanitize_text_field( wp_unslash( $_POST['phone'] ?? '' ) ) );
-		$id      = self::normalize_id( sanitize_text_field( wp_unslash( $_POST['id_number'] ?? '' ) ) );
-		$page_id = absint( $_POST['page'] ?? 0 );
+		$name      = sanitize_text_field( wp_unslash( $_POST['name'] ?? '' ) );
+		$phone_raw = sanitize_text_field( wp_unslash( $_POST['phone'] ?? '' ) );
+		$id_raw    = sanitize_text_field( wp_unslash( $_POST['id_number'] ?? '' ) );
+		$phone     = self::normalize_phone( $phone_raw );
+		$id        = self::normalize_id( $id_raw );
+		$page_id   = absint( $_POST['page'] ?? 0 );
 
+		// The wording is the design handoff's: "יש למלא" for an empty field,
+		// "אינו תקין" for one filled in wrong.
 		$errors = array();
-		if ( mb_strlen( $name ) < 2 ) {
-			$errors['name'] = __( 'נא למלא שם מלא.', 'kivun' );
+		if ( '' === trim( $name ) ) {
+			$errors['name'] = __( 'יש למלא שם מלא', 'kivun' );
+		} elseif ( mb_strlen( $name ) < 2 ) {
+			$errors['name'] = __( 'השם אינו תקין', 'kivun' );
 		}
-		if ( '' === $phone ) {
-			$errors['phone'] = __( 'מספר הטלפון אינו תקין.', 'kivun' );
+		if ( '' === trim( $phone_raw ) ) {
+			$errors['phone'] = __( 'יש למלא מספר טלפון', 'kivun' );
+		} elseif ( '' === $phone ) {
+			$errors['phone'] = __( 'מספר הטלפון אינו תקין', 'kivun' );
 		}
-		if ( '' === $id ) {
-			$errors['id_number'] = __( 'מספר תעודת הזהות אינו תקין.', 'kivun' );
+		if ( '' === trim( $id_raw ) ) {
+			$errors['id_number'] = __( 'יש למלא תעודת זהות', 'kivun' );
+		} elseif ( '' === $id ) {
+			$errors['id_number'] = __( 'מספר תעודת הזהות אינו תקין', 'kivun' );
 		}
 		if ( Kivun_Privacy_Consent::asked() && ! Kivun_Privacy_Consent::given( $_POST ) ) {
-			$errors['privacy_consent'] = __( 'יש לאשר את מדיניות הפרטיות.', 'kivun' );
+			$errors['privacy_consent'] = __( 'יש לאשר את מדיניות הפרטיות', 'kivun' );
 		}
 		if ( $errors ) {
 			wp_send_json_error(
 				array(
-					'message' => __( 'נא לתקן את הפרטים המסומנים.', 'kivun' ),
+					'message' => __( 'יש לתקן את השדות המסומנים כדי להמשיך.', 'kivun' ),
 					'fields'  => $errors,
 				)
 			);
@@ -1015,8 +1109,9 @@ class Kivun_Holland {
 	}
 
 	/**
-	 * Save the answers so far; on "finish", with every answer there, score
-	 * them, close the questionnaire and return the result page.
+	 * Save the answers so far; on "finish", with every answer there, close
+	 * the questionnaire. The result is not sent back — the participant sees a
+	 * thank-you, and the representative prints the report.
 	 *
 	 * @return void
 	 */
@@ -1049,9 +1144,9 @@ class Kivun_Holland {
 		}
 
 		// A finished questionnaire is a record. Posting to it again changes
-		// nothing; the result is handed back as it was.
+		// nothing, and is answered as finished.
 		if ( $stored['done'] ) {
-			wp_send_json_success( array( 'html' => self::results_html( $stored['responses'] ) ) );
+			wp_send_json_success( array( 'done' => true ) );
 		}
 
 		// Saves can arrive out of order — an autosave still in flight when
@@ -1077,7 +1172,7 @@ class Kivun_Holland {
 			$table,
 			array(
 				'message' => self::message( $stored['id'], $posted, $finish ),
-				'answers' => (string) wp_json_encode( self::stored_answers( $stored['id'], $posted, $finish, $seq ) ),
+				'answers' => (string) wp_json_encode( self::stored_answers( $stored['id'], $posted, $finish, $seq, $finish ? (string) current_time( 'mysql' ) : '' ) ),
 			),
 			array( 'id' => $lead_id ),
 			array( '%s', '%s' ),
@@ -1097,7 +1192,9 @@ class Kivun_Holland {
 		 */
 		do_action( 'kivun_holland_completed', $lead_id, self::score( $posted ) );
 
-		wp_send_json_success( array( 'html' => self::results_html( $posted ) ) );
+		// The participant is thanked, not shown the result: the representative
+		// goes through it with them, from the printed report.
+		wp_send_json_success( array( 'done' => true ) );
 	}
 
 	// ── The page ──────────────────────────────────────────────────────────────
@@ -1129,20 +1226,19 @@ class Kivun_Holland {
 	}
 
 	/**
-	 * The result page, drawn on the server so its words live in one place.
+	 * Everything the report shows, from a stored lead row.
 	 *
-	 * @param string $responses A complete set of answers.
-	 * @return string
+	 * @param object $row The lead row (name, phone, created_at, answers).
+	 * @return array<string,mixed>
 	 */
-	public static function results_html( string $responses ): string {
-		$score  = self::score( $responses );
-		$info   = self::type_info();
+	public static function report_data( $row ): array {
+		$stored = self::read_stored( (string) ( $row->answers ?? '' ) );
+		$score  = self::score( $stored['responses'] );
 		$ranked = self::rank( $score['totals'] );
 		$top    = '' === $score['code'] ? array() : str_split( $score['code'] );
 
-		// The professions the questionnaire itself asked about, by type: the
-		// "career directions" for each leading type, drawn from the client's
-		// own list rather than invented. The ones they said "yes" to first.
+		// The professions the questionnaire itself asked about, by type, the
+		// ones answered "yes" first.
 		$jobs = array();
 		foreach ( self::items() as $num => $item ) {
 			if ( 'professions' !== $item['section'] ) {
@@ -1150,7 +1246,7 @@ class Kivun_Holland {
 			}
 			$jobs[ $item['type'] ][] = array(
 				'text' => $item['text'],
-				'yes'  => 'y' === ( $responses[ $num - 1 ] ?? '' ),
+				'yes'  => 'y' === ( $stored['responses'][ $num - 1 ] ?? '' ),
 			);
 		}
 		foreach ( $jobs as $type => $list ) {
@@ -1158,19 +1254,106 @@ class Kivun_Holland {
 			$jobs[ $type ] = $list;
 		}
 
-		ob_start();
-		kivun_get_template(
-			'holland/results.php',
-			array(
-				'score'    => $score,
-				'info'     => $info,
-				'ranked'   => $ranked,
-				'top'      => $top,
-				'jobs'     => $jobs,
-				'intro'    => self::results_intro(),
-				'sections' => self::sections(),
-			)
+		$when = '' !== $stored['done_at'] ? $stored['done_at'] : (string) ( $row->created_at ?? '' );
+
+		return array(
+			'name'     => (string) ( $row->name ?? '' ),
+			'phone'    => (string) ( $row->phone ?? '' ),
+			'id'       => $stored['id'],
+			'date'     => '' !== $when ? kivun_local_date( $when, 'j.n.Y' ) : '',
+			'done'     => $stored['done'],
+			'score'    => $score,
+			'ranked'   => $ranked,
+			'top'      => $top,
+			'rest'     => array_values( array_diff( $ranked, $top ) ),
+			'jobs'     => $jobs,
+			'info'     => self::type_info(),
+			'colors'   => self::type_colors(),
+			'intro'    => self::results_intro(),
+			'sections' => self::sections(),
+			'title'    => self::title(),
+			'logo'     => self::logo_url(),
 		);
-		return Kivun_Content_Creator::flatten_output( (string) ob_get_clean() );
+	}
+
+	/**
+	 * The centre's logo, shipped with the plugin.
+	 *
+	 * @return string
+	 */
+	public static function logo_url(): string {
+		return KIVUN_URL . 'assets/images/kivun-logo.png';
+	}
+
+	/**
+	 * The address of a lead's printable report.
+	 *
+	 * @param int $lead_id The lead row.
+	 * @return string
+	 */
+	public static function report_url( int $lead_id ): string {
+		return add_query_arg(
+			array(
+				'action'   => 'kivun_holland_report',
+				'lead'     => $lead_id,
+				'_wpnonce' => wp_create_nonce( 'kivun_holland_report' ),
+			),
+			admin_url( 'admin-ajax.php' )
+		);
+	}
+
+	/**
+	 * Whether a lead row is a finished questionnaire, with a report to print.
+	 *
+	 * @param object $row The lead row.
+	 * @return bool
+	 */
+	public static function has_report( $row ): bool {
+		return self::LEAD_TYPE === (string) ( $row->type ?? '' )
+			&& self::read_stored( (string) ( $row->answers ?? '' ) )['done'];
+	}
+
+	/**
+	 * The report as a page of its own: A4, ready to print.
+	 *
+	 * For the people who handle the leads, and only them — it carries the
+	 * participant's name, phone and ID number.
+	 *
+	 * @return void
+	 */
+	public static function ajax_report(): void {
+		if ( ! Kivun_Content_Creator::can_manage_leads() ) {
+			wp_die( esc_html__( 'אין לך הרשאה לצפות בדוח.', 'kivun' ), '', array( 'response' => 403 ) );
+		}
+		check_admin_referer( 'kivun_holland_report' );
+
+		$lead_id = absint( $_GET['lead'] ?? 0 );
+
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$row = $lead_id ? $wpdb->get_row(
+			$wpdb->prepare( "SELECT id, name, phone, created_at, answers, type FROM {$wpdb->prefix}kivun_registrations WHERE id = %d AND type = %s", $lead_id, self::LEAD_TYPE )
+		) : null;
+
+		if ( ! $row || ! self::has_report( $row ) ) {
+			wp_die( esc_html__( 'הדוח לא נמצא, או שהשאלון עדיין לא הושלם.', 'kivun' ), '', array( 'response' => 404 ) );
+		}
+
+		Kivun_Core::no_cache();
+		header( 'Content-Type: text/html; charset=utf-8' );
+		echo self::report_html( $row ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped in the template.
+		exit;
+	}
+
+	/**
+	 * The report page's markup.
+	 *
+	 * @param object $row The lead row.
+	 * @return string
+	 */
+	public static function report_html( $row ): string {
+		ob_start();
+		kivun_get_template( 'holland/report.php', self::report_data( $row ) );
+		return (string) ob_get_clean();
 	}
 }

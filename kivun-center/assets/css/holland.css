@@ -1,34 +1,56 @@
 /*
  * Kivun Center — the Holland questionnaire ([kivun_holland]).
  *
- * A page of its own, so a stylesheet of its own: nothing here is wanted
- * anywhere else, and the page should not have to wait on the console's
- * eight thousand lines to draw a login box.
+ * To the design handoff "design_handoff_holland_v2" (Holland v2.dc.html):
+ * every colour, size and radius below is the handoff's own figure. Desktop
+ * is the 860px card; at 600px and narrower the phone values apply (the
+ * handoff's 390px frame, a 358px card).
  *
- * Sizes are px, like the rest of the plugin's screens — rem follows the
- * theme's root size and shrank everything once already. The card is flat;
- * the site's red is the one accent.
+ * Sizes are px, never rem — the theme changes the root size. Paragraphs of
+ * ours all carry a class, because WordPress wraps loose inline runs in <p>s
+ * of its own, and those are neutralised below.
  */
 
 .kivun-holland {
-	--hl-accent: var(--kivun-accent, #de2952);
-	--hl-accent-tint: rgba(222, 41, 82, .08);
+	--hl-accent: #de2952;
+	--hl-accent-hover: #c41f45;
+	--hl-accent-text: #c41f45;
+	--hl-accent-tint: #fdf1f4;
+	--hl-band: #fdf5f7;
+	--hl-band-line: #f6e3e8;
+	--hl-ring: #fbdbe3;
+	--hl-ring-field: #fbe3e9;
+	--hl-track: #f3dde3;
 	--hl-ink: #232323;
-	--hl-text-2: #6b6b72;
-	--hl-line: #e4e4e8;
-	--hl-field: #f5f5f7;
+	--hl-text-2: #6b6468;
+	--hl-text-3: #4d474a;
+	--hl-placeholder: #8f888b;
+	--hl-line: #ece7e8;
+	--hl-btn-line: #e7e1e2;
+	--hl-field: #f7f4f4;
+	--hl-stage: #fbf8f8;
+	--hl-stage-line: #f1ecec;
 	--hl-yes: #16a34a;
-	--hl-yes-tint: rgba(22, 163, 74, .1);
+	--hl-yes-soft: #e6f5ec;
+	--hl-yes-glyph: #15803d;
+	--hl-yes-ring: #dcf2e4;
+	--hl-no-icon: #f1eeef;
 	--hl-error: #dc2626;
-	--hl-font: var(--kivun-font, 'Heebo', 'Assistant', sans-serif);
+	--hl-error-text: #b91c1c;
+	--hl-error-bg: #fdecef;
+	--hl-error-field: #fff6f7;
+	--hl-font: 'Ploni', 'Ploni ML v2 AAA', var(--kivun-font, sans-serif);
 
 	direction: rtl;
 	max-width: 860px;
 	margin: 0 auto;
 	font-family: var(--hl-font);
 	font-size: 16px;
-	line-height: 1.6;
+	/* The handoff sets no line-height on its root: where it gives none for an
+	   element, "normal" is what was measured. */
+	line-height: normal;
 	color: var(--hl-ink);
+	text-align: right;
 	box-sizing: border-box;
 }
 .kivun-holland *,
@@ -38,9 +60,7 @@
 .kivun-holland button { font-family: inherit; }
 .kivun-holland [hidden] { display: none !important; }
 
-/* What wpautop() adds after the output was flattened. Every paragraph of
-   ours carries a class, so a classless one is the page builder's, and it
-   takes no room. */
+/* What wpautop() adds after the output was flattened takes no room. */
 .kivun-holland p:not([class]) { display: contents; }
 .kivun-holland p:empty,
 .kivun-holland br { display: none !important; }
@@ -48,112 +68,36 @@
 /* ── Card ─────────────────────────────────────────────────────────────── */
 
 .kivun-hl-card {
+	overflow: hidden;
 	background: #fff;
 	border: 1px solid var(--hl-line);
-	border-radius: 24px;
-	padding: 40px;
+	border-radius: 28px;
+	box-shadow: 0 1px 2px rgba(60, 20, 30, .04), 0 18px 48px -16px rgba(60, 20, 30, .16);
 }
-
-.kivun-hl-title {
-	margin: 0 0 12px;
-	font-size: 32px;
-	font-weight: 800;
-	line-height: 1.25;
-	color: var(--hl-ink);
-}
-.kivun-hl-title:focus { outline: none; }
-.kivun-hl-lead {
-	margin: 0 0 24px;
-	font-size: 18px;
-	color: var(--hl-text-2);
-	text-wrap: pretty;
-}
-
-.kivun-hl-facts {
+.kivun-hl-logo {
 	display: flex;
-	flex-wrap: wrap;
-	gap: 8px;
-	margin: 0 0 32px;
-	padding: 0;
-	list-style: none;
+	align-items: center;
+	padding: 18px 40px 14px;
 }
-.kivun-hl-facts__item {
+.kivun-holland .kivun-hl-logo__img {
+	display: block;
+	width: auto;
+	height: 52px;
+	max-width: none;
 	margin: 0;
-	padding: 6px 14px;
-	border-radius: 999px;
-	background: var(--hl-accent-tint);
-	color: var(--hl-accent);
-	font-size: 14px;
-	font-weight: 600;
-}
-
-/* ── Login ────────────────────────────────────────────────────────────── */
-
-.kivun-hl-form {
-	display: grid;
-	gap: 16px;
-	max-width: 440px;
-	margin: 0;
-	padding: 24px;
-	border-radius: 20px;
-	background: var(--hl-field);
-}
-.kivun-hl-form__title {
-	margin: 0;
-	font-size: 20px;
-	font-weight: 700;
-}
-.kivun-hl-field {
-	display: grid;
-	gap: 6px;
-}
-.kivun-hl-field__label {
-	font-size: 15px;
-	font-weight: 600;
-}
-.kivun-hl-req { color: var(--hl-accent); }
-.kivun-holland .kivun-hl-field__input {
-	width: 100%;
-	height: 48px;
-	margin: 0;
-	padding: 0 16px;
-	border: 1px solid var(--hl-line);
-	border-radius: 999px;
-	background: #fff;
-	color: var(--hl-ink);
-	font-size: 16px;
+	border: 0;
+	border-radius: 0;
 	box-shadow: none;
 }
-.kivun-holland .kivun-hl-field__input[dir="ltr"] { text-align: right; }
-.kivun-holland .kivun-hl-field__input:focus {
-	outline: none;
-	border-color: var(--hl-accent);
-	box-shadow: 0 0 0 3px var(--hl-accent-tint);
-}
-.kivun-holland .kivun-hl-field__input[aria-invalid="true"] { border-color: var(--hl-error); }
-.kivun-hl-field__error {
-	display: block;
-	min-height: 0;
-	color: var(--hl-error);
-	font-size: 14px;
-}
-.kivun-hl-field__error:empty { display: none; }
 
-.kivun-hl-consent {
-	display: flex;
-	gap: 10px;
-	align-items: flex-start;
-	font-size: 14px;
-	color: var(--hl-text-2);
+.kivun-hl-band {
+	background: var(--hl-band);
+	border-bottom: 1px solid var(--hl-band-line);
 }
-.kivun-hl-consent input { margin-top: 4px; accent-color: var(--hl-accent); }
-.kivun-hl-consent a { color: var(--hl-accent); }
+.kivun-hl-body { padding: 36px 56px 48px; }
 
-.kivun-hl-hint {
-	margin: 0;
-	font-size: 14px;
-	color: var(--hl-text-2);
-}
+.kivun-holland h2,
+.kivun-holland h3 { font-family: inherit; color: var(--hl-ink); }
 
 /* ── Buttons ──────────────────────────────────────────────────────────── */
 
@@ -161,76 +105,304 @@
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	min-height: 48px;
+	gap: 10px;
+	height: 56px;
 	margin: 0;
-	padding: 0 28px;
-	border: 1px solid transparent;
+	padding: 0 40px;
+	border: 0;
 	border-radius: 999px;
-	font-size: 16px;
+	background: transparent;
+	font-size: 19px;
 	font-weight: 700;
 	line-height: 1;
+	color: var(--hl-ink);
 	text-decoration: none;
+	white-space: nowrap;
 	cursor: pointer;
-	transition: background-color .15s, border-color .15s, color .15s;
+	transition: all .16s ease-out;
+	box-shadow: none;
 }
+.kivun-holland .kivun-hl-btn:active { transform: scale(.98); transition-duration: .08s; }
 .kivun-holland .kivun-hl-btn--primary {
 	background: var(--hl-accent);
-	border-color: var(--hl-accent);
 	color: #fff;
+	box-shadow: 0 12px 26px -12px rgba(222, 41, 82, .75);
 }
 .kivun-holland .kivun-hl-btn--primary:hover,
-.kivun-holland .kivun-hl-btn--primary:focus-visible {
-	background: var(--hl-ink);
+.kivun-holland .kivun-hl-btn--primary:focus { background: var(--hl-accent-hover); color: #fff; }
+.kivun-holland .kivun-hl-btn--block { width: 100%; height: 58px; }
+.kivun-holland .kivun-hl-btn--start { height: 60px; padding: 0 52px; font-size: 20px; }
+.kivun-holland .kivun-hl-btn--text {
+	height: 52px;
+	padding: 0 20px;
+	gap: 6px;
+	font-size: 17px;
+	color: var(--hl-ink);
+}
+.kivun-holland .kivun-hl-btn--text:hover,
+.kivun-holland .kivun-hl-btn--text:focus { background: var(--hl-field); color: var(--hl-ink); }
+.kivun-holland .kivun-hl-btn[disabled] { opacity: .6; cursor: progress; }
+
+.kivun-holland .kivun-hl-btn:focus-visible,
+.kivun-holland .kivun-hl-consent input:focus-visible {
+	outline: 2px solid var(--hl-ink);
+	outline-offset: 3px;
+}
+
+/* ── Login ────────────────────────────────────────────────────────────── */
+
+.kivun-hl-band--login {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	padding: 44px 56px 36px;
+}
+.kivun-holland .kivun-hl-title {
+	margin: 0;
+	font-size: 40px;
+	font-weight: 800;
+	line-height: 1.15;
+}
+.kivun-hl-lead {
+	margin: 0;
+	font-size: 18px;
+	line-height: 1.6;
+	color: var(--hl-text-2);
+}
+
+.kivun-holland .kivun-hl-form {
+	display: flex;
+	flex-direction: column;
+	gap: 26px;
+	margin: 0;
+}
+.kivun-hl-form__head { display: flex; flex-direction: column; gap: 4px; }
+.kivun-hl-form__title { font-size: 22px; font-weight: 800; }
+.kivun-hl-form__sub { font-size: 16px; line-height: 1.6; color: var(--hl-text-2); }
+
+.kivun-hl-fields {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+	gap: 20px;
+}
+.kivun-hl-field { display: flex; flex-direction: column; gap: 8px; }
+.kivun-hl-field--wide { grid-column: 1 / -1; }
+.kivun-holland .kivun-hl-field__label {
+	display: block;
+	margin: 0;
+	font-size: 15px;
+	font-weight: 700;
+	line-height: normal;
+	color: var(--hl-ink);
+}
+.kivun-holland .kivun-hl-field__input {
+	/* Content-box, as the handoff draws it: the 1.5px border adds to the 56,
+	   and is rounded the same way the design's is at every pixel density.
+	   The width fills the row whatever the padding and border. */
+	box-sizing: content-box;
+	width: 100%;
+	width: -webkit-fill-available;
+	width: -moz-available;
+	width: stretch;
+	height: 56px;
+	margin: 0;
+	padding: 0 18px;
+	border: 1.5px solid transparent;
+	border-radius: 16px;
+	background: var(--hl-field);
+	font-size: 17px;
+	line-height: normal;
+	color: var(--hl-ink);
+	text-align: right;
+	box-shadow: none;
+	transition: all .16s ease-out;
+}
+.kivun-holland .kivun-hl-field__input::placeholder { color: var(--hl-placeholder); opacity: 1; }
+.kivun-holland .kivun-hl-field__input:focus {
+	outline: none;
+	background: #fff;
 	border-color: var(--hl-ink);
+	box-shadow: 0 0 0 4px var(--hl-ring-field);
+}
+.kivun-holland .kivun-hl-field__input[aria-invalid="true"] {
+	background: var(--hl-error-field);
+	border-color: var(--hl-error);
+}
+.kivun-hl-field__error {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--hl-error-text);
+}
+.kivun-hl-bang {
+	display: inline-flex;
+	flex: none;
+	align-items: center;
+	justify-content: center;
+	width: 16px;
+	height: 16px;
+	border-radius: 50%;
+	background: var(--hl-error);
+	font-size: 11px;
+	font-weight: 800;
 	color: #fff;
 }
-.kivun-holland .kivun-hl-btn--ghost {
-	background: #fff;
-	border-color: var(--hl-line);
-	color: var(--hl-ink);
+
+.kivun-hl-info {
+	display: flex;
+	align-items: flex-start;
+	gap: 12px;
+	padding: 14px 16px;
+	border-radius: 16px;
+	background: var(--hl-field);
 }
-.kivun-holland .kivun-hl-btn--ghost:hover,
-.kivun-holland .kivun-hl-btn--ghost:focus-visible {
+.kivun-hl-info__icon {
+	display: flex;
+	flex: none;
+	align-items: center;
+	justify-content: center;
+	/* 22 plus the border, as the handoff draws it. */
+	width: 24px;
+	height: 24px;
+	margin-top: 1px;
+	border: 1px solid #e3dcde;
+	border-radius: 50%;
 	background: #fff;
-	border-color: var(--hl-ink);
-	color: var(--hl-ink);
+	font-size: 13px;
+	font-weight: 800;
+	color: var(--hl-text-2);
 }
-.kivun-holland .kivun-hl-btn:focus-visible { outline: 2px solid var(--hl-ink); outline-offset: 2px; }
-.kivun-holland .kivun-hl-btn[disabled] { opacity: .6; cursor: progress; }
-.kivun-holland .kivun-hl-form .kivun-hl-btn { width: 100%; }
+.kivun-hl-info__text {
+	margin: 0;
+	font-size: 15px;
+	line-height: 1.6;
+	color: var(--hl-text-3);
+}
+
+.kivun-hl-consent {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	font-size: 15px;
+	line-height: 1.6;
+	color: var(--hl-text-3);
+	cursor: pointer;
+}
+.kivun-holland .kivun-hl-consent input { width: 18px; height: 18px; margin: 3px 0 0; accent-color: var(--hl-accent); }
+.kivun-hl-consent a { color: var(--hl-accent-text); }
 
 .kivun-hl-alert {
+	display: flex;
+	align-items: center;
+	gap: 10px;
 	margin: 0;
-	padding: 12px 16px;
-	border-radius: 14px;
-	background: rgba(220, 38, 38, .08);
-	color: var(--hl-error);
-	font-size: 15px;
+	padding: 14px 20px;
+	border-radius: 16px;
+	background: var(--hl-error-bg);
+	font-size: 16px;
 	font-weight: 600;
+	color: var(--hl-error-text);
+	animation: kivun-hl-shake .3s ease-out;
 }
+.kivun-hl-alert--center { justify-content: center; padding: 14px 18px; text-align: center; }
+.kivun-hl-alert .kivun-hl-bang { width: 22px; height: 22px; font-size: 14px; }
 
-/* ── Progress ─────────────────────────────────────────────────────────── */
+/* With errors showing, the handoff's compact login (its section 02): the
+   band closes up, and the opening line and the note make way for the
+   fields and what is wrong with them. */
+.kivun-hl-login.is-error .kivun-hl-band--login { gap: 10px; padding: 36px 56px 28px; }
+.kivun-hl-login.is-error .kivun-hl-form { gap: 24px; }
+.kivun-hl-login.is-error .kivun-hl-form__head,
+.kivun-hl-login.is-error .kivun-hl-info { display: none; }
 
-.kivun-hl-progress {
-	margin: 0 0 32px;
+/* ── The three parts as steps ─────────────────────────────────────────── */
+
+.kivun-holland .kivun-hl-steps {
+	display: flex;
+	align-items: center;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+.kivun-hl-steps__step { display: flex; align-items: center; margin: 0; }
+.kivun-hl-steps__col { display: flex; align-items: center; }
+.kivun-hl-steps__dot {
+	display: flex;
+	flex: none;
+	align-items: center;
+	justify-content: center;
+	border-radius: 50%;
+	font-weight: 800;
+}
+.kivun-hl-steps__tick { display: none; }
+.kivun-hl-steps__step.is-done .kivun-hl-steps__num { display: none; }
+.kivun-hl-steps__step.is-done .kivun-hl-steps__tick { display: inline; }
+.kivun-hl-steps__step.is-done .kivun-hl-steps__dot { background: var(--hl-ink); color: #fff; }
+.kivun-hl-steps__step.is-active .kivun-hl-steps__dot { background: var(--hl-accent); color: #fff; }
+.kivun-hl-steps__step.is-future .kivun-hl-steps__dot {
+	border: 1.5px solid #e6cdd4;
+	color: var(--hl-text-2);
+	font-weight: 700;
+}
+.kivun-hl-steps__label { font-size: 15px; font-weight: 500; color: var(--hl-ink); white-space: nowrap; }
+.kivun-hl-steps__step.is-active .kivun-hl-steps__label { font-weight: 800; }
+.kivun-hl-steps__step.is-future .kivun-hl-steps__label { color: var(--hl-text-2); }
+
+/* Small: the row above a question, no lines. */
+.kivun-hl-steps--sm { gap: 20px; }
+.kivun-hl-steps--sm .kivun-hl-steps__col { gap: 8px; }
+.kivun-hl-steps--sm .kivun-hl-steps__dot { width: 26px; height: 26px; font-size: 13px; }
+.kivun-hl-steps--sm .is-active .kivun-hl-steps__dot { font-size: 14px; }
+.kivun-hl-steps--sm .kivun-hl-steps__line { display: none; }
+
+/* Large: the journey on a part's opening screen, joined by lines. */
+.kivun-hl-band--journey { padding: 36px 56px 32px; }
+.kivun-hl-steps--lg .kivun-hl-steps__step { flex: 1; }
+.kivun-hl-steps--lg .kivun-hl-steps__step:last-child { flex: none; }
+.kivun-hl-steps--lg .kivun-hl-steps__col {
+	position: relative;
+	z-index: 1;
+	flex-direction: column;
+	gap: 8px;
+	width: 96px;
+}
+.kivun-hl-steps--lg .kivun-hl-steps__dot { width: 44px; height: 44px; font-size: 18px; }
+.kivun-hl-steps--lg .is-active .kivun-hl-steps__dot { font-size: 19px; box-shadow: 0 0 0 6px var(--hl-ring); }
+.kivun-hl-steps--lg .is-future .kivun-hl-steps__dot { background: #fff; }
+.kivun-hl-steps__line {
+	flex: 1;
+	height: 3px;
+	margin: 0 -20px 28px;
+	border-radius: 3px;
+	background: #ecd3da;
+}
+.kivun-hl-steps__step.is-done .kivun-hl-steps__line { background: var(--hl-ink); }
+
+/* ── Progress band (above every question) ─────────────────────────────── */
+
+.kivun-hl-band--progress {
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+	padding: 22px 40px 20px;
 }
 .kivun-hl-progress__row {
 	display: flex;
-	flex-wrap: wrap;
+	align-items: center;
 	justify-content: space-between;
-	gap: 4px 16px;
-	margin-bottom: 10px;
-	font-size: 14px;
-	color: var(--hl-text-2);
+	gap: 16px;
 }
-.kivun-hl-progress__part { font-weight: 700; color: var(--hl-ink); }
-.kivun-hl-progress__num { font-weight: 700; color: var(--hl-ink); font-variant-numeric: tabular-nums; }
+.kivun-hl-progress__part { display: none; font-size: 14px; font-weight: 700; }
+.kivun-hl-progress__count { font-size: 14px; color: var(--hl-text-2); white-space: nowrap; }
+.kivun-hl-progress__num { font-weight: 700; color: var(--hl-ink); }
 .kivun-hl-progress__track {
 	display: block;
 	height: 8px;
-	border-radius: 999px;
-	background: var(--hl-field);
 	overflow: hidden;
+	border-radius: 999px;
+	background: var(--hl-track);
 }
 .kivun-hl-progress__fill {
 	display: block;
@@ -238,101 +410,187 @@
 	height: 100%;
 	border-radius: 999px;
 	background: var(--hl-accent);
-	transition: width .25s;
+	transition: width .24s ease-out;
 }
 
-/* ── Part intro ───────────────────────────────────────────────────────── */
+/* ── A part's opening screen ──────────────────────────────────────────── */
 
-.kivun-hl-intro {
-	padding: 8px 0;
-}
-.kivun-hl-intro__step {
-	margin: 0 0 8px;
-	font-size: 14px;
+.kivun-hl-intro .kivun-hl-body { padding: 40px 56px 48px; }
+.kivun-hl-intro__of {
+	/* Inline, as in the handoff: its line takes the body's 16px strut. */
+	display: inline;
+	font-size: 16px;
 	font-weight: 700;
-	color: var(--hl-accent);
+	color: var(--hl-accent-text);
 }
-.kivun-hl-intro__title {
-	margin: 0 0 16px;
-	font-size: 28px;
+.kivun-holland .kivun-hl-intro__title {
+	margin: 6px 0 0;
+	font-size: 52px;
 	font-weight: 800;
-	line-height: 1.25;
+	line-height: 1.1;
 }
-.kivun-hl-intro__title:focus,
-.kivun-hl-page__title:focus { outline: none; }
-.kivun-hl-intro__text {
-	margin: 0 0 32px;
-	padding: 20px 24px;
-	border-radius: 20px;
-	background: var(--hl-field);
-	font-size: 18px;
-	line-height: 1.7;
-	text-wrap: pretty;
-}
-
-/* ── A page of questions ──────────────────────────────────────────────── */
-
-.kivun-hl-page__head { margin-bottom: 20px; }
-.kivun-hl-page__title {
-	margin: 0 0 6px;
-	font-size: 22px;
-	font-weight: 800;
-	line-height: 1.3;
-}
-.kivun-hl-page__hint {
-	margin: 0;
-	font-size: 14px;
-	color: var(--hl-text-2);
-}
-
-.kivun-hl-items {
+.kivun-holland .kivun-hl-intro__title:focus { outline: none; }
+.kivun-hl-rules {
 	display: grid;
-	gap: 0;
-	margin-bottom: 24px;
-	border-top: 1px solid var(--hl-line);
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+	gap: 14px;
+	margin-top: 24px;
 }
-.kivun-holland .kivun-hl-item {
+.kivun-hl-rule {
+	display: flex;
+	align-items: flex-start;
+	gap: 14px;
+	padding: 22px 24px;
+	border: 1px solid;
+	border-radius: 22px;
+}
+.kivun-hl-rule--yes { border-color: #d3eedd; background: #f1faf4; }
+.kivun-hl-rule--no { border-color: #ebe6e8; background: #f7f5f6; }
+.kivun-hl-rule__icon {
+	display: flex;
+	flex: none;
+	align-items: center;
+	justify-content: center;
+	width: 40px;
+	height: 40px;
+	border-radius: 50%;
+	font-size: 18px;
+	font-weight: 800;
+	color: #fff;
+}
+.kivun-hl-rule--yes .kivun-hl-rule__icon { background: var(--hl-yes); }
+.kivun-hl-rule--no .kivun-hl-rule__icon { background: var(--hl-ink); }
+.kivun-hl-rule__text {
+	margin: 0;
+	padding-top: 6px;
+	font-size: 19px;
+	line-height: 1.65;
+	color: var(--hl-ink);
+}
+
+.kivun-hl-nav {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	gap: 16px;
-	min-width: 0;
-	margin: 0;
-	padding: 14px 4px;
-	border: 0;
-	border-bottom: 1px solid var(--hl-line);
-	background: none;
+	margin-top: 28px;
 }
-/* A legend refuses to be a flex item in some engines; floating it is the
-   documented way to have it sit in the row like any other child. */
-.kivun-holland .kivun-hl-item__text {
-	float: right;
-	flex: 1 1 auto;
-	margin: 0;
-	padding: 0;
-	font-size: 17px;
-	font-weight: 500;
-	line-height: 1.5;
-	color: var(--hl-ink);
-}
-.kivun-hl-item__num {
-	display: inline-block;
-	min-width: 32px;
-	color: var(--hl-text-2);
-	font-variant-numeric: tabular-nums;
-}
-.kivun-hl-item__opts {
+.kivun-hl-nav--intro { margin-top: 36px; }
+.kivun-hl-nav [data-hl-next] { margin-inline-start: auto; }
+
+/* ── A question ───────────────────────────────────────────────────────── */
+
+.kivun-hl-body--question { padding: 32px 48px 36px; }
+.kivun-hl-qhead {
 	display: flex;
-	flex: 0 0 auto;
-	gap: 8px;
+	flex-direction: column;
+	align-items: center;
+	gap: 10px;
+	text-align: center;
+}
+.kivun-hl-pill {
+	padding: 6px 16px;
+	border-radius: 999px;
+	background: var(--hl-accent-tint);
+	font-size: 15px;
+	font-weight: 700;
+	color: var(--hl-accent-text);
+}
+.kivun-hl-qhead__rules {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	max-width: 680px;
+	font-size: 15px;
+	line-height: 1.6;
+	color: var(--hl-text-2);
+	text-wrap: balance;
+}
+.kivun-hl-qhead__rule { display: block; }
+
+.kivun-hl-stage {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 16px;
+	min-height: 200px;
+	margin-top: 24px;
+	padding: 32px 48px;
+	border: 1px solid var(--hl-stage-line);
+	border-radius: 28px;
+	background: var(--hl-stage);
+	text-align: center;
+	touch-action: pan-y;
+	user-select: none;
+	-webkit-user-select: none;
+	transition: transform .2s cubic-bezier(.2, .8, .2, 1), background-color .15s, border-color .15s;
+}
+.kivun-hl-screen:not([hidden]) .kivun-hl-stage { animation: kivun-hl-in .28s cubic-bezier(.2, .8, .2, 1); }
+.kivun-hl-stage__text {
+	font-size: 38px;
+	font-weight: 800;
+	line-height: 1.3;
+	color: var(--hl-ink);
+	text-wrap: balance;
+}
+.kivun-hl-stage__text:focus { outline: none; }
+.kivun-hl-stage__hint {
+	display: none;
+	font-size: 13px;
+	font-weight: 500;
+	color: var(--hl-text-2);
+}
+@media (hover: none) and (pointer: coarse) {
+	.kivun-hl-stage__hint { display: block; }
+}
+
+/* Swiping: the stage follows the finger; past 60px it is tinted, a stamp
+   shows, and the matching button lights up. */
+.kivun-hl-stage.is-dragging { transition: background-color .15s, border-color .15s; cursor: grabbing; }
+.kivun-hl-stamp {
+	position: absolute;
+	top: 14px;
+	display: none;
+	padding: 4px 12px;
+	border-radius: 999px;
+	font-size: 15px;
+	font-weight: 800;
+	color: #fff;
+}
+.kivun-hl-stamp--yes { left: 14px; background: var(--hl-yes); transform: rotate(-8deg); }
+.kivun-hl-stamp--no { right: 14px; background: var(--hl-ink); transform: rotate(8deg); }
+.kivun-hl-item.is-lit-yes .kivun-hl-stage {
+	border: 1.5px solid #9fd9b4;
+	background: #effaf3;
+	box-shadow: 0 18px 36px -16px rgba(22, 163, 74, .45);
+}
+.kivun-hl-item.is-lit-no .kivun-hl-stage {
+	border: 1.5px solid #cfc9cb;
+	background: #f3f1f2;
+	box-shadow: 0 18px 36px -16px rgba(35, 35, 35, .35);
+}
+.kivun-hl-item.is-lit-yes .kivun-hl-stamp--yes,
+.kivun-hl-item.is-lit-no .kivun-hl-stamp--no { display: block; }
+/* While stamped, the stage holds the question alone. */
+.kivun-hl-item.is-lit-yes .kivun-hl-stage__hint,
+.kivun-hl-item.is-lit-no .kivun-hl-stage__hint { display: none; }
+
+/* Yes / No */
+.kivun-hl-opts {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 16px;
+	margin-top: 20px;
 }
 .kivun-holland .kivun-hl-opt {
 	position: relative;
-	display: inline-flex;
+	display: block;
 	margin: 0;
+	line-height: 1;
 	cursor: pointer;
 }
-.kivun-holland .kivun-hl-opt input {
+.kivun-holland .kivun-hl-opt__input {
 	position: absolute;
 	inset: 0;
 	width: 100%;
@@ -341,449 +599,220 @@
 	opacity: 0;
 	cursor: pointer;
 }
-.kivun-hl-opt__text {
-	display: inline-flex;
+.kivun-hl-opt__box {
+	display: flex;
 	align-items: center;
 	justify-content: center;
-	min-width: 72px;
-	height: 44px;
-	padding: 0 18px;
-	border: 1px solid var(--hl-line);
-	border-radius: 999px;
-	background: #fff;
-	font-size: 16px;
-	font-weight: 700;
-	color: var(--hl-ink);
-	transition: background-color .12s, border-color .12s, color .12s;
-}
-.kivun-hl-opt:hover .kivun-hl-opt__text { border-color: var(--hl-ink); }
-.kivun-hl-opt input:focus-visible + .kivun-hl-opt__text {
-	outline: 2px solid var(--hl-ink);
-	outline-offset: 2px;
-}
-.kivun-hl-opt--yes input:checked + .kivun-hl-opt__text {
-	background: var(--hl-yes);
-	border-color: var(--hl-yes);
-	color: #fff;
-}
-.kivun-hl-opt--no input:checked + .kivun-hl-opt__text {
-	background: var(--hl-ink);
-	border-color: var(--hl-ink);
-	color: #fff;
-}
-
-/* Left unanswered when "next" was pressed. */
-.kivun-holland .kivun-hl-item.is-missing {
-	background: rgba(220, 38, 38, .05);
-	box-shadow: inset -4px 0 0 var(--hl-error);
-	padding-right: 14px;
-}
-.kivun-hl-item.is-missing .kivun-hl-opt__text { border-color: var(--hl-error); }
-
-.kivun-hl-page .kivun-hl-alert { margin-bottom: 16px; }
-
-/* ── One question to a screen ─────────────────────────────────────────── */
-
-/* The question is the screen: its words large and centred, the two answers
-   as big buttons under it, and the part's instructions kept small above. */
-.kivun-hl-page--single .kivun-hl-page__head {
-	margin-bottom: 48px;
-	text-align: center;
-}
-.kivun-hl-page--single .kivun-hl-page__title {
-	font-size: 15px;
-	font-weight: 700;
-	color: var(--hl-accent);
-}
-.kivun-hl-page--single .kivun-hl-items {
-	margin-bottom: 24px;
-	border-top: 0;
-}
-.kivun-holland .kivun-hl-page--single .kivun-hl-item {
-	/* A legend is drawn in the fieldset's border, outside its flex layout,
-	   so the space between question and answers is the legend's own margin
-	   and the box is sized by padding rather than a centred min-height. */
-	display: block;
-	padding: 0 0 56px;
-	border-bottom: 0;
-}
-.kivun-holland .kivun-hl-page--single .kivun-hl-item__text {
-	float: none;
-	width: 100%;
-	margin-bottom: 36px;
-	font-size: 28px;
-	font-weight: 700;
-	line-height: 1.4;
-	text-align: center;
-	text-wrap: balance;
-}
-.kivun-hl-page--single .kivun-hl-item__opts {
-	justify-content: center;
-	gap: 16px;
-}
-.kivun-holland .kivun-hl-page--single .kivun-hl-opt { flex: 0 1 200px; }
-.kivun-hl-page--single .kivun-hl-opt__text {
-	width: 100%;
-	height: 64px;
-	font-size: 20px;
-}
-/* Swiping: the question follows the finger, and the answer it is about to
-   give lights up. */
-.kivun-holland .kivun-hl-page--single .kivun-hl-item {
-	transition: transform .2s;
-	touch-action: pan-y;
-}
-.kivun-holland .kivun-hl-page--single .kivun-hl-item.is-swiping { transition: none; }
-.kivun-holland .kivun-hl-page--single .kivun-hl-item.is-swipe-yes .kivun-hl-opt--yes .kivun-hl-opt__text {
-	background: var(--hl-yes);
-	border-color: var(--hl-yes);
-	color: #fff;
-}
-.kivun-holland .kivun-hl-page--single .kivun-hl-item.is-swipe-no .kivun-hl-opt--no .kivun-hl-opt__text {
-	background: var(--hl-ink);
-	border-color: var(--hl-ink);
-	color: #fff;
-}
-/* What follows the finger stays inside the card. */
-.kivun-holland .kivun-hl-quiz { overflow: hidden; }
-
-/* Only where there is a finger to swipe with. */
-.kivun-hl-swipe-hint {
-	display: none;
-	margin: 10px 0 0;
-	font-size: 13px;
-	color: var(--hl-text-2);
-	text-align: center;
-}
-@media (pointer: coarse) {
-	.kivun-hl-swipe-hint { display: block; }
-}
-
-.kivun-holland .kivun-hl-page--single .kivun-hl-item.is-missing {
-	padding-right: 0;
-	background: none;
-	box-shadow: none;
-}
-
-.kivun-hl-nav {
-	display: flex;
-	flex-wrap: wrap;
-	justify-content: space-between;
 	gap: 12px;
+	/* Content-box, as in the handoff: the border adds to the 80. */
+	box-sizing: content-box;
+	height: 80px;
+	border: 1.5px solid var(--hl-btn-line);
+	border-radius: 24px;
+	background: #fff;
+	color: var(--hl-ink);
+	transition: all .16s ease-out;
 }
-/* The forward button sits at the far end even when there is no "back". */
-.kivun-hl-nav [data-hl-next] { margin-inline-start: auto; }
-.kivun-hl-nav--end { justify-content: flex-start; }
+.kivun-hl-opt__icon {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 38px;
+	height: 38px;
+	border-radius: 50%;
+	font-size: 18px;
+	font-weight: 800;
+}
+.kivun-hl-opt--yes .kivun-hl-opt__icon { background: var(--hl-yes-soft); color: var(--hl-yes-glyph); }
+.kivun-hl-opt--no .kivun-hl-opt__icon { background: var(--hl-no-icon); font-size: 17px; color: var(--hl-ink); }
+.kivun-hl-opt__text { font-size: 26px; font-weight: 800; line-height: 1; }
 
-/* ── Result ───────────────────────────────────────────────────────────── */
+@media (hover: hover) {
+	.kivun-hl-opt--yes:hover .kivun-hl-opt__box {
+		border-color: var(--hl-yes);
+		transform: translateY(-2px);
+		box-shadow: 0 12px 24px -12px rgba(22, 163, 74, .45);
+	}
+	.kivun-hl-opt--no:hover .kivun-hl-opt__box {
+		border-color: var(--hl-ink);
+		transform: translateY(-2px);
+		box-shadow: 0 12px 24px -12px rgba(35, 35, 35, .35);
+	}
+}
+.kivun-hl-opt:active .kivun-hl-opt__box { transform: scale(.98); transition-duration: .08s; }
+.kivun-hl-opt__input:focus-visible + .kivun-hl-opt__box { outline: 2px solid var(--hl-ink); outline-offset: 3px; }
 
-.kivun-hl-code {
-	margin: 8px 0 24px;
-	padding: 28px 24px;
-	border-radius: 20px;
+/* Nothing chosen and "next" pressed. */
+.kivun-hl-item.is-missing .kivun-hl-opt__box { border-color: var(--hl-accent); background: #fff7f9; }
+
+/* Chosen — or about to be, while a swipe is past its threshold. */
+.kivun-hl-opt--yes .kivun-hl-opt__input:checked + .kivun-hl-opt__box,
+.kivun-hl-item.is-lit-yes .kivun-hl-opt--yes .kivun-hl-opt__box {
+	border-color: var(--hl-yes);
+	background: var(--hl-yes);
+	color: #fff;
+	transform: none;
+	box-shadow: 0 14px 28px -12px rgba(22, 163, 74, .65);
+}
+.kivun-hl-opt--no .kivun-hl-opt__input:checked + .kivun-hl-opt__box,
+.kivun-hl-item.is-lit-no .kivun-hl-opt--no .kivun-hl-opt__box {
+	border-color: var(--hl-ink);
 	background: var(--hl-ink);
 	color: #fff;
-	text-align: center;
+	transform: none;
+	box-shadow: 0 14px 28px -12px rgba(35, 35, 35, .6);
 }
-.kivun-hl-code__label {
-	margin: 0 0 4px;
-	font-size: 15px;
-	font-weight: 600;
-	opacity: .8;
-}
-.kivun-hl-code__value {
-	margin: 0 0 6px;
-	font-size: 56px;
-	font-weight: 800;
-	line-height: 1.1;
-	letter-spacing: .08em;
-	color: #fff;
-}
-.kivun-hl-code__names {
-	margin: 0;
-	font-size: 17px;
-	font-weight: 600;
-}
+.kivun-hl-opt--yes .kivun-hl-opt__input:checked + .kivun-hl-opt__box .kivun-hl-opt__icon,
+.kivun-hl-item.is-lit-yes .kivun-hl-opt--yes .kivun-hl-opt__icon { background: rgba(255, 255, 255, .22); color: #fff; }
+.kivun-hl-opt--no .kivun-hl-opt__input:checked + .kivun-hl-opt__box .kivun-hl-opt__icon,
+.kivun-hl-item.is-lit-no .kivun-hl-opt--no .kivun-hl-opt__icon { background: rgba(255, 255, 255, .18); color: #fff; }
 
-.kivun-hl-note {
-	margin: 0 0 20px;
-	padding: 12px 16px;
-	border-radius: 14px;
-	background: var(--hl-accent-tint);
-	font-size: 15px;
-}
+.kivun-hl-page .kivun-hl-alert { justify-content: center; margin-top: 20px; }
 
-.kivun-hl-text {
-	margin: 0 0 16px;
-	font-size: 17px;
-	line-height: 1.7;
-	text-wrap: pretty;
-}
-.kivun-hl-text--muted { margin-top: 24px; color: var(--hl-text-2); font-size: 15px; }
+/* ── Thank you ────────────────────────────────────────────────────────── */
 
-.kivun-hl-subtitle {
-	margin: 32px 0 16px;
-	font-size: 22px;
-	font-weight: 800;
-	line-height: 1.3;
-}
-
-/* ── The six types' colours ───────────────────────────────────────────── */
-
-/* One colour per type, kept wherever the type appears: its letter in the
-   profile, its column, its card. --hl-type-ink is for text on that colour. */
-.kivun-holland .kivun-hl-t--R { --hl-type: #2e9e5b; --hl-type-ink: #fff; }
-.kivun-holland .kivun-hl-t--I { --hl-type: #7c3aed; --hl-type-ink: #fff; }
-.kivun-holland .kivun-hl-t--A { --hl-type: #f07c1e; --hl-type-ink: #fff; }
-.kivun-holland .kivun-hl-t--S { --hl-type: #e8b400; --hl-type-ink: #232323; }
-.kivun-holland .kivun-hl-t--E { --hl-type: #d6304f; --hl-type-ink: #fff; }
-.kivun-holland .kivun-hl-t--C { --hl-type: #2a7fd0; --hl-type-ink: #fff; }
-
-.kivun-hl-code__letter { color: var(--hl-type, #fff); }
-
-/* ── Column chart ─────────────────────────────────────────────────────── */
-
-.kivun-hl-chart {
-	display: grid;
-	grid-template-columns: repeat(6, minmax(0, 1fr));
-	gap: 16px;
-	margin: 0;
-	padding: 24px 20px 16px;
-	border-radius: 20px;
-	background: var(--hl-field);
-	list-style: none;
-}
-.kivun-hl-chart__col {
+.kivun-hl-band--thanks {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	gap: 6px;
-	min-width: 0;
-	margin: 0;
+	gap: 18px;
+	padding: 56px 56px 48px;
+	border-top: 1px solid var(--hl-band-line);
+	border-bottom: 0;
 	text-align: center;
 }
-.kivun-hl-chart__value {
-	font-size: 15px;
-	font-weight: 800;
-	color: var(--hl-text-2);
-	font-variant-numeric: tabular-nums;
-}
-.kivun-hl-chart__track {
+.kivun-hl-thanks__check {
 	display: flex;
-	align-items: flex-end;
+	align-items: center;
 	justify-content: center;
-	width: 100%;
-	height: 220px;
+	width: 80px;
+	height: 80px;
+	border-radius: 50%;
+	background: var(--hl-yes);
+	box-shadow: 0 0 0 10px var(--hl-yes-ring);
+	font-size: 38px;
+	font-weight: 800;
+	color: #fff;
 }
-.kivun-hl-chart__bar {
-	display: block;
-	width: 100%;
-	max-width: 64px;
-	min-height: 4px;
-	border-radius: 12px 12px 4px 4px;
-	background: #c9c9cf;
-	transform-origin: bottom;
-	animation: kivun-hl-grow .9s cubic-bezier(.2, .8, .2, 1) both;
+.kivun-holland .kivun-hl-thanks__title {
+	margin: 14px 0 0;
+	font-size: 42px;
+	font-weight: 800;
+	line-height: 1.2;
 }
-.kivun-hl-chart__col:nth-child(2) .kivun-hl-chart__bar { animation-delay: .06s; }
-.kivun-hl-chart__col:nth-child(3) .kivun-hl-chart__bar { animation-delay: .12s; }
-.kivun-hl-chart__col:nth-child(4) .kivun-hl-chart__bar { animation-delay: .18s; }
-.kivun-hl-chart__col:nth-child(5) .kivun-hl-chart__bar { animation-delay: .24s; }
-.kivun-hl-chart__col:nth-child(6) .kivun-hl-chart__bar { animation-delay: .3s; }
-@keyframes kivun-hl-grow {
-	from { transform: scaleY(0); }
-	to { transform: scaleY(1); }
+.kivun-holland .kivun-hl-thanks__title:focus { outline: none; }
+.kivun-hl-thanks__text {
+	max-width: 520px;
+	margin: 0;
+	font-size: 19px;
+	line-height: 1.6;
+	color: var(--hl-text-3);
+	text-wrap: balance;
+}
+.kivun-hl-body--thanks { padding: 32px 56px 44px; }
+.kivun-hl-info--lg { padding: 18px 22px; border-radius: 18px; }
+.kivun-hl-info--lg .kivun-hl-info__icon { width: 26px; height: 26px; margin-top: 2px; }
+.kivun-hl-info--lg .kivun-hl-info__text { font-size: 17px; line-height: 1.65; color: var(--hl-ink); }
+
+/* ── Motion ───────────────────────────────────────────────────────────── */
+
+@keyframes kivun-hl-in {
+	from { opacity: 0; transform: translateY(14px) scale(.98); }
+	to { opacity: 1; transform: none; }
+}
+@keyframes kivun-hl-shake {
+	0%, 100% { transform: translateX(0); }
+	20% { transform: translateX(-6px); }
+	40% { transform: translateX(6px); }
+	60% { transform: translateX(-4px); }
+	80% { transform: translateX(4px); }
 }
 @media (prefers-reduced-motion: reduce) {
-	.kivun-hl-chart__bar { animation: none; }
-}
-.kivun-hl-chart__letter {
-	font-size: 22px;
-	font-weight: 800;
-	line-height: 1;
-	color: #a0a0a8;
-}
-.kivun-hl-chart__name {
-	font-size: 13px;
-	font-weight: 600;
-	line-height: 1.3;
-	color: var(--hl-text-2);
-}
-.kivun-hl-chart__num {
-	font-size: 12px;
-	color: var(--hl-text-2);
-	font-variant-numeric: tabular-nums;
-}
-.kivun-hl-chart__col.is-top .kivun-hl-chart__bar { background: var(--hl-type); }
-.kivun-hl-chart__col.is-top .kivun-hl-chart__letter { color: var(--hl-type); }
-.kivun-hl-chart__col.is-top .kivun-hl-chart__value,
-.kivun-hl-chart__col.is-top .kivun-hl-chart__name { color: var(--hl-ink); }
-
-.kivun-hl-type {
-	margin: 0 0 16px;
-	padding: 20px 24px;
-	border: 1px solid var(--hl-line);
-	border-radius: 20px;
-}
-.kivun-hl-type__title {
-	display: flex;
-	align-items: center;
-	gap: 10px;
-	margin: 0 0 8px;
-	font-size: 20px;
-	font-weight: 800;
-}
-.kivun-hl-type__rank {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	width: 36px;
-	height: 36px;
-	border-radius: 50%;
-	background: var(--hl-type, var(--hl-accent));
-	color: var(--hl-type-ink, #fff);
-	font-size: 18px;
-}
-/* A leading type's card carries its colour along the edge it starts from. */
-.kivun-holland .kivun-hl-type[class*="kivun-hl-t--"] { border-right: 6px solid var(--hl-type); }
-
-/* ── Professions for a type ───────────────────────────────────────────── */
-
-.kivun-hl-jobs {
-	margin: 14px 0 0;
-	padding-top: 12px;
-	border-top: 1px solid var(--hl-line);
-}
-.kivun-hl-jobs__summary {
-	font-size: 15px;
-	font-weight: 700;
-	cursor: pointer;
-}
-.kivun-hl-jobs__list {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 8px;
-	margin: 12px 0 0;
-	padding: 0;
-	list-style: none;
-}
-.kivun-hl-jobs__item {
-	margin: 0;
-	padding: 6px 14px;
-	border: 1px solid var(--hl-line);
-	border-radius: 999px;
-	font-size: 14px;
-	line-height: 1.4;
-}
-.kivun-hl-jobs__item.is-yes {
-	border-color: var(--hl-type);
-	background: var(--hl-type);
-	color: var(--hl-type-ink);
-	font-weight: 700;
-}
-.kivun-hl-jobs__item.is-yes::before { content: "✓ "; }
-.kivun-hl-type__text {
-	margin: 0 0 6px;
-	font-size: 16px;
-	line-height: 1.7;
-}
-.kivun-hl-type__text:last-child { margin-bottom: 0; }
-.kivun-hl-type--muted { background: var(--hl-field); border-color: transparent; }
-
-.kivun-hl-more { margin: 8px 0 0; }
-.kivun-hl-more__summary {
-	display: inline-block;
-	margin-bottom: 16px;
-	font-weight: 700;
-	color: var(--hl-accent);
-	cursor: pointer;
+	.kivun-holland *,
+	.kivun-holland *::before,
+	.kivun-holland *::after {
+		animation: none !important;
+		transition: none !important;
+	}
 }
 
-.kivun-hl-table-wrap { overflow-x: auto; }
-.kivun-holland .kivun-hl-table {
-	width: 100%;
-	margin: 0;
-	border: 0;
-	border-collapse: collapse;
-	font-size: 15px;
-	font-variant-numeric: tabular-nums;
-}
-/* The theme's reset paints every odd body row grey and boxes every cell. */
-.kivun-holland .kivun-hl-table th,
-.kivun-holland .kivun-hl-table td {
-	padding: 10px 12px;
-	border: 0;
-	border-bottom: 1px solid var(--hl-line);
-	background-color: transparent;
-	text-align: center;
-}
-.kivun-holland .kivun-hl-table th[scope="row"] { text-align: right; font-weight: 600; }
-.kivun-holland .kivun-hl-table thead th { color: var(--hl-text-2); font-weight: 700; }
-.kivun-holland .kivun-hl-table__total th,
-.kivun-holland .kivun-hl-table__total td { font-weight: 800; border-bottom: 0; }
+/* ── Phone (the handoff's 390px frame) ────────────────────────────────── */
 
-.kivun-hl-result .kivun-hl-nav { margin-top: 24px; }
+@media (max-width: 600px) {
+	.kivun-hl-card { border-radius: 24px; }
+	.kivun-hl-logo { padding: 14px 18px 10px; }
+	.kivun-holland .kivun-hl-logo__img { height: 42px; }
+	.kivun-hl-body { padding: 24px 20px 28px; }
 
-/* ── Narrow screens ───────────────────────────────────────────────────── */
-
-@media (max-width: 640px) {
-	.kivun-hl-card { padding: 24px 16px; border-radius: 20px; }
-	.kivun-hl-title { font-size: 26px; }
+	.kivun-hl-band--login { gap: 10px; padding: 28px 20px 24px; }
+	.kivun-holland .kivun-hl-title { font-size: 30px; line-height: 1.2; }
 	.kivun-hl-lead { font-size: 16px; }
-	.kivun-hl-form { padding: 20px 16px; }
-	.kivun-hl-intro__title { font-size: 24px; }
-	.kivun-hl-intro__text { font-size: 16px; padding: 16px; }
+	.kivun-holland .kivun-hl-form { gap: 20px; }
+	.kivun-hl-form__title { font-size: 20px; }
+	.kivun-hl-form__sub { font-size: 15px; }
+	.kivun-hl-fields { grid-template-columns: minmax(0, 1fr); }
+	.kivun-hl-info { gap: 10px; padding: 14px; }
+	.kivun-hl-info__text { font-size: 14px; }
+	.kivun-hl-alert--center { padding: 14px 16px; font-size: 15px; }
+	.kivun-hl-login.is-error .kivun-hl-band--login { padding: 24px 20px 20px; }
+	.kivun-hl-login.is-error .kivun-hl-lead { display: none; }
+	.kivun-holland .kivun-hl-login.is-error .kivun-hl-title { font-size: 28px; }
+	.kivun-hl-login.is-error .kivun-hl-form,
+	.kivun-hl-login.is-error .kivun-hl-fields { gap: 18px; }
 
-	.kivun-holland .kivun-hl-item {
-		flex-direction: column;
-		align-items: stretch;
-		gap: 10px;
+	.kivun-hl-band--journey { padding: 24px 14px 20px; }
+	.kivun-hl-steps--lg .kivun-hl-steps__col { gap: 6px; width: 76px; }
+	.kivun-hl-steps--lg .kivun-hl-steps__dot { width: 38px; height: 38px; font-size: 16px; }
+	.kivun-hl-steps--lg .is-active .kivun-hl-steps__dot { font-size: 17px; box-shadow: 0 0 0 5px var(--hl-ring); }
+	.kivun-hl-steps--lg .kivun-hl-steps__label { font-size: 14px; }
+	.kivun-hl-steps--lg .kivun-hl-steps__line { margin: 0 -16px 24px; }
+	.kivun-hl-intro .kivun-hl-body { padding: 26px 20px 28px; }
+	.kivun-hl-intro__of { font-size: 15px; }
+	.kivun-holland .kivun-hl-intro__title { margin-top: 4px; font-size: 40px; }
+	.kivun-hl-rules { grid-template-columns: minmax(0, 1fr); gap: 10px; margin-top: 18px; }
+	.kivun-hl-rule { padding: 18px; }
+	.kivun-hl-rule__icon { width: 36px; height: 36px; font-size: 16px; }
+	.kivun-hl-rule__text { padding-top: 5px; font-size: 17px; }
+	.kivun-hl-nav--intro { gap: 10px; margin-top: 24px; }
+	.kivun-holland .kivun-hl-btn--start { flex: 1; height: 58px; padding: 0 20px; font-size: 19px; }
+
+	.kivun-hl-band--progress { gap: 10px; padding: 18px 18px 16px; }
+	.kivun-hl-band--progress .kivun-hl-steps { display: none; }
+	.kivun-hl-progress__part { display: block; }
+	.kivun-hl-progress__track { height: 6px; }
+
+	.kivun-hl-body--question { padding: 20px 18px 22px; }
+	.kivun-hl-qhead { gap: 0; }
+	.kivun-hl-pill { padding: 6px 14px; font-size: 14px; }
+	.kivun-hl-pill__part { display: none; }
+	.kivun-hl-qhead__rules { gap: 4px; margin-top: 10px; font-size: 13px; line-height: 1.55; }
+	.kivun-hl-stage { min-height: 190px; margin-top: 16px; padding: 24px 20px; border-radius: 24px; }
+	.kivun-hl-stage__text { font-size: 28px; }
+	.kivun-hl-opts { gap: 12px; margin-top: 16px; }
+	.kivun-hl-opt__box { gap: 10px; height: 72px; border-radius: 22px; }
+	.kivun-hl-opt__icon { width: 34px; height: 34px; font-size: 17px; }
+	.kivun-hl-opt--no .kivun-hl-opt__icon { font-size: 16px; }
+	.kivun-hl-opt__text { font-size: 23px; }
+	.kivun-hl-opt--yes .kivun-hl-opt__input:checked + .kivun-hl-opt__box,
+	.kivun-hl-item.is-lit-yes .kivun-hl-opt--yes .kivun-hl-opt__box { box-shadow: 0 12px 24px -10px rgba(22, 163, 74, .6); }
+	.kivun-hl-opt--no .kivun-hl-opt__input:checked + .kivun-hl-opt__box,
+	.kivun-hl-item.is-lit-no .kivun-hl-opt--no .kivun-hl-opt__box { box-shadow: 0 12px 24px -10px rgba(35, 35, 35, .55); }
+	.kivun-hl-page .kivun-hl-alert { justify-content: flex-start; margin-top: 16px; padding: 14px 16px; }
+	.kivun-hl-page .kivun-hl-nav { gap: 10px; margin-top: 22px; }
+	.kivun-holland .kivun-hl-page .kivun-hl-btn--text { padding: 0 18px; }
+	.kivun-holland .kivun-hl-page .kivun-hl-btn--next {
+		flex: 1;
+		gap: 8px;
+		height: 52px;
+		padding: 0 20px;
+		box-shadow: 0 10px 22px -10px rgba(222, 41, 82, .7);
 	}
-	.kivun-holland .kivun-hl-item__text { float: none; font-size: 16px; }
-	.kivun-hl-item__opts { gap: 8px; }
-	.kivun-holland .kivun-hl-opt { flex: 1 1 0; }
-	.kivun-hl-opt__text { width: 100%; }
 
-	.kivun-hl-nav .kivun-hl-btn { flex: 1 1 0; padding: 0 16px; }
-
-	.kivun-hl-page--single .kivun-hl-page__head { margin-bottom: 32px; }
-	.kivun-holland .kivun-hl-page--single .kivun-hl-item { padding: 0 0 40px; }
-	.kivun-holland .kivun-hl-page--single .kivun-hl-item__text { font-size: 22px; margin-bottom: 28px; }
-	.kivun-holland .kivun-hl-page--single .kivun-hl-opt { flex: 1 1 0; }
-
-	.kivun-hl-code__value { font-size: 44px; }
-	.kivun-hl-chart { gap: 6px; padding: 16px 8px 12px; }
-	.kivun-hl-chart__track { height: 160px; }
-	.kivun-hl-chart__value { font-size: 12px; }
-	.kivun-hl-chart__letter { font-size: 18px; }
-	.kivun-hl-chart__name { font-size: 11px; }
-	.kivun-hl-chart__num { display: none; }
-}
-
-/* ── Print: the result alone ──────────────────────────────────────────── */
-
-@media print {
-	body * { visibility: hidden; }
-	.kivun-hl-result,
-	.kivun-hl-result * { visibility: visible; }
-	.kivun-hl-result {
-		position: absolute;
-		top: 0;
-		right: 0;
-		left: 0;
-		border: 0;
-		padding: 0;
-	}
-	.kivun-hl-result .kivun-hl-nav { display: none; }
-	.kivun-hl-more:not([open]) > *:not(summary) { display: block; }
-	.kivun-hl-chart__bar { animation: none; }
-	.kivun-hl-code,
-	.kivun-hl-chart,
-	.kivun-hl-chart__bar,
-	.kivun-hl-type,
-	.kivun-hl-type__rank,
-	.kivun-hl-jobs__item {
-		-webkit-print-color-adjust: exact;
-		print-color-adjust: exact;
-	}
+	.kivun-hl-band--thanks { gap: 14px; padding: 40px 20px 36px; }
+	.kivun-hl-thanks__check { width: 68px; height: 68px; font-size: 32px; box-shadow: 0 0 0 8px var(--hl-yes-ring); }
+	.kivun-holland .kivun-hl-thanks__title { margin-top: 10px; font-size: 30px; }
+	.kivun-hl-thanks__text { font-size: 17px; }
+	.kivun-hl-body--thanks { padding: 22px 20px 26px; }
+	.kivun-hl-info--lg { gap: 12px; padding: 16px; }
+	.kivun-hl-info--lg .kivun-hl-info__text { font-size: 16px; }
 }

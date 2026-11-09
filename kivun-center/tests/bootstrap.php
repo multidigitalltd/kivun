@@ -941,6 +941,71 @@ function wp_send_json_error( $data = null, int $code = 200 ): void {
 }
 
 /**
+ * What wp_die() was called with. Thrown so a handler stops where WordPress
+ * would have stopped it.
+ */
+final class Kivun_Test_Die extends Exception {
+
+	/**
+	 * The HTTP status, where one was given.
+	 */
+	public int $status;
+
+	/**
+	 * @param string $message The message.
+	 * @param int    $status  The HTTP status.
+	 */
+	public function __construct( string $message = '', int $status = 500 ) {
+		parent::__construct( $message );
+		$this->status = $status;
+	}
+}
+
+/**
+ * Stop with a message.
+ *
+ * @param string $message The message.
+ * @param string $title   Unused.
+ * @param array  $args    May carry the response code.
+ * @return void
+ */
+function wp_die( $message = '', $title = '', $args = array() ): void {
+	unset( $title );
+	throw new Kivun_Test_Die( (string) $message, (int) ( $args['response'] ?? 500 ) );
+}
+
+/**
+ * The admin referer check; the nonce itself is not what these tests are about.
+ *
+ * @param string $action The action.
+ * @return int
+ */
+function check_admin_referer( string $action = '-1' ): int {
+	unset( $action );
+	return 1;
+}
+
+/**
+ * A nonce: stable per action, which is all a test can check.
+ *
+ * @param string $action The action.
+ * @return string
+ */
+function wp_create_nonce( string $action = '-1' ): string {
+	return substr( md5( 'nonce|' . $action ), 0, 10 );
+}
+
+/**
+ * The admin URL.
+ *
+ * @param string $path Path under wp-admin.
+ * @return string
+ */
+function admin_url( string $path = '' ): string {
+	return 'https://example.test/wp-admin/' . ltrim( $path, '/' );
+}
+
+/**
  * WordPress's keyed hash. Keyed with a fixed salt here, which is all a test
  * needs: the same input always gives the same token, and a different one
  * does not.
