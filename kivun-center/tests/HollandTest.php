@@ -313,7 +313,7 @@ final class HollandTest extends TestCase {
 		$pairs   = Kivun_Content_Creator::lead_answers( $message );
 		$labels  = array_column( $pairs, 0 );
 
-		$this->assertSame( array( 'תעודת זהות', 'שאלון הולנד', 'קוד הולנד', 'ציונים (מתוך 36)', 'פעילויות', 'כשרים', 'מקצועות' ), $labels );
+		$this->assertSame( array( 'תעודת זהות', 'שאלון הולנד', 'קוד הולנד', 'ציונים (מתוך 36)', 'פעילויות', 'כישורים', 'מקצועות' ), $labels );
 		$this->assertSame( 'S', $pairs[2][1] );
 		$this->assertStringStartsWith( 'S 12 · ', $pairs[3][1] );
 		$this->assertSame( 'R 0 · I 0 · A 0 · S 12 · E 0 · C 0', $pairs[4][1] );
@@ -461,7 +461,8 @@ final class HollandTest extends TestCase {
 
 	/**
 	 * Partial answers are saved; finishing with gaps is refused; finishing
-	 * complete writes the result and returns the page.
+	 * complete writes the result — and sends none of it back: the participant
+	 * is thanked, and the representative prints the report.
 	 *
 	 * @return void
 	 */
@@ -488,20 +489,21 @@ final class HollandTest extends TestCase {
 		$_POST['responses'] = $this->answers( range( 61, 72 ) );
 		$sent               = $this->call( 'ajax_save' );
 		$this->assertTrue( $sent->ok );
-		$this->assertArrayHasKey( 'html', $sent->data );
+		$this->assertSame( array( 'done' => true ), $sent->data, 'no result goes back to the participant' );
 
 		$written = Kivun_Test_State::$updates[1]['data'];
 		$this->assertStringContainsString( 'קוד הולנד: C', $written['message'] );
 		$this->assertSame( array( 'id' => 7 ), Kivun_Test_State::$updates[1]['where'] );
+		$this->assertSame( array(), Kivun_Test_State::$templates, 'no result page is drawn for them' );
 
-		$template = end( Kivun_Test_State::$templates );
-		$this->assertSame( 'holland/results.php', $template['template'] );
-		$this->assertSame( array( 'C' ), $template['vars']['top'] );
+		$stored = Kivun_Holland::read_stored( $written['answers'] );
+		$this->assertTrue( $stored['done'] );
+		$this->assertNotSame( '', $stored['done_at'], 'when it was finished is kept for the report' );
 	}
 
 	/**
 	 * A finished questionnaire is a record: posting to it again changes
-	 * nothing and gets the same result back.
+	 * nothing and is answered as finished.
 	 *
 	 * @return void
 	 */
@@ -516,8 +518,8 @@ final class HollandTest extends TestCase {
 		$sent  = $this->call( 'ajax_save' );
 
 		$this->assertTrue( $sent->ok );
+		$this->assertSame( array( 'done' => true ), $sent->data );
 		$this->assertSame( array(), Kivun_Test_State::$updates );
-		$this->assertSame( array( 'S' ), end( Kivun_Test_State::$templates )['vars']['top'] );
 	}
 
 	/**
@@ -552,7 +554,7 @@ final class HollandTest extends TestCase {
 		$sent               = $this->call( 'ajax_save' );
 
 		$this->assertTrue( $sent->ok );
-		$this->assertArrayHasKey( 'html', $sent->data );
+		$this->assertTrue( $sent->data['done'] );
 		$this->assertStringContainsString( 'קוד הולנד: S', Kivun_Test_State::$updates[1]['data']['message'] );
 		$this->assertTrue( Kivun_Holland::read_stored( Kivun_Test_State::$updates[1]['data']['answers'] )['done'] );
 	}
@@ -654,9 +656,23 @@ final class HollandTest extends TestCase {
 		// Three intros, and every question a screen of its own.
 		$this->assertSame( 3 + 216, substr_count( $html, 'data-hl-screen' ) );
 		$this->assertSame( 216, substr_count( $html, 'kivun-hl-page--single' ) );
-		$this->assertStringContainsString( 'פעילויות · שאלה 1 מתוך 72', $html );
-		$this->assertStringContainsString( 'מקצועות · שאלה 72 מתוך 72', $html );
+		$this->assertStringContainsString( '<span class="kivun-hl-pill__part">פעילויות · </span>שאלה 1 מתוך 72', $html );
+		$this->assertStringContainsString( '<span class="kivun-hl-pill__part">מקצועות · </span>שאלה 72 מתוך 72', $html );
 		$this->assertSame( 1, substr_count( $html, 'data-hl-finish' ) );
+		$this->assertStringContainsString( 'סיום השאלון', $html );
+
+		// Each part opens with its own journey and its two instructions, word
+		// for word from the sheet as the design splits them.
+		$this->assertSame( 3, substr_count( $html, 'data-hl-intro' ) );
+		$this->assertSame( 3, substr_count( $html, 'kivun-hl-steps--lg' ) );
+		$this->assertStringContainsString( 'בחר ב"לא" את הפעילויות שמעולם לא בצעת או שבצעת באופן גרוע.', html_entity_decode( $html ) );
+		$this->assertSame( 216, substr_count( $html, 'data-hl-stage' ) );
+
+		// The end is a thank-you; there is no result on the page at all.
+		$this->assertStringContainsString( 'data-hl-thanks', $html );
+		$this->assertStringContainsString( 'תודה רבה על ההשתתפות!', $html );
+		$this->assertStringNotContainsString( 'קוד הולנד', $html );
+		$this->assertStringContainsString( 'assets/images/kivun-logo.png', $html );
 
 		// The rules from wpautop(): every paragraph of ours has a class, and
 		// no block sits inside a span or a label.
@@ -668,67 +684,154 @@ final class HollandTest extends TestCase {
 		$this->assertStringContainsString( 'name="name"', $html );
 	}
 
+	// ── The representative's report ───────────────────────────────────────────
+
 	/**
-	 * Render the result page for a set of "yes" answers.
+	 * A finished lead row, as the report reads it.
+	 *
+	 * @param array<int,int> $yes  Item numbers answered "yes".
+	 * @param bool           $done Whether it was submitted.
+	 * @return object
+	 */
+	private function lead_row( array $yes, bool $done = true ): object {
+		return (object) array(
+			'id'         => 7,
+			'type'       => 'holland',
+			'name'       => 'ישראל ישראלי',
+			'phone'      => '0501234567',
+			'created_at' => '2026-11-08 10:00:00',
+			'answers'    => (string) wp_json_encode( Kivun_Holland::stored_answers( self::ID, $this->answers( $yes ), $done, 0, '2026-11-09 12:30:00' ) ),
+		);
+	}
+
+	/**
+	 * Render the report for a set of "yes" answers.
 	 *
 	 * @param array<int,int> $yes Item numbers answered "yes".
 	 * @return string
 	 */
-	private function result_page( array $yes ): string {
-		Kivun_Holland::results_html( $this->answers( $yes ) );
+	private function report( array $yes ): string {
+		require_once KIVUN_DIR . 'includes/functions.php';
+		Kivun_Holland::report_html( $this->lead_row( $yes ) );
 		$call = end( Kivun_Test_State::$templates );
-		return $this->render( $call['template'], $call['vars'] );
+		$this->assertSame( 'holland/report.php', $call['template'] );
+		ob_start();
+		( static function () use ( $call ) {
+			extract( $call['vars'], EXTR_SKIP ); // phpcs:ignore WordPress.PHP.DontExtract.extract_extract
+			include KIVUN_DIR . 'templates/' . $call['template'];
+		} )();
+		return (string) ob_get_clean();
 	}
 
 	/**
-	 * The result shows the profile, a column for every type, the leading
-	 * types' descriptions, and the professions of each leading type with the
-	 * ones answered "yes" first.
+	 * Only a finished Holland questionnaire has a report.
 	 *
 	 * @return void
 	 */
-	public function test_the_result_page(): void {
+	public function test_only_a_finished_questionnaire_has_a_report(): void {
+		$this->assertTrue( Kivun_Holland::has_report( $this->lead_row( range( 37, 48 ) ) ) );
+		$this->assertFalse( Kivun_Holland::has_report( $this->lead_row( range( 37, 48 ), false ) ) );
+
+		$other       = $this->lead_row( range( 37, 48 ) );
+		$other->type = 'form';
+		$this->assertFalse( Kivun_Holland::has_report( $other ) );
+
+		$url = Kivun_Holland::report_url( 7 );
+		$this->assertStringStartsWith( 'https://example.test/wp-admin/admin-ajax.php?', $url );
+		$this->assertStringContainsString( 'action=kivun_holland_report', $url );
+		$this->assertStringContainsString( 'lead=7', $url );
+		$this->assertStringContainsString( '_wpnonce=', $url );
+	}
+
+	/**
+	 * The report carries a name, a phone and an ID number: only the people
+	 * who handle the leads may open it.
+	 *
+	 * @return void
+	 */
+	public function test_the_report_is_for_staff_only(): void {
+		$_GET = array( 'lead' => '7' );
+		kivun_test_set_caps( array() );
+		try {
+			Kivun_Holland::ajax_report();
+			$this->fail( 'the report opened without the leads capability' );
+		} catch ( Kivun_Test_Die $died ) {
+			$this->assertSame( 403, $died->status );
+		}
+
+		// Staff, but the row is not a finished questionnaire.
+		kivun_test_set_caps( array( 'edit_others_posts' ) );
+		$GLOBALS['wpdb']->row_handler = fn() => $this->lead_row( range( 37, 48 ), false );
+		try {
+			Kivun_Holland::ajax_report();
+			$this->fail( 'an unfinished questionnaire has no report' );
+		} catch ( Kivun_Test_Die $died ) {
+			$this->assertSame( 404, $died->status );
+		}
+		$_GET = array();
+	}
+
+	/**
+	 * The report: the person, the profile in colour, a column for every type,
+	 * a card for each leading type with its professions — those answered
+	 * "yes" first and ticked — the other types, and the part-by-part table.
+	 *
+	 * @return void
+	 */
+	public function test_the_report(): void {
 		// S 25 (183 is a profession: יועץ זוגי או משפחתי), E 12, A 6.
-		$html = $this->result_page( array_merge( range( 37, 48 ), range( 109, 120 ), array( 183 ), range( 49, 60 ), range( 25, 30 ) ) );
-		$text = (string) preg_replace( '/\s+/u', ' ', wp_strip_all_tags( $html ) );
+		$html = $this->report( array_merge( range( 37, 48 ), range( 109, 120 ), array( 183 ), range( 49, 60 ), range( 25, 30 ) ) );
+		$text = html_entity_decode( (string) preg_replace( '/\s+/u', ' ', wp_strip_all_tags( $html ) ) );
 
-		$this->assertMatchesRegularExpression( '#kivun-hl-code__letter kivun-hl-t--S">S</span>\s*<span class="kivun-hl-code__letter kivun-hl-t--E">E</span>\s*<span class="kivun-hl-code__letter kivun-hl-t--A">A</span>#', $html );
-		$this->assertStringContainsString( 'חברתי-טיפולי · יזמי-ניהולי · אמנותי-יצירתי', $text );
-		$this->assertStringContainsString( '25 מתוך 36', $text );
-		$this->assertStringContainsString( '69%', $text );
+		$this->assertStringContainsString( '<!doctype html>', $html );
+		$this->assertStringContainsString( 'שאלון הכוון תעסוקתי – מודל הולנד', $text );
+		$this->assertStringContainsString( 'ישראל ישראלי', $text );
+		$this->assertStringContainsString( '0501234567', $text );
+		$this->assertStringContainsString( self::ID, $text );
+		$this->assertStringContainsString( '9.11.2026', $text, 'the day it was finished, not the day it was started' );
+
+		// The profile: S E A, in that order, each in its colour.
+		preg_match_all( '#<div class="r-tile" style="--c:(\#[0-9a-f]{6});[^"]*"><div class="r-tile__box">([RIASEC])</div>#', $html, $tiles );
+		$this->assertSame( array( 'S', 'E', 'A' ), $tiles[2] );
+		$this->assertSame( array( '#e8b400', '#d6304f', '#e06b12' ), $tiles[1] );
+
+		// Six columns in R I A S E C order, the leading three marked.
+		preg_match_all( '#<li class="r-col( is-top)?" style="[^"]*">\s*<span class="r-col__pct">(\d+)%#', $html, $cols );
+		$this->assertSame( array( '', '', ' is-top', ' is-top', ' is-top', '' ), $cols[1] );
+		$this->assertSame( array( '0', '0', '17', '69', '33', '0' ), $cols[2] );
+		$this->assertStringContainsString( '25/36', $text );
+
+		// A card for each leading type; S lists the profession said "yes" to
+		// first, ticked, and all twelve.
+		$this->assertSame( 3, substr_count( $html, 'class="r-card"' ) );
 		$this->assertStringContainsString( Kivun_Holland::type_info()['S']['about'], $text );
+		$this->assertSame( 1, substr_count( $html, 'class="r-job is-yes"' ) );
+		$this->assertSame( 3 * 12, substr_count( $html, '<li class="r-job' ) );
+		$s_card = substr( $html, (int) strpos( $html, '--c:#e8b400' ) );
+		$this->assertLessThan( strpos( $s_card, 'מורה בבית ספר' ), strpos( $s_card, 'יועץ זוגי או משפחתי' ) );
 
-		// Six columns, in R I A S E C order, the leading three marked.
-		$this->assertSame( 6, substr_count( $html, 'kivun-hl-chart__col ' ) );
-		preg_match_all( '/kivun-hl-chart__col kivun-hl-t--([RIASEC])( is-top)?"/', $html, $cols );
-		$this->assertSame( Kivun_Holland::TYPES, $cols[1] );
-		$this->assertSame( array( '', '', ' is-top', ' is-top', ' is-top', '' ), $cols[2] );
-
-		// The professions for S: the one answered "yes" first, all twelve listed.
-		$this->assertMatchesRegularExpression( '#<li class="kivun-hl-jobs__item is-yes">יועץ זוגי או משפחתי</li>#', $html );
-		$this->assertSame( 1, substr_count( $html, 'kivun-hl-jobs__item is-yes' ) );
-		$this->assertSame( 3 * 12, substr_count( $html, 'class="kivun-hl-jobs__item' ) );
-		$s_list = substr( $html, (int) strpos( $html, 'kivun-hl-type kivun-hl-t--S' ) );
-		$this->assertLessThan( strpos( $s_list, 'מורה בבית ספר' ), strpos( $s_list, 'יועץ זוגי או משפחתי' ) );
-
-		$this->assertDoesNotMatchRegularExpression( '/<p(\s(?![^>]*class=)[^>]*)?>/', $html );
+		// The other three, and the table with its total row.
+		$this->assertSame( 3, substr_count( $html, 'class="r-rest__row"' ) );
+		$this->assertStringContainsString( 'סה"כ', $text );
+		$this->assertStringContainsString( 'כישורים', $text );
 	}
 
 	/**
-	 * A tie for third shows every tied type in the profile and says so; no
-	 * "yes" at all shows no profile rather than three arbitrary letters.
+	 * A tie for third: four tiles and a note. No "yes" at all: six dashed
+	 * squares and "no profile".
 	 *
 	 * @return void
 	 */
-	public function test_the_result_page_for_ties_and_for_nothing(): void {
-		$tie = $this->result_page( array_merge( range( 37, 48 ), range( 109, 116 ), range( 25, 36 ), array( 97 ), range( 49, 60 ), range( 61, 72 ) ) );
-		$this->assertSame( 4, substr_count( $tie, 'kivun-hl-code__letter ' ) );
+	public function test_the_report_for_ties_and_for_nothing(): void {
+		$tie = $this->report( array_merge( range( 37, 48 ), range( 109, 116 ), range( 25, 36 ), array( 97 ), range( 49, 60 ), range( 61, 72 ) ) );
+		$this->assertSame( 4, substr_count( $tie, 'class="r-tile"' ) );
 		$this->assertStringContainsString( 'יזמי-ניהולי ומנהלי-ארגוני קיבלו ניקוד זהה (12)', $tie );
-		$this->assertSame( 4, substr_count( $tie, 'class="kivun-hl-type kivun-hl-t--' ) );
+		$this->assertSame( 4, substr_count( $tie, 'class="r-card"' ) );
 
-		$none = $this->result_page( array() );
-		$this->assertSame( 0, substr_count( $none, 'kivun-hl-code__letter' ) );
-		$this->assertStringContainsString( 'לא סומנו תשובות', $none );
-		$this->assertSame( 0, substr_count( $none, 'kivun-hl-chart__col kivun-hl-t--R is-top' ) );
+		$none = $this->report( array() );
+		$this->assertSame( 0, substr_count( $none, 'class="r-tile"' ) );
+		$this->assertSame( 6, substr_count( $none, 'class="r-tile r-tile--empty"' ) );
+		$this->assertStringContainsString( 'לא נבנה פרופיל', $none );
+		$this->assertSame( 0, substr_count( $none, 'class="r-card"' ) );
 	}
 }

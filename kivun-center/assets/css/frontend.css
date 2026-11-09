@@ -6983,6 +6983,23 @@ body.kivun-ty-open { overflow: hidden; }
 	overflow-wrap: anywhere;
 }
 .kivun-cc-console .kivun-leads .kivun-lead__answer.kivun-muted { color: var(--cc-text-2); }
+/* A finished Holland questionnaire: the link to its printable report. Shown
+   in every view — it is the one way the result reaches anybody. */
+.kivun-cc-console .kivun-leads .kivun-lead__report {
+	display: inline-flex;
+	align-items: center;
+	margin-top: 6px;
+	padding: 4px 12px;
+	border-radius: 999px;
+	background: var(--cc-brand-tint, #fdf1f4);
+	font-size: 13px;
+	font-weight: 700;
+	line-height: 1.4;
+	color: var(--cc-brand, #de2952);
+	text-decoration: none;
+	white-space: nowrap;
+}
+.kivun-cc-console .kivun-leads .kivun-lead__report:hover { color: var(--cc-ink, #232323); }
 
 /* The note: field grey, radius 16, the mic 6 in from the left. */
 .kivun-cc-console .kivun-leads .kivun-cc-leadtable tbody td[data-col="notes"] { position: relative; }
