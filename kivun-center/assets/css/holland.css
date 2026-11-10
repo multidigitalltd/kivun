@@ -771,6 +771,17 @@ body.kivun-holland-page {
 	}
 }
 
+/* ── Login, stacked ───────────────────────────────────────────────────────
+   The two columns need the card's full 860: below that the 390px panel
+   would leave the form too narrow for its fields, so the panel goes over
+   the form instead — on a tablet or a narrow window, not only a phone. */
+
+@media (max-width: 900px) {
+	.kivun-hl-login:not([hidden]) { grid-template-columns: minmax(0, 1fr); }
+	.kivun-hl-band--login { padding: 28px 40px; border-bottom: 1px solid var(--hl-band-line); }
+	.kivun-hl-login__intro { margin-block: 0; padding-top: 20px; }
+}
+
 /* ── Phone (the handoff's 390px frame) ────────────────────────────────── */
 
 @media (max-width: 600px) {
@@ -780,11 +791,9 @@ body.kivun-holland-page {
 	.kivun-holland .kivun-hl-logo__img { height: 42px; }
 	.kivun-hl-body { padding: 24px 20px 28px; }
 
-	/* The panel over the form. */
-	.kivun-hl-login:not([hidden]) { grid-template-columns: minmax(0, 1fr); }
-	.kivun-hl-band--login { padding: 14px 20px 24px; border-bottom: 1px solid var(--hl-band-line); }
+	.kivun-hl-band--login { padding: 14px 20px 24px; }
 	.kivun-holland .kivun-hl-login__logo .kivun-hl-logo__img { height: 42px; }
-	.kivun-hl-login__intro { margin-block: 0; padding-top: 18px; }
+	.kivun-hl-login__intro { padding-top: 18px; }
 	.kivun-holland .kivun-hl-title { font-size: 30px; line-height: 1.2; }
 	.kivun-holland .kivun-hl-subtitle { margin: 4px 0 12px; font-size: 19px; }
 	.kivun-holland .kivun-hl-lead { font-size: 15px; line-height: 1.65; }
