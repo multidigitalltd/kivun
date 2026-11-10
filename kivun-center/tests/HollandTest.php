@@ -434,6 +434,8 @@ final class HollandTest extends TestCase {
 			}
 			return (object) array(
 				'id'      => $id,
+				'name'    => 'ישראל ישראלי',
+				'phone'   => '0501234567',
 				'answers' => (string) wp_json_encode( Kivun_Holland::stored_answers( self::ID, $responses, $done, $seq ) ),
 			);
 		};
@@ -499,6 +501,66 @@ final class HollandTest extends TestCase {
 		$stored = Kivun_Holland::read_stored( $written['answers'] );
 		$this->assertTrue( $stored['done'] );
 		$this->assertNotSame( '', $stored['done_at'], 'when it was finished is kept for the report' );
+		$this->assertSame( array(), Kivun_Test_State::$mail, 'with no address anywhere, nobody is written to' );
+	}
+
+	/**
+	 * Finishing tells the representative: the name, the phone, the code and
+	 * a button to the report — through a link with no nonce in it, since a
+	 * nonce belongs to whoever it was made for. The ID number stays out.
+	 *
+	 * @return void
+	 */
+	public function test_finishing_emails_the_representative(): void {
+		Kivun_Test_State::$options['kivun_settings'] = array(
+			'admin_email'          => 'general@example.test',
+			'holland_notify_email' => 'rep@example.test, second@example.test',
+		);
+		$this->stored_row( 7, str_repeat( '-', 216 ) );
+		$_POST = array(
+			'lead'      => '7',
+			'token'     => Kivun_Holland::token( 7, self::ID ),
+			'responses' => $this->answers( range( 61, 72 ) ),
+			'finish'    => '1',
+		);
+		$this->assertTrue( $this->call( 'ajax_save' )->ok );
+
+		$this->assertCount( 1, Kivun_Test_State::$mail );
+		$mail = Kivun_Test_State::$mail[0];
+		$this->assertSame( 'rep@example.test, second@example.test', $mail['to'] );
+		$this->assertStringContainsString( 'שאלון הולנד הושלם — ישראל ישראלי', $mail['subject'] );
+		$this->assertStringContainsString( '0501234567', $mail['message'] );
+		$this->assertStringContainsString( 'קוד הולנד:</strong> C', $mail['message'] );
+		$this->assertStringContainsString( 'פתיחת הדוח להדפסה', $mail['message'] );
+		$this->assertStringContainsString( 'admin-post.php?action=kivun_holland_report_open&amp;lead=7', $mail['message'] );
+		$this->assertStringNotContainsString( '_wpnonce', $mail['message'] );
+		$this->assertStringNotContainsString( self::ID, $mail['message'], 'the ID number is not emailed' );
+
+		// Autosaves tell nobody.
+		Kivun_Test_State::$mail = array();
+		unset( $_POST['finish'] );
+		$_POST['responses'] = str_repeat( 'n', 30 ) . str_repeat( '-', 186 );
+		$this->call( 'ajax_save' );
+		$this->assertSame( array(), Kivun_Test_State::$mail );
+	}
+
+	/**
+	 * Who is told: the questionnaire's own setting, or else the general
+	 * notifications address, or else the site's. Only valid addresses.
+	 *
+	 * @return void
+	 */
+	public function test_who_is_told(): void {
+		$this->assertSame( array( 'a@example.test', 'b@example.test' ), Kivun_Holland::email_list( " a@example.test,\nb@example.test; not-an-address A@EXAMPLE.TEST" ) );
+
+		Kivun_Test_State::$options['admin_email'] = 'site@example.test';
+		$this->assertSame( array( 'site@example.test' ), Kivun_Holland::notify_recipients() );
+
+		Kivun_Test_State::$options['kivun_settings'] = array( 'admin_email' => 'general@example.test' );
+		$this->assertSame( array( 'general@example.test' ), Kivun_Holland::notify_recipients() );
+
+		Kivun_Test_State::$options['kivun_settings']['holland_notify_email'] = 'rep@example.test';
+		$this->assertSame( array( 'rep@example.test' ), Kivun_Holland::notify_recipients() );
 	}
 
 	/**

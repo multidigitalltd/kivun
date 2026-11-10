@@ -6827,6 +6827,15 @@ class Kivun_Content_Creator {
 								<?php if ( '' !== $src['origin'] ) : ?>
 									<span class="kivun-cc-source"><?php echo esc_html( $src['origin'] ); ?></span>
 								<?php endif; ?>
+								<?php
+								// A finished Holland questionnaire: the representative
+								// prints the result from here — the participant was not
+								// shown it. Under the name, so it is in view without
+								// scrolling the table sideways.
+								?>
+								<?php if ( Kivun_Holland::has_report( $r ) && self::can_manage_leads() ) : ?>
+									<a class="kivun-lead__report" href="<?php echo esc_url( Kivun_Holland::report_url( (int) $r->id ) ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'דוח להדפסה', 'kivun' ); ?></a>
+								<?php endif; ?>
 							</td>
 							<?php if ( $show_source ) : ?>
 							<td class="kivun-cc-utm" data-label="<?php esc_attr_e( 'מקור (UTM)', 'kivun' ); ?>" data-col="utm">
@@ -6892,14 +6901,6 @@ class Kivun_Content_Creator {
 									<?php endforeach; ?>
 								<?php else : ?>
 									<span class="kivun-lead__answer kivun-muted">—</span>
-								<?php endif; ?>
-								<?php
-								// A finished Holland questionnaire: the representative
-								// prints the result from here — the participant was not
-								// shown it.
-								?>
-								<?php if ( Kivun_Holland::has_report( $r ) && self::can_manage_leads() ) : ?>
-									<a class="kivun-lead__report" href="<?php echo esc_url( Kivun_Holland::report_url( (int) $r->id ) ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'דוח שאלון הולנד להדפסה', 'kivun' ); ?></a>
 								<?php endif; ?>
 							</td>
 							<td data-label="<?php esc_attr_e( 'הערות פנימיות', 'kivun' ); ?>" data-col="notes">

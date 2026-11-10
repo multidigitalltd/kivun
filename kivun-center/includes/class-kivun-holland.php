@@ -81,6 +81,13 @@ class Kivun_Holland {
 		// The representative's printable report. Logged-in staff only: there
 		// is no nopriv hook, and the handler checks the leads capability too.
 		add_action( 'wp_ajax_kivun_holland_report', array( __CLASS__, 'ajax_report' ) );
+
+		// The link in the email to the representative. A nonce belongs to the
+		// person it was made for, so the email cannot carry one: this address
+		// sends whoever opens it to log in, then on to the report with a
+		// nonce of their own.
+		add_action( 'admin_post_kivun_holland_report_open', array( __CLASS__, 'open_report' ) );
+		add_action( 'admin_post_nopriv_kivun_holland_report_open', array( __CLASS__, 'open_report' ) );
 	}
 
 	/**
@@ -1171,7 +1178,7 @@ class Kivun_Holland {
 
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$row = $lead_id ? $wpdb->get_row(
-			$wpdb->prepare( "SELECT id, answers FROM {$table} WHERE id = %d AND type = %s", $lead_id, self::LEAD_TYPE ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			$wpdb->prepare( "SELECT id, name, phone, answers FROM {$table} WHERE id = %d AND type = %s", $lead_id, self::LEAD_TYPE ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		) : null;
 		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 
@@ -1232,7 +1239,9 @@ class Kivun_Holland {
 		 * @param int   $lead_id The lead row.
 		 * @param array $score   The result, as score() returns it.
 		 */
-		do_action( 'kivun_holland_completed', $lead_id, self::score( $posted ) );
+		$score = self::score( $posted );
+		self::notify_completed( $row, $score );
+		do_action( 'kivun_holland_completed', $lead_id, $score );
 
 		// The participant is thanked, not shown the result: the representative
 		// goes through it with them, from the printed report.
@@ -1342,6 +1351,122 @@ class Kivun_Holland {
 			),
 			admin_url( 'admin-ajax.php' )
 		);
+	}
+
+	/**
+	 * The address in the email to the representative: no nonce, so it works
+	 * for whoever opens it, once they are logged in.
+	 *
+	 * @param int $lead_id The lead row.
+	 * @return string
+	 */
+	public static function report_open_url( int $lead_id ): string {
+		return add_query_arg(
+			array(
+				'action' => 'kivun_holland_report_open',
+				'lead'   => $lead_id,
+			),
+			admin_url( 'admin-post.php' )
+		);
+	}
+
+	/**
+	 * Opening the emailed link: not logged in — to the login page and back
+	 * here; logged in — on to the report, with a nonce of the reader's own.
+	 * The report checks the leads capability itself.
+	 *
+	 * @return void
+	 */
+	public static function open_report(): void {
+		$lead_id = absint( $_GET['lead'] ?? 0 ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Only redirects; the report checks its own nonce.
+
+		if ( ! is_user_logged_in() ) {
+			wp_safe_redirect( wp_login_url( self::report_open_url( $lead_id ) ) );
+			exit;
+		}
+		if ( ! Kivun_Content_Creator::can_manage_leads() ) {
+			wp_die( esc_html__( 'אין לך הרשאה לצפות בדוח.', 'kivun' ), '', array( 'response' => 403 ) );
+		}
+
+		wp_safe_redirect( self::report_url( $lead_id ) );
+		exit;
+	}
+
+	/**
+	 * Who is told when somebody finishes: the addresses in the setting
+	 * "שאלון הולנד — התראה על סיום", or else the plugin's notifications
+	 * address, or else the site's.
+	 *
+	 * @return array<int,string>
+	 */
+	public static function notify_recipients(): array {
+		$own = (string) Kivun_Admin_Settings::get( 'holland_notify_email', '' );
+		$to  = self::email_list( $own );
+		if ( ! $to ) {
+			$to = self::email_list( (string) Kivun_Admin_Settings::get( 'admin_email', '' ) );
+		}
+		if ( ! $to ) {
+			$to = self::email_list( (string) get_option( 'admin_email' ) );
+		}
+		return $to;
+	}
+
+	/**
+	 * Addresses written with commas, spaces or new lines between them, the
+	 * valid ones only.
+	 *
+	 * @param string $raw As typed.
+	 * @return array<int,string>
+	 */
+	public static function email_list( string $raw ): array {
+		$out = array();
+		foreach ( preg_split( '/[\s,;]+/', $raw ) as $part ) {
+			$email = sanitize_email( $part );
+			if ( '' !== $email && is_email( $email ) && ! isset( $out[ strtolower( $email ) ] ) ) {
+				$out[ strtolower( $email ) ] = $email;
+			}
+		}
+		return array_values( $out );
+	}
+
+	/**
+	 * Tell the representative that a questionnaire was finished: who, the
+	 * code, and a button to the printable report. The ID number stays out of
+	 * the email — it is on the report, behind the login.
+	 *
+	 * @param object $row   The lead row: id, name, phone.
+	 * @param array  $score The result, as score() returns it.
+	 * @return void
+	 */
+	public static function notify_completed( $row, array $score ): void {
+		$to = self::notify_recipients();
+		if ( ! $to || ! apply_filters( 'kivun_holland_notify', true, $row, $score ) ) {
+			return;
+		}
+
+		$lead_id = (int) ( $row->id ?? 0 );
+		$name    = trim( (string) ( $row->name ?? '' ) );
+		$phone   = trim( (string) ( $row->phone ?? '' ) );
+		$code    = '' !== $score['code'] ? (string) $score['code'] : '—';
+
+		/* translators: 1: site name, 2: participant name. */
+		$subject = sprintf( __( '[%1$s] שאלון הולנד הושלם — %2$s', 'kivun' ), get_bloginfo( 'name' ), '' !== $name ? $name : __( 'משתתף/ת', 'kivun' ) );
+
+		$body = sprintf(
+			'<p>%1$s</p><ul><li><strong>%2$s</strong> %3$s</li><li><strong>%4$s</strong> <span dir="ltr">%5$s</span></li><li><strong>%6$s</strong> %7$s%8$s</li></ul>%9$s<p style="color:#6b6b6b;font-size:13px">%10$s</p>',
+			esc_html__( 'משתתף/ת סיים/ה את שאלון הולנד. הדוח מוכן להדפסה.', 'kivun' ),
+			esc_html__( 'שם:', 'kivun' ),
+			esc_html( $name ),
+			esc_html__( 'טלפון:', 'kivun' ),
+			esc_html( $phone ),
+			esc_html__( 'קוד הולנד:', 'kivun' ),
+			esc_html( $code ),
+			! empty( $score['tie'] ) ? ' ' . esc_html__( '(שוויון במקום השלישי)', 'kivun' ) : '',
+			Kivun_Mailer::button( self::report_open_url( $lead_id ), __( 'פתיחת הדוח להדפסה', 'kivun' ) ),
+			esc_html__( 'הדוח נפתח למי שמחובר/ת לאתר עם הרשאה לטפל בלידים.', 'kivun' )
+		);
+
+		Kivun_Mailer::send( implode( ', ', $to ), $subject, $body, __( 'שאלון הולנד הושלם', 'kivun' ) );
 	}
 
 	/**

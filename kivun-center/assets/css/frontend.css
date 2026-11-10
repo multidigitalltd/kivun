@@ -6983,12 +6983,15 @@ body.kivun-ty-open { overflow: hidden; }
 	overflow-wrap: anywhere;
 }
 .kivun-cc-console .kivun-leads .kivun-lead__answer.kivun-muted { color: var(--cc-text-2); }
-/* A finished Holland questionnaire: the link to its printable report. Shown
-   in every view — it is the one way the result reaches anybody. */
+/* A finished Holland questionnaire: the link to its printable report, under
+   the name in the content column so it is in view without scrolling the
+   table sideways. Shown in every view — it is the one way the result
+   reaches anybody. */
 .kivun-cc-console .kivun-leads .kivun-lead__report {
 	display: inline-flex;
+	align-self: flex-start;
 	align-items: center;
-	margin-top: 6px;
+	margin-top: 4px;
 	padding: 4px 12px;
 	border-radius: 999px;
 	background: var(--cc-brand-tint, #fdf1f4);
