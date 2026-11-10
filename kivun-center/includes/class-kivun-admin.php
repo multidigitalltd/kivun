@@ -2099,6 +2099,9 @@ class Kivun_Admin {
 								<td><?php echo esc_html( ! empty( $r->privacy_consent ) ? '✓' : '—' ); ?></td>
 							<td>
 								<?php echo kivun_submission_details( (string) ( $r->message ?? '' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Helper escapes the saved text and labels. ?>
+								<?php if ( Kivun_Holland::has_report( $r ) && Kivun_Content_Creator::can_manage_leads() ) : ?>
+									<a class="button button-small" href="<?php echo esc_url( Kivun_Holland::report_url( (int) $r->id ) ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'דוח להדפסה', 'kivun' ); ?></a>
+								<?php endif; ?>
 							</td>
 							<td>
 								<?php

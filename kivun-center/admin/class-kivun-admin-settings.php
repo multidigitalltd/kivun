@@ -293,6 +293,7 @@ class Kivun_Admin_Settings {
 				'coordinators_female'        => sanitize_textarea_field( wp_unslash( $_POST['coordinators_female'] ?? '' ) ),
 				'coordinators_forms'         => sanitize_textarea_field( wp_unslash( $_POST['coordinators_forms'] ?? '' ) ),
 				'applications_archive_email' => sanitize_email( wp_unslash( $_POST['applications_archive_email'] ?? '' ) ),
+				'holland_notify_email'       => implode( ', ', Kivun_Holland::email_list( sanitize_textarea_field( wp_unslash( $_POST['holland_notify_email'] ?? '' ) ) ) ),
 				'whatsapp_enabled'           => ! empty( $_POST['whatsapp_enabled'] ),
 				'whatsapp_number'            => sanitize_text_field( wp_unslash( $_POST['whatsapp_number'] ?? '' ) ),
 				'whatsapp_message'           => sanitize_text_field( wp_unslash( $_POST['whatsapp_message'] ?? '' ) ),
@@ -466,6 +467,16 @@ class Kivun_Admin_Settings {
 					<td>
 						<input type="email" name="admin_email" value="<?php echo esc_attr( $o( 'admin_email', get_option( 'admin_email' ) ) ); ?>" class="regular-text">
 						<p class="description"><?php esc_html_e( 'ישלחו לכאן הרשמות לקורסים חינמיים. ניתן לדרוס לכל קורס בנפרד מהמטאבוקס.', 'kivun' ); ?></p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'שאלון הולנד — התראה על סיום', 'kivun' ); ?></th>
+					<td>
+						<input type="text" name="holland_notify_email" value="<?php echo esc_attr( $o( 'holland_notify_email' ) ); ?>" class="regular-text" dir="ltr" placeholder="rep@example.com">
+						<p class="description">
+							<?php esc_html_e( 'כשמשתתף/ת מסיים/ת את שאלון הולנד, נשלח לכתובת הזו מייל עם השם, הטלפון, הקוד וכפתור לדוח להדפסה. אפשר כמה כתובות, מופרדות בפסיקים.', 'kivun' ); ?><br>
+							<?php esc_html_e( 'ריק — המייל יישלח לכתובת ההתראות הכללית שלמעלה.', 'kivun' ); ?>
+						</p>
 					</td>
 				</tr>
 				<tr>

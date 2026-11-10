@@ -4,13 +4,19 @@
  *
  * Every screen is already in the page; this shows one at a time, keeps the
  * answers, and hands them to the server, which is the only place they are
- * scored. Answers are saved as the person goes — on every "next", and a few
- * seconds after the last click — so closing the tab costs nothing: logging
- * in again with the same phone and ID number picks up where they stopped.
+ * scored. At the end the participant is thanked, not shown a result — the
+ * representative prints the report.
  *
- * Nothing that identifies the person is kept in the browser. sessionStorage
- * holds the row number, its token and the answers so a refresh does not send
- * them back to the login; it is gone when the tab is.
+ * Answers are saved as the person goes, so closing the tab costs nothing:
+ * logging in again with the same phone and ID number picks up where they
+ * stopped. Nothing that identifies the person is kept in the browser —
+ * sessionStorage holds the row number, its token and the answers so a
+ * refresh does not send them back to the login, and it goes with the tab.
+ *
+ * The behaviour follows the design handoff (Holland Demo.dc.html): a choice
+ * lights its button and moves on after 300ms, during which nothing else is
+ * taken; the stage can be dragged — past 60px it is tinted and stamped,
+ * past 100px on release it is a choice, otherwise it springs back.
  */
 (function () {
 	'use strict';
@@ -24,12 +30,18 @@
 	var PAGE = root.getAttribute('data-page') || '0';
 	var STORE = 'kivun_holland_' + PAGE;
 	var SAVE_DELAY = 3000;
+	var ADVANCE = 300;
+	var LIT = 60;
+	var PICK = 100;
 
+	var card = root.querySelector('[data-hl-card]');
 	var login = root.querySelector('[data-hl-login]');
 	var form = root.querySelector('[data-hl-form]');
 	var alertBox = root.querySelector('[data-hl-alert]');
 	var quiz = root.querySelector('[data-hl-quiz]');
-	var results = root.querySelector('[data-hl-results]');
+	var thanks = root.querySelector('[data-hl-thanks]');
+	var band = root.querySelector('[data-hl-progress]');
+	var bandSteps = band ? Array.prototype.slice.call(band.querySelectorAll('.kivun-hl-steps__step')) : [];
 	var screens = Array.prototype.slice.call(root.querySelectorAll('[data-hl-screen]'));
 	var partLabel = root.querySelector('[data-hl-part]');
 	var answeredEl = root.querySelector('[data-hl-answered]');
@@ -38,6 +50,8 @@
 	var state = { lead: 0, token: '', responses: blank(), screen: 0 };
 	var saveTimer = null;
 	var saving = Promise.resolve();
+	var busy = false;        // The 300ms after a choice: nothing else is taken.
+	var advanceTimer = null;
 
 	function blank() {
 		return new Array(TOTAL + 1).join('-');
@@ -160,7 +174,7 @@
 			answeredEl.textContent = String(n);
 		}
 		if (fill) {
-			fill.style.width = (TOTAL ? Math.round(100 * n / TOTAL) : 0) + '%';
+			fill.style.width = (TOTAL ? (100 * n / TOTAL) : 0) + '%';
 		}
 	}
 
@@ -173,13 +187,46 @@
 
 	// ── Screens ─────────────────────────────────────────────────────────────
 
+	function isIntro(screen) {
+		return screen.hasAttribute('data-hl-intro');
+	}
+
+	// The step row above the questions: the parts before this one done, this
+	// one current, the rest still to come.
+	function paintSteps(part) {
+		bandSteps.forEach(function (step, k) {
+			step.classList.toggle('is-done', k < part);
+			step.classList.toggle('is-active', k === part);
+			step.classList.toggle('is-future', k > part);
+			if (k === part) {
+				step.setAttribute('aria-current', 'step');
+			} else {
+				step.removeAttribute('aria-current');
+			}
+		});
+	}
+
+	function scrollToTop() {
+		var top = root.getBoundingClientRect().top + window.pageYOffset - 24;
+		if (window.pageYOffset > top) {
+			window.scrollTo(0, Math.max(0, top));
+		}
+	}
+
 	function show(index, focus) {
+		clearTimeout(advanceTimer);
+		busy = false;
 		state.screen = Math.max(0, Math.min(index, screens.length - 1));
 		screens.forEach(function (s, i) {
 			s.hidden = i !== state.screen;
 		});
 
 		var current = screens[state.screen];
+		var part = parseInt(current.getAttribute('data-hl-part-index'), 10) || 0;
+		if (band) {
+			band.hidden = isIntro(current);
+		}
+		paintSteps(part);
 		if (partLabel) {
 			partLabel.textContent = current.getAttribute('data-hl-label') || '';
 		}
@@ -187,13 +234,13 @@
 		if (alertEl) {
 			alertEl.hidden = true;
 		}
+		current.querySelectorAll('.is-missing').forEach(function (el) {
+			el.classList.remove('is-missing');
+		});
 		remember();
 
 		if (focus !== false) {
-			var top = root.getBoundingClientRect().top + window.pageYOffset - 24;
-			if (window.pageYOffset > top) {
-				window.scrollTo(0, Math.max(0, top));
-			}
+			scrollToTop();
 			var heading = current.querySelector('[data-hl-focus]');
 			if (heading) {
 				heading.focus({ preventScroll: true });
@@ -201,7 +248,7 @@
 		}
 	}
 
-	// Where somebody coming back should land: the page holding their first
+	// Where somebody coming back should land: the screen holding their first
 	// unanswered question, or the very start when there is none yet.
 	function resumeScreen() {
 		if (answeredCount() === 0) {
@@ -215,9 +262,18 @@
 		return screens.length - 1;
 	}
 
+	// The login carries its own logo, in the panel beside the form; the
+	// card's logo strip is for the screens after it.
+	function setLogin(on) {
+		login.hidden = !on;
+		if (card) {
+			card.classList.toggle('is-login', on);
+		}
+	}
+
 	function enterQuiz(index) {
-		login.hidden = true;
-		results.hidden = true;
+		setLogin(false);
+		thanks.hidden = true;
 		quiz.hidden = false;
 		paintAnswers();
 		show(index);
@@ -227,27 +283,42 @@
 		forget();
 		state = { lead: 0, token: '', responses: blank(), screen: 0 };
 		quiz.hidden = true;
-		results.hidden = true;
-		login.hidden = false;
+		thanks.hidden = true;
+		setLogin(true);
 		if (message) {
 			alertBox.textContent = message;
 			alertBox.hidden = false;
 		}
 	}
 
-	function showResults(html) {
+	function showThanks() {
 		forget();
 		quiz.hidden = true;
-		login.hidden = true;
-		results.innerHTML = html;
-		results.hidden = false;
-
-		var top = root.getBoundingClientRect().top + window.pageYOffset - 24;
-		window.scrollTo(0, Math.max(0, top));
-		var heading = results.querySelector('[data-hl-focus]');
+		setLogin(false);
+		thanks.hidden = false;
+		scrollToTop();
+		var heading = thanks.querySelector('[data-hl-focus]');
 		if (heading) {
 			heading.focus({ preventScroll: true });
 		}
+	}
+
+	function pageAlert(screen, text) {
+		var alertEl = screen.querySelector('[data-hl-page-alert]');
+		if (!alertEl) {
+			return;
+		}
+		// Rebuilt each time so the shake plays again.
+		alertEl.hidden = true;
+		alertEl.innerHTML = '';
+		var bang = document.createElement('span');
+		bang.className = 'kivun-hl-bang';
+		bang.setAttribute('aria-hidden', 'true');
+		bang.textContent = '!';
+		alertEl.appendChild(bang);
+		alertEl.appendChild(document.createTextNode(text));
+		void alertEl.offsetWidth;
+		alertEl.hidden = false;
 	}
 
 	// ── Login ───────────────────────────────────────────────────────────────
@@ -256,7 +327,11 @@
 		var input = form.querySelector('[name="' + name + '"]');
 		var slot = form.querySelector('[data-hl-error="' + name + '"]');
 		if (slot) {
-			slot.textContent = text || '';
+			var m = slot.querySelector('[data-hl-msg]');
+			if (m) {
+				m.textContent = text || '';
+			}
+			slot.hidden = !text;
 		}
 		if (input) {
 			if (text) {
@@ -273,6 +348,27 @@
 		});
 		alertBox.hidden = true;
 		alertBox.textContent = '';
+		login.classList.remove('is-error');
+	}
+
+	function showLoginAlert(text) {
+		login.classList.toggle('is-error', !!form.querySelector('[aria-invalid="true"]'));
+		alertBox.hidden = true;
+		alertBox.textContent = text;
+		void alertBox.offsetWidth;
+		alertBox.hidden = false;
+	}
+
+	var FIX = 'יש לתקן את השדות המסומנים כדי להמשיך.';
+
+	// An Israeli number: local digits starting 0, nine or ten of them, with
+	// +972 / 972 read as the leading 0.
+	function validPhone(raw) {
+		var digits = String(raw).replace(/\D+/g, '');
+		if (digits.indexOf('972') === 0) {
+			digits = '0' + digits.slice(3);
+		}
+		return /^0\d{8,9}$/.test(digits);
 	}
 
 	form.addEventListener('submit', function (e) {
@@ -286,22 +382,28 @@
 
 		var missing = false;
 		if (!name) {
-			fieldError('name', 'נא למלא שם מלא.');
+			fieldError('name', 'יש למלא שם מלא');
 			missing = true;
 		}
 		if (!phone) {
-			fieldError('phone', 'נא למלא מספר טלפון.');
+			fieldError('phone', 'יש למלא מספר טלפון');
+			missing = true;
+		} else if (!validPhone(phone)) {
+			// The same rule the server applies, so the mistake is shown before
+			// anything is sent.
+			fieldError('phone', 'מספר הטלפון אינו תקין');
 			missing = true;
 		}
 		if (!id) {
-			fieldError('id_number', 'נא למלא מספר תעודת זהות.');
+			fieldError('id_number', 'יש למלא תעודת זהות');
 			missing = true;
 		}
 		if (consent && !consent.checked) {
-			fieldError('privacy_consent', 'יש לאשר את מדיניות הפרטיות.');
+			fieldError('privacy_consent', 'יש לאשר את מדיניות הפרטיות');
 			missing = true;
 		}
 		if (missing) {
+			showLoginAlert(FIX);
 			var first = form.querySelector('[aria-invalid="true"]');
 			if (first) {
 				first.focus();
@@ -332,8 +434,7 @@
 				enterQuiz(resumeScreen());
 			})
 			.catch(function (err) {
-				alertBox.textContent = err.message;
-				alertBox.hidden = false;
+				showLoginAlert(err.message);
 				var first = form.querySelector('[aria-invalid="true"]');
 				if (first) {
 					first.focus();
@@ -344,21 +445,12 @@
 			});
 	});
 
-	// ── The questionnaire ───────────────────────────────────────────────────
+	// ── Answering ───────────────────────────────────────────────────────────
 
-	quiz.addEventListener('change', function (e) {
-		var input = e.target;
-		if (!input || input.type !== 'radio') {
-			return;
-		}
-		var item = input.closest('[data-hl-item]');
-		if (!item) {
-			return;
-		}
-		setAnswer(parseInt(item.getAttribute('data-hl-item'), 10), input.value === 'y' ? 'y' : 'n');
+	// Record a choice on a question, as the radio change does.
+	function record(item, value) {
+		setAnswer(parseInt(item.getAttribute('data-hl-item'), 10), value);
 		item.classList.remove('is-missing');
-
-		// The page's warning goes once there is nothing left to warn about.
 		var screen = item.closest('[data-hl-screen]');
 		var alertEl = screen && screen.querySelector('[data-hl-page-alert]');
 		if (alertEl && !alertEl.hidden && !missingIn(screen).length) {
@@ -367,41 +459,28 @@
 		paintProgress();
 		remember();
 		saveSoon();
-	});
+	}
 
-	// ── One question to a screen: answering moves on ───────────────────────
-
-	// Only a choice made with the mouse or a finger moves on by itself. The
-	// arrow keys also select a radio button, and a keyboard user moving
-	// between "yes" and "no" must not be carried off to the next question.
-	// The answer the pointer went down on; the click that follows must be
-	// on the same one, and any key press in between cancels it.
-	var pressed = null;
-	var advanceTimer = null;
-	quiz.addEventListener('pointerdown', function (e) {
-		pressed = e.target.closest('.kivun-hl-opt');
-	});
-	quiz.addEventListener('keydown', function () {
-		pressed = null;
-	});
-
-	quiz.addEventListener('click', function (e) {
+	quiz.addEventListener('change', function (e) {
 		var input = e.target;
-		if (!input || input.type !== 'radio' || !pressed || input.closest('.kivun-hl-opt') !== pressed) {
+		if (!input || input.type !== 'radio') {
 			return;
 		}
-		pressed = null;
-		var screen = input.closest('[data-hl-screen]');
-		if (screen && screen.classList.contains('kivun-hl-page--single')) {
-			advanceFrom(screen);
+		var item = input.closest('[data-hl-item]');
+		if (item) {
+			record(item, input.value === 'y' ? 'y' : 'n');
 		}
 	});
 
+	// After a choice: the button stays lit for 300ms, then the next question.
+	// Nothing else is taken meanwhile. On the last question the choice does
+	// not submit; focus goes to "finish".
 	function advanceFrom(screen) {
 		var index = screens.indexOf(screen);
 		clearTimeout(advanceTimer);
-		// Long enough to see the choice light up.
+		busy = true;
 		advanceTimer = setTimeout(function () {
+			busy = false;
 			if (state.screen !== index || missingIn(screen).length) {
 				return;
 			}
@@ -411,121 +490,159 @@
 				return;
 			}
 			var upcoming = screens[index + 1];
-			if (upcoming && !upcoming.querySelector('[data-hl-item]')) {
+			if (upcoming && isIntro(upcoming)) {
 				// The end of a part: saved at once, not with the next few.
 				save(false).catch(function () { /* Tried again on the next "next". */ });
 			}
 			show(index + 1);
-		}, 300);
+		}, ADVANCE);
 	}
 
-	// ── Swipe on a phone: right for "yes", left for "no" ───────────────────
+	// Only a choice made with the mouse or a finger moves on by itself. The
+	// arrow keys also select a radio button, and a keyboard user moving
+	// between "yes" and "no" must not be carried off to the next question.
+	// The answer the pointer went down on has to be the one clicked, and any
+	// key pressed in between cancels it.
+	var pressed = null;
+	quiz.addEventListener('pointerdown', function (e) {
+		pressed = e.target.closest('.kivun-hl-opt');
+	});
+	quiz.addEventListener('keydown', function () {
+		pressed = null;
+	});
 
-	// A deliberate sideways stroke across the question only: long enough,
-	// clearly more sideways than down, and quick, so that scrolling the page
-	// or a finger resting on the screen answers nothing. The question follows
-	// the finger a little, tinted toward the answer it is about to give.
-	var swipe = null;
-	var SWIPE_MIN = 70;
+	quiz.addEventListener('click', function (e) {
+		var input = e.target;
+		if (!input || input.type !== 'radio') {
+			return;
+		}
+		if (busy) {
+			// A second choice inside the 300ms is not taken.
+			e.preventDefault();
+			return;
+		}
+		if (!pressed || input.closest('.kivun-hl-opt') !== pressed) {
+			return;
+		}
+		pressed = null;
+		var screen = input.closest('[data-hl-screen]');
+		if (screen && screen.classList.contains('kivun-hl-page--single')) {
+			advanceFrom(screen);
+		}
+	});
 
-	quiz.addEventListener('touchstart', function (e) {
-		var item = e.target.closest('.kivun-hl-page--single [data-hl-item]');
-		if (!item || e.touches.length !== 1) {
-			swipe = null;
-			return;
-		}
-		swipe = { item: item, x: e.touches[0].clientX, y: e.touches[0].clientY, t: Date.now(), dx: 0, sideways: null };
-	}, { passive: true });
+	// ── Dragging the stage: right for "yes", left for "no" ──────────────────
 
-	quiz.addEventListener('touchmove', function (e) {
-		if (!swipe) {
-			return;
-		}
-		var dx = e.touches[0].clientX - swipe.x;
-		var dy = e.touches[0].clientY - swipe.y;
-		if (swipe.sideways === null && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) {
-			swipe.sideways = Math.abs(dx) > Math.abs(dy) * 1.5;
-		}
-		if (!swipe.sideways) {
-			return;
-		}
-		swipe.dx = dx;
-		swipe.item.classList.add('is-swiping');
-		swipe.item.style.transform = 'translateX(' + Math.round(dx * 0.4) + 'px)';
-		swipe.item.classList.toggle('is-swipe-yes', dx > SWIPE_MIN);
-		swipe.item.classList.toggle('is-swipe-no', dx < -SWIPE_MIN);
-	}, { passive: true });
+	var drag = null;
 
-	function endSwipe() {
-		if (!swipe) {
+	function setDrag(d, dx) {
+		d.dx = dx;
+		var rot = Math.max(-4, Math.min(4, dx / 25));
+		d.stage.style.transform = 'translateX(' + dx + 'px) rotate(' + rot + 'deg)';
+		d.item.classList.toggle('is-lit-yes', dx > LIT);
+		d.item.classList.toggle('is-lit-no', dx < -LIT);
+	}
+
+	function endDrag(cancel) {
+		if (!drag) {
 			return;
 		}
-		var s = swipe;
-		swipe = null;
-		s.item.style.transform = '';
-		s.item.classList.remove('is-swiping', 'is-swipe-yes', 'is-swipe-no');
-		if (!s.sideways || Math.abs(s.dx) < SWIPE_MIN || Date.now() - s.t > 1000) {
+		var d = drag;
+		drag = null;
+		d.stage.classList.remove('is-dragging');
+		d.stage.style.transform = '';
+		d.item.classList.remove('is-lit-yes', 'is-lit-no');
+		if (cancel || Math.abs(d.dx) <= PICK || busy) {
 			return;
 		}
-		var input = s.item.querySelector('input[value="' + (s.dx > 0 ? 'y' : 'n') + '"]');
+		var input = d.item.querySelector('input[value="' + (d.dx > 0 ? 'y' : 'n') + '"]');
 		if (!input) {
 			return;
 		}
 		input.checked = true;
-		input.dispatchEvent(new Event('change', { bubbles: true }));
-		advanceFrom(s.item.closest('[data-hl-screen]'));
+		record(d.item, d.dx > 0 ? 'y' : 'n');
+		advanceFrom(d.item.closest('[data-hl-screen]'));
 	}
-	quiz.addEventListener('touchend', endSwipe);
-	quiz.addEventListener('touchcancel', function () {
-		if (swipe) {
-			swipe.dx = 0;
+
+	quiz.addEventListener('pointerdown', function (e) {
+		var stage = e.target.closest('.kivun-hl-page--single [data-hl-stage]');
+		if (!stage || busy || (e.pointerType === 'mouse' && e.button !== 0)) {
+			return;
 		}
-		endSwipe();
+		drag = { stage: stage, item: stage.closest('[data-hl-item]'), x: e.clientX, y: e.clientY, dx: 0, id: e.pointerId, sideways: null };
 	});
+
+	quiz.addEventListener('pointermove', function (e) {
+		if (!drag || e.pointerId !== drag.id) {
+			return;
+		}
+		var dx = e.clientX - drag.x;
+		var dy = e.clientY - drag.y;
+		// Decide once whether this is a sideways drag or the page scrolling.
+		if (drag.sideways === null) {
+			if (Math.abs(dx) < 8 && Math.abs(dy) < 8) {
+				return;
+			}
+			drag.sideways = Math.abs(dx) > Math.abs(dy);
+			if (!drag.sideways) {
+				drag = null;
+				return;
+			}
+			drag.stage.classList.add('is-dragging');
+			try {
+				drag.stage.setPointerCapture(e.pointerId);
+			} catch (err) { /* Not every pointer can be captured. */ }
+		}
+		setDrag(drag, dx);
+	});
+
+	quiz.addEventListener('pointerup', function (e) {
+		if (drag && e.pointerId === drag.id) {
+			endDrag(drag.sideways !== true);
+		}
+	});
+	quiz.addEventListener('pointercancel', function () {
+		endDrag(true);
+	});
+
+	// ── Back and forward ────────────────────────────────────────────────────
 
 	quiz.addEventListener('click', function (e) {
 		var prev = e.target.closest('[data-hl-prev]');
 		var next = e.target.closest('[data-hl-next]');
-		if (prev) {
-			clearTimeout(advanceTimer);
-			show(state.screen - 1);
+		if (!prev && !next) {
 			return;
 		}
-		if (!next) {
+		if (busy) {
+			return;
+		}
+		if (prev) {
+			show(state.screen - 1);
 			return;
 		}
 
 		var screen = screens[state.screen];
-		var alertEl = screen.querySelector('[data-hl-page-alert]');
 		var missing = missingIn(screen);
 
 		if (missing.length) {
 			missing.forEach(function (item) {
 				item.classList.add('is-missing');
 			});
-			if (alertEl) {
-				alertEl.textContent = screen.classList.contains('kivun-hl-page--single')
-					? 'יש לבחור "כן" או "לא" כדי להמשיך.'
-					: missing.length === 1
-					? 'נשארה שאלה אחת ללא תשובה בעמוד הזה. יש לענות על כל השאלות.'
-					: 'נשארו ' + missing.length + ' שאלות ללא תשובה בעמוד הזה. יש לענות על כל השאלות.';
-				alertEl.hidden = false;
-			}
+			pageAlert(screen, 'יש לבחור "כן" או "לא" כדי להמשיך.');
 			var radio = missing[0].querySelector('input[type="radio"]');
 			if (radio) {
-				missing[0].scrollIntoView({ block: 'center' });
 				radio.focus({ preventScroll: true });
 			}
 			return;
 		}
 
 		if (!next.hasAttribute('data-hl-finish')) {
-			// Only pages hold answers; an intro has nothing new to save. A
-			// single question is saved with the next few, the end of a part
-			// at once.
-			if (screen.querySelector('[data-hl-item]')) {
+			// Only questions hold answers; an opening screen has nothing new
+			// to save. A question is saved with the next few, the end of a
+			// part at once.
+			if (!isIntro(screen)) {
 				var upcoming = screens[state.screen + 1];
-				if (screen.classList.contains('kivun-hl-page--single') && upcoming && upcoming.querySelector('[data-hl-item]')) {
+				if (upcoming && !isIntro(upcoming)) {
 					saveSoon();
 				} else {
 					save(false).catch(function () { /* Tried again on the next "next". */ });
@@ -535,51 +652,32 @@
 			return;
 		}
 
-		// The last page. Anything still blank elsewhere — a page skipped
-		// with "back" — is found before the server is asked.
+		// The last question. Anything still blank elsewhere — a question
+		// skipped with "back" — is found before the server is asked.
 		var firstGap = resumeScreen();
 		if (answeredCount() < TOTAL && firstGap !== state.screen) {
 			show(firstGap);
 			var gapScreen = screens[firstGap];
-			var gapAlert = gapScreen.querySelector('[data-hl-page-alert]');
 			missingIn(gapScreen).forEach(function (item) {
 				item.classList.add('is-missing');
 			});
-			if (gapAlert) {
-				gapAlert.textContent = 'יש לענות על כל השאלות לפני הסיום — נשארו כאן שאלות ללא תשובה.';
-				gapAlert.hidden = false;
-			}
+			pageAlert(gapScreen, 'יש לענות על כל השאלות לפני הסיום — נשארה כאן שאלה ללא תשובה.');
 			return;
 		}
 
 		next.disabled = true;
 		save(true)
 			.then(function (data) {
-				if (data.html) {
-					showResults(data.html);
+				if (data.done) {
+					showThanks();
 				}
 			})
 			.catch(function (err) {
-				if (alertEl) {
-					alertEl.textContent = err.message;
-					alertEl.hidden = false;
-				}
+				pageAlert(screen, err.message);
 			})
 			.then(function () {
 				next.disabled = false;
 			});
-	});
-
-	// The result's own button. Everything on it is printed, the folded
-	// section included.
-	results.addEventListener('click', function (e) {
-		if (!e.target.closest('[data-hl-print]')) {
-			return;
-		}
-		results.querySelectorAll('details').forEach(function (d) {
-			d.open = true;
-		});
-		window.print();
 	});
 
 	// A save that is still waiting when the tab closes goes out with it.
