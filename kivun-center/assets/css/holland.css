@@ -161,11 +161,27 @@ body.kivun-holland-page {
 
 /* ── Login ────────────────────────────────────────────────────────────── */
 
+/* Two columns: the pink panel on the right — the logo, and under it the
+   title, the model and the opening — and the form on the left. The card's
+   own logo strip waits for the screens after the login. */
+.kivun-hl-card.is-login > .kivun-hl-logo { display: none; }
+.kivun-hl-login:not([hidden]) {
+	display: grid;
+	grid-template-columns: 390px minmax(0, 1fr);
+}
 .kivun-hl-band--login {
 	display: flex;
 	flex-direction: column;
-	gap: 12px;
-	padding: 44px 56px 36px;
+	padding: 30px 36px 36px;
+	border-bottom: 0;
+}
+.kivun-hl-login__logo { display: flex; margin-inline-start: -9px; }
+.kivun-hl-login__intro {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	margin-block: auto;
+	padding-top: 24px;
 }
 .kivun-holland .kivun-hl-title {
 	margin: 0;
@@ -173,27 +189,34 @@ body.kivun-holland-page {
 	font-weight: 800;
 	line-height: 1.15;
 }
-.kivun-hl-lead {
+.kivun-holland .kivun-hl-subtitle {
+	margin: 8px 0 20px;
+	font-size: 22px;
+	font-weight: 800;
+	line-height: 1.3;
+	color: var(--hl-accent-text);
+}
+.kivun-holland .kivun-hl-lead {
 	margin: 0;
-	font-size: 18px;
-	line-height: 1.6;
-	color: var(--hl-text-2);
+	font-size: 17px;
+	line-height: 1.75;
+	color: var(--hl-text-3);
 }
 
 .kivun-holland .kivun-hl-form {
 	display: flex;
 	flex-direction: column;
-	gap: 26px;
 	margin: 0;
+	padding: 36px 40px 40px;
 }
-.kivun-hl-form__head { display: flex; flex-direction: column; gap: 4px; }
-.kivun-hl-form__title { font-size: 22px; font-weight: 800; }
-.kivun-hl-form__sub { font-size: 16px; line-height: 1.6; color: var(--hl-text-2); }
+.kivun-hl-form__head { display: flex; flex-direction: column; gap: 2px; margin-bottom: 14px; }
+.kivun-hl-form__title { font-size: 22px; font-weight: 800; line-height: 1.2; }
+.kivun-hl-form__sub { font-size: 15px; line-height: 1.4; color: var(--hl-text-2); }
 
 .kivun-hl-fields {
 	display: grid;
-	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-	gap: 20px;
+	grid-template-columns: minmax(0, 1fr);
+	gap: 16px;
 }
 .kivun-hl-field { display: flex; flex-direction: column; gap: 8px; }
 .kivun-hl-field--wide { grid-column: 1 / -1; }
@@ -214,7 +237,7 @@ body.kivun-holland-page {
 	width: -webkit-fill-available;
 	width: -moz-available;
 	width: stretch;
-	height: 56px;
+	height: 52px;
 	margin: 0;
 	padding: 0 18px;
 	border: 1.5px solid transparent;
@@ -291,6 +314,17 @@ body.kivun-holland-page {
 	color: var(--hl-text-3);
 }
 
+/* Under the fields, a quiet line: why the details are asked for. */
+.kivun-holland .kivun-hl-note {
+	margin: 16px 0 0;
+	font-size: 14px;
+	line-height: 1.6;
+	color: var(--hl-text-2);
+}
+.kivun-hl-form > .kivun-hl-field { margin-top: 16px; }
+.kivun-holland .kivun-hl-form .kivun-hl-btn--block { margin-top: 20px; }
+.kivun-hl-form .kivun-hl-alert { margin-top: 16px; }
+
 .kivun-hl-consent {
 	display: flex;
 	align-items: flex-start;
@@ -322,10 +356,7 @@ body.kivun-holland-page {
 /* With errors showing, the handoff's compact login (its section 02): the
    band closes up, and the opening line and the note make way for the
    fields and what is wrong with them. */
-.kivun-hl-login.is-error .kivun-hl-band--login { gap: 10px; padding: 36px 56px 28px; }
-.kivun-hl-login.is-error .kivun-hl-form { gap: 24px; }
-.kivun-hl-login.is-error .kivun-hl-form__head,
-.kivun-hl-login.is-error .kivun-hl-info { display: none; }
+.kivun-hl-login.is-error .kivun-hl-note { display: none; }
 
 /* ── The three parts as steps ─────────────────────────────────────────── */
 
@@ -490,32 +521,26 @@ body.kivun-holland-page {
 /* ── A question ───────────────────────────────────────────────────────── */
 
 .kivun-hl-body--question { padding: 32px 48px 36px; }
+/* Over the question, one line: the part in the accent colour, a hairline,
+   and "question 5 of 72" with the number in bold. */
 .kivun-hl-qhead {
 	display: flex;
-	flex-direction: column;
 	align-items: center;
-	gap: 10px;
+	justify-content: center;
+	font-size: 15px;
+	line-height: normal;
 	text-align: center;
 }
-.kivun-hl-pill {
-	padding: 6px 16px;
-	border-radius: 999px;
-	background: var(--hl-accent-tint);
-	font-size: 15px;
-	font-weight: 700;
-	color: var(--hl-accent-text);
+.kivun-hl-qhead__part { font-weight: 700; color: var(--hl-accent-text); }
+.kivun-hl-qhead__sep {
+	flex: none;
+	width: 1px;
+	height: 14px;
+	margin: 0 12px;
+	background: var(--hl-line);
 }
-.kivun-hl-qhead__rules {
-	display: flex;
-	flex-direction: column;
-	gap: 2px;
-	max-width: 680px;
-	font-size: 15px;
-	line-height: 1.6;
-	color: var(--hl-text-2);
-	text-wrap: balance;
-}
-.kivun-hl-qhead__rule { display: block; }
+.kivun-hl-qhead__of { color: var(--hl-text-2); }
+.kivun-holland .kivun-hl-qhead__num { font-weight: 700; color: var(--hl-ink); }
 
 .kivun-hl-stage {
 	position: relative;
@@ -525,7 +550,7 @@ body.kivun-holland-page {
 	justify-content: center;
 	gap: 16px;
 	min-height: 200px;
-	margin-top: 24px;
+	margin-top: 16px;
 	padding: 32px 48px;
 	border: 1px solid var(--hl-stage-line);
 	border-radius: 28px;
@@ -755,21 +780,21 @@ body.kivun-holland-page {
 	.kivun-holland .kivun-hl-logo__img { height: 42px; }
 	.kivun-hl-body { padding: 24px 20px 28px; }
 
-	.kivun-hl-band--login { gap: 10px; padding: 28px 20px 24px; }
+	/* The panel over the form. */
+	.kivun-hl-login:not([hidden]) { grid-template-columns: minmax(0, 1fr); }
+	.kivun-hl-band--login { padding: 14px 20px 24px; border-bottom: 1px solid var(--hl-band-line); }
+	.kivun-holland .kivun-hl-login__logo .kivun-hl-logo__img { height: 42px; }
+	.kivun-hl-login__intro { margin-block: 0; padding-top: 18px; }
 	.kivun-holland .kivun-hl-title { font-size: 30px; line-height: 1.2; }
-	.kivun-hl-lead { font-size: 16px; }
-	.kivun-holland .kivun-hl-form { gap: 20px; }
+	.kivun-holland .kivun-hl-subtitle { margin: 4px 0 12px; font-size: 19px; }
+	.kivun-holland .kivun-hl-lead { font-size: 15px; line-height: 1.65; }
+	.kivun-holland .kivun-hl-form { padding: 24px 20px 28px; }
 	.kivun-hl-form__title { font-size: 20px; }
-	.kivun-hl-form__sub { font-size: 15px; }
-	.kivun-hl-fields { grid-template-columns: minmax(0, 1fr); }
 	.kivun-hl-info { gap: 10px; padding: 14px; }
 	.kivun-hl-info__text { font-size: 14px; }
 	.kivun-hl-alert--center { padding: 14px 16px; font-size: 15px; }
-	.kivun-hl-login.is-error .kivun-hl-band--login { padding: 24px 20px 20px; }
 	.kivun-hl-login.is-error .kivun-hl-lead { display: none; }
-	.kivun-holland .kivun-hl-login.is-error .kivun-hl-title { font-size: 28px; }
-	.kivun-hl-login.is-error .kivun-hl-form,
-	.kivun-hl-login.is-error .kivun-hl-fields { gap: 18px; }
+	.kivun-holland .kivun-hl-login.is-error .kivun-hl-subtitle { margin-bottom: 0; }
 
 	.kivun-hl-band--journey { padding: 24px 14px 20px; }
 	.kivun-hl-steps--lg .kivun-hl-steps__col { gap: 6px; width: 76px; }
@@ -793,10 +818,8 @@ body.kivun-holland-page {
 	.kivun-hl-progress__track { height: 6px; }
 
 	.kivun-hl-body--question { padding: 20px 18px 22px; }
-	.kivun-hl-qhead { gap: 0; }
-	.kivun-hl-pill { padding: 6px 14px; font-size: 14px; }
-	.kivun-hl-pill__part { display: none; }
-	.kivun-hl-qhead__rules { gap: 4px; margin-top: 10px; font-size: 13px; line-height: 1.55; }
+	.kivun-hl-qhead { font-size: 14px; }
+	.kivun-hl-qhead__sep { margin: 0 10px; }
 	.kivun-hl-stage { min-height: 190px; margin-top: 16px; padding: 24px 20px; border-radius: 24px; }
 	.kivun-hl-stage__text { font-size: 28px; }
 	.kivun-hl-opts { gap: 12px; margin-top: 16px; }

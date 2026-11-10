@@ -718,8 +718,16 @@ final class HollandTest extends TestCase {
 		// Three intros, and every question a screen of its own.
 		$this->assertSame( 3 + 216, substr_count( $html, 'data-hl-screen' ) );
 		$this->assertSame( 216, substr_count( $html, 'kivun-hl-page--single' ) );
-		$this->assertStringContainsString( '<span class="kivun-hl-pill__part">פעילויות · </span>שאלה 1 מתוך 72', $html );
-		$this->assertStringContainsString( '<span class="kivun-hl-pill__part">מקצועות · </span>שאלה 72 מתוך 72', $html );
+		$this->assertStringContainsString( '<span class="kivun-hl-qhead__part">פעילויות</span>', $html );
+		$this->assertStringContainsString( 'שאלה <b class="kivun-hl-qhead__num">1</b> מתוך 72', $html );
+		$this->assertStringContainsString( 'שאלה <b class="kivun-hl-qhead__num">72</b> מתוך 72', $html );
+
+		// The login: the title over the model, and the opening as two paragraphs, word for word.
+		$this->assertStringContainsString( '<h2 class="kivun-hl-title">שאלון הכוון תעסוקתי</h2>', $html );
+		$this->assertStringContainsString( '<p class="kivun-hl-subtitle">מודל הולנד</p>', $html );
+		$this->assertSame( 2, substr_count( $html, '<p class="kivun-hl-lead">' ) );
+		$this->assertStringContainsString( '<p class="kivun-hl-lead">השאלון נועד לבדוק את הנטיות המקצועיות שלך ולסייע בידך בבחירה ובהכוון מקצועי.</p>', $html );
+		$this->assertStringContainsString( '<p class="kivun-hl-lead">אנא קרא את ההוראות בדייקנות והקפד לענות על כל השאלות.</p>', $html );
 		$this->assertSame( 1, substr_count( $html, 'data-hl-finish' ) );
 		$this->assertStringContainsString( 'סיום השאלון', $html );
 

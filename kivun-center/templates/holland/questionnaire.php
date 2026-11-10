@@ -57,14 +57,29 @@ $kivun_hl_steps = static function ( int $current, string $size ) use ( $sections
 };
 ?>
 <div class="kivun-holland" dir="rtl" data-total="<?php echo esc_attr( (string) $total ); ?>" data-page="<?php echo esc_attr( (string) $page_id ); ?>">
-	<div class="kivun-hl-card">
+	<div class="kivun-hl-card is-login" data-hl-card>
 		<div class="kivun-hl-logo"><img class="kivun-hl-logo__img" src="<?php echo esc_url( Kivun_Holland::logo_url() ); ?>" alt="<?php esc_attr_e( 'מרכזי הכוון לתעסוקה ולימודים – כיוון ירושלים', 'kivun' ); ?>" width="500" height="200"></div>
 
 		<?php // ── Login ─────────────────────────────────────────────────── ?>
 		<div class="kivun-hl-login" data-hl-login>
+			<?php
+			// The opening, beside the form: the logo, the title on two lines
+			// with the model under it, and the client's two sentences each a
+			// paragraph of its own — the same words, set as the design sets them.
+			$kivun_hl_title = explode( ' – ', Kivun_Holland::title(), 2 );
+			$kivun_hl_intro = preg_split( '/(?<=\.)\s+/u', Kivun_Holland::intro(), -1, PREG_SPLIT_NO_EMPTY );
+			?>
 			<div class="kivun-hl-band kivun-hl-band--login">
-				<h2 class="kivun-hl-title"><?php echo esc_html( Kivun_Holland::title() ); ?></h2>
-				<p class="kivun-hl-lead"><?php echo esc_html( Kivun_Holland::intro() ); ?></p>
+				<div class="kivun-hl-login__logo"><img class="kivun-hl-logo__img" src="<?php echo esc_url( Kivun_Holland::logo_url() ); ?>" alt="<?php esc_attr_e( 'מרכזי הכוון לתעסוקה ולימודים – כיוון ירושלים', 'kivun' ); ?>" width="500" height="200"></div>
+				<div class="kivun-hl-login__intro">
+					<h2 class="kivun-hl-title"><?php echo esc_html( $kivun_hl_title[0] ); ?></h2>
+					<?php if ( isset( $kivun_hl_title[1] ) ) : ?>
+						<p class="kivun-hl-subtitle"><?php echo esc_html( $kivun_hl_title[1] ); ?></p>
+					<?php endif; ?>
+					<?php foreach ( $kivun_hl_intro as $kivun_hl_para ) : ?>
+						<p class="kivun-hl-lead"><?php echo esc_html( $kivun_hl_para ); ?></p>
+					<?php endforeach; ?>
+				</div>
 			</div>
 
 			<form class="kivun-hl-body kivun-hl-form" data-hl-form novalidate>
@@ -91,10 +106,7 @@ $kivun_hl_steps = static function ( int $current, string $size ) use ( $sections
 					<?php endforeach; ?>
 				</div>
 
-				<div class="kivun-hl-info">
-					<span class="kivun-hl-info__icon" aria-hidden="true">i</span>
-					<p class="kivun-hl-info__text"><?php esc_html_e( 'הפרטים נדרשים כדי לשמור את התשובות. אם תצא באמצע, היכנס שוב עם אותו טלפון ותעודת זהות ותמשיך מאותה נקודה.', 'kivun' ); ?></p>
-				</div>
+				<p class="kivun-hl-note"><?php esc_html_e( 'הפרטים נדרשים כדי לשמור את התשובות. אם תצא באמצע, היכנס שוב עם אותו טלפון ותעודת זהות ותמשיך מאותה נקודה.', 'kivun' ); ?></p>
 
 				<?php if ( Kivun_Privacy_Consent::asked() ) : ?>
 					<div class="kivun-hl-field">
@@ -183,13 +195,14 @@ $kivun_hl_steps = static function ( int $current, string $size ) use ( $sections
 					$kivun_hl_last = ( $kivun_hl_sec_i === $kivun_hl_parts - 1 && count( $kivun_hl_pages ) - 1 === $kivun_hl_page_i );
 					$kivun_hl_one  = ( 1 === count( $kivun_hl_nums ) );
 					/* translators: 1: question number within the part, 2: questions in the part. */
-					$kivun_hl_qof = sprintf( __( 'שאלה %1$d מתוך %2$d', 'kivun' ), $kivun_hl_page_i + 1, count( $kivun_hl_pages ) );
+					$kivun_hl_qof = sprintf( esc_html__( 'שאלה %1$s מתוך %2$d', 'kivun' ), '<b class="kivun-hl-qhead__num">' . (int) ( $kivun_hl_page_i + 1 ) . '</b>', count( $kivun_hl_pages ) );
 					?>
 					<div class="kivun-hl-screen kivun-hl-page<?php echo $kivun_hl_one ? ' kivun-hl-page--single' : ''; ?>" data-hl-screen data-hl-part-index="<?php echo esc_attr( (string) $kivun_hl_sec_i ); ?>" data-hl-label="<?php echo esc_attr( $kivun_hl_label ); ?>" hidden>
 						<div class="kivun-hl-body kivun-hl-body--question">
 							<div class="kivun-hl-qhead">
-								<span class="kivun-hl-pill"><span class="kivun-hl-pill__part"><?php echo esc_html( $kivun_hl_section['title'] ); ?> · </span><?php echo esc_html( $kivun_hl_qof ); ?></span>
-								<span class="kivun-hl-qhead__rules"><span class="kivun-hl-qhead__rule"><?php echo esc_html( $kivun_hl_section['yes'] ); ?></span><span class="kivun-hl-qhead__rule"><?php echo esc_html( $kivun_hl_section['no'] ); ?></span></span>
+								<span class="kivun-hl-qhead__part"><?php echo esc_html( $kivun_hl_section['title'] ); ?></span>
+								<span class="kivun-hl-qhead__sep" aria-hidden="true"></span>
+								<span class="kivun-hl-qhead__of"><?php echo $kivun_hl_qof; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped above; the number is an int. ?></span>
 							</div>
 
 							<?php foreach ( $kivun_hl_nums as $kivun_hl_num ) : ?>
