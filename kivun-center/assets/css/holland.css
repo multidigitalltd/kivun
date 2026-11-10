@@ -65,6 +65,16 @@
 .kivun-holland p:empty,
 .kivun-holland br { display: none !important; }
 
+/* ── The page itself (templates/holland/blank-page.php) ─────────────────── */
+
+/* No site header or footer: the handoff's frame around the card — its
+   #f3f1f1, and 48px above and below (24px on a phone). */
+body.kivun-holland-page {
+	margin: 0;
+	background: #f3f1f1;
+}
+.kivun-holland-page__main { padding: 48px 16px; }
+
 /* ── Card ─────────────────────────────────────────────────────────────── */
 
 .kivun-hl-card {
@@ -739,6 +749,7 @@
 /* ── Phone (the handoff's 390px frame) ────────────────────────────────── */
 
 @media (max-width: 600px) {
+	.kivun-holland-page__main { padding: 24px 16px; }
 	.kivun-hl-card { border-radius: 24px; }
 	.kivun-hl-logo { padding: 14px 18px 10px; }
 	.kivun-holland .kivun-hl-logo__img { height: 42px; }
