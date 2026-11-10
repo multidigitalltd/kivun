@@ -34,6 +34,7 @@
 	var LIT = 60;
 	var PICK = 100;
 
+	var card = root.querySelector('[data-hl-card]');
 	var login = root.querySelector('[data-hl-login]');
 	var form = root.querySelector('[data-hl-form]');
 	var alertBox = root.querySelector('[data-hl-alert]');
@@ -261,8 +262,17 @@
 		return screens.length - 1;
 	}
 
+	// The login carries its own logo, in the panel beside the form; the
+	// card's logo strip is for the screens after it.
+	function setLogin(on) {
+		login.hidden = !on;
+		if (card) {
+			card.classList.toggle('is-login', on);
+		}
+	}
+
 	function enterQuiz(index) {
-		login.hidden = true;
+		setLogin(false);
 		thanks.hidden = true;
 		quiz.hidden = false;
 		paintAnswers();
@@ -274,7 +284,7 @@
 		state = { lead: 0, token: '', responses: blank(), screen: 0 };
 		quiz.hidden = true;
 		thanks.hidden = true;
-		login.hidden = false;
+		setLogin(true);
 		if (message) {
 			alertBox.textContent = message;
 			alertBox.hidden = false;
@@ -284,7 +294,7 @@
 	function showThanks() {
 		forget();
 		quiz.hidden = true;
-		login.hidden = true;
+		setLogin(false);
 		thanks.hidden = false;
 		scrollToTop();
 		var heading = thanks.querySelector('[data-hl-focus]');
