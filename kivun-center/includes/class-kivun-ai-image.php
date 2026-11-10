@@ -23,6 +23,23 @@ class Kivun_AI_Image {
 	const ENDPOINT = 'https://api.openai.com/v1/images/generations';
 
 	/**
+	 * The image models the settings offer, the first one the default.
+	 *
+	 * The retired gpt-image-1 is not among them: OpenAI shut it down on
+	 * 23 October 2026, and every request for it since has come back "The
+	 * model 'gpt-image-1' does not exist" — which is what the console was
+	 * showing. A site still set to it is moved to the default by model().
+	 */
+	const MODELS = array( 'gpt-image-2', 'gpt-image-1.5', 'dall-e-3' );
+
+	/**
+	 * What to try when the chosen model is gone, in order. Models are retired
+	 * on OpenAI's schedule, not this plugin's, so a missing model falls through
+	 * to the next one rather than ending in an error nobody can act on.
+	 */
+	const FALLBACKS = array( 'gpt-image-2', 'gpt-image-1.5' );
+
+	/**
 	 * The cover's default shape: a wide strip rather than a 16:9 block.
 	 *
 	 * The hero on a content page is rendered at its own ratio — the stylesheet
@@ -121,38 +138,47 @@ class Kivun_AI_Image {
 			return new \WP_Error( 'kivun_ai_no_key', __( 'לא הוגדר מפתח API. הזינו אותו בהגדרות → Kivun Center.', 'kivun' ) );
 		}
 
-		$model = (string) Kivun_Admin_Settings::get( 'ai_image_model', 'gpt-image-1' );
-		$model = in_array( $model, array( 'gpt-image-1', 'dall-e-3' ), true ) ? $model : 'gpt-image-1';
+		$prompt = self::build_prompt( $title, $desc, $type, $style, $custom );
 
-		$body = array(
-			'model'   => $model,
-			'prompt'  => self::build_prompt( $title, $desc, $type, $style, $custom ),
-			'n'       => 1,
-			'size'    => self::size_for( $model ),
-			'quality' => self::quality_for( $model ),
-		);
-		if ( 'dall-e-3' === $model ) {
-			$body['response_format'] = 'b64_json';
+		// The chosen model first, then the fallbacks — each tried only when
+		// the one before it turns out not to exist any more.
+		foreach ( self::models_to_try() as $model ) {
+			$body = array(
+				'model'   => $model,
+				'prompt'  => $prompt,
+				'n'       => 1,
+				'size'    => self::size_for( $model ),
+				'quality' => self::quality_for( $model ),
+			);
+			if ( 'dall-e-3' === $model ) {
+				$body['response_format'] = 'b64_json';
+			}
+
+			$response = wp_remote_post(
+				self::ENDPOINT,
+				array(
+					// The newer models take longer over a wide, high-quality
+					// image than the old one did.
+					'timeout' => 120,
+					'headers' => array(
+						'Authorization' => 'Bearer ' . $key,
+						'Content-Type'  => 'application/json',
+					),
+					'body'    => wp_json_encode( $body ),
+				)
+			);
+
+			if ( is_wp_error( $response ) ) {
+				return $response;
+			}
+
+			$code = (int) wp_remote_retrieve_response_code( $response );
+			$data = json_decode( (string) wp_remote_retrieve_body( $response ), true );
+
+			if ( 200 === $code || ! self::model_missing( $code, $data ) ) {
+				break;
+			}
 		}
-
-		$response = wp_remote_post(
-			self::ENDPOINT,
-			array(
-				'timeout' => 60,
-				'headers' => array(
-					'Authorization' => 'Bearer ' . $key,
-					'Content-Type'  => 'application/json',
-				),
-				'body'    => wp_json_encode( $body ),
-			)
-		);
-
-		if ( is_wp_error( $response ) ) {
-			return $response;
-		}
-
-		$code = (int) wp_remote_retrieve_response_code( $response );
-		$data = json_decode( (string) wp_remote_retrieve_body( $response ), true );
 
 		if ( 200 !== $code ) {
 			return new \WP_Error( 'kivun_ai_api', self::friendly_error( $code, $data ) );
@@ -271,6 +297,45 @@ class Kivun_AI_Image {
 	}
 
 	/**
+	 * The configured model, or the default when the setting names one that is
+	 * no longer offered (gpt-image-1, shut down by OpenAI) or nothing at all.
+	 *
+	 * @return string
+	 */
+	public static function model(): string {
+		$model = (string) Kivun_Admin_Settings::get( 'ai_image_model', self::MODELS[0] );
+		return in_array( $model, self::MODELS, true ) ? $model : self::MODELS[0];
+	}
+
+	/**
+	 * The configured model followed by the fallbacks, each once.
+	 *
+	 * @return array<int,string>
+	 */
+	public static function models_to_try(): array {
+		return array_values( array_unique( array_merge( array( self::model() ), self::FALLBACKS ) ) );
+	}
+
+	/**
+	 * Whether a failed request failed because the model itself is gone —
+	 * retired, renamed, or not open to this account — rather than for a
+	 * reason the next model would hit too.
+	 *
+	 * @param int   $code HTTP status code.
+	 * @param mixed $data Decoded response body.
+	 * @return bool
+	 */
+	public static function model_missing( int $code, $data ): bool {
+		$err = is_array( $data ) && isset( $data['error'] ) && is_array( $data['error'] ) ? $data['error'] : array();
+		if ( 'model_not_found' === (string) ( $err['code'] ?? '' ) ) {
+			return true;
+		}
+
+		$msg = (string) ( $err['message'] ?? '' );
+		return ( 404 === $code || 400 === $code ) && '' !== $msg && false !== stripos( $msg, 'does not exist' ) && false !== stripos( $msg, 'model' );
+	}
+
+	/**
 	 * Turn an OpenAI API error into a clear Hebrew message.
 	 *
 	 * @param int   $code HTTP status code.
@@ -291,6 +356,13 @@ class Kivun_AI_Image {
 		}
 		if ( 'insufficient_quota' === $type || 429 === $code || ( '' !== $api_msg && false !== stripos( $api_msg, 'quota' ) ) ) {
 			return __( 'נגמרו הקרדיטים/המכסה בחשבון ה-OpenAI. יש לטעון קרדיטים ולנסות שוב.', 'kivun' );
+		}
+		// OpenAI opens its image models only to organisations it has verified.
+		if ( '' !== $api_msg && false !== stripos( $api_msg, 'verif' ) ) {
+			return __( 'OpenAI דורשת לאמת את הארגון כדי להשתמש במודל התמונות. יש להיכנס לחשבון ה-OpenAI ← Settings ← Organization ← Verify Organization, ואחרי האימות (עד כ-15 דקות) לנסות שוב.', 'kivun' );
+		}
+		if ( self::model_missing( $code, $data ) ) {
+			return __( 'מודל התמונות לא זמין בחשבון ה-OpenAI הזה. בחרו מודל אחר בהגדרות ← Kivun Center ← יצירת תמונות.', 'kivun' );
 		}
 		return '' !== $api_msg ? $api_msg : __( 'שגיאה בשירות ה-AI. נסו שוב מאוחר יותר.', 'kivun' );
 	}
