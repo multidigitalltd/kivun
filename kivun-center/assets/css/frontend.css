@@ -7876,3 +7876,49 @@ body.kivun-ty-open { overflow: hidden; }
 	.kivun-cc-console .kivun-tab-panel--list.kivun-tab-panel--list :is(.kivun-cc-leadfilters, .kivun-report-bar) > :is(.kivun-cc-btn, button):not(.kivun-mic) { flex: 1 1 calc(50% - 5px); }
 	.kivun-cc-console .kivun-tab-panel--list.kivun-tab-panel--list :is(.kivun-cc-leadfilters, .kivun-report-bar, .kivun-apps-filters, .kivun-mgr-bar) > :is(input, textarea) + .kivun-mic { flex: none; width: 36px; height: 36px; max-width: none; }
 }
+
+/* ── A workshop's sign-up, on its page ───────────────────────────────────────
+ * Until when this cycle takes sign-ups, or — once it has closed — that
+ * sign-ups go to the next cycle, and for a recurring workshop when it opens.
+ * Sky while open, the brand tint once it is the next cycle's turn.
+ * ───────────────────────────────────────────────────────────────────────── */
+.kivun-cycle {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-start;
+	gap: 6px 12px;
+	box-sizing: border-box;
+	margin: 0 0 18px;
+	padding: 14px 16px;
+	border-radius: 20px;
+	background: #e3f5fd;
+	color: #2e2e31;
+	font-size: 15px;
+	line-height: 1.5;
+	direction: rtl;
+	text-align: right;
+}
+.kivun-cycle--next { background: #fde8ed; }
+.kivun-cycle__tag {
+	flex: 1 1 100%;
+	font-size: 13px;
+	font-weight: 700;
+	color: #6b6b72;
+}
+.kivun-cycle__dot {
+	flex: none;
+	width: 10px;
+	height: 10px;
+	margin-top: 7px;
+	border-radius: 50%;
+	background: #5cc8f0;
+}
+.kivun-cycle--next .kivun-cycle__dot { background: #df2950; }
+.kivun-cycle__text { flex: 1 1 0; min-width: 0; }
+.kivun-cycle__title { display: block; font-size: 16px; font-weight: 700; }
+.kivun-cycle__body { display: block; }
+
+/* The recurring switch in the wizard's workshop card: the next-cycle date
+   only while it is on. */
+.kivun-cc-wizard .kivun-cc-sessrepeat { display: flex; flex-direction: column; gap: 16px; margin-top: 4px; }
+.kivun-cc-wizard .kivun-cc-sessrepeat:not(:has(.kivun-ses-switch:checked)) .kivun-cc-sessnext { display: none; }

@@ -24,6 +24,108 @@ class Kivun_Workshops {
 	public static function init(): void {
 		add_action( 'wp_ajax_kivun_submit_lead', array( __CLASS__, 'ajax_submit_lead' ) );
 		add_action( 'wp_ajax_nopriv_kivun_submit_lead', array( __CLASS__, 'ajax_submit_lead' ) );
+
+		// Where a workshop's sign-up stands, on its own page: a shortcode for
+		// a page built in Elementor, and above the content for one that is not.
+		add_shortcode( 'kivun_session_status', array( __CLASS__, 'session_status_shortcode' ) );
+		add_filter( 'the_content', array( __CLASS__, 'prepend_session_status' ) );
+	}
+
+	/**
+	 * Workshops whose notice is already on this page, so the shortcode and
+	 * the content filter never print it twice.
+	 *
+	 * @var array<int,bool>
+	 */
+	private static array $shown = array();
+
+	/**
+	 * The notice saying where a workshop's sign-up stands.
+	 *
+	 * Before the date: until when this cycle takes sign-ups. After it: that
+	 * sign-ups now go to the next cycle — and, for a recurring workshop
+	 * ("סדנה שוטפת") with a date set, when that cycle opens.
+	 *
+	 * @param int $post_id The workshop (kivun_session) post ID.
+	 * @return string Escaped HTML, or '' when there is nothing to say.
+	 */
+	public static function session_status_html( int $post_id ): string {
+		if ( 'kivun_session' !== get_post_type( $post_id ) ) {
+			return '';
+		}
+
+		$cycle = kivun_session_cycle( $post_id );
+		if ( 'none' === $cycle['state'] ) {
+			return '';
+		}
+
+		if ( 'open' === $cycle['state'] ) {
+			$tone  = 'open';
+			$title = sprintf(
+				/* translators: %s: the last day of sign-up, e.g. 20/11/2026. */
+				__( 'ההרשמה למחזור הנוכחי פתוחה עד %s', 'kivun' ),
+				kivun_display_date( $cycle['until'] )
+			);
+			$body = '';
+		} elseif ( '' !== $cycle['next'] ) {
+			$tone  = 'next';
+			$title = sprintf(
+				/* translators: %s: the day the next cycle opens, e.g. 01/12/2026. */
+				__( 'המחזור הבא נפתח ב־%s', 'kivun' ),
+				kivun_display_date( $cycle['next'] )
+			);
+			$body = __( 'ההרשמה למחזור הנוכחי נסגרה. אפשר להירשם כבר עכשיו — נשמור לך מקום במחזור הבא.', 'kivun' );
+		} else {
+			$tone  = 'next';
+			$title = __( 'ההרשמה למחזור הנוכחי נסגרה', 'kivun' );
+			$body  = __( 'אפשר להירשם כבר עכשיו למחזור הבא — נעדכן אותך כשייפתח.', 'kivun' );
+		}
+
+		self::$shown[ $post_id ] = true;
+
+		return sprintf(
+			'<div class="kivun-cycle kivun-cycle--%1$s" role="status">%2$s<span class="kivun-cycle__dot" aria-hidden="true"></span><div class="kivun-cycle__text"><strong class="kivun-cycle__title">%3$s</strong>%4$s</div></div>',
+			esc_attr( $tone ),
+			$cycle['recurring'] ? '<span class="kivun-cycle__tag">' . esc_html__( 'סדנה שוטפת', 'kivun' ) . '</span>' : '',
+			esc_html( $title ),
+			'' !== $body ? '<span class="kivun-cycle__body">' . esc_html( $body ) . '</span>' : ''
+		);
+	}
+
+	/**
+	 * `[kivun_session_status]`, or `[kivun_session_status id="123"]`.
+	 *
+	 * @param array|string $atts Shortcode attributes.
+	 * @return string
+	 */
+	public static function session_status_shortcode( $atts ): string {
+		$atts    = shortcode_atts( array( 'id' => 0 ), (array) $atts, 'kivun_session_status' );
+		$post_id = absint( $atts['id'] );
+		if ( ! $post_id ) {
+			$post_id = (int) get_the_ID();
+		}
+
+		return $post_id ? self::session_status_html( $post_id ) : '';
+	}
+
+	/**
+	 * Put the notice above a workshop's own content on its page, unless the
+	 * shortcode has already placed it.
+	 *
+	 * @param string $content The post content.
+	 * @return string
+	 */
+	public static function prepend_session_status( $content ) {
+		if ( ! is_singular( 'kivun_session' ) || ! in_the_loop() || ! is_main_query() ) {
+			return $content;
+		}
+
+		$post_id = (int) get_the_ID();
+		if ( ! $post_id || isset( self::$shown[ $post_id ] ) || has_shortcode( (string) $content, 'kivun_session_status' ) ) {
+			return $content;
+		}
+
+		return self::session_status_html( $post_id ) . $content;
 	}
 
 	/**
@@ -77,7 +179,14 @@ class Kivun_Workshops {
 		}
 
 		$post_type = get_post_type( $post_id );
-		if ( 'kivun_session' === $post_type && ! kivun_session_registration_open( $post_id ) ) {
+		$cycle     = 'kivun_session' === $post_type ? kivun_session_cycle( $post_id ) : array();
+		if ( 'kivun_session' === $post_type && ! kivun_session_registration_open( $post_id ) && '' !== ( $cycle['next'] ?? '' ) ) {
+			$msg = sprintf(
+				/* translators: %s: the day the next cycle opens, e.g. 01/12/2026. */
+				__( 'נרשמת למחזור הבא, שנפתח ב־%s. נעדכן אותך!', 'kivun' ),
+				kivun_display_date( $cycle['next'] )
+			);
+		} elseif ( 'kivun_session' === $post_type && ! kivun_session_registration_open( $post_id ) ) {
 			$msg = __( 'המחזור הנוכחי סגור — נרשמת לרשימה למחזור הבא. נעדכן אותך כשייפתח!', 'kivun' );
 		} elseif ( in_array( $post_type, array( 'kivun_workshop', 'kivun_session', 'kivun_event' ), true ) ) {
 			$msg = __( 'ההרשמה התקבלה! נציג יצור איתך קשר בהקדם.', 'kivun' );
