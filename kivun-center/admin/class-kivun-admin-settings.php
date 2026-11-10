@@ -305,7 +305,7 @@ class Kivun_Admin_Settings {
 				'crm_webhook_secret'         => sanitize_text_field( wp_unslash( $_POST['crm_webhook_secret'] ?? '' ) ),
 				'crm_webhook_headers'        => sanitize_textarea_field( wp_unslash( $_POST['crm_webhook_headers'] ?? '' ) ),
 				'crm_webhook_updates'        => ! empty( $_POST['crm_webhook_updates'] ),
-				'ai_image_model'             => sanitize_text_field( wp_unslash( $_POST['ai_image_model'] ?? 'gpt-image-1' ) ),
+				'ai_image_model'             => sanitize_text_field( wp_unslash( $_POST['ai_image_model'] ?? Kivun_AI_Image::MODELS[0] ) ),
 				'ai_image_quality'           => sanitize_key( wp_unslash( $_POST['ai_image_quality'] ?? 'medium' ) ),
 				'ai_image_width'             => absint( $_POST['ai_image_width'] ?? Kivun_AI_Image::DEFAULT_WIDTH ),
 				'ai_image_height'            => absint( $_POST['ai_image_height'] ?? Kivun_AI_Image::DEFAULT_HEIGHT ),
@@ -1067,10 +1067,13 @@ class Kivun_Admin_Settings {
 				<tr>
 					<th scope="row"><?php esc_html_e( 'מודל', 'kivun' ); ?></th>
 					<td>
+						<?php $kivun_model = Kivun_AI_Image::model(); ?>
 						<select name="ai_image_model">
-							<option value="gpt-image-1" <?php selected( $o( 'ai_image_model', 'gpt-image-1' ), 'gpt-image-1' ); ?>><?php esc_html_e( 'gpt-image-1 (מומלץ — איכות גבוהה)', 'kivun' ); ?></option>
-							<option value="dall-e-3" <?php selected( $o( 'ai_image_model', 'gpt-image-1' ), 'dall-e-3' ); ?>><?php esc_html_e( 'dall-e-3', 'kivun' ); ?></option>
+							<option value="gpt-image-2" <?php selected( $kivun_model, 'gpt-image-2' ); ?>><?php esc_html_e( 'gpt-image-2 (מומלץ)', 'kivun' ); ?></option>
+							<option value="gpt-image-1.5" <?php selected( $kivun_model, 'gpt-image-1.5' ); ?>><?php esc_html_e( 'gpt-image-1.5 (OpenAI מפסיקה אותו ב-1/12/2026)', 'kivun' ); ?></option>
+							<option value="dall-e-3" <?php selected( $kivun_model, 'dall-e-3' ); ?>><?php esc_html_e( 'dall-e-3', 'kivun' ); ?></option>
 						</select>
+						<p class="description"><?php esc_html_e( 'אם המודל שנבחר כבר לא קיים ב-OpenAI, התמונה נוצרת אוטומטית במודל הבא ברשימה. gpt-image-1 הופסק ב-23/10/2026.', 'kivun' ); ?></p>
 					</td>
 				</tr>
 				<tr>
