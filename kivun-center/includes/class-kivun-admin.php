@@ -145,6 +145,19 @@ class Kivun_Admin {
 					</p>
 				</td>
 			</tr>
+			<tr>
+				<th><?php esc_html_e( 'סדנה קבועה (שוטפת)', 'kivun' ); ?></th>
+				<td>
+					<label><input type="checkbox" name="_kivun_session_recurring" value="1" <?php checked( '1', (string) $f( '_kivun_session_recurring' ) ); ?>> <?php esc_html_e( 'חוזרת במחזורים', 'kivun' ); ?></label>
+				</td>
+			</tr>
+			<tr>
+				<th><?php esc_html_e( 'המחזור הבא נפתח ב־', 'kivun' ); ?></th>
+				<td>
+					<input type="date" name="_kivun_session_next_open" value="<?php echo esc_attr( $f( '_kivun_session_next_open' ) ); ?>">
+					<p class="description"><?php esc_html_e( 'לסדנה קבועה: אחרי תאריך התוקף, דף הסדנה מציג מתי המחזור הבא נפתח.', 'kivun' ); ?></p>
+				</td>
+			</tr>
 		</table>
 		<?php
 	}
@@ -1390,8 +1403,14 @@ class Kivun_Admin {
 				'_kivun_capacity'            => 'absint',
 				'_kivun_contact_email'       => 'email',
 				'_kivun_session_valid_until' => 'text',
+				'_kivun_session_recurring'   => 'text',
+				'_kivun_session_next_open'   => 'text',
 			) as $key => $type ) {
 				self::save_field( $post_id, $key, $type );
+			}
+			// The next-cycle date belongs to a recurring workshop only.
+			if ( '1' !== (string) get_post_meta( $post_id, '_kivun_session_recurring', true ) ) {
+				update_post_meta( $post_id, '_kivun_session_next_open', '' );
 			}
 		}
 

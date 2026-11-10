@@ -240,6 +240,8 @@ class Kivun_Content_Creator {
 			'session_location' => '',
 			'session_capacity' => '',
 			'session_valid'    => '',
+			'session_repeat'   => '',
+			'session_next'     => '',
 			'event_date'       => '',
 			'event_time'       => '',
 			'event_location'   => '',
@@ -293,6 +295,8 @@ class Kivun_Content_Creator {
 			$v['session_location'] = (string) get_post_meta( $group_posts['session'], '_kivun_session_location', true );
 			$v['session_capacity'] = (string) get_post_meta( $group_posts['session'], '_kivun_capacity', true );
 			$v['session_valid']    = (string) get_post_meta( $group_posts['session'], '_kivun_session_valid_until', true );
+			$v['session_repeat']   = (string) get_post_meta( $group_posts['session'], '_kivun_session_recurring', true );
+			$v['session_next']     = (string) get_post_meta( $group_posts['session'], '_kivun_session_next_open', true );
 		}
 		if ( isset( $group_posts['event'] ) ) {
 			$eid                 = (int) $group_posts['event'];
@@ -580,7 +584,10 @@ class Kivun_Content_Creator {
 							<input type="number" name="session_capacity" class="kivun-lp-input" min="0" value="<?php echo esc_attr( $v['session_capacity'] ); ?>">
 							<label class="kivun-lp-sub"><?php esc_html_e( 'תוקף ההרשמה (עד תאריך)', 'kivun' ); ?></label>
 							<input type="date" name="session_valid_until" class="kivun-lp-input" dir="ltr" value="<?php echo esc_attr( $v['session_valid'] ); ?>">
-							<p class="kivun-lp-hint"><?php esc_html_e( 'אחרי תאריך זה ההרשמה נסגרת. לפתיחת מחזור חדש — עדכנו את התאריך.', 'kivun' ); ?></p>
+							<label class="kivun-lp-sub"><input type="checkbox" name="session_recurring" value="1" <?php checked( '1', $v['session_repeat'] ); ?>> <?php esc_html_e( 'סדנה קבועה (שוטפת) — חוזרת במחזורים', 'kivun' ); ?></label>
+							<label class="kivun-lp-sub"><?php esc_html_e( 'המחזור הבא נפתח ב־', 'kivun' ); ?></label>
+							<input type="date" name="session_next_open" class="kivun-lp-input" dir="ltr" value="<?php echo esc_attr( $v['session_next'] ); ?>">
+							<p class="kivun-lp-hint"><?php esc_html_e( 'אחרי תאריך התוקף ההרשמה נשמרת למחזור הבא. בסדנה קבועה הדף מציג מתי המחזור הבא נפתח. לפתיחת מחזור חדש — עדכנו את התאריכים.', 'kivun' ); ?></p>
 						</div>
 
 						<!-- Event-only extras -->
@@ -1242,6 +1249,12 @@ class Kivun_Content_Creator {
 						'_kivun_capacity'            => absint( $_POST['session_capacity'] ?? 0 ),
 						'_kivun_contact_email'       => $s['email'],
 						'_kivun_session_valid_until' => sanitize_text_field( wp_unslash( $_POST['session_valid_until'] ?? '' ) ),
+						// A recurring workshop ("סדנה שוטפת") and the day its
+						// next cycle opens. The date is kept only while the
+						// switch is on, so a workshop switched back to a
+						// one-off does not go on announcing a cycle.
+						'_kivun_session_recurring'   => empty( $_POST['session_recurring'] ) ? '' : '1',
+						'_kivun_session_next_open'   => empty( $_POST['session_recurring'] ) ? '' : self::valid_date( sanitize_text_field( wp_unslash( $_POST['session_next_open'] ?? '' ) ) ),
 					),
 					$cta
 				),
@@ -3519,11 +3532,31 @@ class Kivun_Content_Creator {
 									<input type="number" id="kivun-ccf-session-capacity" name="session_capacity" class="kivun-cc-input kivun-cc-input--lg" min="0" value="<?php echo esc_attr( $v['session_capacity'] ); ?>">
 								</div>
 								<div class="kivun-cc-fieldset">
-									<label class="kivun-cc-sub" for="kivun-ccf-session-valid"><?php esc_html_e( 'תוקף ההרשמה (עד תאריך)', 'kivun' ); ?></label>
+									<label class="kivun-cc-sub" for="kivun-ccf-session-valid"><?php esc_html_e( 'ההרשמה למחזור הנוכחי פתוחה עד', 'kivun' ); ?></label>
 									<input type="date" id="kivun-ccf-session-valid" name="session_valid_until" class="kivun-cc-input kivun-cc-input--lg" dir="ltr" value="<?php echo esc_attr( $v['session_valid'] ); ?>">
 								</div>
 							</div>
-							<p class="kivun-cc-hint"><?php esc_html_e( 'אחרי תאריך זה המחזור הנוכחי נסגר; ההרשמה נשמרת למחזור הבא. עדכון תאריך פותח מחזור חדש.', 'kivun' ); ?></p>
+							<?php
+							/*
+							 * "סדנה שוטפת": a workshop that runs in cycles. Switched
+							 * on, it asks when the next cycle opens, and the page
+							 * says so once this cycle's date has passed. A block,
+							 * not a span, for the switch: it holds a field set, and
+							 * wpautop() would split a block out of an inline one.
+							 */
+							?>
+							<div class="kivun-cc-sessrepeat">
+								<label class="kivun-cc-optcheck kivun-cf-toggle">
+									<input type="checkbox" name="session_recurring" value="1" class="kivun-ses-switch" <?php checked( '1', $v['session_repeat'] ); ?>>
+									<span class="kivun-cf-track" aria-hidden="true"></span>
+									<span><?php esc_html_e( 'סדנה קבועה (שוטפת) — חוזרת במחזורים', 'kivun' ); ?></span>
+								</label>
+								<div class="kivun-cc-fieldset kivun-cc-sessnext">
+									<label class="kivun-cc-sub" for="kivun-ccf-session-next"><?php esc_html_e( 'המחזור הבא נפתח ב־', 'kivun' ); ?></label>
+									<input type="date" id="kivun-ccf-session-next" name="session_next_open" class="kivun-cc-input kivun-cc-input--lg" dir="ltr" value="<?php echo esc_attr( $v['session_next'] ); ?>">
+								</div>
+							</div>
+							<p class="kivun-cc-hint"><?php esc_html_e( 'עד התאריך נרשמים למחזור הנוכחי. אחריו ההרשמה ממשיכה ונשמרת למחזור הבא — ובסדנה קבועה הדף מציג מתי הוא נפתח. כשמחזור חדש נפתח, מעדכנים את התאריכים.', 'kivun' ); ?></p>
 						</div>
 
 						<div class="kivun-cc-card kivun-cc-section" data-step="3" style="order:4" data-type="event" <?php echo isset( $group_posts['event'] ) ? '' : 'hidden'; ?>>
@@ -4252,6 +4285,11 @@ class Kivun_Content_Creator {
 			if ( 'kivun_workshop' === $p->post_type && Kivun_Custom_Forms::enabled( (int) $p->ID ) ) {
 				$groups[ $g ]['form'] = count( Kivun_Custom_Forms::fields( (int) $p->ID ) );
 			}
+			// A recurring workshop, and when its next cycle opens if that is
+			// set and still ahead.
+			if ( 'kivun_session' === $p->post_type && kivun_session_is_recurring( (int) $p->ID ) ) {
+				$groups[ $g ]['repeat'] = kivun_session_cycle( (int) $p->ID )['next'];
+			}
 			// A group counts as published as soon as any of its posts is live;
 			// short of that, report the most informative state it is actually
 			// in — "scheduled" and "private" both say more than "draft".
@@ -4373,6 +4411,12 @@ class Kivun_Content_Creator {
 				if ( isset( $g['form'] ) ) {
 					/* translators: %d: number of questions on the landing page's own form. */
 					$meta[] = sprintf( _n( 'טופס מותאם · %d שאלה', 'טופס מותאם · %d שאלות', (int) $g['form'], 'kivun' ), (int) $g['form'] );
+				}
+				if ( isset( $g['repeat'] ) ) {
+					$meta[] = '' !== $g['repeat']
+						/* translators: %s: the day the workshop's next cycle opens. */
+						? sprintf( __( 'סדנה שוטפת · המחזור הבא %s', 'kivun' ), kivun_display_date( (string) $g['repeat'] ) )
+						: __( 'סדנה שוטפת', 'kivun' );
 				}
 				if ( ! empty( $g['scheduled'] ) && 'future' === $g['status'] ) {
 					/* translators: %s: date and time the content goes live. */

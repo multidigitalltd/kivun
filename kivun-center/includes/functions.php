@@ -85,6 +85,69 @@ function kivun_session_registration_open( int $post_id ): bool {
 }
 
 /**
+ * Whether a workshop is a recurring one ("סדנה שוטפת"): it runs in cycles,
+ * and once a cycle's sign-up date passes, sign-ups go to the next one.
+ *
+ * @param int $post_id The session (kivun_session) post ID.
+ * @return bool
+ */
+function kivun_session_is_recurring( int $post_id ): bool {
+	return '1' === (string) get_post_meta( $post_id, '_kivun_session_recurring', true );
+}
+
+/**
+ * Where a workshop's sign-up stands, for the notice on its page and the
+ * message after signing up.
+ *
+ * 'open'    — the current cycle takes sign-ups until `until`.
+ * 'next'    — the current cycle has closed; sign-ups are for the next one,
+ *             which opens on `next` when a recurring workshop names a date
+ *             still ahead (otherwise `next` is '').
+ * 'none'    — no sign-up date at all, so nothing to say.
+ *
+ * @param int $post_id The session (kivun_session) post ID.
+ * @return array{state:string,until:string,next:string,recurring:bool}
+ */
+function kivun_session_cycle( int $post_id ): array {
+	$until     = trim( (string) get_post_meta( $post_id, '_kivun_session_valid_until', true ) );
+	$recurring = kivun_session_is_recurring( $post_id );
+	$next      = $recurring ? trim( (string) get_post_meta( $post_id, '_kivun_session_next_open', true ) ) : '';
+	$today     = current_time( 'Y-m-d' );
+
+	// A next-cycle date that has already gone by says nothing true: the
+	// cycle it named has started and the dates were not moved on yet.
+	if ( '' !== $next && $next < $today ) {
+		$next = '';
+	}
+
+	if ( '' === $until ) {
+		$state = 'none';
+	} elseif ( $today <= $until ) {
+		$state = 'open';
+	} else {
+		$state = 'next';
+	}
+
+	return array(
+		'state'     => $state,
+		'until'     => $until,
+		'next'      => $next,
+		'recurring' => $recurring,
+	);
+}
+
+/**
+ * A stored Y-m-d date as the site shows dates to visitors: 20/11/2026.
+ *
+ * @param string $ymd A date as stored.
+ * @return string The date for display, or '' when it is not a date.
+ */
+function kivun_display_date( string $ymd ): string {
+	$when = DateTime::createFromFormat( '!Y-m-d', trim( $ymd ) );
+	return $when ? $when->format( 'd/m/Y' ) : '';
+}
+
+/**
  * Whether an event is still open for registration.
  *
  * Registration closes permanently once the event date (_kivun_event_date) has
