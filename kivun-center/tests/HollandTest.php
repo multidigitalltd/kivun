@@ -684,6 +684,54 @@ final class HollandTest extends TestCase {
 		$this->assertStringContainsString( 'name="name"', $html );
 	}
 
+	// ── The page around it ────────────────────────────────────────────────────
+
+	/**
+	 * The page with the shortcode is recognised whether the shortcode is in
+	 * its content or in an Elementor Shortcode widget — that is how it gets
+	 * the page without the site's header and footer.
+	 *
+	 * @return void
+	 */
+	public function test_the_questionnaire_page_is_recognised(): void {
+		$in_content = (object) array(
+			'ID'           => 21,
+			'post_content' => 'פתיחה [kivun_holland] סוף',
+		);
+		$in_builder = (object) array(
+			'ID'           => 22,
+			'post_content' => '',
+		);
+		Kivun_Test_State::$meta[22]['_elementor_data'] = '[{"widgetType":"shortcode","settings":{"shortcode":"[kivun_holland]"}}]';
+		$other = (object) array(
+			'ID'           => 23,
+			'post_content' => '[kivun_jobs]',
+		);
+
+		$this->assertTrue( Kivun_Holland::page_has_questionnaire( $in_content ) );
+		$this->assertTrue( Kivun_Holland::page_has_questionnaire( $in_builder ) );
+		$this->assertFalse( Kivun_Holland::page_has_questionnaire( $other ) );
+		$this->assertFalse( Kivun_Holland::page_has_questionnaire( null ) );
+	}
+
+	/**
+	 * The page's own template draws the content and WordPress's head and
+	 * footer hooks — what styles and scripts need — and none of the theme's
+	 * header, footer or title.
+	 *
+	 * @return void
+	 */
+	public function test_the_page_has_no_site_header_or_footer(): void {
+		$tpl = (string) file_get_contents( KIVUN_DIR . 'templates/holland/blank-page.php' );
+
+		foreach ( array( 'wp_head()', 'wp_body_open()', 'the_content()', 'wp_footer()', "body_class( 'kivun-holland-page' )" ) as $needed ) {
+			$this->assertStringContainsString( $needed, $tpl );
+		}
+		foreach ( array( 'get_header', 'get_footer', 'the_title', 'get_template_part' ) as $left_out ) {
+			$this->assertStringNotContainsString( $left_out, $tpl );
+		}
+	}
+
 	// ── The representative's report ───────────────────────────────────────────
 
 	/**

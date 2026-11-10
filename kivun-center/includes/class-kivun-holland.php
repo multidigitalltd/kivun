@@ -74,6 +74,10 @@ class Kivun_Holland {
 
 		add_action( 'wp_enqueue_scripts', array( __CLASS__, 'enqueue_for_page' ), 20 );
 
+		// The questionnaire's page stands on its own: no site header, footer
+		// or page title around the card.
+		add_filter( 'template_include', array( __CLASS__, 'blank_template' ), 99 );
+
 		// The representative's printable report. Logged-in staff only: there
 		// is no nopriv hook, and the handler checks the leads capability too.
 		add_action( 'wp_ajax_kivun_holland_report', array( __CLASS__, 'ajax_report' ) );
@@ -88,17 +92,55 @@ class Kivun_Holland {
 	 * @return void
 	 */
 	public static function enqueue_for_page(): void {
-		if ( ! is_singular() ) {
-			return;
-		}
-		$post = get_post();
-		if ( ! $post instanceof \WP_Post ) {
-			return;
-		}
-		$haystack = (string) $post->post_content . (string) get_post_meta( $post->ID, '_elementor_data', true );
-		if ( false !== strpos( $haystack, '[kivun_holland' ) ) {
+		if ( is_singular() && self::page_has_questionnaire( get_post() ) ) {
 			self::enqueue();
 		}
+	}
+
+	/**
+	 * Whether a post carries the questionnaire's shortcode — in its content,
+	 * or in Elementor's data, where a Shortcode widget keeps it.
+	 *
+	 * @param mixed $post The post.
+	 * @return bool
+	 */
+	public static function page_has_questionnaire( $post ): bool {
+		if ( ! is_object( $post ) || empty( $post->ID ) ) {
+			return false;
+		}
+		$haystack = (string) ( $post->post_content ?? '' ) . (string) get_post_meta( (int) $post->ID, '_elementor_data', true );
+		return false !== strpos( $haystack, '[kivun_holland' );
+	}
+
+	/**
+	 * The page that holds the questionnaire is drawn without the site's
+	 * header, footer and page title — the questionnaire card is the page.
+	 *
+	 * The same idea as Elementor's own "Canvas" template: WordPress's head
+	 * and footer hooks still run, so every style and script the page needs
+	 * (Elementor's included) still loads; only the theme's chrome is left
+	 * out. A theme can supply its own kivun/holland/blank-page.php.
+	 *
+	 * @param string $template The template WordPress chose.
+	 * @return string
+	 */
+	public static function blank_template( $template ) {
+		if ( ! is_singular() || ! self::page_has_questionnaire( get_post() ) ) {
+			return $template;
+		}
+
+		/**
+		 * Whether the questionnaire's page is drawn without the site's header
+		 * and footer. Default true.
+		 *
+		 * @param bool $blank Whether to leave them out.
+		 */
+		if ( ! apply_filters( 'kivun_holland_blank_page', true ) ) {
+			return $template;
+		}
+
+		$theme = get_stylesheet_directory() . '/kivun/holland/blank-page.php';
+		return file_exists( $theme ) ? $theme : KIVUN_DIR . 'templates/holland/blank-page.php';
 	}
 
 	/**
