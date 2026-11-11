@@ -304,6 +304,12 @@ class Kivun_Export {
 		);
 		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
 
+		// A Holland row's code and scores were written when it was finished,
+		// by the rules of the day; the dashboard and the report work them out
+		// afresh from the answers. The file does the same, so it never
+		// disagrees with them (a four-letter code from before 2.60.0, say).
+		$rows = array_map( array( 'Kivun_Holland', 'refresh_row' ), (array) $rows );
+
 		$filename = ( $post_ids ? 'registrations-' . implode( '-', $post_ids ) : 'registrations' )
 			. '-' . self::range_slug( $range ) . '.csv';
 

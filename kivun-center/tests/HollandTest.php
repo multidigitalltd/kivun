@@ -982,4 +982,40 @@ final class HollandTest extends TestCase {
 		$this->assertSame( 0, substr_count( $none, 'class="r-rest__row"' ) );
 		$this->assertSame( 6, substr_count( $none, 'class="r-card"' ) );
 	}
+
+	/**
+	 * A row saved under the old rules — a four-letter code — reads as the
+	 * dashboard and the report show it once refreshed; other rows pass
+	 * through untouched.
+	 *
+	 * @return void
+	 */
+	public function test_an_old_row_is_refreshed(): void {
+		$responses = $this->answers( array( 1, 13, 25, 37 ) );
+		$stored    = Kivun_Holland::stored_answers( self::ID, $responses, true, 4, '2026-11-01 10:00:00' );
+		foreach ( $stored as $i => $entry ) {
+			if ( 'holland_code' === $entry['key'] ) {
+				$stored[ $i ]['value'] = 'RIAS';
+			}
+		}
+		$row = array(
+			'type'    => 'holland',
+			'message' => "תעודת זהות: 000000018\nקוד הולנד: RIAS (שוויון במקום השלישי)",
+			'answers' => (string) wp_json_encode( $stored ),
+		);
+
+		$fresh = Kivun_Holland::refresh_row( $row );
+		$this->assertStringContainsString( 'קוד הולנד: RIA' . "\n", $fresh['message'] );
+		$this->assertStringNotContainsString( 'RIAS', $fresh['message'] . $fresh['answers'] );
+		$again = Kivun_Holland::read_stored( $fresh['answers'] );
+		$this->assertSame( $responses, $again['responses'] );
+		$this->assertSame( 4, $again['seq'] );
+		$this->assertSame( '2026-11-01 10:00:00', $again['done_at'] );
+
+		$other = array(
+			'type'    => 'form',
+			'message' => 'x',
+		);
+		$this->assertSame( $other, Kivun_Holland::refresh_row( $other ) );
+	}
 }

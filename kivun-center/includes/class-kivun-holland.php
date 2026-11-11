@@ -1061,6 +1061,30 @@ class Kivun_Holland {
 	}
 
 	/**
+	 * A lead row with its summary and stored result worked out again from
+	 * the answers, by today's rules. Rows of any other type pass through.
+	 *
+	 * What a row carries was computed when it was saved; a change of rules
+	 * since (the code became three letters in 2.60.0) would otherwise leave
+	 * old rows saying something the dashboard and the report no longer do.
+	 *
+	 * @param array<string,mixed> $row A lead row, as an array.
+	 * @return array<string,mixed>
+	 */
+	public static function refresh_row( array $row ): array {
+		if ( self::LEAD_TYPE !== (string) ( $row['type'] ?? '' ) ) {
+			return $row;
+		}
+		$stored = self::read_stored( (string) ( $row['answers'] ?? '' ) );
+		if ( '' === $stored['id'] ) {
+			return $row;
+		}
+		$row['message'] = self::message( $stored['id'], $stored['responses'], $stored['done'] );
+		$row['answers'] = (string) wp_json_encode( self::stored_answers( $stored['id'], $stored['responses'], $stored['done'], $stored['seq'], $stored['done_at'] ) );
+		return $row;
+	}
+
+	/**
 	 * The unfinished row this person already has, if any.
 	 *
 	 * Matched on the phone and the ID number together. A finished row is
