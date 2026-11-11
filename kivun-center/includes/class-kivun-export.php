@@ -278,6 +278,11 @@ class Kivun_Export {
 		if ( '' !== $slice['type'] ) {
 			$where .= ' AND r.type = %s';
 			$args[] = $slice['type'];
+		} else {
+			// "All types" is every lead the leads table shows — and the
+			// Holland questionnaire is not among them; it is exported by
+			// asking for it by name.
+			$where .= " AND r.type <> 'holland'";
 		}
 		if ( '' !== $slice['campaign'] ) {
 			// Matched on the campaign's own utm value, which is what a lead
@@ -298,6 +303,12 @@ class Kivun_Export {
 			ARRAY_A
 		);
 		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+
+		// A Holland row's code and scores were written when it was finished,
+		// by the rules of the day; the dashboard and the report work them out
+		// afresh from the answers. The file does the same, so it never
+		// disagrees with them (a four-letter code from before 2.60.0, say).
+		$rows = array_map( array( 'Kivun_Holland', 'refresh_row' ), (array) $rows );
 
 		$filename = ( $post_ids ? 'registrations-' . implode( '-', $post_ids ) : 'registrations' )
 			. '-' . self::range_slug( $range ) . '.csv';

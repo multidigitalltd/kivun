@@ -660,7 +660,6 @@ class Kivun_Admin {
 			'event'        => __( 'אירוע', 'kivun' ),
 			'form'         => __( 'טופס באתר', 'kivun' ),
 			'jobs_board'   => __( 'לוח משרות', 'kivun' ),
-			'holland'      => __( 'שאלון הולנד', 'kivun' ),
 		);
 	}
 
@@ -1913,7 +1912,9 @@ class Kivun_Admin {
 		$reg_statuses = self::reg_statuses();
 		$type_labels  = self::reg_type_labels();
 
-		$conds = array();
+		// The Holland questionnaire's participants are managed on a
+		// dashboard of their own ([kivun_holland_dashboard]), not here.
+		$conds = array( "r.type <> 'holland'" );
 		if ( $course_filter ) {
 			// A course and the landing page built for it are one piece of
 			// content; the enquiries belong to it, not to whichever of the two
@@ -1950,7 +1951,7 @@ class Kivun_Admin {
 			 $limit_sql"
 		);
 		$found = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}kivun_registrations r $where" );
-		$total = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}kivun_registrations" );
+		$total = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}kivun_registrations WHERE type <> 'holland'" );
 		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
 		$total_pages = max( 1, (int) ceil( $found / $per_page ) );
@@ -2099,9 +2100,6 @@ class Kivun_Admin {
 								<td><?php echo esc_html( ! empty( $r->privacy_consent ) ? '✓' : '—' ); ?></td>
 							<td>
 								<?php echo kivun_submission_details( (string) ( $r->message ?? '' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Helper escapes the saved text and labels. ?>
-								<?php if ( Kivun_Holland::has_report( $r ) && Kivun_Content_Creator::can_manage_leads() ) : ?>
-									<a class="button button-small" href="<?php echo esc_url( Kivun_Holland::report_url( (int) $r->id ) ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'דוח להדפסה', 'kivun' ); ?></a>
-								<?php endif; ?>
 							</td>
 							<td>
 								<?php

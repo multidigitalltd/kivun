@@ -166,7 +166,6 @@ final class HollandTest extends TestCase {
 			$score['totals']
 		);
 		$this->assertSame( 'SEA', $score['code'] );
-		$this->assertFalse( $score['tie'] );
 		$this->assertSame( 36, $score['max'] );
 		$this->assertSame( 12, $score['sections']['skills']['S'] );
 		$this->assertSame( 0, $score['sections']['professions']['E'] );
@@ -174,23 +173,34 @@ final class HollandTest extends TestCase {
 	}
 
 	/**
-	 * A type that scored the same as the third is part of the code too, so a
-	 * tie for third gives four letters (or more); equal scores are listed in
+	 * The code is three letters, never four. Equal totals are told apart by
+	 * the professions part, then activities, then skills, and only then by
 	 * R I A S E C order.
 	 *
 	 * @return void
 	 */
-	public function test_a_tie_for_third_gives_a_longer_code(): void {
+	public function test_the_code_is_always_three_letters(): void {
+		// Everything equal everywhere: the fixed order is all that is left.
 		$all = Kivun_Holland::score( str_repeat( 'y', 216 ) );
-		$this->assertSame( 'RIASEC', $all['code'] );
-		$this->assertTrue( $all['tie'] );
+		$this->assertSame( 'RIA', $all['code'] );
+		$this->assertArrayNotHasKey( 'tie', $all );
 
-		// S 20, A 13, then E and C level on 12: both are the third letter.
-		$score = Kivun_Holland::score( $this->answers( array_merge( range( 37, 48 ), range( 109, 116 ), range( 25, 36 ), array( 97 ), range( 49, 60 ), range( 61, 72 ) ) ) );
-		$this->assertSame( 'SAEC', $score['code'] );
-		$this->assertTrue( $score['tie'] );
-		$this->assertSame( array( 'S', 'A', 'E', 'C', 'R', 'I' ), Kivun_Holland::rank( $score['totals'] ) );
-		$this->assertStringContainsString( 'קוד הולנד: SAEC (שוויון במקום השלישי)', Kivun_Holland::message( self::ID, $this->answers( array_merge( range( 37, 48 ), range( 109, 116 ), range( 25, 36 ), array( 97 ), range( 49, 60 ), range( 61, 72 ) ) ), true ) );
+		// S 20, A 12 + 1, then E and C level on 12. E's twelve are all
+		// activities, C's all professions: the professions part decides.
+		$yes   = array_merge( range( 37, 48 ), range( 109, 116 ), range( 25, 36 ), array( 97 ), range( 49, 60 ), range( 205, 216 ) );
+		$score = Kivun_Holland::score( $this->answers( $yes ) );
+		$this->assertSame( 12, $score['totals']['E'] );
+		$this->assertSame( 12, $score['totals']['C'] );
+		$this->assertSame( 'SAC', $score['code'] );
+		$this->assertSame( array( 'S', 'A', 'C', 'E', 'R', 'I' ), Kivun_Holland::rank( $score['totals'], $score['sections'] ) );
+		$this->assertStringContainsString( "קוד הולנד: SAC\n", Kivun_Holland::message( self::ID, $this->answers( $yes ), true ) );
+
+		// Level on professions as well (6 each): activities decide — E has
+		// six there, C none (its other six are skills).
+		$yes   = array_merge( range( 37, 48 ), range( 109, 116 ), range( 25, 36 ), array( 97 ), range( 49, 54 ), range( 193, 198 ), range( 205, 210 ), range( 133, 138 ) );
+		$score = Kivun_Holland::score( $this->answers( $yes ) );
+		$this->assertSame( $score['totals']['E'], $score['totals']['C'] );
+		$this->assertSame( 'SAE', $score['code'] );
 	}
 
 	/**
@@ -205,7 +215,6 @@ final class HollandTest extends TestCase {
 
 		$none = Kivun_Holland::score( str_repeat( 'n', 216 ) );
 		$this->assertSame( '', $none['code'] );
-		$this->assertFalse( $none['tie'] );
 		$this->assertStringContainsString( 'קוד הולנד: —', Kivun_Holland::message( self::ID, str_repeat( 'n', 216 ), true ) );
 	}
 
@@ -890,14 +899,14 @@ final class HollandTest extends TestCase {
 	}
 
 	/**
-	 * The report: the person, the profile in colour, a column for every type,
-	 * a card for each leading type with its professions — those answered
-	 * "yes" first and ticked — the other types, and the part-by-part table.
+	 * The report, in the order of the client's document: (1) tendencies and
+	 * the Holland code, (2) the three-letter code with a line on each of its
+	 * domains, (3) the table and the chart, (4) all six types explained.
 	 *
 	 * @return void
 	 */
 	public function test_the_report(): void {
-		// S 25 (183 is a profession: יועץ זוגי או משפחתי), E 12, A 6.
+		// S 25, E 12, A 6.
 		$html = $this->report( array_merge( range( 37, 48 ), range( 109, 120 ), array( 183 ), range( 49, 60 ), range( 25, 30 ) ) );
 		$text = html_entity_decode( (string) preg_replace( '/\s+/u', ' ', wp_strip_all_tags( $html ) ) );
 
@@ -908,48 +917,105 @@ final class HollandTest extends TestCase {
 		$this->assertStringContainsString( self::ID, $text );
 		$this->assertStringContainsString( '9.11.2026', $text, 'the day it was finished, not the day it was started' );
 
-		// The profile: S E A, in that order, each in its colour.
+		// The four parts, in order.
+		$at = array_map(
+			static fn( string $needle ): int => (int) strpos( $text, $needle ),
+			array( 'נטיות תעסוקתיות נטיות מקצועיות משקפות', 'להלן הקוד SEA', 'פירוט הבחירות', 'הסבר על נטיות תעסוקתיות', 'אפיונים של תחומים מקצועיים' )
+		);
+		$this->assertNotContains( 0, $at );
+		$sorted = $at;
+		sort( $sorted );
+		$this->assertSame( $sorted, $at );
+
+		// 1: the client's words, bold where the document is bold.
+		$this->assertStringContainsString( 'הקוד מציג את <b>שלוש הנטיות החזקות ביותר שלך</b> לפי סדר העוצמה שלהן', $html );
+		$this->assertStringContainsString( 'משמש כ<b>מצפן אישי</b>.', $html );
+
+		// 2: three tiles, S E A in their colours, and a line on each domain.
 		preg_match_all( '#<div class="r-tile" style="--c:(\#[0-9a-f]{6});[^"]*"><div class="r-tile__box">([RIASEC])</div>#', $html, $tiles );
 		$this->assertSame( array( 'S', 'E', 'A' ), $tiles[2] );
 		$this->assertSame( array( '#e8b400', '#d6304f', '#e06b12' ), $tiles[1] );
+		$this->assertStringContainsString( 'נטיותיך המקצועיות ממוקדות בשלושה תחומים מרכזיים: תחום חברתי ותחום יוזמתי ותחום אמנותי', $text );
+		$this->assertSame( 3, substr_count( $html, 'class="r-rest__row"' ) );
+		$this->assertStringContainsString( 'תחום אמנותי (נוטה לביטוי עצמי, יצירה אמנותית, שימוש בדמיון, ביטוי של רגשות ופעילויות אינדיבידואליסטיות)', $text );
+		$this->assertStringContainsString( 'לפירוט התחומים ומשמעותם ראה בהמשך', $text );
 
-		// Six columns in R I A S E C order, the leading three marked.
+		// 3: the table with a total column, and six columns in R I A S E C
+		// order with the code's three marked.
+		$this->assertStringContainsString( 'כישורים', $text );
+		$this->assertStringContainsString( '<td>' . ( 25 + 12 + 6 ) . '</td>', $html, 'the grand total' );
 		preg_match_all( '#<li class="r-col( is-top)?" style="[^"]*">\s*<span class="r-col__pct">(\d+)%#', $html, $cols );
 		$this->assertSame( array( '', '', ' is-top', ' is-top', ' is-top', '' ), $cols[1] );
 		$this->assertSame( array( '0', '0', '17', '69', '33', '0' ), $cols[2] );
 		$this->assertStringContainsString( '25/36', $text );
 
-		// A card for each leading type; S lists the profession said "yes" to
-		// first, ticked, and all twelve.
-		$this->assertSame( 3, substr_count( $html, 'class="r-card"' ) );
-		$this->assertStringContainsString( Kivun_Holland::type_info()['S']['about'], $text );
-		$this->assertSame( 1, substr_count( $html, 'class="r-job is-yes"' ) );
-		$this->assertSame( 3 * 12, substr_count( $html, '<li class="r-job' ) );
-		$s_card = substr( $html, (int) strpos( $html, '--c:#e8b400' ) );
-		$this->assertLessThan( strpos( $s_card, 'מורה בבית ספר' ), strpos( $s_card, 'יועץ זוגי או משפחתי' ) );
-
-		// The other three, and the table with its total row.
-		$this->assertSame( 3, substr_count( $html, 'class="r-rest__row"' ) );
-		$this->assertStringContainsString( 'סה"כ', $text );
-		$this->assertStringContainsString( 'כישורים', $text );
+		// 4: a card for every type, whatever the code.
+		$this->assertSame( 6, substr_count( $html, 'class="r-card"' ) );
+		foreach ( Kivun_Holland::type_info() as $info ) {
+			$this->assertStringContainsString( $info['about'], $text );
+			$this->assertStringContainsString( 'אפיונים: ' . $info['traits'], $text );
+			$this->assertStringContainsString( 'מקצועות: ' . $info['fields'], $text );
+		}
 	}
 
 	/**
-	 * A tie for third: four tiles and a note. No "yes" at all: six dashed
-	 * squares and "no profile".
+	 * A tie for third still gives three tiles. Fewer types with a "yes"
+	 * than three: as many as there are. No "yes" at all: six dashed squares
+	 * and "no profile" — and still the explanation of every type.
 	 *
 	 * @return void
 	 */
 	public function test_the_report_for_ties_and_for_nothing(): void {
-		$tie = $this->report( array_merge( range( 37, 48 ), range( 109, 116 ), range( 25, 36 ), array( 97 ), range( 49, 60 ), range( 61, 72 ) ) );
-		$this->assertSame( 4, substr_count( $tie, 'class="r-tile"' ) );
-		$this->assertStringContainsString( 'יזמי-ניהולי ומנהלי-ארגוני קיבלו ניקוד זהה (12)', $tie );
-		$this->assertSame( 4, substr_count( $tie, 'class="r-card"' ) );
+		$tie = $this->report( array_merge( range( 37, 48 ), range( 109, 116 ), range( 25, 36 ), array( 97 ), range( 49, 60 ), range( 205, 216 ) ) );
+		$this->assertSame( 3, substr_count( $tie, 'class="r-tile"' ) );
+		$this->assertStringContainsString( 'להלן הקוד', $tie );
+		$this->assertStringNotContainsString( 'שוויון', $tie );
+
+		$two = $this->report( array( 37, 38, 49 ) );
+		$this->assertSame( 2, substr_count( $two, 'class="r-tile"' ) );
+		$this->assertStringContainsString( 'ממוקדות בשני תחומים מרכזיים: תחום חברתי ותחום יוזמתי', $two );
 
 		$none = $this->report( array() );
 		$this->assertSame( 0, substr_count( $none, 'class="r-tile"' ) );
 		$this->assertSame( 6, substr_count( $none, 'class="r-tile r-tile--empty"' ) );
 		$this->assertStringContainsString( 'לא נבנה פרופיל', $none );
-		$this->assertSame( 0, substr_count( $none, 'class="r-card"' ) );
+		$this->assertSame( 0, substr_count( $none, 'class="r-rest__row"' ) );
+		$this->assertSame( 6, substr_count( $none, 'class="r-card"' ) );
+	}
+
+	/**
+	 * A row saved under the old rules — a four-letter code — reads as the
+	 * dashboard and the report show it once refreshed; other rows pass
+	 * through untouched.
+	 *
+	 * @return void
+	 */
+	public function test_an_old_row_is_refreshed(): void {
+		$responses = $this->answers( array( 1, 13, 25, 37 ) );
+		$stored    = Kivun_Holland::stored_answers( self::ID, $responses, true, 4, '2026-11-01 10:00:00' );
+		foreach ( $stored as $i => $entry ) {
+			if ( 'holland_code' === $entry['key'] ) {
+				$stored[ $i ]['value'] = 'RIAS';
+			}
+		}
+		$row = array(
+			'type'    => 'holland',
+			'message' => "תעודת זהות: 000000018\nקוד הולנד: RIAS (שוויון במקום השלישי)",
+			'answers' => (string) wp_json_encode( $stored ),
+		);
+
+		$fresh = Kivun_Holland::refresh_row( $row );
+		$this->assertStringContainsString( 'קוד הולנד: RIA' . "\n", $fresh['message'] );
+		$this->assertStringNotContainsString( 'RIAS', $fresh['message'] . $fresh['answers'] );
+		$again = Kivun_Holland::read_stored( $fresh['answers'] );
+		$this->assertSame( $responses, $again['responses'] );
+		$this->assertSame( 4, $again['seq'] );
+		$this->assertSame( '2026-11-01 10:00:00', $again['done_at'] );
+
+		$other = array(
+			'type'    => 'form',
+			'message' => 'x',
+		);
+		$this->assertSame( $other, Kivun_Holland::refresh_row( $other ) );
 	}
 }

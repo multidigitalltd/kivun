@@ -60,6 +60,13 @@ class Kivun_Holland {
 	const PAGE_SIZE = 1;
 
 	/**
+	 * The parts that settle a tie, in the order they are asked: the
+	 * professions part first — it asks most directly what kind of work the
+	 * person wants — then activities, then skills.
+	 */
+	const TIE_ORDER = array( 'professions', 'activities', 'skills' );
+
+	/**
 	 * Registers the shortcode and the two endpoints.
 	 *
 	 * @return void
@@ -534,61 +541,110 @@ class Kivun_Holland {
 	}
 
 	/**
-	 * What each type means, as the result page explains it.
+	 * What each type means, in the client's own words (the results document,
+	 * November 2026), word for word.
 	 *
-	 * @return array<string,array{name:string,about:string,traits:string,fields:string}>
+	 * "name" is the type's heading in the detailed explanation; "domain" is
+	 * how the code's summary and the chart call it ("תחום אמנותי"). The
+	 * document names them differently in the two places, and both are kept.
+	 *
+	 * @return array<string,array{name:string,domain:string,about:string,traits:string,fields:string}>
 	 */
 	public static function type_info(): array {
 		return array(
 			'R' => array(
-				'name'   => __( 'ביצועי-מעשי', 'kivun' ),
-				'about'  => __( 'אנשים שאוהבים "ללכלך את הידיים" בעשייה פרקטית. הם נהנים לעבוד עם כלים, מכונות או ציוד, ומעדיפים פעילות טכנית ופיזית על פני עיסוק בתיאוריות.', 'kivun' ),
-				'traits' => __( 'מעשיים, ממוקדי-מטרה, ומתחברים יותר לעשייה מאשר לדיבורים.', 'kivun' ),
-				'fields' => __( 'הנדסה, מכונאות, חקלאות, תפעול ותחזוקה.', 'kivun' ),
+				'name'   => __( 'ביצועי', 'kivun' ),
+				'domain' => __( 'ביצועי', 'kivun' ),
+				'about'  => __( 'מגלה עניין בהפעלת כלים ובמכונות. נוטה לפעילות גופנית הדורשת מיומנות, קואורדינציה ויכולת טכנית.', 'kivun' ),
+				'traits' => __( 'אדם כזה הוא מעשי, קונפורמי, מתעניין בחפצים יותר מאשר באנשים.', 'kivun' ),
+				'fields' => __( 'לבעלי נטייה ריאליסטית מתאימים מקצועות כמו: הנדסה, טכנאות, הנדסאות.', 'kivun' ),
 			),
 			'I' => array(
-				'name'   => __( 'חקרני', 'kivun' ),
-				'about'  => __( 'אנשים שמונעים מסקרנות ורצון להבין לעומק איך דברים עובדים. הם אוהבים לאסוף נתונים, לנתח מצבים ולפתור בעיות מורכבות.', 'kivun' ),
-				'traits' => __( 'רציונליים, אנליטיים, אוהבים לחשוב ולהתעמק, ומעריכים חשיבה אובייקטיבית.', 'kivun' ),
-				'fields' => __( 'מדעים, רפואה, מתמטיקה, מחקר ופיתוח.', 'kivun' ),
+				'name'   => __( 'חקרן', 'kivun' ),
+				'domain' => __( 'חקרני', 'kivun' ),
+				'about'  => __( 'נוטה לפעילויות שכליות אנליטיות (כגון: חשיבה, הבנה, ניתוח תופעות), יותר מאשר לפעילויות רגשיות (כגון: שימוש באינטואיציה ותחושות, יחסי גומלין עם אנשים).', 'kivun' ),
+				'traits' => __( 'אדם כזה הוא רציונאלי, מופנם, אנליטי, אינטלקטואלי, מעריך אובייקטיביות.', 'kivun' ),
+				'fields' => __( 'לבעלי נטייה חקרנית מתאימים מקצועות כמו: מתמטיקה, מחקר ותחומי מדע.', 'kivun' ),
 			),
 			'A' => array(
-				'name'   => __( 'אמנותי-יצירתי', 'kivun' ),
-				'about'  => __( 'אנשים שזקוקים למקום פתוח לביטוי אישי ולדמיון. הם מחפשים סביבת עבודה לא שגרתית שבה יוכלו להביא לידי ביטוי את הרגש והמקוריות שלהם.', 'kivun' ),
-				'traits' => __( 'יצירתיים, מקוריים, רגישים, ואוהבים לפעול מחוץ לקופסה.', 'kivun' ),
-				'fields' => __( 'עיצוב, כתיבה, מוזיקה, משחק ואמנות חזותית.', 'kivun' ),
+				'name'   => __( 'אמנותי', 'kivun' ),
+				'domain' => __( 'אמנותי', 'kivun' ),
+				'about'  => __( 'נוטה לביטוי עצמי, יצירה אמנותית, שימוש בדמיון, ביטוי של רגשות ופעילויות אינדיבידואליסטיות.', 'kivun' ),
+				'traits' => __( 'אדם כזה אוהב לתת ביטוי יצירתי לרגשות. מעדיף פעילויות בלתי שגרתיות. יצירתי, מביע רגש, מקורי.', 'kivun' ),
+				'fields' => __( 'לבעלי נטייה אמנותית מתאימים מקצועות כמו: עיצוב, ציור, מוסיקה, כתיבה.', 'kivun' ),
 			),
 			'S' => array(
-				'name'   => __( 'חברתי-טיפולי', 'kivun' ),
-				'about'  => __( 'אנשים שהמיקוד המרכזי שלהם הוא בעבודה עם בני אדם. הם שואבים סיפוק ממתן עזרה לאחרים, טיפול, ייעוץ או הדרכה.', 'kivun' ),
-				'traits' => __( 'תקשורתיים, סבלניים, חמים, פתוחים ובעלי אינטליגנציה רגשית גבוהה.', 'kivun' ),
-				'fields' => __( 'ייעוץ, עבודה סוציאלית, פסיכולוגיה, הוראה וסיעוד.', 'kivun' ),
+				'name'   => __( 'חברתי', 'kivun' ),
+				'domain' => __( 'חברתי', 'kivun' ),
+				'about'  => __( 'נוטה לפעילות בינאישית יותר מאשר לפעילות גופנית או אינטלקטואלית, כגון: הדרכה, מתן עזרה, טיפול, מתן מידע, הסברה.', 'kivun' ),
+				'traits' => __( 'אדם כזה הוא בעל יכולת מילולית, מעוניין ביצירת קשר, פתיחות וחמימות. חברתי ובעל טאקט.', 'kivun' ),
+				'fields' => __( 'לבעלי נטייה חברתית מתאימים מקצועות כמו: הוראה, סיעוד, הדרכה, ייעוץ.', 'kivun' ),
 			),
 			'E' => array(
-				'name'   => __( 'יזמי-ניהולי', 'kivun' ),
-				'about'  => __( 'אנשים שאוהבים להוביל, להשפיע ולהניע תהליכים. הם נהנים מסביבה דינמית, הצבת יעדים, וחתירה להישגים, מעמד או הצלחה עסקית.', 'kivun' ),
-				'traits' => __( 'שאפתנים, בעלי ביטחון עצמי, אסרטיביים ובעלי כושר שכנוע.', 'kivun' ),
-				'fields' => __( 'ניהול, יזמות עסקית, שיווק ומכירות, עריכת דין.', 'kivun' ),
+				'name'   => __( 'יזמי', 'kivun' ),
+				'domain' => __( 'יוזמתי', 'kivun' ),
+				'about'  => __( 'נוטה לפעילויות מילוליות שמטרתן להשפיע על אחרים, לשכנע, להנהיג, לנהל אחרים, להשיג כוח וסטאטוס, להגיע להישגים ארגוניים וכלכליים.', 'kivun' ),
+				'traits' => __( 'אדם כזה הוא שאפתן, תקיף, בעל כושר שכנוע, בעל בטחון עצמי, נהנה מסטאטוס וכוח.', 'kivun' ),
+				'fields' => __( 'לבעלי נטייה יזמית מתאימים מקצועות כמו: מכירות, ניהול, יזמות עסקית.', 'kivun' ),
 			),
 			'C' => array(
-				'name'   => __( 'מנהלי-ארגוני', 'kivun' ),
-				'about'  => __( 'אנשים שפורחים בסביבה מסודרת ומאורגנת. הם אוהבים לעבוד עם נתונים, מספרים וכללים ברורים, ומצטיינים בירידה לפרטים.', 'kivun' ),
-				'traits' => __( 'מסודרים, דייקנים, יעילים מאוד, ואוהבים מסגרות עבודה מוגדרות.', 'kivun' ),
-				'fields' => __( 'הנהלת חשבונות, מערכות מידע, אדמיניסטרציה וניתוח נתונים.', 'kivun' ),
+				'name'   => __( 'מנהלי', 'kivun' ),
+				'domain' => __( 'מנהלי', 'kivun' ),
+				'about'  => __( 'נוטה לפעילויות מובנות הגזורות מחוקים ונהלים ולפעילויות הכרוכות בעיבוד נתונים: חישובים, תיוק, הפעלת ציוד משרדי.', 'kivun' ),
+				'traits' => __( 'אדם כזה אוהב לעבוד בצמוד לנהלים וחוקים, להשתמש בנתונים, לסדר ולארגן. הוא מעשי ויעיל ומעדיף פעילויות בעלות מבנה מוגדר.', 'kivun' ),
+				'fields' => __( 'לבעלי נטייה מנהלית מתאימים מקצועות כגון: סטטיסטיקה, מזכירות, הנהלת חשבונות.', 'kivun' ),
 			),
 		);
 	}
 
 	/**
-	 * The two paragraphs that open the result page.
+	 * The report's opening (part 1): what occupational tendencies are and
+	 * what the Holland code is. The client's words; <b> marks what the
+	 * document sets in bold.
 	 *
 	 * @return array<int,string>
 	 */
-	public static function results_intro(): array {
+	public static function report_intro(): array {
 		return array(
-			__( 'נטיות תעסוקתיות הן למעשה תחומי העניין שלך בעולם העבודה – הפעילויות שאתה נהנה לעשות, שמסקרנים אותך ושבהם תרצה להתפתח. הנטייה שלך מתגבשת עם השנים מתוך האופי המולד שלך, החוויות שצברת, ואנשים משמעותיים שהיוו עבורך השראה.', 'kivun' ),
-			__( 'כדי לעזור לך למפות את הכיוון הנכון עבורך, נהוג לחלק את עולם התעסוקה לשש קבוצות עיקריות. אצל רוב האנשים ניתן לזהות שילוב של שתיים או שלוש קבוצות שבולטות במיוחד.', 'kivun' ),
+			__( 'נטיות מקצועיות משקפות את העדפותיך התעסוקתיות בעולם העבודה. אלו מבוססות על תחומים בהם הנך מגלה הנאה ועניין, ובהם היית רוצה להתמקצע. העדפות תעסוקתיות מתפתחות לאורך זמן וקשורות בין היתר למאפיינים מולדים, להתנסויות שצברת לאורך החיים, ולדמויות משמעותיות שעוררו בך השראה.', 'kivun' ),
+			__( 'קוד ההולנד הוא תוצאה המורכבת משלוש אותיות, המסכמת את תחומי העניין והנטיות הבולטים ביותר שלך בעולם העבודה.', 'kivun' ),
+			__( 'מתוך שש משפחות המקצועות, הקוד מציג את <b>שלוש הנטיות החזקות ביותר שלך</b> לפי סדר העוצמה שלהן. הקוד אינו קובע עבורך מקצוע אחד ספציפי, אלא משמש כ<b>מצפן אישי</b>. הוא מסייע לנו למקד את החיפוש ולזהות אילו סביבות עבודה, תפקידים ומסלולי לימוד מתאימים לאופי שלך, יאפשרו לך למצות את הפוטנציאל, ויעניקו לך תחושת סיפוק והצלחה.', 'kivun' ),
 		);
+	}
+
+	/**
+	 * The opening of the detailed explanation (part 4), in the client's words.
+	 *
+	 * @return array<int,string>
+	 */
+	public static function report_explain(): array {
+		return array(
+			__( 'נטיות תעסוקתיות משקפות את העדפותיך התעסוקתיות בעולם העבודה. אלו מבוססות על תחומים בהם הנך מגלה הנאה ועניין, ובהם היית רוצה להתמקצע. העדפות תעסוקתיות מתפתחות לאורך זמן וקשורות בין היתר למאפיינים מולדים, להתנסויות שצברת לאורך החיים, ולדמויות משמעותיות שעוררו בך השראה.', 'kivun' ),
+			__( 'לצורך מיפוי נטיותייך התעסוקתיות מוצגת בזאת חלוקה של עולם המקצועות לשש קבוצות מובחנות. בכל אחת מהקבוצות מוצג תיאור משפחת המקצועות השייכת לקבוצה וכן פירוט מאפייני אישיות ההולמים עיסוק במקצועות אלו. על פי רוב, הנטייה התעסוקתית מהווה שילוב בין מספר מצומצם של קבוצות מקצועות.', 'kivun' ),
+		);
+	}
+
+	/**
+	 * The sentence that names the code's domains (part 2): "נטיותיך
+	 * המקצועיות ממוקדות בשלושה תחומים מרכזיים: תחום אמנותי ותחום יוזמתי
+	 * ותחום מנהלי". Fewer than three when fewer types scored at all.
+	 *
+	 * @param array<int,string> $top The code's letters, strongest first.
+	 * @return string
+	 */
+	public static function code_sentence( array $top ): string {
+		$info  = self::type_info();
+		$names = array_map( static fn( string $t ): string => __( 'תחום', 'kivun' ) . ' ' . $info[ $t ]['domain'], $top );
+		$count = array(
+			1 => __( 'בתחום מרכזי אחד', 'kivun' ),
+			2 => __( 'בשני תחומים מרכזיים', 'kivun' ),
+			3 => __( 'בשלושה תחומים מרכזיים', 'kivun' ),
+		);
+		if ( ! isset( $count[ count( $names ) ] ) ) {
+			return '';
+		}
+		/* translators: 1: how many domains, 2: the domains, joined by "ו". */
+		return sprintf( __( 'נטיותיך המקצועיות ממוקדות %1$s: %2$s', 'kivun' ), $count[ count( $names ) ], implode( ' ו', $names ) );
 	}
 
 	/**
@@ -701,15 +757,13 @@ class Kivun_Holland {
 	/**
 	 * Score a full set of answers.
 	 *
-	 * @param string $responses Normalized answers.
-	 * The code is the three highest types, with two refinements. A type
-	 * that scored the same as the third is part of the code too — picking
-	 * one of two equal scores would be the order of the alphabet speaking,
-	 * not the answers — so a tie for third gives a code of four letters (or
-	 * more). And a type nobody said "yes" to is no tendency at all, so a
+	 * The code is always the three highest types — never four. Equal totals
+	 * are settled by rank(): the professions part first, then activities,
+	 * then skills. A type nobody said "yes" to is no tendency at all, so a
 	 * zero never makes it into the code, even to fill it out to three.
 	 *
-	 * @return array{totals:array<string,int>,sections:array<string,array<string,int>>,code:string,tie:bool,max:int}
+	 * @param string $responses Normalized answers.
+	 * @return array{totals:array<string,int>,sections:array<string,array<string,int>>,code:string,max:int}
 	 */
 	public static function score( string $responses ): array {
 		$totals   = array_fill_keys( self::TYPES, 0 );
@@ -725,11 +779,9 @@ class Kivun_Holland {
 			}
 		}
 
-		$ranked = self::rank( $totals );
-		$third  = $totals[ $ranked[2] ];
-		$code   = '';
-		foreach ( $ranked as $i => $type ) {
-			if ( $totals[ $type ] <= 0 || ( $i >= 3 && $totals[ $type ] !== $third ) ) {
+		$code = '';
+		foreach ( array_slice( self::rank( $totals, $sections ), 0, 3 ) as $type ) {
+			if ( $totals[ $type ] <= 0 ) {
 				break;
 			}
 			$code .= $type;
@@ -739,24 +791,34 @@ class Kivun_Holland {
 			'totals'   => $totals,
 			'sections' => $sections,
 			'code'     => $code,
-			'tie'      => strlen( $code ) > 3,
 			'max'      => self::PER_TYPE * count( self::sections() ),
 		);
 	}
 
 	/**
-	 * The types from highest score to lowest; equal scores keep R I A S E C
-	 * order.
+	 * The types from highest score to lowest.
 	 *
-	 * @param array<string,int> $totals Score per type.
+	 * The code has room for three letters only, so equal totals have to be
+	 * told apart: by the score in the professions part, then activities,
+	 * then skills, and only when every one of those is equal too, by
+	 * R I A S E C order.
+	 *
+	 * @param array<string,int>               $totals   Score per type.
+	 * @param array<string,array<string,int>> $sections Score per part and type, when known.
 	 * @return array<int,string>
 	 */
-	public static function rank( array $totals ): array {
+	public static function rank( array $totals, array $sections = array() ): array {
 		$types = self::TYPES;
 		usort(
 			$types,
-			static function ( string $a, string $b ) use ( $totals ): int {
+			static function ( string $a, string $b ) use ( $totals, $sections ): int {
 				$diff = ( $totals[ $b ] ?? 0 ) <=> ( $totals[ $a ] ?? 0 );
+				foreach ( self::TIE_ORDER as $part ) {
+					if ( 0 !== $diff ) {
+						break;
+					}
+					$diff = ( $sections[ $part ][ $b ] ?? 0 ) <=> ( $sections[ $part ][ $a ] ?? 0 );
+				}
 				return 0 !== $diff ? $diff : array_search( $a, self::TYPES, true ) <=> array_search( $b, self::TYPES, true );
 			}
 		);
@@ -975,9 +1037,9 @@ class Kivun_Holland {
 
 		if ( $done ) {
 			$score  = self::score( $responses );
-			$ranked = self::rank( $score['totals'] );
+			$ranked = self::rank( $score['totals'], $score['sections'] );
 
-			$lines[] = __( 'קוד הולנד', 'kivun' ) . ': ' . ( '' !== $score['code'] ? $score['code'] : '—' ) . ( $score['tie'] ? ' ' . __( '(שוויון במקום השלישי)', 'kivun' ) : '' );
+			$lines[] = __( 'קוד הולנד', 'kivun' ) . ': ' . ( '' !== $score['code'] ? $score['code'] : '—' );
 
 			$parts = array();
 			foreach ( $ranked as $type ) {
@@ -996,6 +1058,30 @@ class Kivun_Holland {
 		}
 
 		return implode( "\n", $lines );
+	}
+
+	/**
+	 * A lead row with its summary and stored result worked out again from
+	 * the answers, by today's rules. Rows of any other type pass through.
+	 *
+	 * What a row carries was computed when it was saved; a change of rules
+	 * since (the code became three letters in 2.60.0) would otherwise leave
+	 * old rows saying something the dashboard and the report no longer do.
+	 *
+	 * @param array<string,mixed> $row A lead row, as an array.
+	 * @return array<string,mixed>
+	 */
+	public static function refresh_row( array $row ): array {
+		if ( self::LEAD_TYPE !== (string) ( $row['type'] ?? '' ) ) {
+			return $row;
+		}
+		$stored = self::read_stored( (string) ( $row['answers'] ?? '' ) );
+		if ( '' === $stored['id'] ) {
+			return $row;
+		}
+		$row['message'] = self::message( $stored['id'], $stored['responses'], $stored['done'] );
+		$row['answers'] = (string) wp_json_encode( self::stored_answers( $stored['id'], $stored['responses'], $stored['done'], $stored['seq'], $stored['done_at'] ) );
+		return $row;
 	}
 
 	/**
@@ -1285,27 +1371,8 @@ class Kivun_Holland {
 	public static function report_data( $row ): array {
 		$stored = self::read_stored( (string) ( $row->answers ?? '' ) );
 		$score  = self::score( $stored['responses'] );
-		$ranked = self::rank( $score['totals'] );
 		$top    = '' === $score['code'] ? array() : str_split( $score['code'] );
-
-		// The professions the questionnaire itself asked about, by type, the
-		// ones answered "yes" first.
-		$jobs = array();
-		foreach ( self::items() as $num => $item ) {
-			if ( 'professions' !== $item['section'] ) {
-				continue;
-			}
-			$jobs[ $item['type'] ][] = array(
-				'text' => $item['text'],
-				'yes'  => 'y' === ( $stored['responses'][ $num - 1 ] ?? '' ),
-			);
-		}
-		foreach ( $jobs as $type => $list ) {
-			usort( $list, static fn( array $a, array $b ): int => (int) $b['yes'] <=> (int) $a['yes'] );
-			$jobs[ $type ] = $list;
-		}
-
-		$when = '' !== $stored['done_at'] ? $stored['done_at'] : (string) ( $row->created_at ?? '' );
+		$when   = '' !== $stored['done_at'] ? $stored['done_at'] : (string) ( $row->created_at ?? '' );
 
 		return array(
 			'name'     => (string) ( $row->name ?? '' ),
@@ -1314,13 +1381,12 @@ class Kivun_Holland {
 			'date'     => '' !== $when ? kivun_local_date( $when, 'j.n.Y' ) : '',
 			'done'     => $stored['done'],
 			'score'    => $score,
-			'ranked'   => $ranked,
 			'top'      => $top,
-			'rest'     => array_values( array_diff( $ranked, $top ) ),
-			'jobs'     => $jobs,
+			'sentence' => self::code_sentence( $top ),
 			'info'     => self::type_info(),
 			'colors'   => self::type_colors(),
-			'intro'    => self::results_intro(),
+			'intro'    => self::report_intro(),
+			'explain'  => self::report_explain(),
 			'sections' => self::sections(),
 			'title'    => self::title(),
 			'logo'     => self::logo_url(),
@@ -1453,7 +1519,7 @@ class Kivun_Holland {
 		$subject = sprintf( __( '[%1$s] שאלון הולנד הושלם — %2$s', 'kivun' ), get_bloginfo( 'name' ), '' !== $name ? $name : __( 'משתתף/ת', 'kivun' ) );
 
 		$body = sprintf(
-			'<p>%1$s</p><ul><li><strong>%2$s</strong> %3$s</li><li><strong>%4$s</strong> <span dir="ltr">%5$s</span></li><li><strong>%6$s</strong> %7$s%8$s</li></ul>%9$s<p style="color:#6b6b6b;font-size:13px">%10$s</p>',
+			'<p>%1$s</p><ul><li><strong>%2$s</strong> %3$s</li><li><strong>%4$s</strong> <span dir="ltr">%5$s</span></li><li><strong>%6$s</strong> %7$s</li></ul>%8$s<p style="color:#6b6b6b;font-size:13px">%9$s</p>',
 			esc_html__( 'משתתף/ת סיים/ה את שאלון הולנד. הדוח מוכן להדפסה.', 'kivun' ),
 			esc_html__( 'שם:', 'kivun' ),
 			esc_html( $name ),
@@ -1461,10 +1527,15 @@ class Kivun_Holland {
 			esc_html( $phone ),
 			esc_html__( 'קוד הולנד:', 'kivun' ),
 			esc_html( $code ),
-			! empty( $score['tie'] ) ? ' ' . esc_html__( '(שוויון במקום השלישי)', 'kivun' ) : '',
 			Kivun_Mailer::button( self::report_open_url( $lead_id ), __( 'פתיחת הדוח להדפסה', 'kivun' ) ),
 			esc_html__( 'הדוח נפתח למי שמחובר/ת לאתר עם הרשאה לטפל בלידים.', 'kivun' )
 		);
+
+		// And the way to everyone else's, once the dashboard has a page.
+		$dashboard = Kivun_Holland_Dashboard::url();
+		if ( '' !== $dashboard ) {
+			$body .= sprintf( '<p style="font-size:14px"><a href="%1$s">%2$s</a></p>', esc_url( $dashboard ), esc_html__( 'לכל שאלוני הולנד', 'kivun' ) );
+		}
 
 		Kivun_Mailer::send( implode( ', ', $to ), $subject, $body, __( 'שאלון הולנד הושלם', 'kivun' ) );
 	}
