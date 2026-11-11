@@ -874,6 +874,58 @@ function kivun_test_set_caps( array $caps ): void {
 	Kivun_Test_State::$caps = array_fill_keys( $caps, true );
 }
 
+/**
+ * Whether someone is logged in: anyone holding a capability is, unless a
+ * test says otherwise through the "logged_in" option.
+ *
+ * @return bool
+ */
+function is_user_logged_in(): bool {
+	return (bool) ( Kivun_Test_State::$options['logged_in'] ?? ! empty( Kivun_Test_State::$caps ) );
+}
+
+/**
+ * The login page, with where to come back to.
+ *
+ * @param string $redirect Where to go after.
+ * @return string
+ */
+function wp_login_url( string $redirect = '' ): string {
+	return 'https://example.test/wp-login.php' . ( '' !== $redirect ? '?redirect_to=' . rawurlencode( $redirect ) : '' );
+}
+
+/**
+ * A post's status, from what the test registered.
+ *
+ * @param int $post_id The post.
+ * @return string|false
+ */
+function get_post_status( $post_id = 0 ) {
+	return Kivun_Test_State::$posts[ (int) $post_id ]['status'] ?? false;
+}
+
+/**
+ * Parse a query string.
+ *
+ * @param string $input  The query string.
+ * @param mixed  $result Filled with the values.
+ * @return void
+ */
+function wp_parse_str( string $input, &$result ): void {
+	parse_str( $input, $result );
+}
+
+/**
+ * A URL with a nonce on it.
+ *
+ * @param string $url    The URL.
+ * @param string $action The nonce action.
+ * @return string
+ */
+function wp_nonce_url( string $url, $action = -1 ): string {
+	return add_query_arg( '_wpnonce', 'nonce-' . $action, $url );
+}
+
 // ── AJAX ──────────────────────────────────────────────────────────────────────
 
 /**
@@ -1500,6 +1552,7 @@ foreach ( array(
 	'class-kivun-privacy-consent',
 	'class-kivun-share-image',
 	'class-kivun-holland',
+	'class-kivun-holland-dashboard',
 ) as $kivun_test_class ) {
 	require_once KIVUN_DIR . 'includes/' . $kivun_test_class . '.php';
 }

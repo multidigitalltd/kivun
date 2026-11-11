@@ -59,6 +59,7 @@ class Kivun_Core {
 		Kivun_Event_Popup::init();
 		Kivun_Share_Image::init();
 		Kivun_Holland::init();
+		Kivun_Holland_Dashboard::init();
 
 		// Elementor — only when Elementor Pro is active.
 		add_action(
@@ -139,6 +140,7 @@ class Kivun_Core {
 			'class-kivun-ai-content',
 			'class-kivun-event-popup',
 			'class-kivun-holland',
+			'class-kivun-holland-dashboard',
 		) as $file ) {
 			require_once $dir . $file . '.php';
 		}
@@ -160,6 +162,7 @@ class Kivun_Core {
 			// nonce baked into the page goes stale, and every login is then
 			// refused as an expired session.
 			'kivun_holland',
+			'kivun_holland_dashboard',
 		);
 	}
 
@@ -537,6 +540,7 @@ class Kivun_Core {
 					'kivun_employer_register',
 					'kivun_employer_dashboard',
 					'kivun_holland',
+					'kivun_holland_dashboard',
 				);
 
 				// Elementor keeps page content (including Shortcode widgets) in

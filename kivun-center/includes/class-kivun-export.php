@@ -278,6 +278,11 @@ class Kivun_Export {
 		if ( '' !== $slice['type'] ) {
 			$where .= ' AND r.type = %s';
 			$args[] = $slice['type'];
+		} else {
+			// "All types" is every lead the leads table shows — and the
+			// Holland questionnaire is not among them; it is exported by
+			// asking for it by name.
+			$where .= " AND r.type <> 'holland'";
 		}
 		if ( '' !== $slice['campaign'] ) {
 			// Matched on the campaign's own utm value, which is what a lead

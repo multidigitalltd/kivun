@@ -21,7 +21,8 @@
 (function () {
 	'use strict';
 
-	var root = document.querySelector('.kivun-holland');
+	// The questionnaire, not the dashboard, which shares its stylesheet.
+	var root = document.querySelector('.kivun-holland[data-total]');
 	if (!root || typeof kivun === 'undefined') {
 		return;
 	}

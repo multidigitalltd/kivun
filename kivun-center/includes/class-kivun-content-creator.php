@@ -2835,9 +2835,11 @@ class Kivun_Content_Creator {
 
 		if ( $with_leads ) {
 			// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-			$stats['leads']     = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}kivun_registrations" );
+			// Holland questionnaires have a dashboard of their own and are
+			// counted there, not here.
+			$stats['leads']     = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}kivun_registrations WHERE type <> 'holland'" );
 			$stats['leads_new'] = (int) $wpdb->get_var(
-				"SELECT COUNT(*) FROM {$wpdb->prefix}kivun_registrations WHERE status IN ( 'new', 'new_lead' )"
+				"SELECT COUNT(*) FROM {$wpdb->prefix}kivun_registrations WHERE status IN ( 'new', 'new_lead' ) AND type <> 'holland'"
 			);
 			// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		}
@@ -6257,7 +6259,7 @@ class Kivun_Content_Creator {
 		$rows = $wpdb->get_results(
 			"SELECT course_id, COUNT(*) AS total
 			 FROM {$wpdb->prefix}kivun_registrations
-			 WHERE course_id > 0
+			 WHERE course_id > 0 AND type <> 'holland'
 			 GROUP BY course_id"
 		);
 
@@ -6373,7 +6375,9 @@ class Kivun_Content_Creator {
 		// on screen, one in the file.
 		$content_scope = self::content_scope( $content_filter );
 
-		$conds = array();
+		// The Holland questionnaire's participants are managed on a
+		// dashboard of their own ([kivun_holland_dashboard]), not here.
+		$conds = array( "r.type <> 'holland'" );
 		if ( $content_scope ) {
 			$conds[] = 'r.course_id IN ( ' . implode( ', ', $content_scope ) . ' )';
 		}
@@ -6870,15 +6874,6 @@ class Kivun_Content_Creator {
 								<span class="kivun-lead__type" data-type="<?php echo esc_attr( $row_type ); ?>"><?php echo esc_html( $type_labels[ $row_type ] ?? $row_type ); ?></span>
 								<?php if ( '' !== $src['origin'] ) : ?>
 									<span class="kivun-cc-source"><?php echo esc_html( $src['origin'] ); ?></span>
-								<?php endif; ?>
-								<?php
-								// A finished Holland questionnaire: the representative
-								// prints the result from here — the participant was not
-								// shown it. Under the name, so it is in view without
-								// scrolling the table sideways.
-								?>
-								<?php if ( Kivun_Holland::has_report( $r ) && self::can_manage_leads() ) : ?>
-									<a class="kivun-lead__report" href="<?php echo esc_url( Kivun_Holland::report_url( (int) $r->id ) ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'דוח להדפסה', 'kivun' ); ?></a>
 								<?php endif; ?>
 							</td>
 							<?php if ( $show_source ) : ?>
