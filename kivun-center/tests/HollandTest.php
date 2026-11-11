@@ -935,6 +935,7 @@ final class HollandTest extends TestCase {
 		preg_match_all( '#<div class="r-tile" style="--c:(\#[0-9a-f]{6});[^"]*"><div class="r-tile__box">([RIASEC])</div>#', $html, $tiles );
 		$this->assertSame( array( 'S', 'E', 'A' ), $tiles[2] );
 		$this->assertSame( array( '#e8b400', '#d6304f', '#e06b12' ), $tiles[1] );
+		$this->assertStringContainsString( '<div class="r-tiles" dir="ltr">', $html, 'the squares read left to right, like the code' );
 		$this->assertStringContainsString( 'נטיותיך המקצועיות ממוקדות בשלושה תחומים מרכזיים: תחום חברתי ותחום יוזמתי ותחום אמנותי', $text );
 		$this->assertSame( 3, substr_count( $html, 'class="r-rest__row"' ) );
 		$this->assertStringContainsString( 'תחום אמנותי (נוטה לביטוי עצמי, יצירה אמנותית, שימוש בדמיון, ביטוי של רגשות ופעילויות אינדיבידואליסטיות)', $text );
