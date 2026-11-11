@@ -193,9 +193,10 @@ table.r-table { width: 100%; border-collapse: separate; border-spacing: 0; borde
 				<?php esc_html_e( 'להלן הקוד', 'kivun' ); ?>
 				<span class="r-iso" dir="ltr"><?php echo esc_html( implode( '', $top ) ); ?></span>
 			</p>
-			<div class="r-tiles">
+			<?php // Left to right, the way the code itself reads ("AES"). ?>
+			<div class="r-tiles" dir="ltr">
 				<?php foreach ( $top as $kivun_hl_t ) : ?>
-					<div class="r-tile" style="<?php echo esc_attr( $kivun_hl_var( $kivun_hl_t ) ); ?>"><div class="r-tile__box"><?php echo esc_html( $kivun_hl_t ); ?></div><span class="r-tile__name"><?php echo esc_html( $info[ $kivun_hl_t ]['domain'] ); ?></span></div>
+					<div class="r-tile" style="<?php echo esc_attr( $kivun_hl_var( $kivun_hl_t ) ); ?>"><div class="r-tile__box"><?php echo esc_html( $kivun_hl_t ); ?></div><span class="r-tile__name" dir="rtl"><?php echo esc_html( $info[ $kivun_hl_t ]['domain'] ); ?></span></div>
 				<?php endforeach; ?>
 			</div>
 			<p class="r-profile__note"><?php echo esc_html( $sentence ); ?></p>
