@@ -12,6 +12,11 @@
  * filters nothing; the word is kept only when the box was left empty, so the
  * row still says the visitor answered.
  *
+ * Forms built in Elementor's editor are not drawn by the plugin, and Elementor
+ * cannot open a field only when "אחר" is chosen. Their city field is turned
+ * into the same list in the browser (assets/js/city-elementor.js), which sends
+ * the city typed under "אחר" as the field's own value.
+ *
  * Not used for the "יישוב" of a course, event or job in the console: that is
  * where the thing takes place, it is matched against Mercaz Kivun's own list
  * of places for the distance search, and a job in a town that is not on this
@@ -31,6 +36,71 @@ final class Kivun_Cities {
 	 * The last choice, which opens the free text box.
 	 */
 	const OTHER = 'אחר';
+
+	/**
+	 * Register hooks.
+	 *
+	 * @return void
+	 */
+	public static function init(): void {
+		add_action( 'wp_enqueue_scripts', array( __CLASS__, 'enqueue_elementor' ) );
+	}
+
+	/**
+	 * Whether forms built in Elementor get the list.
+	 *
+	 * @return bool
+	 */
+	public static function for_elementor(): bool {
+		/**
+		 * Whether a city field in an Elementor Pro form becomes the list.
+		 *
+		 * @param bool $on Default: while Elementor Pro is active.
+		 */
+		return (bool) apply_filters( 'kivun_city_elementor', defined( 'ELEMENTOR_PRO_VERSION' ) );
+	}
+
+	/**
+	 * Load the script that turns an Elementor form's city field into the
+	 * list, with the list itself.
+	 *
+	 * On every front-end page while Elementor Pro is active: a form can sit
+	 * in a page, a template, a popup or the footer, and none of those says
+	 * so before the page is drawn. The script is small and does nothing on a
+	 * page without one.
+	 *
+	 * @return void
+	 */
+	public static function enqueue_elementor(): void {
+		if ( is_admin() || ! self::for_elementor() ) {
+			return;
+		}
+
+		wp_enqueue_script(
+			'kivun-city-elementor',
+			KIVUN_URL . 'assets/js/' . Kivun_Core::asset( 'city-elementor', 'js' ),
+			array(),
+			KIVUN_VERSION,
+			true
+		);
+		wp_script_add_data( 'kivun-city-elementor', 'defer', true );
+		wp_add_inline_script( 'kivun-city-elementor', 'window.kivunCities = ' . wp_json_encode( self::script_config() ) . ';', 'before' );
+	}
+
+	/**
+	 * What the Elementor script is handed: the list and its words.
+	 *
+	 * @return array{cities:array<int,string>,other:string,pick:string,hint:string,label:string}
+	 */
+	public static function script_config(): array {
+		return array(
+			'cities' => self::all(),
+			'other'  => self::OTHER,
+			'pick'   => __( 'בחירת עיר', 'kivun' ),
+			'hint'   => __( 'כתבו את שם העיר', 'kivun' ),
+			'label'  => __( 'שם העיר', 'kivun' ),
+		);
+	}
 
 	/**
 	 * The cities offered, in the order they are shown. "אחר" is not one of

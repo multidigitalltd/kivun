@@ -267,6 +267,69 @@ final class CitiesTest extends TestCase {
 		$this->assertMatchesRegularExpression( '#<select name="city" id="kivun-cf-city-9"#', $html );
 	}
 
+	// ── Forms built in Elementor ─────────────────────────────────────────────
+
+	/**
+	 * Without Elementor Pro there is nothing to load.
+	 *
+	 * @return void
+	 */
+	public function test_nothing_is_loaded_without_elementor_pro(): void {
+		Kivun_Cities::enqueue_elementor();
+
+		$this->assertNotContains( 'kivun-city-elementor', Kivun_Test_State::$enqueued );
+	}
+
+	/**
+	 * With it, the script is loaded and handed the same list the plugin's
+	 * own forms draw, with the same words.
+	 *
+	 * @return void
+	 */
+	public function test_the_elementor_script_is_handed_the_same_list(): void {
+		add_filter( 'kivun_city_elementor', static fn(): bool => true );
+
+		Kivun_Cities::enqueue_elementor();
+
+		$this->assertContains( 'kivun-city-elementor', Kivun_Test_State::$enqueued );
+		$inline = implode( '', Kivun_Test_State::$inline['kivun-city-elementor'] ?? array() );
+		$this->assertMatchesRegularExpression( '#^window\.kivunCities = \{.*\};$#s', $inline );
+
+		$cfg = json_decode( substr( $inline, strlen( 'window.kivunCities = ' ), -1 ), true );
+		$this->assertSame( Kivun_Cities::all(), $cfg['cities'] );
+		$this->assertSame( 'אחר', $cfg['other'] );
+		$this->assertSame( 'בחירת עיר', $cfg['pick'] );
+		$this->assertNotSame( '', $cfg['hint'] );
+		$this->assertNotSame( '', $cfg['label'] );
+	}
+
+	/**
+	 * The script is built, and checked like every other: the site loads the
+	 * minified copy, and a build that skipped it would ship nothing.
+	 *
+	 * @return void
+	 */
+	public function test_the_elementor_script_is_built_and_checked(): void {
+		$package = (string) file_get_contents( KIVUN_DIR . 'package.json' );
+		$check   = (string) file_get_contents( KIVUN_DIR . 'bin/check-assets.sh' );
+
+		$this->assertFileExists( KIVUN_DIR . 'assets/js/city-elementor.min.js' );
+		$this->assertStringContainsString( 'terser assets/js/city-elementor.js -c -m -o assets/js/city-elementor.min.js', $package );
+		$this->assertMatchesRegularExpression( '#for name in [^;]*\bcity-elementor\b[^;]*; do#', $check );
+	}
+
+	/**
+	 * The plugin starts it.
+	 *
+	 * @return void
+	 */
+	public function test_the_plugin_starts_it(): void {
+		$core = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-core.php' );
+
+		$this->assertStringContainsString( 'Kivun_Cities::init();', $core );
+		$this->assertStringContainsString( "'class-kivun-cities',", $core );
+	}
+
 	/**
 	 * The form builder's preview draws the city as the list it now is.
 	 *

@@ -52,6 +52,7 @@ class Kivun_Core {
 		Kivun_Phones::init();
 		Kivun_Duplicate::init();
 		Kivun_Thank_You::init();
+		Kivun_Cities::init();
 		Kivun_Content_Creator::init();
 		Kivun_Unified_Meta::init();
 		Kivun_AI_Image::init();
