@@ -871,23 +871,26 @@ final class HollandTest extends TestCase {
 	}
 
 	/**
-	 * The report carries a name, a phone and an ID number: only the people
-	 * who handle the leads may open it.
+	 * The report carries a name, a phone and an ID number: only the site's
+	 * administrators may open it — not an editor who handles the leads.
 	 *
 	 * @return void
 	 */
 	public function test_the_report_is_for_staff_only(): void {
 		$_GET = array( 'lead' => '7' );
-		kivun_test_set_caps( array() );
-		try {
-			Kivun_Holland::ajax_report();
-			$this->fail( 'the report opened without the leads capability' );
-		} catch ( Kivun_Test_Die $died ) {
-			$this->assertSame( 403, $died->status );
+		foreach ( array( array(), array( 'edit_others_posts' ), array( 'kivun_view_leads' ) ) as $caps ) {
+			kivun_test_set_caps( $caps );
+			try {
+				Kivun_Holland::ajax_report();
+				$this->fail( 'the report opened for ' . ( $caps ? $caps[0] : 'nobody' ) );
+			} catch ( Kivun_Test_Die $died ) {
+				$this->assertSame( 403, $died->status );
+				$this->assertSame( Kivun_Holland::refusal(), $died->getMessage() );
+			}
 		}
 
-		// Staff, but the row is not a finished questionnaire.
-		kivun_test_set_caps( array( 'edit_others_posts' ) );
+		// An administrator, but the row is not a finished questionnaire.
+		kivun_test_set_caps( array( 'manage_options' ) );
 		$GLOBALS['wpdb']->row_handler = fn() => $this->lead_row( range( 37, 48 ), false );
 		try {
 			Kivun_Holland::ajax_report();

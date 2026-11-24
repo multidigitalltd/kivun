@@ -45,6 +45,14 @@ class Kivun_Export {
 			if ( ! Kivun_Content_Creator::can_manage_leads() ) {
 				wp_die( 'Unauthorized' );
 			}
+			// The Holland questionnaire is left out of "all types" and
+			// exported only by asking for it by name — which is open to its
+			// readers alone, as its dashboard is. Without this, anyone who
+			// handles the leads could download every participant's ID
+			// number from the link the dashboard uses.
+			if ( Kivun_Holland::LEAD_TYPE === self::slices()['type'] && ! Kivun_Holland::can_view_results() ) {
+				wp_die( 'Unauthorized' );
+			}
 			self::export_registrations( $post_ids, self::date_range() );
 			return;
 		}
