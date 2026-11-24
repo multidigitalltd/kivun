@@ -191,7 +191,15 @@ final class CustomFormAppearanceTest extends TestCase {
 				substr_count( $html, 'type="radio" name="gender"' ),
 				$name . ' does not offer gender as exactly two buttons'
 			);
-			$this->assertStringNotContainsString( '<option value="אחר"', $html, $name . ' still offers a third' );
+			// Read inside the gender question only: the city list ends with
+			// "אחר" of its own (2.61.0), and that is not a third gender.
+			$this->assertSame( 1, preg_match( '#<legend>מגדר</legend>(.*?)</fieldset>#su', $html, $gender ), $name . ' has no gender question' );
+			$this->assertStringNotContainsString( 'אחר', $gender[1], $name . ' still offers a third' );
+			$this->assertSame(
+				array( 'זכר', 'נקבה' ),
+				preg_match_all( '#name="gender" value="([^"]*)"#u', $html, $values ) ? $values[1] : array(),
+				$name . ' offers a gender other than the two'
+			);
 			$this->assertStringNotContainsString( 'select name="gender"', $html, $name . ' still uses a menu' );
 		}
 	}

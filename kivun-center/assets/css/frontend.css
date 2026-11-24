@@ -163,6 +163,10 @@
 }
 .kivun-form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0 1.5rem; }
 @media (max-width: 600px) { .kivun-form-grid { grid-template-columns: 1fr; } }
+
+/* The box "אחר" opens under the city list. Hidden until then whatever a
+   theme says about the display of an input. */
+.kivun-city-other[hidden] { display: none !important; }
 .kivun-form-actions { display: flex; gap: 1rem; margin-top: .5rem; }
 
 /* ── Jobs-board manager: act-as switcher, banner, add-publisher ──────────── */
@@ -776,6 +780,14 @@
 .kivun-interest--plain .kivun-consent-row input:focus-visible {
 	outline: 2px solid currentColor;
 	outline-offset: 2px;
+}
+/* A list's options open in a box the browser draws, on its own white unless
+   told otherwise — while the list above takes the page's colour, which on a
+   dark design is white. Options are given a colour of their own so the city
+   list, and any list question, can be read when it is opened. */
+.kivun-interest--plain .kivun-form-row select option {
+	color: #1f2430;
+	background: #fff;
 }
 
 /* A filled pill with a mark in it, the way the client's own design draws it.
@@ -4731,6 +4743,7 @@ td.kivun-cc-rowactions > form > * {
 .kivun-apply-form input[type="email"],
 .kivun-apply-form input[type="tel"],
 .kivun-apply-form input[type="file"],
+.kivun-apply-form select,
 .kivun-apply-form textarea {
 	width: 100%;
 	box-sizing: border-box;
@@ -4746,6 +4759,7 @@ td.kivun-cc-rowactions > form > * {
 .kivun-apply-form input::placeholder,
 .kivun-apply-form textarea::placeholder { color: #a6a6a6; }
 .kivun-apply-form input:focus,
+.kivun-apply-form select:focus,
 .kivun-apply-form textarea:focus {
 	outline: none;
 	background: #fff;
@@ -5980,12 +5994,14 @@ body.kivun-ty-open { overflow: hidden; }
 @media (max-width: 600px) { .kivun-ef__grid { grid-template-columns: 1fr; } }
 .kivun-ef__field { display: flex; flex-direction: column; gap: .45rem; }
 .kivun-ef__field label { font-weight: 600; font-size: .95rem; color: var(--kivun-dark); }
-.kivun-ef__field input {
+.kivun-ef__field input,
+.kivun-ef__field select {
 	border: 0; border-bottom: 1px solid #c9ccd4; background: transparent;
 	padding: .5rem .1rem; font: inherit; font-size: 1rem; color: var(--kivun-dark);
 	border-radius: 0; box-shadow: none;
 }
-.kivun-ef__field input:focus { outline: none; border-bottom-color: var(--kivun-accent); box-shadow: 0 1px 0 0 var(--kivun-accent); }
+.kivun-ef__field input:focus,
+.kivun-ef__field select:focus { outline: none; border-bottom-color: var(--kivun-accent); box-shadow: 0 1px 0 0 var(--kivun-accent); }
 .kivun-ef__consent { display: flex; align-items: flex-start; gap: .5rem; margin: 1.6rem 0 0; font-size: .9rem; color: #555; line-height: 1.5; }
 .kivun-ef__consent input { margin-top: .2rem; accent-color: var(--kivun-accent); width: auto; }
 .kivun-ef__consent a { color: var(--kivun-accent); text-decoration: underline; }
@@ -6011,12 +6027,14 @@ body.kivun-ty-open { overflow: hidden; }
 .kivun-ef__actions { text-align: left; margin-top: 1.6rem; }
 .kivun-ef__submit { margin-top: 0 !important; }
 .kivun-ef__field label { color: #3a3f4a; font-weight: 600; }
-.kivun-ef__field input { border-bottom-color: #cfd2da; }
+.kivun-ef__field input,
+.kivun-ef__field select { border-bottom-color: #cfd2da; }
 
 /* Event form — bottom-line-only inputs (theme-proof) + larger type. */
 .kivun-ef__field input[type="text"],
 .kivun-ef__field input[type="tel"],
-.kivun-ef__field input[type="email"] {
+.kivun-ef__field input[type="email"],
+.kivun-ef__field select {
 	border: 0 !important;
 	border-bottom: 1px solid #cfd2da !important;
 	border-radius: 0 !important;
@@ -6027,7 +6045,8 @@ body.kivun-ty-open { overflow: hidden; }
 }
 .kivun-ef__field input[type="text"]:focus,
 .kivun-ef__field input[type="tel"]:focus,
-.kivun-ef__field input[type="email"]:focus {
+.kivun-ef__field input[type="email"]:focus,
+.kivun-ef__field select:focus {
 	border: 0 !important;
 	border-bottom: 2px solid var(--kivun-accent) !important;
 	outline: none !important;

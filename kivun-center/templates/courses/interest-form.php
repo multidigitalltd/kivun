@@ -40,7 +40,7 @@ $kivun_plain = ! empty( $plain );
 
 		<div class="kivun-form-row">
 			<label><?php esc_html_e( 'עיר', 'kivun' ); ?></label>
-			<input type="text" name="city" autocomplete="address-level2">
+			<?php echo Kivun_Cities::field( 'city' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped in Kivun_Cities::field(). ?>
 		</div>
 
 		<?php // Two buttons rather than a menu, and the same markup the choice questions use. ?>

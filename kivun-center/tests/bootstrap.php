@@ -136,6 +136,13 @@ final class Kivun_Test_State {
 	public static array $enqueued = array();
 
 	/**
+	 * Code passed to wp_add_inline_script(), keyed by handle.
+	 *
+	 * @var array<string,array<int,string>>
+	 */
+	public static array $inline = array();
+
+	/**
 	 * Forget everything, so tests do not leak into one another.
 	 *
 	 * @return void
@@ -161,6 +168,7 @@ final class Kivun_Test_State {
 		self::$current_post = 0;
 		self::$templates    = array();
 		self::$enqueued     = array();
+		self::$inline       = array();
 
 		// Whether an address has already been written to is remembered for
 		// the rest of the request, which across tests is the rest of the run.
@@ -1141,6 +1149,15 @@ function home_url( string $path = '/' ): string {
 }
 
 /**
+ * The privacy policy page's URL. None is set on the test site.
+ *
+ * @return string
+ */
+function get_privacy_policy_url(): string {
+	return '';
+}
+
+/**
  * Add query arguments to a URL.
  *
  * Core takes either a map and a URL, or one key, one value and a URL, and
@@ -1303,6 +1320,40 @@ function wp_kses( string $content, array $allowed = array() ): string {
  */
 function wp_enqueue_script( ...$args ): void {
 	Kivun_Test_State::$enqueued[] = (string) ( $args[0] ?? '' );
+}
+
+/**
+ * Attach data to a registered script. Nothing reads it here.
+ *
+ * @param mixed ...$args Whatever the caller passes.
+ * @return bool
+ */
+function wp_script_add_data( ...$args ): bool {
+	unset( $args );
+	return true;
+}
+
+/**
+ * Add code beside a script. Recorded, so what a script is handed can be read.
+ *
+ * @param string $handle   The script.
+ * @param string $data     The code.
+ * @param string $position 'before' or 'after'.
+ * @return bool
+ */
+function wp_add_inline_script( string $handle, string $data, string $position = 'after' ): bool {
+	unset( $position );
+	Kivun_Test_State::$inline[ $handle ][] = $data;
+	return true;
+}
+
+/**
+ * Whether this is an admin screen. The tests run as the front end.
+ *
+ * @return bool
+ */
+function is_admin(): bool {
+	return false;
 }
 
 /**
@@ -1550,6 +1601,7 @@ foreach ( array(
 	'class-kivun-core',
 	'class-kivun-custom-forms',
 	'class-kivun-privacy-consent',
+	'class-kivun-cities',
 	'class-kivun-share-image',
 	'class-kivun-holland',
 	'class-kivun-holland-dashboard',

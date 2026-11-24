@@ -36,7 +36,7 @@ $kivun_policy = (string) Kivun_Admin_Settings::get( 'cookie_policy_url', '' );
 			</div>
 			<div class="kivun-ef__field">
 				<label><?php esc_html_e( 'עיר', 'kivun' ); ?></label>
-				<input type="text" name="city" autocomplete="address-level2">
+				<?php echo Kivun_Cities::field( 'city' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped in Kivun_Cities::field(). ?>
 			</div>
 		</div>
 

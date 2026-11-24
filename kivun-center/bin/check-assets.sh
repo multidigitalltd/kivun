@@ -38,7 +38,7 @@ for name in frontend admin accessibility cookies whatsapp picker holland; do
 	fi
 done
 
-for name in frontend admin-crm accessibility cookies voice picker holland; do
+for name in frontend admin-crm accessibility cookies voice picker holland city-elementor; do
 	src="assets/js/${name}.js"
 	min="assets/js/${name}.min.js"
 	[ -f "$src" ] || continue

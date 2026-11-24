@@ -50,7 +50,7 @@ $kivun_asks     = static fn( string $key ): bool => in_array( $key, $kivun_built
 		<?php if ( $kivun_asks( 'city' ) ) : ?>
 			<div class="kivun-form-row">
 				<label for="kivun-cf-city-<?php echo esc_attr( (string) $post_id ); ?>"><?php esc_html_e( 'עיר', 'kivun' ); ?></label>
-				<input type="text" id="kivun-cf-city-<?php echo esc_attr( (string) $post_id ); ?>" name="city" autocomplete="address-level2">
+				<?php echo Kivun_Cities::field( 'city', 'kivun-cf-city-' . $post_id ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped in Kivun_Cities::field(). ?>
 			</div>
 		<?php endif; ?>
 

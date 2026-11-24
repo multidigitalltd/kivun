@@ -197,11 +197,42 @@
 		var outside = opt.value === 'no';
 		row.hidden = !outside;
 
-		var input = row.querySelector('input');
-		if (!input) { return; }
-		// Answering "yes" after typing an address would otherwise submit one
-		// the candidate can no longer see.
-		if (outside) { input.focus(); } else { input.value = ''; }
+		var field = row.querySelector('select, input');
+		if (!field) { return; }
+		if (outside) { field.focus(); return; }
+		// Answering "yes" after choosing a city would otherwise submit one the
+		// candidate can no longer see — and the box "אחר" opened with it.
+		field.value = '';
+		if (field.matches('select[data-kivun-city]')) { cityOther(field, false); }
+	});
+
+	// ── City: "אחר" opens a box for a city that is not on the list ───────────────
+	//
+	// The box is disabled while hidden, so a city typed there and then given up
+	// for one on the list is not posted alongside it. The word that opens it is
+	// read from the list itself rather than written here a second time.
+	function cityOther(select, focus) {
+		var box = select.parentNode && select.parentNode.querySelector('.kivun-city-other');
+		if (!box) { return; }
+		var open = select.value !== '' && select.value === select.getAttribute('data-kivun-city');
+		box.hidden = !open;
+		box.disabled = !open;
+		if (!open) { box.value = ''; }
+		if (open && focus) { box.focus(); }
+	}
+
+	document.addEventListener('change', function (e) {
+		var select = e.target.closest && e.target.closest('select[data-kivun-city]');
+		if (select) { cityOther(select, true); }
+	});
+
+	// A browser that refills the form on going back or reloading sets the
+	// list's value without a change event, which would leave "אחר" chosen
+	// with nowhere to type. pageshow comes after that refill, on every load.
+	window.addEventListener('pageshow', function () {
+		document.querySelectorAll('select[data-kivun-city]').forEach(function (select) {
+			cityOther(select, false);
+		});
 	});
 
 	// ── Job board filters ────────────────────────────────────────────────────────
@@ -3134,7 +3165,7 @@
 	// order the checkboxes happen to be in.
 	var KIVUN_CF_BUILTINS = [
 		{ key: 'email', label: 'אימייל', type: 'text' },
-		{ key: 'city', label: 'עיר', type: 'text' },
+		{ key: 'city', label: 'עיר', type: 'select' },
 		{ key: 'gender', label: 'מגדר', type: 'radio', options: ['זכר', 'נקבה'] }
 	];
 	var KIVUN_CF_TAIL = [
