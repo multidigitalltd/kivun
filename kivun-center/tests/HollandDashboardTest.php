@@ -80,12 +80,12 @@ class HollandDashboardTest extends TestCase {
 	}
 
 	/**
-	 * Logged out: a way in, nothing else. Logged in without the leads
-	 * capability: a refusal.
+	 * Logged out: a way in, nothing else. Logged in as anyone but an
+	 * administrator: a refusal.
 	 *
 	 * @return void
 	 */
-	public function test_only_lead_managers_see_it(): void {
+	public function test_logged_out_is_shown_the_way_in(): void {
 		Kivun_Test_State::$options['logged_in'] = false;
 		$this->assertSame( 'gate', $this->vars()['view'] );
 		$this->assertStringContainsString( 'wp-login.php', $this->vars()['login'] );
@@ -93,7 +93,93 @@ class HollandDashboardTest extends TestCase {
 		Kivun_Test_State::$options['logged_in'] = true;
 		$this->assertSame( 'gate', $this->vars()['view'] );
 		$this->assertSame( '', $this->vars()['login'] );
-		$this->assertStringContainsString( 'אין לך הרשאה', $this->vars()['message'] );
+		$this->assertSame( Kivun_Holland::refusal(), $this->vars()['message'] );
+	}
+
+	/**
+	 * Handling the leads is not enough: the editor, the coordinator who was
+	 * given the leads and the agency that reads them are all refused. The
+	 * results are for the site's administrators (the client's decision).
+	 *
+	 * @return void
+	 */
+	public function test_only_administrators_see_it(): void {
+		Kivun_Test_State::$options['logged_in'] = true;
+
+		foreach ( array( 'edit_others_posts', 'kivun_view_leads', 'kivun_read_leads' ) as $cap ) {
+			kivun_test_set_caps( array( $cap ) );
+			$this->assertTrue( Kivun_Content_Creator::can_read_leads(), "{$cap} reads the general leads" );
+			$this->assertSame( 'gate', $this->vars()['view'], "{$cap} sees the Holland results" );
+			$this->assertSame( Kivun_Holland::refusal(), $this->vars()['message'] );
+		}
+
+		kivun_test_set_caps( array( 'manage_options' ) );
+		$GLOBALS['wpdb']->results_handler = static fn() => array();
+		$this->assertSame( 'list', $this->vars()['view'] );
+	}
+
+	/**
+	 * The export the dashboard links to is refused to the same people.
+	 *
+	 * It is the general leads export asked for the questionnaire by name, and
+	 * the general export is open to everyone who handles the leads — so the
+	 * dashboard's own rule has to be applied there too, or the ID numbers are
+	 * one link away for everyone the dashboard turns back.
+	 *
+	 * @return void
+	 */
+	public function test_the_export_is_refused_to_the_same_people(): void {
+		require_once KIVUN_DIR . 'includes/class-kivun-export.php';
+		$_GET = array(
+			'type'  => 'registrations',
+			'ctype' => 'holland',
+		);
+		kivun_test_set_caps( array( 'edit_others_posts' ) );
+
+		try {
+			Kivun_Export::handle();
+			$this->fail( 'the Holland export ran for somebody who is not an administrator' );
+		} catch ( Kivun_Test_Die $died ) {
+			$this->assertSame( 'Unauthorized', $died->getMessage() );
+		}
+
+		$source = (string) file_get_contents( KIVUN_DIR . 'includes/class-kivun-export.php' );
+		$gate   = strpos( $source, 'Kivun_Holland::can_view_results()' );
+		$write  = strpos( $source, 'self::export_registrations( $post_ids' );
+		$this->assertNotFalse( $gate, 'the export does not ask' );
+		$this->assertLessThan( $write, $gate, 'the export asks after it has run' );
+	}
+
+	/**
+	 * The link in the email turns back the same people, before it hands them
+	 * a nonce for the report.
+	 *
+	 * @return void
+	 */
+	public function test_the_emailed_link_refuses_the_same_people(): void {
+		$_GET = array( 'lead' => '7' );
+		kivun_test_set_caps( array( 'edit_others_posts' ) );
+
+		try {
+			Kivun_Holland::open_report();
+			$this->fail( 'the emailed link went on to the report for an editor' );
+		} catch ( Kivun_Test_Die $died ) {
+			$this->assertSame( 403, $died->status );
+		}
+	}
+
+	/**
+	 * The email says who can open the report, truthfully.
+	 *
+	 * @return void
+	 */
+	public function test_the_email_says_who_can_open_it(): void {
+		Kivun_Test_State::$options['admin_email'] = 'rep@example.test';
+
+		Kivun_Holland::notify_completed( $this->row( 7, array( 37 ), true ), Kivun_Holland::score( str_repeat( 'n', 216 ) ) );
+
+		$this->assertStringContainsString( 'כמנהל/ת האתר', Kivun_Test_State::$mail[0]['message'] );
+		$this->assertStringNotContainsString( 'לטפל בלידים', Kivun_Test_State::$mail[0]['message'] );
 	}
 
 	/**
@@ -113,7 +199,7 @@ class HollandDashboardTest extends TestCase {
 	 * @return void
 	 */
 	public function test_the_list(): void {
-		kivun_test_set_caps( array( 'edit_others_posts' ) );
+		kivun_test_set_caps( array( 'manage_options' ) );
 		$html = $this->draw(
 			array(
 				$this->row( 7, array_merge( range( 37, 48 ), range( 49, 60 ), range( 25, 30 ) ), true ),

@@ -157,11 +157,13 @@ class Kivun_Holland_Dashboard {
 				)
 			);
 		}
-		if ( ! Kivun_Content_Creator::can_manage_leads() ) {
+		// Administrators only, as every way to the results is
+		// (Kivun_Holland::can_view_results()).
+		if ( ! Kivun_Holland::can_view_results() ) {
 			return self::template(
 				'gate',
 				array(
-					'message' => __( 'אין לך הרשאה לצפות בתוצאות השאלונים.', 'kivun' ),
+					'message' => Kivun_Holland::refusal(),
 					'login'   => '',
 				)
 			);

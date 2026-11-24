@@ -1403,6 +1403,35 @@ class Kivun_Holland {
 	}
 
 	/**
+	 * Whether the current user may see the questionnaire's results: the
+	 * dashboard, a report, the export of them.
+	 *
+	 * The site's administrators only — the client's decision (2.61.1). The
+	 * results carry a name, a phone and an ID number, and are kept apart from
+	 * the general leads on purpose: handling the leads does not, by itself,
+	 * make somebody a reader of these.
+	 *
+	 * @return bool
+	 */
+	public static function can_view_results(): bool {
+		/**
+		 * Whether the current user may see the Holland questionnaire's results.
+		 *
+		 * @param bool $can Default: whether they can manage the site's options.
+		 */
+		return (bool) apply_filters( 'kivun_holland_can_view', current_user_can( 'manage_options' ) );
+	}
+
+	/**
+	 * The refusal, in the words both the dashboard and a report use.
+	 *
+	 * @return string
+	 */
+	public static function refusal(): string {
+		return __( 'תוצאות השאלונים פתוחות לצפייה למנהלי האתר בלבד.', 'kivun' );
+	}
+
+	/**
 	 * The address of a lead's printable report.
 	 *
 	 * @param int $lead_id The lead row.
@@ -1439,7 +1468,7 @@ class Kivun_Holland {
 	/**
 	 * Opening the emailed link: not logged in — to the login page and back
 	 * here; logged in — on to the report, with a nonce of the reader's own.
-	 * The report checks the leads capability itself.
+	 * The report checks the permission again itself.
 	 *
 	 * @return void
 	 */
@@ -1450,8 +1479,8 @@ class Kivun_Holland {
 			wp_safe_redirect( wp_login_url( self::report_open_url( $lead_id ) ) );
 			exit;
 		}
-		if ( ! Kivun_Content_Creator::can_manage_leads() ) {
-			wp_die( esc_html__( 'אין לך הרשאה לצפות בדוח.', 'kivun' ), '', array( 'response' => 403 ) );
+		if ( ! self::can_view_results() ) {
+			wp_die( esc_html( self::refusal() ), '', array( 'response' => 403 ) );
 		}
 
 		wp_safe_redirect( self::report_url( $lead_id ) );
@@ -1528,7 +1557,7 @@ class Kivun_Holland {
 			esc_html__( 'קוד הולנד:', 'kivun' ),
 			esc_html( $code ),
 			Kivun_Mailer::button( self::report_open_url( $lead_id ), __( 'פתיחת הדוח להדפסה', 'kivun' ) ),
-			esc_html__( 'הדוח נפתח למי שמחובר/ת לאתר עם הרשאה לטפל בלידים.', 'kivun' )
+			esc_html__( 'הדוח נפתח למי שמחובר/ת לאתר כמנהל/ת האתר.', 'kivun' )
 		);
 
 		// And the way to everyone else's, once the dashboard has a page.
@@ -1554,14 +1583,14 @@ class Kivun_Holland {
 	/**
 	 * The report as a page of its own: A4, ready to print.
 	 *
-	 * For the people who handle the leads, and only them — it carries the
-	 * participant's name, phone and ID number.
+	 * For the site's administrators, and only them — it carries the
+	 * participant's name, phone and ID number (can_view_results()).
 	 *
 	 * @return void
 	 */
 	public static function ajax_report(): void {
-		if ( ! Kivun_Content_Creator::can_manage_leads() ) {
-			wp_die( esc_html__( 'אין לך הרשאה לצפות בדוח.', 'kivun' ), '', array( 'response' => 403 ) );
+		if ( ! self::can_view_results() ) {
+			wp_die( esc_html( self::refusal() ), '', array( 'response' => 403 ) );
 		}
 		check_admin_referer( 'kivun_holland_report' );
 
