@@ -143,7 +143,12 @@ class Kivun_Workshops {
 			'name'              => sanitize_text_field( wp_unslash( $_POST['name'] ?? '' ) ),
 			'email'             => sanitize_email( wp_unslash( $_POST['email'] ?? '' ) ),
 			'phone'             => sanitize_text_field( wp_unslash( $_POST['phone'] ?? '' ) ),
-			'city'              => sanitize_text_field( wp_unslash( $_POST['city'] ?? '' ) ),
+			// Chosen from a list; "אחר" opens a box, and the city typed
+			// there is the one stored.
+			'city'              => Kivun_Cities::resolve(
+				sanitize_text_field( wp_unslash( $_POST['city'] ?? '' ) ),
+				sanitize_text_field( wp_unslash( $_POST['city_other'] ?? '' ) )
+			),
 			'gender'            => sanitize_text_field( wp_unslash( $_POST['gender'] ?? '' ) ),
 			'marketing_consent' => empty( $_POST['marketing_consent'] ) ? 0 : 1,
 			'privacy_consent'   => empty( $_POST['privacy_consent'] ) ? 0 : 1,

@@ -638,7 +638,11 @@ class Kivun_Jobs {
 		$message = sanitize_textarea_field( wp_unslash( $_POST['message'] ?? '' ) );
 		$gender  = sanitize_text_field( wp_unslash( $_POST['gender'] ?? '' ) );
 		$local   = sanitize_key( wp_unslash( $_POST['local_resident'] ?? '' ) );
-		$address = sanitize_text_field( wp_unslash( $_POST['address'] ?? '' ) );
+		// A city from the list, or the one typed in the box "אחר" opens.
+		$address = Kivun_Cities::resolve(
+			sanitize_text_field( wp_unslash( $_POST['address'] ?? '' ) ),
+			sanitize_text_field( wp_unslash( $_POST['address_other'] ?? '' ) )
+		);
 
 		$local = in_array( $local, array( 'yes', 'no' ), true ) ? $local : '';
 		// The address is asked for only when the answer is "no", so keeping one

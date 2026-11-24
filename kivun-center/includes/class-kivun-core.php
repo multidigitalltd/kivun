@@ -123,6 +123,7 @@ class Kivun_Core {
 			'class-kivun-form-details',
 			'class-kivun-custom-forms',
 			'class-kivun-privacy-consent',
+			'class-kivun-cities',
 			'class-kivun-share-image',
 			'class-kivun-lead-capture',
 			'class-kivun-utm',

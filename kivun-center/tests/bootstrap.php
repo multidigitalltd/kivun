@@ -1141,6 +1141,15 @@ function home_url( string $path = '/' ): string {
 }
 
 /**
+ * The privacy policy page's URL. None is set on the test site.
+ *
+ * @return string
+ */
+function get_privacy_policy_url(): string {
+	return '';
+}
+
+/**
  * Add query arguments to a URL.
  *
  * Core takes either a map and a URL, or one key, one value and a URL, and
@@ -1550,6 +1559,7 @@ foreach ( array(
 	'class-kivun-core',
 	'class-kivun-custom-forms',
 	'class-kivun-privacy-consent',
+	'class-kivun-cities',
 	'class-kivun-share-image',
 	'class-kivun-holland',
 	'class-kivun-holland-dashboard',

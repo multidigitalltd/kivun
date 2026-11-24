@@ -75,8 +75,8 @@ $kivun_job_filled = Kivun_Jobs::is_filled( (int) $job_id );
 		// most of them live in the city the job is in is a question for nothing.
 		?>
 		<div class="kivun-form-row kivun-apply-full kivun-apply-address" hidden>
-			<label for="kivun-apply-address"><?php esc_html_e( 'כתובת המגורים', 'kivun' ); ?></label>
-			<input type="text" id="kivun-apply-address" name="address" autocomplete="address-level2" placeholder="<?php esc_attr_e( 'עיר / יישוב', 'kivun' ); ?>">
+			<label for="kivun-apply-address"><?php esc_html_e( 'עיר המגורים', 'kivun' ); ?></label>
+			<?php echo Kivun_Cities::field( 'address', 'kivun-apply-address' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped in Kivun_Cities::field(). ?>
 		</div>
 
 		<div class="kivun-form-row kivun-apply-full">
